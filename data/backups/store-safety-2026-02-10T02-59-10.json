@@ -1,0 +1,115 @@
+{
+  "version": 10,
+  "cards": [
+    {
+      "id": "5e8312a9-b45a-49a1-b175-17deae8fcf28",
+      "title": "dasasd",
+      "descriptionHtml": "",
+      "location": {
+        "day": null,
+        "period": null
+      },
+      "order": 1770692350104,
+      "date": null,
+      "time": null,
+      "hasDate": false,
+      "priority": null,
+      "status": "todo",
+      "projectId": null,
+      "checklist": [],
+      "createdAt": "2026-02-10T02:59:10.100Z",
+      "updatedAt": "2026-02-10T02:59:10.100Z"
+    }
+  ],
+  "shortcutFolders": [],
+  "shortcuts": [],
+  "paths": [],
+  "projects": [],
+  "registeredIDEs": [],
+  "calendarEvents": [],
+  "noteFolders": [],
+  "notes": [
+    {
+      "id": "1f73d537-a03d-4994-be97-44df754fcb21",
+      "title": "",
+      "mdPath": "1f73d537-a03d-4994-be97-44df754fcb21.md",
+      "folderId": null,
+      "projectId": null,
+      "createdAt": "2026-02-08T15:18:29.673Z",
+      "updatedAt": "2026-02-08T20:04:27.022Z",
+      "order": 1770563909674
+    },
+    {
+      "id": "ec734c98-e25d-4745-a109-f8a6f403351e",
+      "title": "148055f9-4e6d-489b-8825-ec3e5ac5aa5f",
+      "mdPath": "ec734c98-e25d-4745-a109-f8a6f403351e.md",
+      "folderId": null,
+      "projectId": null,
+      "createdAt": "2026-02-10T00:19:43.411Z",
+      "updatedAt": "2026-02-10T00:20:14.179Z",
+      "order": 1770682783415
+    },
+    {
+      "id": "4792ac1a-62a9-422b-bfd1-e2b6a4a38af9",
+      "title": "56fd0458-4a43-44c9-81d1-f8e644587938",
+      "mdPath": "4792ac1a-62a9-422b-bfd1-e2b6a4a38af9.md",
+      "folderId": null,
+      "projectId": null,
+      "createdAt": "2026-02-10T00:19:43.422Z",
+      "updatedAt": "2026-02-10T00:19:43.422Z",
+      "order": 1770682783422
+    },
+    {
+      "id": "8b1e6bab-964b-4be0-a682-0614baa30803",
+      "title": "997f8008-a0e9-4c23-b0cd-affd2309de9e",
+      "mdPath": "8b1e6bab-964b-4be0-a682-0614baa30803.md",
+      "folderId": null,
+      "projectId": null,
+      "createdAt": "2026-02-10T00:19:43.434Z",
+      "updatedAt": "2026-02-10T00:19:43.434Z",
+      "order": 1770682783434
+    },
+    {
+      "id": "0dbae773-1e9c-47e7-adc3-ff3726902727",
+      "title": "f1cb0ac8-ca98-489c-a176-86d19355c850",
+      "mdPath": "0dbae773-1e9c-47e7-adc3-ff3726902727.md",
+      "folderId": null,
+      "projectId": null,
+      "createdAt": "2026-02-10T00:19:43.447Z",
+      "updatedAt": "2026-02-10T00:19:43.447Z",
+      "order": 1770682783447
+    }
+  ],
+  "clipboardCategories": [],
+  "clipboardItems": [],
+  "files": [],
+  "apps": [],
+  "macros": [],
+  "habits": [],
+  "habitEntries": [],
+  "bills": [],
+  "expenses": [],
+  "budgetCategories": [],
+  "savingsGoals": [],
+  "quickAccess": [],
+  "meetings": [],
+  "settings": {
+    "themeName": "dark-default",
+    "dataDir": null,
+    "installerCompleted": false,
+    "weekStart": "2026-02-09",
+    "keyboardShortcuts": [
+      {
+        "id": "quick-search",
+        "action": "Abrir busca rápida",
+        "description": "Buscar cards, eventos, atalhos e notas",
+        "keys": {
+          "ctrl": true,
+          "key": "k"
+        }
+      }
+    ],
+    "backupEnabled": true,
+    "backupIntervalMinutes": 10
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.organizador.semanal",
+  "productName": "Organon",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json"
+  ],
+  "icon": "src/renderer/images/logo.png",
+  "win": {
+    "target": ["nsis"],
+    "icon": "src/renderer/images/logo.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerLanguages": ["pt_BR", "en_US"],
+    "language": "1046"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "src/renderer/images/logo.png"
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "icon": "src/renderer/images/logo.png"
+  }
+}

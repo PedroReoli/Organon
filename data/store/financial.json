@@ -1,0 +1,11 @@
+{
+  "bills": [],
+  "expenses": [],
+  "budgetCategories": [],
+  "incomes": [],
+  "financialConfig": {
+    "monthlyIncome": 0,
+    "monthlySpendingLimit": 0
+  },
+  "savingsGoals": []
+}

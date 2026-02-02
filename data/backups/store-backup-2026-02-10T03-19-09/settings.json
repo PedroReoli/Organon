@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "themeName": "dark-default",
+    "dataDir": null,
+    "installerCompleted": false,
+    "weekStart": "2026-02-09",
+    "keyboardShortcuts": [
+      {
+        "id": "quick-search",
+        "action": "Abrir busca rápida",
+        "description": "Buscar cards, eventos, atalhos e notas",
+        "keys": {
+          "ctrl": true,
+          "key": "k"
+        }
+      }
+    ],
+    "backupEnabled": true,
+    "backupIntervalMinutes": 10
+  }
+}

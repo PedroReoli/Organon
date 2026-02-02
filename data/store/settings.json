@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "themeName": "dark-vscode",
+    "dataDir": null,
+    "installerCompleted": false,
+    "weekStart": "2026-02-16",
+    "keyboardShortcuts": [
+      {
+        "id": "quick-search",
+        "action": "Abrir busca rápida",
+        "description": "Buscar cards, eventos, atalhos e notas",
+        "keys": {
+          "ctrl": true,
+          "key": "k"
+        }
+      }
+    ],
+    "backupEnabled": true,
+    "backupIntervalMinutes": 10
+  }
+}

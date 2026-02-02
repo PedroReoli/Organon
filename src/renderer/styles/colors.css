@@ -1,0 +1,124 @@
+/*
+ * Arquivo de cores - Todas as cores do app são definidas aqui
+ * Tema escuro moderno com acentos coloridos
+ */
+
+:root {
+  /* ========================================
+   * CORES PRIMÁRIAS
+   * ======================================== */
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-primary-light: rgba(99, 102, 241, 0.15);
+  --color-primary-glow: rgba(99, 102, 241, 0.4);
+
+  /* ========================================
+   * CORES DE FUNDO (Tema Escuro)
+   * ======================================== */
+  --color-background: #0f172a;
+  --color-background-secondary: #1e293b;
+  --color-background-tertiary: #334155;
+  --color-background-elevated: #1e293b;
+
+  /* ========================================
+   * CORES DE SUPERFÍCIE (cards, modais)
+   * ======================================== */
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-surface-light: #475569;
+
+  /* ========================================
+   * CORES DE BORDA
+   * ======================================== */
+  --color-border: #334155;
+  --color-border-light: #475569;
+  --color-border-focus: #6366f1;
+
+  /* ========================================
+   * CORES DE TEXTO
+   * ======================================== */
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #0f172a;
+
+  /* ========================================
+   * CORES DOS PERÍODOS DO DIA
+   * ======================================== */
+  --color-morning: rgba(251, 191, 36, 0.15);
+  --color-morning-border: #fbbf24;
+  --color-morning-text: #fcd34d;
+  --color-morning-icon: #fbbf24;
+
+  --color-afternoon: rgba(249, 115, 22, 0.15);
+  --color-afternoon-border: #f97316;
+  --color-afternoon-text: #fb923c;
+  --color-afternoon-icon: #f97316;
+
+  --color-night: rgba(99, 102, 241, 0.15);
+  --color-night-border: #6366f1;
+  --color-night-text: #a5b4fc;
+  --color-night-icon: #818cf8;
+
+  /* ========================================
+   * CORES DE ESTADO
+   * ======================================== */
+  --color-danger: #ef4444;
+  --color-danger-hover: #f87171;
+  --color-danger-bg: rgba(239, 68, 68, 0.15);
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.15);
+
+  /* ========================================
+   * CORES DE DRAG AND DROP
+   * ======================================== */
+  --color-drag-highlight: rgba(99, 102, 241, 0.2);
+  --color-drag-placeholder: rgba(100, 116, 139, 0.3);
+  --color-drag-active: rgba(99, 102, 241, 0.3);
+
+  /* ========================================
+   * BACKLOG
+   * ======================================== */
+  --color-backlog-bg: #0f172a;
+  --color-backlog-header: #1e293b;
+
+  /* ========================================
+   * TITLEBAR
+   * ======================================== */
+  --color-titlebar-bg: #0f172a;
+  --color-titlebar-text: #94a3b8;
+  --color-titlebar-btn-hover: #334155;
+  --color-titlebar-close-hover: #ef4444;
+
+  /* ========================================
+   * SOMBRAS
+   * ======================================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.4), 0 3px 10px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.5);
+  --shadow-drag: 0 15px 35px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+
+  /* ========================================
+   * TRANSIÇÕES
+   * ======================================== */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* ========================================
+   * DIMENSÕES
+   * ======================================== */
+  --titlebar-height: 38px;
+  --backlog-width: 300px;
+  --period-label-width: 50px;
+  --cell-min-height: 140px;
+  --card-border-radius: 10px;
+  --modal-border-radius: 16px;
+
+  /* ========================================
+   * FONTES (Sistema)
+   * ======================================== */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del \"f:\\\\Repositorios\\\\Pessoal\\\\ElectronApp-Todo\\\\src\\\\renderer\\\\styles\\\\globals.css\")",
+      "Bash(dir:*)",
+      "Bash(npm run exec:*)",
+      "Bash(set:*)",
+      "Bash(npx electron-builder:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(node -e:*)",
+      "Bash(npm config:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)"
+    ]
+  }
+}

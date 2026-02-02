@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+release/
+
+# Data files (local persistence - keep folder, ignore data)
+data/*.json
+!data/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+
+# TypeScript build cache
+*.tsbuildinfo
+*.zip
+/data
+/data
