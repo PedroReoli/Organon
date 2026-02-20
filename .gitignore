@@ -30,3 +30,8 @@ npm-debug.log*
 *.zip
 /data
 /data
+/.claude
+/.cursor
+/.data
+/.doc
+/docs
