@@ -6658,6 +6658,12 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width var(--transition-fast), min-width var(--transition-fast);
+}
+
+.notes-sidebar.is-collapsed {
+  width: 56px;
+  min-width: 56px;
 }
 
 .notes-sidebar-header {
@@ -6666,8 +6672,16 @@ input:focus, textarea:focus, select:focus {
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px;
   color: var(--color-text-secondary);
+}
+
+.notes-sidebar-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .notes-sidebar-header h3 {
@@ -6675,6 +6689,26 @@ input:focus, textarea:focus, select:focus {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.notes-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.notes-sidebar-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .notes-folder-add {
@@ -6807,6 +6841,12 @@ input:focus, textarea:focus, select:focus {
   min-height: 0;
   background: var(--color-background-secondary);
   border-right: 1px solid var(--color-border);
+  transition: width var(--transition-fast), min-width var(--transition-fast);
+}
+
+.notes-list.is-collapsed {
+  width: 56px;
+  min-width: 56px;
 }
 
 .notes-list-header {
@@ -6819,6 +6859,13 @@ input:focus, textarea:focus, select:focus {
   background: var(--color-backlog-header);
 }
 
+.notes-list-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .notes-list-header h3 {
   font-size: 11px;
   font-weight: 700;
@@ -6826,6 +6873,12 @@ input:focus, textarea:focus, select:focus {
   letter-spacing: 0.5px;
   color: var(--color-text-secondary);
   flex-shrink: 0;
+}
+
+.notes-list-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .notes-list-add {
@@ -12712,6 +12765,11 @@ input:focus, textarea:focus, select:focus {
   max-width: 760px;
 }
 
+.playbook-dialog-preview-modal {
+  max-width: min(980px, 96vw);
+  width: min(980px, 96vw);
+}
+
 .playbook-edit-modal {
   max-width: min(1280px, 96vw);
   width: min(1280px, 96vw);
@@ -12727,6 +12785,11 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.playbook-dialog-preview-modal-body {
+  max-height: min(70vh, 780px);
+  overflow: auto;
 }
 
 .playbook-edit-modal-body {
