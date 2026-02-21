@@ -207,6 +207,27 @@ export interface Meeting {
   createdAt: string
   updatedAt: string
 }
+export interface PlaybookDialog {
+  id: string
+  title: string
+  text: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Playbook {
+  id: string
+  title: string
+  sector: string
+  category: string
+  summary: string
+  content: string
+  dialogs: PlaybookDialog[]
+  order: number
+  createdAt: string
+  updatedAt: string
+}
 
 // Clipboard - categoria
 export interface ClipboardCategory {
@@ -761,6 +782,7 @@ export interface Store {
   savingsGoals: SavingsGoal[]
   quickAccess: QuickAccessItem[]
   meetings: Meeting[]
+  playbooks: Playbook[]
   crmContacts: CRMContact[]
   crmInteractions: CRMInteraction[]
   crmTags: CRMTag[]

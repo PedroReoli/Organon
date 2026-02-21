@@ -32,6 +32,8 @@ import type {
   RegisteredIDE,
   QuickAccessItem,
   Meeting,
+  Playbook,
+  PlaybookDialog,
   CRMContact,
   CRMInteraction,
   CRMTag,
@@ -143,7 +145,7 @@ const normalizeStudyState = (input: Partial<StudyState> | null | undefined): Stu
 }
 
 const getDefaultStore = (): Store => ({
-  version: 11,
+  version: 12,
   cards: [],
   shortcutFolders: [],
   shortcuts: [],
@@ -172,6 +174,7 @@ const getDefaultStore = (): Store => ({
   savingsGoals: [],
   quickAccess: [],
   meetings: [],
+  playbooks: [],
   crmContacts: [],
   crmInteractions: [],
   crmTags: [],
@@ -235,11 +238,40 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
   // Normalizar cards (migrar de formato antigo para novo com date/hasDate)
   const rawCards = Array.isArray(input.cards) ? input.cards : base.cards
   const normalizedCards = rawCards.map(card => normalizeCard(card as Card & { id: string; title: string }))
+  const normalizedPlaybooks: Playbook[] = Array.isArray(input.playbooks)
+    ? input.playbooks
+      .filter(pb => pb && typeof pb.title === 'string')
+      .map(pb => ({
+        id: pb.id ?? generateId(),
+        title: pb.title ?? '',
+        sector: pb.sector ?? 'Geral',
+        category: pb.category ?? 'Geral',
+        summary: pb.summary ?? '',
+        content: pb.content ?? '',
+        dialogs: Array.isArray(pb.dialogs)
+          ? pb.dialogs
+            .filter(dialog => dialog && typeof dialog.text === 'string')
+            .map((dialog, index) => ({
+              id: dialog.id ?? generateId(),
+              title: dialog.title ?? `Dialogo ${index + 1}`,
+              text: dialog.text ?? '',
+              order: Number.isFinite(dialog.order) ? dialog.order : index,
+              createdAt: dialog.createdAt ?? new Date().toISOString(),
+              updatedAt: dialog.updatedAt ?? dialog.createdAt ?? new Date().toISOString(),
+            }))
+            .sort((a, b) => a.order - b.order)
+          : [],
+        order: Number.isFinite(pb.order) ? pb.order : 0,
+        createdAt: pb.createdAt ?? new Date().toISOString(),
+        updatedAt: pb.updatedAt ?? pb.createdAt ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => a.order - b.order)
+    : base.playbooks
 
   return {
     ...base,
     ...input,
-    version: 11,
+    version: 12,
     cards: normalizedCards.map(c => ({ ...c, projectId: (c as Card & { projectId?: string | null }).projectId ?? null })),
     shortcutFolders: normalizedFolders,
     shortcuts: normalizedShortcuts,
@@ -297,6 +329,7 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
     savingsGoals: Array.isArray(input.savingsGoals) ? input.savingsGoals : base.savingsGoals,
     quickAccess: normalizedQuickAccess,
     meetings: Array.isArray(input.meetings) ? input.meetings : base.meetings,
+    playbooks: normalizedPlaybooks,
     crmContacts: Array.isArray((input as Partial<Store> & { crmContacts?: CRMContact[] }).crmContacts)
       ? (input as Partial<Store> & { crmContacts?: CRMContact[] }).crmContacts as CRMContact[]
       : base.crmContacts,
@@ -1445,6 +1478,137 @@ export const useStore = () => {
   }, [updateStore])
 
   // ========================================
+  // Playbook methods
+  // ========================================
+
+  const addPlaybook = useCallback((input: {
+    title: string
+    sector?: string
+    category?: string
+    summary?: string
+    content?: string
+  }) => {
+    const title = input.title.trim()
+    if (!title) return undefined
+
+    const maxOrder = store.playbooks.length > 0
+      ? Math.max(...store.playbooks.map(playbook => playbook.order))
+      : -1
+
+    const now = new Date().toISOString()
+    const newPlaybook: Playbook = {
+      id: generateId(),
+      title,
+      sector: (input.sector ?? 'Geral').trim() || 'Geral',
+      category: (input.category ?? 'Geral').trim() || 'Geral',
+      summary: (input.summary ?? '').trim(),
+      content: input.content ?? '',
+      dialogs: [],
+      order: maxOrder + 1,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    updateStore(prev => ({
+      ...prev,
+      playbooks: [...prev.playbooks, newPlaybook],
+    }))
+
+    return newPlaybook.id
+  }, [store.playbooks, updateStore])
+
+  const updatePlaybook = useCallback((playbookId: string, updates: Partial<Pick<Playbook, 'title' | 'sector' | 'category' | 'summary' | 'content'>>) => {
+    updateStore(prev => ({
+      ...prev,
+      playbooks: prev.playbooks.map(playbook =>
+        playbook.id !== playbookId
+          ? playbook
+          : {
+            ...playbook,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+          },
+      ),
+    }))
+  }, [updateStore])
+
+  const removePlaybook = useCallback((playbookId: string) => {
+    updateStore(prev => ({
+      ...prev,
+      playbooks: prev.playbooks.filter(playbook => playbook.id !== playbookId),
+    }))
+  }, [updateStore])
+
+  const addPlaybookDialog = useCallback((playbookId: string, input: { title: string; text: string }) => {
+    const now = new Date().toISOString()
+    const dialogId = generateId()
+    updateStore(prev => ({
+      ...prev,
+      playbooks: prev.playbooks.map(playbook => {
+        if (playbook.id !== playbookId) return playbook
+        const maxOrder = playbook.dialogs.length > 0
+          ? Math.max(...playbook.dialogs.map(dialog => dialog.order))
+          : -1
+        const dialog: PlaybookDialog = {
+          id: dialogId,
+          title: input.title.trim() || `Dialogo ${maxOrder + 2}`,
+          text: input.text,
+          order: maxOrder + 1,
+          createdAt: now,
+          updatedAt: now,
+        }
+        return {
+          ...playbook,
+          dialogs: [...playbook.dialogs, dialog],
+          updatedAt: now,
+        }
+      }),
+    }))
+    return dialogId
+  }, [updateStore])
+
+  const updatePlaybookDialog = useCallback((playbookId: string, dialogId: string, updates: Partial<Pick<PlaybookDialog, 'title' | 'text'>>) => {
+    const now = new Date().toISOString()
+    updateStore(prev => ({
+      ...prev,
+      playbooks: prev.playbooks.map(playbook => {
+        if (playbook.id !== playbookId) return playbook
+        return {
+          ...playbook,
+          dialogs: playbook.dialogs.map(dialog =>
+            dialog.id !== dialogId
+              ? dialog
+              : {
+                ...dialog,
+                ...updates,
+                updatedAt: now,
+              },
+          ),
+          updatedAt: now,
+        }
+      }),
+    }))
+  }, [updateStore])
+
+  const removePlaybookDialog = useCallback((playbookId: string, dialogId: string) => {
+    const now = new Date().toISOString()
+    updateStore(prev => ({
+      ...prev,
+      playbooks: prev.playbooks.map(playbook => {
+        if (playbook.id !== playbookId) return playbook
+        const nextDialogs = playbook.dialogs
+          .filter(dialog => dialog.id !== dialogId)
+          .map((dialog, index) => ({ ...dialog, order: index }))
+        return {
+          ...playbook,
+          dialogs: nextDialogs,
+          updatedAt: now,
+        }
+      }),
+    }))
+  }, [updateStore])
+
+  // ========================================
   // Reset Store
   // ========================================
 
@@ -1710,6 +1874,7 @@ export const useStore = () => {
     financialConfig: store.financialConfig,
     savingsGoals: store.savingsGoals,
     quickAccess: store.quickAccess,
+    playbooks: store.playbooks,
     crmContacts: store.crmContacts,
     crmInteractions: store.crmInteractions,
     crmTags: store.crmTags,
@@ -1815,6 +1980,13 @@ export const useStore = () => {
     addMeeting,
     updateMeeting,
     removeMeeting,
+    // Playbook methods
+    addPlaybook,
+    updatePlaybook,
+    removePlaybook,
+    addPlaybookDialog,
+    updatePlaybookDialog,
+    removePlaybookDialog,
     // CRM methods
     addCRMContact,
     updateCRMContact,

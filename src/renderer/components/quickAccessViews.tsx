@@ -59,6 +59,16 @@ export const AVAILABLE_VIEWS: ViewOption[] = [
     ),
   },
   {
+    view: 'playbook',
+    label: 'Playbook',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M3.5 2.5h7a2 2 0 0 1 2 2v9h-9a1 1 0 0 1-1-1v-8a2 2 0 0 1 2-2Z" />
+        <path d="M5 5.5h6M5 8h6M5 10.5h4" />
+      </svg>
+    ),
+  },
+  {
     view: 'colors',
     label: 'Cores',
     icon: (

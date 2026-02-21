@@ -8,6 +8,7 @@ export type AppView =
   | 'planner'
   | 'calendar'
   | 'crm'
+  | 'playbook'
   | 'colors'
   | 'shortcuts'
   | 'paths'
@@ -70,6 +71,7 @@ const navItems: NavGroupItem[] = [
 export const InternalNav = ({ activeView, onChange, disabled = false }: InternalNavProps) => {
   const [openDropdown, setOpenDropdown] = useState<NavGroup | null>(null)
   const orgRef = useRef<HTMLButtonElement>(null)
+  const workRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLButtonElement>(null)
   const toolsRef = useRef<HTMLButtonElement>(null)
   const personalRef = useRef<HTMLButtonElement>(null)
@@ -77,6 +79,7 @@ export const InternalNav = ({ activeView, onChange, disabled = false }: Internal
   const getButtonRef = (groupId: string): React.RefObject<HTMLButtonElement> => {
     switch (groupId) {
       case 'organization': return orgRef
+      case 'work': return workRef
       case 'content': return contentRef
       case 'tools': return toolsRef
       case 'personal': return personalRef

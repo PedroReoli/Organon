@@ -8,6 +8,7 @@ import { TodayView } from './TodayView'
 import { PlannerView } from './PlannerView'
 import { CalendarView } from './CalendarView'
 import { CRMView } from './CRMView'
+import { PlaybookView } from './PlaybookView'
 import { ShortcutsView } from './ShortcutsView'
 import { PathsView } from './PathsView'
 import { ProjectsView } from './ProjectsView'
@@ -131,6 +132,7 @@ export const App = () => {
     // Project & IDE methods
     projects,
     meetings,
+    playbooks,
     registeredIDEs,
     addProject,
     updateProject,
@@ -153,6 +155,13 @@ export const App = () => {
     removeCRMTag,
     addCRMContactLink,
     removeCRMContactLink,
+    // Playbook methods
+    addPlaybook,
+    updatePlaybook,
+    removePlaybook,
+    addPlaybookDialog,
+    updatePlaybookDialog,
+    removePlaybookDialog,
     updateSettings,
     updateStudy,
   } = useStore()
@@ -488,6 +497,18 @@ export const App = () => {
               onRemoveTag={removeCRMTag}
               onAddLink={addCRMContactLink}
               onRemoveLink={removeCRMContactLink}
+            />
+          )}
+
+          {activeView === 'playbook' && (
+            <PlaybookView
+              playbooks={playbooks}
+              onAddPlaybook={addPlaybook}
+              onUpdatePlaybook={updatePlaybook}
+              onRemovePlaybook={removePlaybook}
+              onAddDialog={addPlaybookDialog}
+              onUpdateDialog={updatePlaybookDialog}
+              onRemoveDialog={removePlaybookDialog}
             />
           )}
 
