@@ -31,6 +31,8 @@ export const NotesView = ({
 }: NotesViewProps) => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
+  const [isFoldersSidebarOpen, setIsFoldersSidebarOpen] = useState(true)
+  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(true)
   const [newFolderName, setNewFolderName] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [contentLoaded, setContentLoaded] = useState(false)
@@ -304,107 +306,157 @@ export const NotesView = ({
 
   return (
     <div className="notes-layout">
-      <aside className="notes-sidebar">
+      <aside className={`notes-sidebar ${isFoldersSidebarOpen ? '' : 'is-collapsed'}`}>
         <div className="notes-sidebar-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-            <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
-          </svg>
-          <h3>Pastas</h3>
-        </div>
-        <div className="notes-folder-add">
-          <input
-            type="text"
-            value={newFolderName}
-            onChange={e => setNewFolderName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAddFolder()}
-            placeholder="Nova pasta..."
-            className="form-input"
-          />
-          <button className="btn btn-primary" onClick={handleAddFolder} disabled={!newFolderName.trim()}>
-            +
-          </button>
-        </div>
-        <div className="notes-folder-list">
+          <div className="notes-sidebar-header-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
+            </svg>
+            {isFoldersSidebarOpen ? <h3>Pastas</h3> : null}
+          </div>
           <button
-            className={`notes-folder-item ${selectedFolderId === null ? 'active' : ''}`}
-            onClick={() => setSelectedFolderId(null)}
+            type="button"
+            className="notes-sidebar-toggle"
+            onClick={() => setIsFoldersSidebarOpen(prev => !prev)}
+            title={isFoldersSidebarOpen ? 'Ocultar sidebar de pastas' : 'Mostrar sidebar de pastas'}
+            aria-label={isFoldersSidebarOpen ? 'Ocultar sidebar de pastas' : 'Mostrar sidebar de pastas'}
           >
-            <span className="notes-folder-item-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <path d="M14 2v6h6" />
-              </svg>
-              Todas as notas
-            </span>
-            <span className="notes-count">{notes.length}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              {isFoldersSidebarOpen ? (
+                <polyline points="15 18 9 12 15 6" />
+              ) : (
+                <polyline points="9 18 15 12 9 6" />
+              )}
+            </svg>
           </button>
-          {folderRows.map(folder => (
-            <div key={folder.id} className="notes-folder-row">
+        </div>
+
+        {isFoldersSidebarOpen ? (
+          <>
+            <div className="notes-folder-add">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddFolder()}
+                placeholder="Nova pasta..."
+                className="form-input"
+              />
+              <button className="btn btn-primary" onClick={handleAddFolder} disabled={!newFolderName.trim()}>
+                +
+              </button>
+            </div>
+            <div className="notes-folder-list">
               <button
-                className={`notes-folder-item ${selectedFolderId === folder.id ? 'active' : ''}`}
-                onClick={() => setSelectedFolderId(folder.id)}
-                style={{ paddingLeft: `${12 + folder.depth * 16}px` }}
+                className={`notes-folder-item ${selectedFolderId === null ? 'active' : ''}`}
+                onClick={() => setSelectedFolderId(null)}
               >
                 <span className="notes-folder-item-label">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                    <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6" />
                   </svg>
-                  {folder.name}
+                  Todas as notas
                 </span>
-                <span className="notes-count">
-                  {notes.filter(n => n.folderId === folder.id).length}
-                </span>
+                <span className="notes-count">{notes.length}</span>
               </button>
-              <button
-                className="notes-folder-delete"
-                onClick={() => onRemoveFolder(folder.id)}
-                title="Excluir pasta"
-              >
-                &times;
-              </button>
+              {folderRows.map(folder => (
+                <div key={folder.id} className="notes-folder-row">
+                  <button
+                    className={`notes-folder-item ${selectedFolderId === folder.id ? 'active' : ''}`}
+                    onClick={() => setSelectedFolderId(folder.id)}
+                    style={{ paddingLeft: `${12 + folder.depth * 16}px` }}
+                  >
+                    <span className="notes-folder-item-label">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                        <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
+                      </svg>
+                      {folder.name}
+                    </span>
+                    <span className="notes-count">
+                      {notes.filter(n => n.folderId === folder.id).length}
+                    </span>
+                  </button>
+                  <button
+                    className="notes-folder-delete"
+                    onClick={() => onRemoveFolder(folder.id)}
+                    title="Excluir pasta"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        ) : null}
       </aside>
 
-      <div className="notes-list">
+      <div className={`notes-list ${isNotesSidebarOpen ? '' : 'is-collapsed'}`}>
         <div className="notes-list-header">
-          <h3>Notas</h3>
-          <button className="btn btn-primary notes-add-btn" onClick={handleAddNote} title="Nova nota">
-            +
-          </button>
-        </div>
-        <div className="notes-list-items">
-          {filteredNotes.length === 0 ? (
-            <div className="notes-empty">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32" style={{ opacity: 0.3 }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <path d="M14 2v6h6" />
-              </svg>
-              Nenhuma nota encontrada.
-            </div>
-          ) : (
-            filteredNotes.map(note => (
-              <button
-                key={note.id}
-                className={`notes-list-item ${selectedNoteId === note.id ? 'active' : ''}`}
-                onClick={() => setSelectedNoteId(note.id)}
-                onContextMenu={e => {
-                  e.preventDefault()
-                  setNoteContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id })
-                }}
-                title="Botao direito para opcoes"
-              >
-                <div className="notes-item-info">
-                  <span className="notes-item-title">{note.title}</span>
-                  <span className="notes-item-date">
-                    {new Date(note.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
+          <div className="notes-list-header-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+            </svg>
+            {isNotesSidebarOpen ? <h3>Notas</h3> : null}
+          </div>
+          <div className="notes-list-header-actions">
+            {isNotesSidebarOpen ? (
+              <button className="btn btn-primary notes-add-btn" onClick={handleAddNote} title="Nova nota">
+                +
               </button>
-            ))
-          )}
+            ) : null}
+            <button
+              type="button"
+              className="notes-sidebar-toggle"
+              onClick={() => setIsNotesSidebarOpen(prev => !prev)}
+              title={isNotesSidebarOpen ? 'Ocultar sidebar de notas' : 'Mostrar sidebar de notas'}
+              aria-label={isNotesSidebarOpen ? 'Ocultar sidebar de notas' : 'Mostrar sidebar de notas'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                {isNotesSidebarOpen ? (
+                  <polyline points="15 18 9 12 15 6" />
+                ) : (
+                  <polyline points="9 18 15 12 9 6" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {isNotesSidebarOpen ? (
+          <div className="notes-list-items">
+            {filteredNotes.length === 0 ? (
+              <div className="notes-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32" style={{ opacity: 0.3 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6" />
+                </svg>
+                Nenhuma nota encontrada.
+              </div>
+            ) : (
+              filteredNotes.map(note => (
+                <button
+                  key={note.id}
+                  className={`notes-list-item ${selectedNoteId === note.id ? 'active' : ''}`}
+                  onClick={() => setSelectedNoteId(note.id)}
+                  onContextMenu={e => {
+                    e.preventDefault()
+                    setNoteContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id })
+                  }}
+                  title="Botao direito para opcoes"
+                >
+                  <div className="notes-item-info">
+                    <span className="notes-item-title">{note.title}</span>
+                    <span className="notes-item-date">
+                      {new Date(note.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div className="notes-editor">
