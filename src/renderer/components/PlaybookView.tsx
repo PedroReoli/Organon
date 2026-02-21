@@ -139,6 +139,7 @@ export const PlaybookView = ({
   const [editForm, setEditForm] = useState<PlaybookForm>(EMPTY_FORM)
 
   const [showDialogModal, setShowDialogModal] = useState(false)
+  const [showDialogPreviewModal, setShowDialogPreviewModal] = useState(false)
   const [editingDialogId, setEditingDialogId] = useState<string | null>(null)
   const [dialogForm, setDialogForm] = useState<DialogForm>(EMPTY_DIALOG_FORM)
   const [dialogVariableValues, setDialogVariableValues] = useState<Record<string, string>>({})
@@ -268,6 +269,12 @@ export const PlaybookView = ({
   }, [selectedPlaybookId])
 
   useEffect(() => {
+    if (screen !== 'detail') {
+      setShowDialogPreviewModal(false)
+    }
+  }, [screen, selectedPlaybookId])
+
+  useEffect(() => {
     if (!selectedPlaybook) {
       setDetailContentDraft('')
       return
@@ -278,6 +285,7 @@ export const PlaybookView = ({
 
   useEffect(() => {
     if (!selectedDialog) {
+      setShowDialogPreviewModal(false)
       setDialogVariableValues({})
       setDialogVariableBold({})
       setDialogCopyStatus('')
@@ -452,8 +460,19 @@ export const PlaybookView = ({
     closeDialogModal()
   }
 
+  const openDialogPreviewModal = (dialogId: string) => {
+    setSelectedDialogId(dialogId)
+    setShowDialogPreviewModal(true)
+  }
+
+  const closeDialogPreviewModal = () => {
+    setShowDialogPreviewModal(false)
+    setDialogCopyStatus('')
+  }
+
   const openSelectedDialogForEdit = () => {
     if (!selectedDialog) return
+    setShowDialogPreviewModal(false)
     openDialogEditModal(selectedDialog)
   }
 
@@ -716,7 +735,7 @@ export const PlaybookView = ({
                         key={dialog.id}
                         type="button"
                         className={`playbook-dialog-item ${selectedDialogId === dialog.id ? 'is-active' : ''}`}
-                        onClick={() => setSelectedDialogId(dialog.id)}
+                        onClick={() => openDialogPreviewModal(dialog.id)}
                       >
                         <span className="playbook-dialog-order">{index + 1}</span>
                         <span className="playbook-dialog-title">{dialog.title || `Dialogo ${index + 1}`}</span>
@@ -724,88 +743,6 @@ export const PlaybookView = ({
                     ))}
                   </div>
                 )}
-
-                <div className="playbook-dialog-detail">
-                  {selectedDialog ? (
-                    <>
-                      <div className="playbook-dialog-detail-head">
-                        <strong>{selectedDialog.title || 'Dialogo'}</strong>
-                        <button
-                          type="button"
-                          className="playbook-icon-btn"
-                          onClick={openSelectedDialogForEdit}
-                          title="Editar dialogo"
-                          aria-label="Editar dialogo"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                            <path d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25z" />
-                            <path d="M14.06 4.94l3.75 3.75" />
-                          </svg>
-                        </button>
-                      </div>
-
-                      <div className="playbook-dialog-preview-wrap">
-                        {selectedDialogVariables.length > 0 && (
-                          <div className="playbook-variables">
-                            <h4>Variaveis da mensagem</h4>
-                            <div className="playbook-variables-grid">
-                              {selectedDialogVariables.map(variableName => (
-                                <label key={variableName} className="playbook-variable-field">
-                                  <span>{`{${variableName}}`}</span>
-                                  <div className="playbook-variable-row">
-                                    <input
-                                      type="text"
-                                      className="form-input"
-                                      value={dialogVariableValues[variableName] ?? ''}
-                                      onChange={event => {
-                                        const nextValue = event.target.value
-                                        setDialogVariableValues(prev => ({ ...prev, [variableName]: nextValue }))
-                                        setDialogCopyStatus('')
-                                      }}
-                                      placeholder={`Digite ${variableName}`}
-                                    />
-                                    <button
-                                      type="button"
-                                      className={`playbook-bold-toggle ${dialogVariableBold[variableName] ? 'is-active' : ''}`}
-                                      onClick={() => {
-                                        setDialogVariableBold(prev => ({ ...prev, [variableName]: !prev[variableName] }))
-                                        setDialogCopyStatus('')
-                                      }}
-                                      title="Aplicar negrito nesta variavel"
-                                      aria-label={`Negrito para ${variableName}`}
-                                    >
-                                      B
-                                    </button>
-                                  </div>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="playbook-preview">
-                          <div className="playbook-preview-header">
-                            <h4>Preview</h4>
-                            <button type="button" className="btn btn-secondary btn-sm" onClick={copyDialogMessage}>
-                              Copiar mensagem
-                            </button>
-                          </div>
-
-                          <div
-                            className="playbook-dialog-detail-content playbook-content-html"
-                            dangerouslySetInnerHTML={{
-                              __html: selectedDialogPreviewHtml || '<p>Sem conteudo.</p>',
-                            }}
-                          />
-
-                          {dialogCopyStatus ? (
-                            <span className="playbook-copy-status">{dialogCopyStatus}</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
               </div>
             </aside>
           </div>
@@ -981,6 +918,104 @@ export const PlaybookView = ({
               </button>
               <button type="button" className="btn btn-primary" onClick={savePlaybookEdit} disabled={!editForm.title.trim()}>
                 Salvar alteracoes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDialogPreviewModal && selectedDialog && (
+        <div className="modal-backdrop" onClick={closeDialogPreviewModal}>
+          <div className="modal playbook-dialog-preview-modal" onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedDialog.title || 'Dialogo'}</h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="playbook-icon-btn"
+                  onClick={openSelectedDialogForEdit}
+                  title="Editar dialogo"
+                  aria-label="Editar dialogo"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                    <path d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25z" />
+                    <path d="M14.06 4.94l3.75 3.75" />
+                  </svg>
+                </button>
+                <button type="button" className="modal-close-btn" onClick={closeDialogPreviewModal}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-body playbook-dialog-preview-modal-body">
+              <div className="playbook-dialog-preview-wrap">
+                {selectedDialogVariables.length > 0 && (
+                  <div className="playbook-variables">
+                    <h4>Variaveis da mensagem</h4>
+                    <div className="playbook-variables-grid">
+                      {selectedDialogVariables.map(variableName => (
+                        <label key={variableName} className="playbook-variable-field">
+                          <span>{`{${variableName}}`}</span>
+                          <div className="playbook-variable-row">
+                            <input
+                              type="text"
+                              className="form-input"
+                              value={dialogVariableValues[variableName] ?? ''}
+                              onChange={event => {
+                                const nextValue = event.target.value
+                                setDialogVariableValues(prev => ({ ...prev, [variableName]: nextValue }))
+                                setDialogCopyStatus('')
+                              }}
+                              placeholder={`Digite ${variableName}`}
+                            />
+                            <button
+                              type="button"
+                              className={`playbook-bold-toggle ${dialogVariableBold[variableName] ? 'is-active' : ''}`}
+                              onClick={() => {
+                                setDialogVariableBold(prev => ({ ...prev, [variableName]: !prev[variableName] }))
+                                setDialogCopyStatus('')
+                              }}
+                              title="Aplicar negrito nesta variavel"
+                              aria-label={`Negrito para ${variableName}`}
+                            >
+                              B
+                            </button>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="playbook-preview">
+                  <div className="playbook-preview-header">
+                    <h4>Preview</h4>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={copyDialogMessage}>
+                      Copiar mensagem
+                    </button>
+                  </div>
+
+                  <div
+                    className="playbook-dialog-detail-content playbook-content-html"
+                    dangerouslySetInnerHTML={{
+                      __html: selectedDialogPreviewHtml || '<p>Sem conteudo.</p>',
+                    }}
+                  />
+
+                  {dialogCopyStatus ? (
+                    <span className="playbook-copy-status">{dialogCopyStatus}</span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={closeDialogPreviewModal}>
+                Fechar
               </button>
             </div>
           </div>
