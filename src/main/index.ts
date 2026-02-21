@@ -1244,6 +1244,30 @@ const listBackups = (dataPath: string): Array<{ name: string; path: string; date
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
+    // Auto-delete: if the newest backup is within 2 days, delete all backups older than 2 days
+    if (backups.length > 0) {
+      const now = Date.now()
+      const twoDaysMs = 2 * 24 * 60 * 60 * 1000
+      const newestAge = now - new Date(backups[0].date).getTime()
+
+      if (newestAge < twoDaysMs) {
+        const toDelete = backups.filter(b => now - new Date(b.date).getTime() > twoDaysMs)
+        for (const backup of toDelete) {
+          try {
+            const stat = fs.statSync(backup.path)
+            if (stat.isDirectory()) {
+              fs.rmSync(backup.path, { recursive: true, force: true })
+            } else {
+              fs.unlinkSync(backup.path)
+            }
+          } catch (e) {
+            console.error('Erro ao deletar backup antigo:', e)
+          }
+        }
+        return backups.filter(b => now - new Date(b.date).getTime() <= twoDaysMs)
+      }
+    }
+
     return backups
   } catch (error) {
     console.error('Erro ao listar backups:', error)
