@@ -696,12 +696,75 @@ export interface KeyboardShortcut {
   }
 }
 
+export type NavbarGroupId = 'organization' | 'work' | 'tools' | 'content' | 'personal'
+
+export type NavbarView =
+  | 'planner'
+  | 'calendar'
+  | 'crm'
+  | 'playbook'
+  | 'projects'
+  | 'colors'
+  | 'paths'
+  | 'shortcuts'
+  | 'apps'
+  | 'notes'
+  | 'clipboard'
+  | 'files'
+  | 'habits'
+  | 'study'
+  | 'financial'
+
+export type NavIconId =
+  | 'planner'
+  | 'calendar'
+  | 'shortcuts'
+  | 'paths'
+  | 'projects'
+  | 'notes'
+  | 'clipboard'
+  | 'files'
+  | 'apps'
+  | 'habits'
+  | 'study'
+  | 'financial'
+  | 'organization'
+  | 'content'
+  | 'tools'
+  | 'personal'
+  | 'crm'
+  | 'playbook'
+  | 'colors'
+  | 'dashboard'
+
+export interface NavbarGroupConfig {
+  id: NavbarGroupId
+  label: string
+  iconId: NavIconId
+  enabled: boolean
+  order: number
+}
+
+export interface NavbarItemConfig {
+  view: NavbarView
+  label: string
+  iconId: NavIconId
+  groupId: NavbarGroupId | null
+  order: number
+}
+
+export interface NavbarConfig {
+  groups: NavbarGroupConfig[]
+  items: NavbarItemConfig[]
+}
+
 export interface Settings {
   themeName: ThemeName
   dataDir: string | null
   installerCompleted: boolean
   weekStart: string | null
   keyboardShortcuts?: KeyboardShortcut[]
+  navbarConfig?: NavbarConfig
   backupEnabled?: boolean
   backupIntervalMinutes?: number
 }

@@ -1,17 +1,28 @@
 import { useEffect, useRef } from 'react'
 import type { MouseEvent } from 'react'
 import type { AppView } from './InternalNav'
-import type { NavGroup } from './navGroups'
+
+export interface NavDropdownItem {
+  view: AppView
+  label: string
+  icon: JSX.Element
+}
+
+export interface NavDropdownGroup {
+  id: string
+  label: string
+  items: NavDropdownItem[]
+}
 
 interface NavDropdownProps {
-  group: NavGroup
+  group: NavDropdownGroup
   activeView: AppView
   onSelect: (view: AppView) => void
   onClose: () => void
-  buttonRef: React.RefObject<HTMLButtonElement>
+  anchorEl: HTMLButtonElement | null
 }
 
-export const NavDropdown = ({ group, activeView, onSelect, onClose, buttonRef }: NavDropdownProps) => {
+export const NavDropdown = ({ group, activeView, onSelect, onClose, anchorEl }: NavDropdownProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -19,8 +30,8 @@ export const NavDropdown = ({ group, activeView, onSelect, onClose, buttonRef }:
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
+        anchorEl &&
+        !anchorEl.contains(event.target as Node)
       ) {
         onClose()
       }
@@ -35,9 +46,8 @@ export const NavDropdown = ({ group, activeView, onSelect, onClose, buttonRef }:
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
 
-    // Posicionar dropdown
-    if (buttonRef.current && dropdownRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect()
+    if (anchorEl && dropdownRef.current) {
+      const buttonRect = anchorEl.getBoundingClientRect()
       dropdownRef.current.style.top = `${buttonRect.bottom + 4}px`
       dropdownRef.current.style.left = `${buttonRect.left}px`
     }
@@ -46,7 +56,7 @@ export const NavDropdown = ({ group, activeView, onSelect, onClose, buttonRef }:
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [onClose, buttonRef])
+  }, [anchorEl, onClose])
 
   const handleItemClick = (view: AppView) => (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()

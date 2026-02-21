@@ -1,6 +1,5 @@
-﻿import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Settings, ThemeName, RegisteredIDE, KeyboardShortcut, CalendarEvent } from '../types'
-import { useMemo } from 'react'
 import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'

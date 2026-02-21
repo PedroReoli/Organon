@@ -24,6 +24,7 @@ import { FinancialView } from './FinancialView'
 import { InstallerView } from './InstallerView'
 import { ShortcutSearchModal } from './ShortcutSearchModal'
 import { HistoryView } from './HistoryView'
+import { NavbarCustomizeModal } from './NavbarCustomizeModal'
 
 import type { AppView } from './InternalNav'
 
@@ -170,6 +171,7 @@ export const App = () => {
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
   const [showQuickSearch, setShowQuickSearch] = useState(false)
   const [showShortcutSearch, setShowShortcutSearch] = useState(false)
+  const [showNavbarCustomizeModal, setShowNavbarCustomizeModal] = useState(false)
   const [reduceModeSignal, setReduceModeSignal] = useState(0)
   const [pendingOpenCardId, setPendingOpenCardId] = useState<string | null>(null)
   const [pendingCalendarDate, setPendingCalendarDate] = useState<string | null>(null)
@@ -363,7 +365,13 @@ export const App = () => {
       <div className="app-container">
         <Titlebar />
         <div className="app-body">
-          <InternalNav activeView={activeView} onChange={setActiveView} disabled />
+          <InternalNav
+            activeView={activeView}
+            onChange={setActiveView}
+            disabled
+            navbarConfig={settings.navbarConfig}
+            onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
+          />
           <div className="app-view">
             <div className="app-status" style={{ color: 'var(--color-text-muted)' }}>
               <div className="app-status-title">Carregando...</div>
@@ -380,7 +388,13 @@ export const App = () => {
       <div className="app-container">
         <Titlebar />
         <div className="app-body">
-          <InternalNav activeView={activeView} onChange={setActiveView} disabled />
+          <InternalNav
+            activeView={activeView}
+            onChange={setActiveView}
+            disabled
+            navbarConfig={settings.navbarConfig}
+            onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
+          />
           <div className="app-view">
             <div className="app-status" style={{ color: 'var(--color-danger)' }}>
               <div className="app-status-title">Erro ao carregar</div>
@@ -396,7 +410,12 @@ export const App = () => {
     <div className="app-container">
       <Titlebar />
       <div className="app-body">
-        <InternalNav activeView={activeView} onChange={setActiveView} />
+        <InternalNav
+          activeView={activeView}
+          onChange={setActiveView}
+          navbarConfig={settings.navbarConfig}
+          onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
+        />
 
         <div className="app-view">
           {activeView === 'today' && (
@@ -761,6 +780,13 @@ export const App = () => {
           }}
         />
       )}
+
+      <NavbarCustomizeModal
+        isOpen={showNavbarCustomizeModal}
+        onClose={() => setShowNavbarCustomizeModal(false)}
+        settings={settings}
+        onUpdateSettings={updateSettings}
+      />
     </div>
   )
 }

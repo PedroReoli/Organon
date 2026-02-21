@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
-import { navGroups, type NavGroup } from './navGroups'
-import { NavDropdown } from './NavDropdown'
+import type { NavbarConfig } from '../types'
+import { renderNavIcon, resolveNavbarConfig } from './navConfig'
+import { NavDropdown, type NavDropdownGroup } from './NavDropdown'
 
 export type AppView =
   | 'today'
@@ -27,23 +28,19 @@ interface InternalNavProps {
   activeView: AppView
   onChange: (view: AppView) => void
   disabled?: boolean
+  navbarConfig?: NavbarConfig
+  onOpenNavbarCustomize?: () => void
 }
 
 interface NavGroupItem {
   type: 'item' | 'group'
   view?: AppView
-  group?: NavGroup
+  group?: NavDropdownGroup
   label: string
   icon: JSX.Element
 }
 
-// Ícone do Dashboard
-const todayIcon = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <circle cx="8" cy="8" r="6" />
-    <path d="M8 4v4l2.5 2.5" />
-  </svg>
-)
+const todayIcon = renderNavIcon('dashboard')
 
 const settingsIcon = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -52,61 +49,87 @@ const settingsIcon = (
   </svg>
 )
 
-// Itens da navbar (itens individuais + grupos)
-const navItems: NavGroupItem[] = [
-  {
-    type: 'item',
-    view: 'today',
-    label: 'Dashboard',
-    icon: todayIcon,
-  },
-  ...navGroups.map(group => ({
-    type: 'group' as const,
-    group,
-    label: group.label,
-    icon: group.icon,
-  })),
-]
+const navbarCustomizeIcon = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M2.5 5.5h7" />
+    <path d="M2.5 10.5h11" />
+    <circle cx="11.5" cy="5.5" r="1.5" />
+    <circle cx="6.5" cy="10.5" r="1.5" />
+  </svg>
+)
 
-export const InternalNav = ({ activeView, onChange, disabled = false }: InternalNavProps) => {
-  const [openDropdown, setOpenDropdown] = useState<NavGroup | null>(null)
-  const orgRef = useRef<HTMLButtonElement>(null)
-  const workRef = useRef<HTMLButtonElement>(null)
-  const contentRef = useRef<HTMLButtonElement>(null)
-  const toolsRef = useRef<HTMLButtonElement>(null)
-  const personalRef = useRef<HTMLButtonElement>(null)
+export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize }: InternalNavProps) => {
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const groupButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
-  const getButtonRef = (groupId: string): React.RefObject<HTMLButtonElement> => {
-    switch (groupId) {
-      case 'organization': return orgRef
-      case 'work': return workRef
-      case 'content': return contentRef
-      case 'tools': return toolsRef
-      case 'personal': return personalRef
-      default: return { current: null }
+  const resolvedGroups = useMemo(() => {
+    const config = resolveNavbarConfig(navbarConfig)
+    const enabledGroups = config.groups.filter(group => group.enabled)
+    const itemsByGroup = new Map(enabledGroups.map(group => [group.id, [] as NavDropdownGroup['items']]))
+
+    for (const item of config.items) {
+      if (!item.groupId) continue
+      const list = itemsByGroup.get(item.groupId)
+      if (!list) continue
+      list.push({
+        view: item.view as AppView,
+        label: item.label,
+        icon: renderNavIcon(item.iconId),
+      })
     }
-  }
+
+    return enabledGroups.map(group => ({
+      id: group.id,
+      label: group.label,
+      icon: renderNavIcon(group.iconId),
+      items: itemsByGroup.get(group.id) ?? [],
+    }))
+  }, [navbarConfig])
+
+  const navItems: NavGroupItem[] = useMemo(() => ([
+    {
+      type: 'item',
+      view: 'today',
+      label: 'Dashboard',
+      icon: todayIcon,
+    },
+    ...resolvedGroups.map(group => ({
+      type: 'group' as const,
+      group: {
+        id: group.id,
+        label: group.label,
+        items: group.items,
+      },
+      label: group.label,
+      icon: group.icon,
+    })),
+  ]), [resolvedGroups])
 
   const handleClick = (view: AppView) => (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     if (disabled) return
-    setOpenDropdown(null)
+    setOpenDropdownId(null)
     onChange(view)
   }
 
-  const handleGroupClick = (group: NavGroup) => (event: MouseEvent<HTMLButtonElement>) => {
+  const handleGroupClick = (groupId: string) => (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     if (disabled) return
-    setOpenDropdown(openDropdown?.id === group.id ? null : group)
+    setOpenDropdownId(prev => (prev === groupId ? null : groupId))
   }
 
-  const isGroupActive = (group: NavGroup): boolean => {
-    return group.items.some(item => item.view === activeView)
-  }
+  const isGroupActive = (group: NavDropdownGroup): boolean => group.items.some(item => item.view === activeView)
 
   const handleDropdownSelect = (view: AppView) => {
     onChange(view)
-    setOpenDropdown(null)
+    setOpenDropdownId(null)
+  }
+
+  const handleOpenNavbarCustomize = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    if (disabled) return
+    setOpenDropdownId(null)
+    onOpenNavbarCustomize?.()
   }
 
   return (
@@ -129,17 +152,21 @@ export const InternalNav = ({ activeView, onChange, disabled = false }: Internal
                   <span>{item.label}</span>
                 </button>
               )
-            } else if (item.type === 'group' && item.group) {
+            }
+
+            if (item.type === 'group' && item.group) {
               const isActive = isGroupActive(item.group)
-              const isOpen = openDropdown?.id === item.group.id
-              const buttonRef = getButtonRef(item.group.id)
-              
+              const isOpen = openDropdownId === item.group.id
+              const anchorEl = groupButtonRefs.current[item.group.id] ?? null
+
               return (
                 <div key={item.group.id} className="nav-dropdown-wrapper">
                   <button
-                    ref={buttonRef}
+                    ref={el => {
+                      groupButtonRefs.current[item.group!.id] = el
+                    }}
                     className={`app-nav-tab ${isActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''}`}
-                    onClick={handleGroupClick(item.group)}
+                    onClick={handleGroupClick(item.group.id)}
                     disabled={disabled}
                     title={item.label}
                   >
@@ -158,18 +185,31 @@ export const InternalNav = ({ activeView, onChange, disabled = false }: Internal
                       group={item.group}
                       activeView={activeView}
                       onSelect={handleDropdownSelect}
-                      onClose={() => setOpenDropdown(null)}
-                      buttonRef={buttonRef}
+                      onClose={() => setOpenDropdownId(null)}
+                      anchorEl={anchorEl}
                     />
                   )}
                 </div>
               )
             }
+
             return null
           })}
         </div>
 
         <div className="app-nav-actions">
+          <button
+            className="app-nav-action app-nav-action-navbar"
+            onClick={handleOpenNavbarCustomize}
+            disabled={disabled}
+            title="Personalizar navbar"
+          >
+            <span className="app-nav-icon" aria-hidden="true">
+              {navbarCustomizeIcon}
+            </span>
+            <span>Navbar</span>
+          </button>
+
           <button
             className={`app-nav-action app-nav-action-settings ${activeView === 'settings' ? 'is-active' : ''}`}
             onClick={handleClick('settings')}
@@ -182,7 +222,6 @@ export const InternalNav = ({ activeView, onChange, disabled = false }: Internal
             <span>Config</span>
           </button>
         </div>
-
       </nav>
     </>
   )
