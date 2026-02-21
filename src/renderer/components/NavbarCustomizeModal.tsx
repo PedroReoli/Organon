@@ -1,9 +1,9 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Settings, NavbarConfig, NavbarGroupConfig, NavbarGroupId, NavbarItemConfig, NavbarView } from '../types'
-import { DndContext, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import { SortableContext, arrayMove, horizontalListSortingStrategy, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { NAVBAR_VIEW_LABELS, NAV_ICON_OPTIONS, createDefaultNavbarConfig, renderNavIcon, resolveNavbarConfig } from './navConfig'
 
@@ -37,16 +37,72 @@ const parseBucketGroupId = (raw: string): NavbarGroupId | null => raw.startsWith
   ? raw.slice(GROUP_BUCKET_PREFIX.length) as NavbarGroupId
   : null
 
-const DroppableBucket = ({ id, className, children }: { id: string; className: string; children: ReactNode }) => {
-  const { setNodeRef, isOver } = useDroppable({ id })
+// ─── Icon Picker ────────────────────────────────────────────────────────────
+
+const IconPicker = ({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (id: string) => void
+}) => {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
   return (
-    <div ref={setNodeRef} className={`${className} ${isOver ? 'is-drop-over' : ''}`}>
-      {children}
+    <div ref={ref} className="icon-picker">
+      <button
+        type="button"
+        className="icon-picker-trigger settings-navbar-icon"
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v) }}
+        title="Trocar icone"
+      >
+        {renderNavIcon(value as any)}
+      </button>
+      {open && (
+        <div className="icon-picker-popup">
+          {NAV_ICON_OPTIONS.map(option => (
+            <button
+              key={option.id}
+              type="button"
+              className={`icon-picker-option ${value === option.id ? 'is-selected' : ''}`}
+              title={option.label}
+              onClick={(e) => { e.stopPropagation(); onChange(option.id); setOpen(false) }}
+            >
+              {renderNavIcon(option.id)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-const SortableGroupCard = ({
+// ─── Drag handle icon ───────────────────────────────────────────────────────
+
+const DragDots = ({ size = 10 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
+    <circle cx="5" cy="3.5" r="1.4" />
+    <circle cx="11" cy="3.5" r="1.4" />
+    <circle cx="5" cy="8" r="1.4" />
+    <circle cx="11" cy="8" r="1.4" />
+    <circle cx="5" cy="12.5" r="1.4" />
+    <circle cx="11" cy="12.5" r="1.4" />
+  </svg>
+)
+
+// ─── Sortable Group Row (compact, vertical) ─────────────────────────────────
+
+const SortableGroupRow = ({
   group,
   onUpdateLabel,
   onUpdateIcon,
@@ -57,85 +113,145 @@ const SortableGroupCard = ({
   onUpdateIcon: (groupId: NavbarGroupId, iconId: NavbarConfig['groups'][number]['iconId']) => void
   onRemove: (groupId: NavbarGroupId) => void
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: getGroupDragId(group.id) })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: getGroupDragId(group.id),
+  })
+  const [editing, setEditing] = useState(false)
 
   return (
     <div
       ref={setNodeRef}
-      className={`navbar-group-card ${isDragging ? 'is-dragging' : ''}`}
+      className={`navbar-group-row ${isDragging ? 'is-dragging' : ''}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <div className="navbar-group-card-top">
-        <button type="button" className="navbar-drag-handle" {...attributes} {...listeners} title="Arrastar item">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="4" cy="4" r="1" /><circle cx="12" cy="4" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="12" cy="12" r="1" />
-          </svg>
-        </button>
+      <button
+        type="button"
+        className="navbar-drag-handle"
+        {...attributes}
+        {...listeners}
+        title="Arrastar para reordenar"
+      >
+        <DragDots size={11} />
+      </button>
 
-        <span className="settings-navbar-icon" aria-hidden="true">{renderNavIcon(group.iconId)}</span>
-
-        <button type="button" className="navbar-group-remove" onClick={() => onRemove(group.id)} title="Remover da navbar">
-          Remover
-        </button>
-      </div>
-
-      <input
-        className="form-input"
-        value={group.label}
-        onChange={event => onUpdateLabel(group.id, event.target.value)}
-        placeholder="Nome do item"
+      <IconPicker
+        value={group.iconId}
+        onChange={(id) => onUpdateIcon(group.id, id as NavbarConfig['groups'][number]['iconId'])}
       />
 
-      <select
-        className="form-input"
-        value={group.iconId}
-        onChange={event => onUpdateIcon(group.id, event.target.value as NavbarConfig['groups'][number]['iconId'])}
+      {editing ? (
+        <input
+          className="navbar-group-label-input form-input"
+          value={group.label}
+          onChange={e => onUpdateLabel(group.id, e.target.value)}
+          onBlur={() => setEditing(false)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditing(false) }}
+          autoFocus
+          onPointerDown={e => e.stopPropagation()}
+        />
+      ) : (
+        <button
+          type="button"
+          className="navbar-group-label-btn"
+          onClick={() => setEditing(true)}
+          title="Clique para editar o nome"
+        >
+          <span>{group.label}</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        </button>
+      )}
+
+      <button
+        type="button"
+        className="navbar-group-remove-btn"
+        onClick={() => onRemove(group.id)}
+        title="Remover da navbar"
       >
-        {NAV_ICON_OPTIONS.map(option => (
-          <option key={option.id} value={option.id}>{option.label}</option>
-        ))}
-      </select>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
     </div>
   )
 }
 
-const SortableViewCard = ({
+// ─── Sortable View Item (compact) ───────────────────────────────────────────
+
+const SortableViewItem = ({
   item,
   onUpdateIcon,
 }: {
   item: NavbarItemConfig
   onUpdateIcon: (view: NavbarView, iconId: NavbarConfig['items'][number]['iconId']) => void
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: getViewDragId(item.view) })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: getViewDragId(item.view),
+  })
 
   return (
     <div
       ref={setNodeRef}
-      className={`navbar-view-card ${isDragging ? 'is-dragging' : ''}`}
+      className={`navbar-view-item ${isDragging ? 'is-dragging' : ''}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <button type="button" className="navbar-drag-handle" {...attributes} {...listeners} title="Arrastar view">
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="4" cy="4" r="1" /><circle cx="12" cy="4" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="12" cy="12" r="1" />
-        </svg>
+      <button
+        type="button"
+        className="navbar-drag-handle"
+        {...attributes}
+        {...listeners}
+        title="Arrastar"
+      >
+        <DragDots size={9} />
       </button>
 
-      <span className="settings-navbar-icon" aria-hidden="true">{renderNavIcon(item.iconId)}</span>
-      <span className="navbar-view-label">{NAVBAR_VIEW_LABELS[item.view]}</span>
+      <div onPointerDown={e => e.stopPropagation()}>
+        <IconPicker
+          value={item.iconId}
+          onChange={(id) => onUpdateIcon(item.view, id as NavbarConfig['items'][number]['iconId'])}
+        />
+      </div>
 
-      <select
-        className="form-input navbar-view-icon-select"
-        value={item.iconId}
-        onChange={event => onUpdateIcon(item.view, event.target.value as NavbarConfig['items'][number]['iconId'])}
-        onPointerDown={event => event.stopPropagation()}
-      >
-        {NAV_ICON_OPTIONS.map(option => (
-          <option key={option.id} value={option.id}>{option.label}</option>
-        ))}
-      </select>
+      <span className="navbar-view-item-label">{NAVBAR_VIEW_LABELS[item.view]}</span>
     </div>
   )
 }
+
+// ─── Droppable Bucket ───────────────────────────────────────────────────────
+
+const DroppableBucket = ({ id, className, children }: { id: string; className: string; children: ReactNode }) => {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div ref={setNodeRef} className={`${className} ${isOver ? 'is-drop-over' : ''}`}>
+      {children}
+    </div>
+  )
+}
+
+// ─── Navbar Preview Bar ──────────────────────────────────────────────────────
+
+const NavbarPreviewBar = ({ groups }: { groups: NavbarGroupConfig[] }) => (
+  <div className="navbar-preview-bar">
+    <span className="navbar-preview-label">Preview</span>
+    <div className="navbar-preview-items">
+      {groups.length === 0 ? (
+        <span className="navbar-preview-empty">Nenhum item na navbar</span>
+      ) : (
+        groups.map(group => (
+          <div key={group.id} className="navbar-preview-item">
+            <span className="settings-navbar-icon">{renderNavIcon(group.iconId)}</span>
+            <span className="navbar-preview-item-label">{group.label}</span>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+)
+
+// ─── Main Modal ──────────────────────────────────────────────────────────────
 
 export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettings }: NavbarCustomizeModalProps) => {
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -389,13 +505,9 @@ export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettin
 
   useEffect(() => {
     if (!isOpen) return
-
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
+      if (event.key === 'Escape') onClose()
     }
-
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
@@ -406,6 +518,9 @@ export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettin
   const activeDragGroup = activeDragId ? parseGroupId(activeDragId) : null
   const activeDragView = activeDragId ? parseViewId(activeDragId) : null
 
+  const dragGhostGroup = activeDragGroup ? orderedGroups.find(g => g.id === activeDragGroup) : null
+  const dragGhostView = activeDragView ? navbarConfig.items.find(i => i.view === activeDragView) : null
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal navbar-customize-modal" onClick={event => event.stopPropagation()}>
@@ -415,9 +530,7 @@ export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettin
         </header>
 
         <div className="modal-body navbar-customize-body">
-          <p className="settings-help-text">
-            Arraste para ordenar. Remova/adicione itens da navbar e arraste views entre os itens.
-          </p>
+          <NavbarPreviewBar groups={activeGroups} />
 
           <DndContext
             sensors={sensors}
@@ -426,107 +539,130 @@ export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettin
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
-            <section className="navbar-customize-section">
-              <div className="navbar-customize-section-head">
-                <h3>Itens da Navbar</h3>
-                <span>{activeGroups.length} ativo(s)</span>
-              </div>
-
-              <SortableContext items={activeGroupDragIds} strategy={horizontalListSortingStrategy}>
-                <div className="navbar-group-strip">
-                  {activeGroups.map(group => (
-                    <SortableGroupCard
-                      key={group.id}
-                      group={group}
-                      onUpdateLabel={updateGroupLabel}
-                      onUpdateIcon={updateGroupIcon}
-                      onRemove={(groupId) => setGroupEnabled(groupId, false)}
-                    />
-                  ))}
+            <div className="navbar-customize-panels">
+              {/* ── Left: Groups panel ── */}
+              <div className="navbar-groups-panel">
+                <div className="navbar-panel-head">
+                  <h3>Grupos</h3>
+                  <span>{activeGroups.length} ativo(s)</span>
                 </div>
-              </SortableContext>
 
-              <div className="navbar-group-pool">
-                <span className="navbar-group-pool-label">Adicionar item:</span>
-                {hiddenGroups.length === 0 && <span className="navbar-group-pool-empty">Todos os itens estao ativos</span>}
-                {hiddenGroups.map(group => (
-                  <button
-                    key={group.id}
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setGroupEnabled(group.id, true)}
-                    title="Adicionar item na navbar"
-                  >
-                    + {group.label}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="navbar-customize-section">
-              <div className="navbar-customize-section-head">
-                <h3>Views</h3>
-                <span>Arraste para mover entre itens</span>
-              </div>
-
-              <div className="navbar-view-board">
-                {activeGroups.map(group => {
-                  const bucketId = getGroupBucketId(group.id)
-                  const views = itemsByBucket.get(group.id) ?? []
-                  const sortableIds = views.map(item => getViewDragId(item.view))
-
-                  return (
-                    <div key={group.id} className="navbar-view-column">
-                      <div className="navbar-view-column-head">
-                        <span className="settings-navbar-icon" aria-hidden="true">{renderNavIcon(group.iconId)}</span>
-                        <strong>{group.label}</strong>
-                        <span>{views.length}</span>
-                      </div>
-
-                      <DroppableBucket id={bucketId} className="navbar-view-column-body">
-                        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                          <div className="navbar-view-list">
-                            {views.map(item => (
-                              <SortableViewCard key={item.view} item={item} onUpdateIcon={updateViewIcon} />
-                            ))}
-                            {views.length === 0 && <div className="navbar-view-empty">Solte views aqui</div>}
-                          </div>
-                        </SortableContext>
-                      </DroppableBucket>
-                    </div>
-                  )
-                })}
-
-                <div className="navbar-view-column navbar-view-column-unassigned">
-                  <div className="navbar-view-column-head">
-                    <strong>Fora da Navbar</strong>
-                    <span>{(itemsByBucket.get(UNASSIGNED_KEY) ?? []).length}</span>
+                <SortableContext items={activeGroupDragIds} strategy={verticalListSortingStrategy}>
+                  <div className="navbar-groups-list">
+                    {activeGroups.length === 0 && (
+                      <div className="navbar-empty-hint">Adicione um grupo abaixo</div>
+                    )}
+                    {activeGroups.map(group => (
+                      <SortableGroupRow
+                        key={group.id}
+                        group={group}
+                        onUpdateLabel={updateGroupLabel}
+                        onUpdateIcon={updateGroupIcon}
+                        onRemove={(id) => setGroupEnabled(id, false)}
+                      />
+                    ))}
                   </div>
+                </SortableContext>
 
-                  <DroppableBucket id={UNASSIGNED_BUCKET_ID} className="navbar-view-column-body">
-                    <SortableContext
-                      items={(itemsByBucket.get(UNASSIGNED_KEY) ?? []).map(item => getViewDragId(item.view))}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="navbar-view-list">
-                        {(itemsByBucket.get(UNASSIGNED_KEY) ?? []).map(item => (
-                          <SortableViewCard key={item.view} item={item} onUpdateIcon={updateViewIcon} />
-                        ))}
-                        {(itemsByBucket.get(UNASSIGNED_KEY) ?? []).length === 0 && (
-                          <div className="navbar-view-empty">Sem views fora da navbar</div>
-                        )}
+                {hiddenGroups.length > 0 && (
+                  <div className="navbar-groups-pool">
+                    <span className="navbar-pool-label">Adicionar grupo:</span>
+                    <div className="navbar-pool-items">
+                      {hiddenGroups.map(group => (
+                        <button
+                          key={group.id}
+                          className="navbar-pool-btn"
+                          onClick={() => setGroupEnabled(group.id, true)}
+                          title="Adicionar a navbar"
+                        >
+                          <span className="settings-navbar-icon">{renderNavIcon(group.iconId)}</span>
+                          <span>{group.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Right: Views board ── */}
+              <div className="navbar-views-panel">
+                <div className="navbar-panel-head">
+                  <h3>Views</h3>
+                  <span>Arraste views entre grupos</span>
+                </div>
+
+                <div className="navbar-view-board">
+                  {activeGroups.map(group => {
+                    const bucketId = getGroupBucketId(group.id)
+                    const views = itemsByBucket.get(group.id) ?? []
+                    const sortableIds = views.map(item => getViewDragId(item.view))
+
+                    return (
+                      <div key={group.id} className="navbar-view-column">
+                        <div className="navbar-view-column-head">
+                          <span className="settings-navbar-icon">{renderNavIcon(group.iconId)}</span>
+                          <strong>{group.label}</strong>
+                          <span className="navbar-view-column-count">{views.length}</span>
+                        </div>
+
+                        <DroppableBucket id={bucketId} className="navbar-view-column-body">
+                          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                            <div className="navbar-view-list">
+                              {views.map(item => (
+                                <SortableViewItem key={item.view} item={item} onUpdateIcon={updateViewIcon} />
+                              ))}
+                              {views.length === 0 && (
+                                <div className="navbar-view-empty">Solte views aqui</div>
+                              )}
+                            </div>
+                          </SortableContext>
+                        </DroppableBucket>
                       </div>
-                    </SortableContext>
-                  </DroppableBucket>
+                    )
+                  })}
+
+                  <div className="navbar-view-column navbar-view-column-unassigned">
+                    <div className="navbar-view-column-head">
+                      <strong>Fora da Navbar</strong>
+                      <span className="navbar-view-column-count">
+                        {(itemsByBucket.get(UNASSIGNED_KEY) ?? []).length}
+                      </span>
+                    </div>
+
+                    <DroppableBucket id={UNASSIGNED_BUCKET_ID} className="navbar-view-column-body">
+                      <SortableContext
+                        items={(itemsByBucket.get(UNASSIGNED_KEY) ?? []).map(item => getViewDragId(item.view))}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="navbar-view-list">
+                          {(itemsByBucket.get(UNASSIGNED_KEY) ?? []).map(item => (
+                            <SortableViewItem key={item.view} item={item} onUpdateIcon={updateViewIcon} />
+                          ))}
+                          {(itemsByBucket.get(UNASSIGNED_KEY) ?? []).length === 0 && (
+                            <div className="navbar-view-empty">Sem views fora da navbar</div>
+                          )}
+                        </div>
+                      </SortableContext>
+                    </DroppableBucket>
+                  </div>
                 </div>
               </div>
-            </section>
+            </div>
 
-            {(activeDragGroup || activeDragView) && (
-              <div className="navbar-drag-overlay">
-                {activeDragGroup && <span>{orderedGroups.find(group => group.id === activeDragGroup)?.label ?? 'Item'}</span>}
-                {activeDragView && <span>{NAVBAR_VIEW_LABELS[activeDragView]}</span>}
-              </div>
-            )}
+            <DragOverlay dropAnimation={null}>
+              {dragGhostGroup && (
+                <div className="navbar-drag-ghost">
+                  <span className="settings-navbar-icon">{renderNavIcon(dragGhostGroup.iconId)}</span>
+                  <span>{dragGhostGroup.label}</span>
+                </div>
+              )}
+              {dragGhostView && (
+                <div className="navbar-drag-ghost">
+                  <span className="settings-navbar-icon">{renderNavIcon(dragGhostView.iconId)}</span>
+                  <span>{NAVBAR_VIEW_LABELS[dragGhostView.view]}</span>
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
         </div>
 

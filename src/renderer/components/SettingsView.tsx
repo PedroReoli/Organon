@@ -77,6 +77,8 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   const themeCarouselRef = useRef<HTMLDivElement>(null)
   const [backups, setBackups] = useState<Array<{ name: string; path: string; date: string; size: number }>>([])
   const [backupLoading, setBackupLoading] = useState(false)
+  const [backupPage, setBackupPage] = useState(0)
+  const BACKUPS_PER_PAGE = 3
   const [mergeLoading, setMergeLoading] = useState(false)
   const [importMarkdownLoading, setImportMarkdownLoading] = useState(false)
   const [importPlanningLoading, setImportPlanningLoading] = useState(false)
@@ -285,6 +287,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
       if (result.success) {
         const list = await window.electronAPI.listBackups()
         setBackups(list)
+        setBackupPage(0)
         alert('Backup criado com sucesso!')
       } else {
         alert(`Erro ao criar backup: ${result.error}`)
@@ -867,30 +870,58 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                 )}
               </div>
 
-              {backups.length > 0 && (
-                <div className="settings-backups-list">
-                  <h4>Backups Disponiveis</h4>
-                  <div className="settings-backups-items">
-                    {backups.map((backup) => (
-                      <div key={backup.path} className="settings-backup-item">
-                        <div className="settings-backup-item-info">
-                          <div className="settings-backup-item-name">{backup.name}</div>
-                          <div className="settings-backup-item-meta">
-                            {formatDate(backup.date)} • {formatFileSize(backup.size)}
+              {backups.length > 0 && (() => {
+                const totalPages = Math.ceil(backups.length / BACKUPS_PER_PAGE)
+                const paginated = backups.slice(backupPage * BACKUPS_PER_PAGE, (backupPage + 1) * BACKUPS_PER_PAGE)
+                return (
+                  <div className="settings-backups-list">
+                    <div className="settings-backups-header">
+                      <h4>Backups Disponiveis</h4>
+                      <span className="settings-backups-total">{backups.length} backup(s)</span>
+                    </div>
+                    <div className="settings-backups-items">
+                      {paginated.map((backup) => (
+                        <div key={backup.path} className="settings-backup-item">
+                          <div className="settings-backup-item-info">
+                            <div className="settings-backup-item-name">{backup.name}</div>
+                            <div className="settings-backup-item-meta">
+                              {formatDate(backup.date)} • {formatFileSize(backup.size)}
+                            </div>
                           </div>
+                          <button
+                            className="btn btn-secondary btn-xs"
+                            onClick={() => handleRestoreBackup(backup.path)}
+                            disabled={backupLoading}
+                          >
+                            Restaurar
+                          </button>
                         </div>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="settings-backups-pagination">
                         <button
                           className="btn btn-secondary btn-xs"
-                          onClick={() => handleRestoreBackup(backup.path)}
-                          disabled={backupLoading}
+                          onClick={() => setBackupPage(p => Math.max(0, p - 1))}
+                          disabled={backupPage === 0}
                         >
-                          Restaurar
+                          ‹
+                        </button>
+                        <span className="settings-backups-page-info">
+                          {backupPage + 1} / {totalPages}
+                        </span>
+                        <button
+                          className="btn btn-secondary btn-xs"
+                          onClick={() => setBackupPage(p => Math.min(totalPages - 1, p + 1))}
+                          disabled={backupPage >= totalPages - 1}
+                        >
+                          ›
                         </button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
 
             <div className="settings-data-card">
