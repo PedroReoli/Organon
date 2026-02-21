@@ -1,5 +1,4 @@
-﻿import { useState } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -31,6 +30,7 @@ interface PlannerViewProps {
   onReorderCard: (day: Day | null, period: Period | null, orderedIds: string[]) => void
   onEditEvent: (eventId: string, updates: Partial<Pick<CalendarEvent, 'title' | 'description' | 'date' | 'time' | 'color' | 'recurrence' | 'reminder'>>) => void
   onRemoveEvent: (eventId: string) => void
+  reduceModeSignal?: number
   openCardId?: string | null
   onOpenCardHandled?: () => void
 }
@@ -47,12 +47,15 @@ export const PlannerView = ({
   onReorderCard,
   onEditEvent,
   onRemoveEvent,
+  reduceModeSignal,
   openCardId,
   onOpenCardHandled,
 }: PlannerViewProps) => {
   const [activeCard, setActiveCard] = useState<CardType | null>(null)
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<{ event: CalendarEvent; period: Period } | null>(null)
+  const [isBacklogOpen, setIsBacklogOpen] = useState(true)
+  const reduceModeHandledRef = useRef<number | undefined>(reduceModeSignal)
 
   const weekDates = getCurrentWeekDates()
   const weekStart = weekDates.mon
@@ -67,6 +70,17 @@ export const PlannerView = ({
     setSelectedCard(card)
     onOpenCardHandled?.()
   }, [openCardId, cards, onOpenCardHandled])
+
+  useEffect(() => {
+    if (typeof reduceModeSignal !== 'number') return
+    if (reduceModeHandledRef.current === undefined) {
+      reduceModeHandledRef.current = reduceModeSignal
+      return
+    }
+    if (reduceModeSignal <= reduceModeHandledRef.current) return
+    reduceModeHandledRef.current = reduceModeSignal
+    setIsBacklogOpen(prev => !prev)
+  }, [reduceModeSignal])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -145,6 +159,8 @@ export const PlannerView = ({
           cards={getCardsForLocation(null, null)}
           onAddCard={onAddCard}
           onCardClick={setSelectedCard}
+          isCollapsed={!isBacklogOpen}
+          onToggleCollapsed={() => setIsBacklogOpen(prev => !prev)}
         />
 
         <WeekGrid
@@ -197,3 +213,4 @@ export const PlannerView = ({
     </DndContext>
   )
 }
+

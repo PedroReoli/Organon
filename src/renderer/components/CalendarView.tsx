@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Card, CalendarEvent } from '../types'
 import { expandCalendarEvents, getTodayISO, formatDateFull } from '../utils'
 
@@ -7,6 +7,7 @@ interface CalendarViewProps {
   events: CalendarEvent[]
   onAddEvent: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => void
   onRemoveEvent: (eventId: string) => void
+  reduceModeSignal?: number
   focusDateISO?: string | null
   onFocusDateHandled?: () => void
 }
@@ -18,10 +19,12 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 
-export const CalendarView = ({ cards, events, onAddEvent, onRemoveEvent, focusDateISO, onFocusDateHandled }: CalendarViewProps) => {
+export const CalendarView = ({ cards, events, onAddEvent, onRemoveEvent, reduceModeSignal, focusDateISO, onFocusDateHandled }: CalendarViewProps) => {
   const today = getTodayISO()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [isSideOpen, setIsSideOpen] = useState(true)
+  const reduceModeHandledRef = useRef<number | undefined>(reduceModeSignal)
 
   // New event form state
   const [newEventTitle, setNewEventTitle] = useState('')
@@ -44,6 +47,17 @@ export const CalendarView = ({ cards, events, onAddEvent, onRemoveEvent, focusDa
     if (yyyy && mm) setCurrentDate(new Date(yyyy, mm - 1, 1))
     onFocusDateHandled?.()
   }, [focusDateISO, onFocusDateHandled])
+
+  useEffect(() => {
+    if (typeof reduceModeSignal !== 'number') return
+    if (reduceModeHandledRef.current === undefined) {
+      reduceModeHandledRef.current = reduceModeSignal
+      return
+    }
+    if (reduceModeSignal <= reduceModeHandledRef.current) return
+    reduceModeHandledRef.current = reduceModeSignal
+    setIsSideOpen(prev => !prev)
+  }, [reduceModeSignal])
 
   // Sync form date with selected date
   useEffect(() => {
@@ -166,8 +180,36 @@ export const CalendarView = ({ cards, events, onAddEvent, onRemoveEvent, focusDa
       </div>
 
       {/* Side panel — always visible */}
-      <div className="calendar-side is-open">
+      <div className={`calendar-side ${isSideOpen ? 'is-open' : 'is-collapsed'}`}>
+        <div className="calendar-side-topbar">
+          <div className="calendar-side-topbar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {isSideOpen ? <span>Painel</span> : null}
+          </div>
+          <button
+            type="button"
+            className="calendar-side-toggle-btn"
+            onClick={() => setIsSideOpen(prev => !prev)}
+            title={isSideOpen ? 'Recolher painel' : 'Expandir painel'}
+            aria-label={isSideOpen ? 'Recolher painel' : 'Expandir painel'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              {isSideOpen ? (
+                <polyline points="15 18 9 12 15 6" />
+              ) : (
+                <polyline points="9 18 15 12 9 6" />
+              )}
+            </svg>
+          </button>
+        </div>
         {/* New event form — always visible */}
+        {isSideOpen ? (
+          <>
         <div className="calendar-side-form">
           <h4 className="calendar-side-form-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
@@ -332,6 +374,8 @@ export const CalendarView = ({ cards, events, onAddEvent, onRemoveEvent, focusDa
             <p>Selecione um dia para ver os detalhes.</p>
           </div>
         )}
+          </>
+        ) : null}
       </div>
     </div>
   )

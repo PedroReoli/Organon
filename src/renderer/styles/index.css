@@ -244,6 +244,12 @@ input:focus, textarea:focus, select:focus {
   min-width: var(--backlog-width);
   background: var(--color-backlog-bg);
   border-right: 1px solid var(--color-border);
+  transition: width var(--transition-fast), min-width var(--transition-fast);
+}
+
+.backlog.is-collapsed {
+  width: 56px;
+  min-width: 56px;
 }
 
 .backlog-header {
@@ -255,12 +261,38 @@ input:focus, textarea:focus, select:focus {
   border-bottom: 1px solid var(--color-border);
 }
 
+.backlog-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .backlog-header h2 {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.backlog-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.backlog-toggle-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .backlog-count {
@@ -7836,6 +7868,11 @@ input:focus, textarea:focus, select:focus {
     border-right: none;
     border-bottom: 1px solid var(--color-border);
   }
+  .backlog.is-collapsed {
+    width: 100%;
+    min-width: 100%;
+    max-height: 56px;
+  }
   .week-grid {
     min-height: 0;
   }
@@ -8077,6 +8114,54 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width var(--transition-fast), min-width var(--transition-fast);
+}
+
+.calendar-side.is-collapsed {
+  width: 56px;
+  min-width: 56px;
+}
+
+.calendar-side-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-backlog-header);
+}
+
+.calendar-side-topbar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-side-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.calendar-side-toggle-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .calendar-side-header {
@@ -8290,6 +8375,11 @@ input:focus, textarea:focus, select:focus {
     max-height: 280px;
     border-left: none;
     border-top: 1px solid var(--color-border);
+  }
+  .calendar-side.is-collapsed {
+    width: 100%;
+    min-width: 100%;
+    max-height: 56px;
   }
 }
 

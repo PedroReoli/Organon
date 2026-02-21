@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
@@ -170,9 +170,23 @@ export const App = () => {
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
   const [showQuickSearch, setShowQuickSearch] = useState(false)
   const [showShortcutSearch, setShowShortcutSearch] = useState(false)
+  const [reduceModeSignal, setReduceModeSignal] = useState(0)
   const [pendingOpenCardId, setPendingOpenCardId] = useState<string | null>(null)
   const [pendingCalendarDate, setPendingCalendarDate] = useState<string | null>(null)
   const reminderFiredRef = useState(() => new Set<string>())[0]
+
+  const keyboardShortcuts = useMemo(() => {
+    const defaults = DEFAULT_SETTINGS.keyboardShortcuts || []
+    const saved = settings.keyboardShortcuts || []
+    const byId = new Map(saved.map(shortcut => [shortcut.id, shortcut]))
+
+    return defaults.map(defaultShortcut => {
+      const customShortcut = byId.get(defaultShortcut.id)
+      return customShortcut
+        ? { ...defaultShortcut, ...customShortcut, keys: customShortcut.keys }
+        : defaultShortcut
+    })
+  }, [settings.keyboardShortcuts])
 
   // Verificar se precisa mostrar o instalador
   useEffect(() => {
@@ -284,16 +298,25 @@ export const App = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const shortcuts = settings.keyboardShortcuts || DEFAULT_SETTINGS.keyboardShortcuts || []
-      const quickSearchShortcut = getShortcutById(shortcuts, 'quick-search')
-      
-      if (quickSearchShortcut && matchesShortcut(e, quickSearchShortcut)) {
-        const target = e.target as HTMLElement | null
-        const tag = target?.tagName?.toLowerCase()
-        if (tag === 'input' || tag === 'textarea' || (target as HTMLElement | null)?.isContentEditable) {
-          // Nao dispara atalhos globais enquanto o usuario digita em campos de texto.
-          return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || (target as HTMLElement | null)?.isContentEditable) {
+        // Nao dispara atalhos globais enquanto o usuario digita em campos de texto.
+        return
+      }
+
+      const quickSearchShortcut = getShortcutById(keyboardShortcuts, 'quick-search')
+      const reducedModeShortcut = getShortcutById(keyboardShortcuts, 'reduced-mode')
+
+      if (reducedModeShortcut && matchesShortcut(e, reducedModeShortcut)) {
+        if (activeView === 'notes' || activeView === 'planner' || activeView === 'calendar') {
+          e.preventDefault()
+          setReduceModeSignal(prev => prev + 1)
         }
+        return
+      }
+
+      if (quickSearchShortcut && matchesShortcut(e, quickSearchShortcut)) {
         e.preventDefault()
         setShowShortcutSearch(true)
       }
@@ -301,7 +324,7 @@ export const App = () => {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [settings.keyboardShortcuts])
+  }, [activeView, keyboardShortcuts])
 
   const handleOpenShortcut = (url: string) => {
     void (async () => {
@@ -462,6 +485,7 @@ export const App = () => {
               onReorderCard={reorderInCell}
               onEditEvent={updateCalendarEvent}
               onRemoveEvent={removeCalendarEvent}
+              reduceModeSignal={reduceModeSignal}
               openCardId={pendingOpenCardId}
               onOpenCardHandled={() => setPendingOpenCardId(null)}
             />
@@ -473,6 +497,7 @@ export const App = () => {
               events={calendarEvents}
               onAddEvent={addCalendarEvent}
               onRemoveEvent={removeCalendarEvent}
+              reduceModeSignal={reduceModeSignal}
               focusDateISO={pendingCalendarDate}
               onFocusDateHandled={() => setPendingCalendarDate(null)}
             />
@@ -540,6 +565,7 @@ export const App = () => {
               onRemoveNote={removeNote}
               onAddFolder={addNoteFolder}
               onRemoveFolder={removeNoteFolder}
+              reduceModeSignal={reduceModeSignal}
             />
           )}
 

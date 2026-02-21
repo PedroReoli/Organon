@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import type { Settings, ThemeName, RegisteredIDE, KeyboardShortcut, CalendarEvent } from '../types'
+import { useMemo } from 'react'
 import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'
@@ -210,7 +211,18 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
     setShowIdeForm(true)
   }
 
-  const shortcuts = settings.keyboardShortcuts || DEFAULT_SETTINGS.keyboardShortcuts || []
+  const shortcuts = useMemo(() => {
+    const defaults = DEFAULT_SETTINGS.keyboardShortcuts || []
+    const saved = settings.keyboardShortcuts || []
+    const byId = new Map(saved.map(shortcut => [shortcut.id, shortcut]))
+
+    return defaults.map(defaultShortcut => {
+      const customShortcut = byId.get(defaultShortcut.id)
+      return customShortcut
+        ? { ...defaultShortcut, ...customShortcut, keys: customShortcut.keys }
+        : defaultShortcut
+    })
+  }, [settings.keyboardShortcuts])
 
   const formatShortcut = (keys: KeyboardShortcut['keys']) => {
     const parts: string[] = []

@@ -2,7 +2,7 @@
   "cards": [
     {
       "id": "5e8312a9-b45a-49a1-b175-17deae8fcf28",
-      "title": "dasasd",
+      "title": "Estudar C#",
       "descriptionHtml": "",
       "location": {
         "day": "thu",
@@ -12,12 +12,12 @@
       "date": null,
       "time": null,
       "hasDate": false,
-      "priority": null,
+      "priority": "P3",
       "status": "todo",
       "projectId": null,
       "checklist": [],
       "createdAt": "2026-02-10T02:59:10.100Z",
-      "updatedAt": "2026-02-19T22:10:29.859Z"
+      "updatedAt": "2026-02-21T15:40:21.007Z"
     },
     {
       "id": "5be6248a-7dcf-4805-bdd4-3cb6653b37b0",

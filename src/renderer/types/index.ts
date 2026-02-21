@@ -804,6 +804,12 @@ export const DEFAULT_SETTINGS: Settings = {
       description: 'Buscar cards, eventos, atalhos e notas',
       keys: { ctrl: true, key: 'k' },
     },
+    {
+      id: 'reduced-mode',
+      action: 'Alternar modo reduzido',
+      description: 'Reduz paineis da view atual por niveis (pressione novamente para o proximo nivel)',
+      keys: { ctrl: true, shift: true, key: 'm' },
+    },
   ],
   backupEnabled: true,
   backupIntervalMinutes: 15,

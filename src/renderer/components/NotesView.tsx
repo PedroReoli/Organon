@@ -11,6 +11,7 @@ interface NotesViewProps {
   onRemoveNote: (noteId: string) => void
   onAddFolder: (name: string, parentId?: string | null) => string
   onRemoveFolder: (folderId: string) => void
+  reduceModeSignal?: number
 }
 
 type FolderRow = {
@@ -28,6 +29,7 @@ export const NotesView = ({
   onRemoveNote,
   onAddFolder,
   onRemoveFolder,
+  reduceModeSignal,
 }: NotesViewProps) => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
@@ -42,6 +44,8 @@ export const NotesView = ({
   const currentNoteIdRef = useRef<string | null>(null)
   const noteContextMenuRef = useRef<HTMLDivElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const reduceModeHandledRef = useRef<number | undefined>(reduceModeSignal)
+  const sidebarStateRef = useRef({ foldersOpen: true, notesOpen: true })
 
   const folderRows = useMemo<FolderRow[]>(() => {
     const byParent = new Map<string | null, NoteFolder[]>()
@@ -303,6 +307,39 @@ export const NotesView = ({
 
     setSelectedNoteId(clonedNote.id)
   }
+
+  useEffect(() => {
+    sidebarStateRef.current = {
+      foldersOpen: isFoldersSidebarOpen,
+      notesOpen: isNotesSidebarOpen,
+    }
+  }, [isFoldersSidebarOpen, isNotesSidebarOpen])
+
+  useEffect(() => {
+    if (typeof reduceModeSignal !== 'number') return
+    if (reduceModeHandledRef.current === undefined) {
+      reduceModeHandledRef.current = reduceModeSignal
+      return
+    }
+    if (reduceModeSignal <= reduceModeHandledRef.current) return
+    reduceModeHandledRef.current = reduceModeSignal
+
+    const { foldersOpen, notesOpen } = sidebarStateRef.current
+    if (!foldersOpen && !notesOpen) {
+      setIsFoldersSidebarOpen(true)
+      setIsNotesSidebarOpen(true)
+      return
+    }
+
+    if (foldersOpen) {
+      setIsFoldersSidebarOpen(false)
+      return
+    }
+
+    if (notesOpen) {
+      setIsNotesSidebarOpen(false)
+    }
+  }, [reduceModeSignal])
 
   return (
     <div className="notes-layout">
