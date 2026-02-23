@@ -1,15 +1,26 @@
-﻿# Organon
+# Organon
 
-O **Organon** e um app desktop (Electron) para organizar rotina pessoal e trabalho em um unico lugar.
-Ele centraliza planejamento, compromissos, notas, arquivos, atalhos, habitos e controle financeiro.
+Organon e um app desktop para organizar trabalho e vida pessoal no mesmo lugar.
+A proposta e reduzir trocas de contexto, concentrar informacoes importantes e transformar planejamento em execucao diaria.
 
-## O que voce encontra no Organon
-- Dashboard com visao geral do dia
-- Planejamento de tarefas por periodos
-- Calendario de eventos e compromissos
-- Notas, clipboard e arquivos organizados
-- Atalhos, apps e macros para agilizar o fluxo
-- Habitos e financeiro para acompanhamento pessoal
+## O que o Organon entrega
+- Visao do dia com foco no que importa agora
+- Planejamento semanal e calendario integrados
+- Espaco para conhecimento, operacao e memoria
+- Fluxo unico para tarefas, notas, arquivos, links e rotina
+- Acompanhamento pessoal em habitos e financeiro
 
-## Objetivo
-Reduzir troca de contexto entre varias ferramentas e manter tudo importante em uma interface unica.
+## Como esta documentacao foi organizada
+A pasta about, na raiz do projeto, concentra a visao principal do produto.
+
+- Arquitetura: visao minimamente tecnica do funcionamento geral
+- Telas: o que pode ser feito em cada area do aplicativo
+- Proposito: intencao humana por tras da ferramenta
+
+## Leitura recomendada
+- about/arquitetura.md
+- about/telas.md
+- about/proposito.md
+
+## Estado atual
+O projeto esta em evolucao continua, com foco em experiencia de uso local, autonomia e velocidade no dia a dia.
