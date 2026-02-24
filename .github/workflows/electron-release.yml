@@ -1,0 +1,69 @@
+name: Electron Windows Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: electron-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (Windows)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run exec
+
+      - name: Prepare release metadata
+        id: meta
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $shortSha = "${{ github.sha }}".Substring(0,7)
+          $tag = "v$version-$shortSha"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "short_sha=$shortSha"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag"
+
+      - name: Validate generated installer
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path release -File -Filter *.exe
+          if (-not $files) {
+            Write-Error "Nenhum instalador .exe foi gerado em release/"
+          }
+          $files | ForEach-Object { Write-Host "Installer: $($_.Name)" }
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Organon ${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.short_sha }})
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
