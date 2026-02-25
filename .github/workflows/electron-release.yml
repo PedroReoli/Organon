@@ -39,7 +39,7 @@ jobs:
         id: meta
         shell: pwsh
         run: |
-          $version = node -e "const fs=require('fs'); const s=fs.readFileSync('src/renderer/config/app.config.ts','utf8'); const m=s.match(/APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]/); if(!m){console.error('APP_VERSION nao encontrado em src/renderer/config/app.config.ts'); process.exit(1);} process.stdout.write(m[1]);"
+          $version = node -e 'const fs=require("fs"); const s=fs.readFileSync("src/renderer/config/app.config.ts","utf8"); const m=s.match(/APP_VERSION\s*=\s*["'']([^"'']+)["'']/); if(!m){console.error("APP_VERSION nao encontrado em src/renderer/config/app.config.ts"); process.exit(1);} process.stdout.write(m[1]);'
           $packageVersion = node -p "require('./package.json').version"
           if ($version -ne $packageVersion) {
             Write-Error \"Versao divergente: app.config.ts=$version e package.json=$packageVersion\"
