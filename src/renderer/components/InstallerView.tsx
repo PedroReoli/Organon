@@ -8,6 +8,7 @@ interface InstallerViewProps {
 }
 
 type InstallerStep = 'welcome' | 'data-folder' | 'theme' | 'finishing'
+const THEMES_PER_PAGE = 2
 
 interface ThemeCardProps {
   themeName: ThemeName
@@ -53,11 +54,15 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
 }
 
 export const InstallerView = ({ onComplete }: InstallerViewProps) => {
+  const themeNames = Object.keys(THEMES) as ThemeName[]
   const [step, setStep] = useState<InstallerStep>('welcome')
   const [dataDir, setDataDir] = useState<string | null>(null)
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>('dark-default')
+  const [themePageStart, setThemePageStart] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const maxThemePageStart = Math.max(0, Math.floor((themeNames.length - 1) / THEMES_PER_PAGE) * THEMES_PER_PAGE)
+  const visibleThemes = themeNames.slice(themePageStart, themePageStart + THEMES_PER_PAGE)
 
   const handleSelectFolder = async () => {
     if (!isElectron()) return
@@ -74,6 +79,15 @@ export const InstallerView = ({ onComplete }: InstallerViewProps) => {
   const handleThemeSelect = (themeName: ThemeName) => {
     setSelectedTheme(themeName)
     applyTheme(THEMES[themeName])
+  }
+
+  const changeThemePage = (direction: 'left' | 'right') => {
+    setThemePageStart((current) => {
+      if (direction === 'left') {
+        return Math.max(0, current - THEMES_PER_PAGE)
+      }
+      return Math.min(maxThemePageStart, current + THEMES_PER_PAGE)
+    })
   }
 
   const handleFinish = async () => {
@@ -175,15 +189,43 @@ export const InstallerView = ({ onComplete }: InstallerViewProps) => {
             <h2>Escolha um Tema</h2>
             <p>Selecione o tema visual do aplicativo.</p>
 
-            <div className="theme-grid installer-theme-grid">
-              {(Object.keys(THEMES) as ThemeName[]).map((themeName) => (
-                <ThemeCard
-                  key={themeName}
-                  themeName={themeName}
-                  isSelected={selectedTheme === themeName}
-                  onSelect={() => handleThemeSelect(themeName)}
-                />
-              ))}
+            <div className="installer-theme-grid">
+              <div className="theme-carousel-wrapper installer-theme-carousel-wrapper">
+                <button
+                  className="theme-carousel-arrow theme-carousel-arrow-left"
+                  onClick={() => changeThemePage('left')}
+                  aria-label="Temas anteriores"
+                  disabled={themePageStart === 0}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+
+                <div className="installer-theme-page">
+                  <div className="theme-carousel-track installer-theme-track">
+                    {visibleThemes.map((themeName) => (
+                      <ThemeCard
+                        key={themeName}
+                        themeName={themeName}
+                        isSelected={selectedTheme === themeName}
+                        onSelect={() => handleThemeSelect(themeName)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  className="theme-carousel-arrow theme-carousel-arrow-right"
+                  onClick={() => changeThemePage('right')}
+                  aria-label="Próximos temas"
+                  disabled={themePageStart >= maxThemePageStart}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div className="installer-nav">

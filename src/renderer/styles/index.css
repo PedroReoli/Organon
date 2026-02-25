@@ -6261,6 +6261,21 @@ input:focus, textarea:focus, select:focus {
   width: 100%;
 }
 
+.installer-theme-carousel-wrapper {
+  justify-content: center;
+}
+
+.installer-theme-page {
+  width: 376px; /* 2 cards (180px) + 1 gap (16px) */
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.installer-theme-track {
+  width: 100%;
+  justify-content: center;
+}
+
 .installer-summary {
   width: 100%;
   background: var(--color-background);
