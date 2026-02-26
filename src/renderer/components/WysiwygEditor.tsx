@@ -31,6 +31,195 @@ interface WysiwygEditorProps {
   mode?: 'compact' | 'full'
 }
 
+// ── Slash commands ──────────────────────────────────────────────────────────
+
+type SlashCmd = { query: string; from: number; to: number; x: number; y: number }
+
+interface SlashCommand {
+  id: string
+  label: string
+  desc: string
+  icon: string
+  keywords: string[]
+  action: (editor: Editor) => void
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    id: 'h1', label: 'Título 1', desc: 'Título grande', icon: 'H1',
+    keywords: ['titulo', 'h1', 'heading', 'cabecalho'],
+    action: e => e.chain().focus().setHeading({ level: 1 }).run(),
+  },
+  {
+    id: 'h2', label: 'Título 2', desc: 'Título médio', icon: 'H2',
+    keywords: ['titulo', 'h2', 'heading', 'cabecalho'],
+    action: e => e.chain().focus().setHeading({ level: 2 }).run(),
+  },
+  {
+    id: 'h3', label: 'Título 3', desc: 'Título pequeno', icon: 'H3',
+    keywords: ['titulo', 'h3', 'heading', 'cabecalho'],
+    action: e => e.chain().focus().setHeading({ level: 3 }).run(),
+  },
+  {
+    id: 'p', label: 'Parágrafo', desc: 'Texto normal', icon: '¶',
+    keywords: ['paragrafo', 'texto', 'normal', 'p'],
+    action: e => e.chain().focus().setParagraph().run(),
+  },
+  {
+    id: 'bullet', label: 'Lista de pontos', desc: 'Lista não ordenada', icon: '•',
+    keywords: ['lista', 'bullet', 'pontos', 'ul'],
+    action: e => e.chain().focus().toggleBulletList().run(),
+  },
+  {
+    id: 'number', label: 'Lista numerada', desc: 'Lista com números', icon: '1.',
+    keywords: ['lista', 'numerada', 'ordenada', 'ol'],
+    action: e => e.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    id: 'task', label: 'Lista de tarefas', desc: 'Checkboxes interativos', icon: '☑',
+    keywords: ['tarefa', 'task', 'checklist', 'checkbox', 'todo'],
+    action: e => e.chain().focus().toggleTaskList().run(),
+  },
+  {
+    id: 'quote', label: 'Citação', desc: 'Bloco de citação', icon: '"',
+    keywords: ['citacao', 'quote', 'blockquote'],
+    action: e => e.chain().focus().toggleBlockquote().run(),
+  },
+  {
+    id: 'code', label: 'Bloco de código', desc: 'Código com syntax highlight', icon: '</>',
+    keywords: ['codigo', 'code', 'bloco', 'pre'],
+    action: e => e.chain().focus().toggleCodeBlock().run(),
+  },
+  {
+    id: 'hr', label: 'Divisor', desc: 'Linha horizontal separadora', icon: '—',
+    keywords: ['divisor', 'linha', 'hr', 'horizontal', 'separador'],
+    action: e => e.chain().focus().setHorizontalRule().run(),
+  },
+  {
+    id: 'table', label: 'Tabela', desc: 'Tabela 3 × 3', icon: '⊞',
+    keywords: ['tabela', 'table', 'grid'],
+    action: e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    id: 'bold', label: 'Negrito', desc: 'Texto em negrito', icon: 'B',
+    keywords: ['negrito', 'bold'],
+    action: e => e.chain().focus().toggleBold().run(),
+  },
+  {
+    id: 'italic', label: 'Itálico', desc: 'Texto em itálico', icon: 'I',
+    keywords: ['italico', 'italic'],
+    action: e => e.chain().focus().toggleItalic().run(),
+  },
+]
+
+// ── Slash menu component ─────────────────────────────────────────────────────
+
+const SlashCommandMenu = ({
+  cmd,
+  onApply,
+  onClose,
+}: {
+  cmd: SlashCmd
+  onApply: (command: SlashCommand) => void
+  onClose: () => void
+}) => {
+  const [selected, setSelected] = useState(0)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const filtered = SLASH_COMMANDS.filter(c => {
+    if (!cmd.query) return true
+    const q = cmd.query.toLowerCase()
+    return (
+      c.label.toLowerCase().includes(q) ||
+      c.keywords.some(k => k.includes(q))
+    )
+  })
+
+  // Reset selection when filter changes
+  useEffect(() => { setSelected(0) }, [cmd.query])
+
+  // Keyboard handler
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelected(p => Math.min(p + 1, filtered.length - 1))
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelected(p => Math.max(p - 1, 0))
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (filtered[selected]) {
+          e.preventDefault()
+          e.stopPropagation()
+          onApply(filtered[selected])
+        }
+        return
+      }
+    }
+    document.addEventListener('keydown', handler, true)
+    return () => document.removeEventListener('keydown', handler, true)
+  }, [filtered, selected, onApply, onClose])
+
+  // Click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  // Keep selected item scrolled into view
+  useEffect(() => {
+    const item = menuRef.current?.querySelector(`[data-index="${selected}"]`) as HTMLElement | null
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [selected])
+
+  if (filtered.length === 0) {
+    onClose()
+    return null
+  }
+
+  // Position: below cursor, flip up if near bottom of viewport
+  const MENU_HEIGHT = Math.min(filtered.length * 44 + 8, 300)
+  const top = cmd.y + MENU_HEIGHT > window.innerHeight - 16 ? cmd.y - MENU_HEIGHT - 28 : cmd.y
+  const left = Math.max(8, Math.min(cmd.x, window.innerWidth - 260))
+
+  return (
+    <div
+      ref={menuRef}
+      className="slash-menu"
+      style={{ position: 'fixed', top, left }}
+    >
+      {cmd.query && (
+        <div className="slash-menu-query">/{cmd.query}</div>
+      )}
+      {filtered.map((c, i) => (
+        <button
+          key={c.id}
+          data-index={i}
+          className={`slash-menu-item ${i === selected ? 'is-selected' : ''}`}
+          onMouseEnter={() => setSelected(i)}
+          onMouseDown={e => { e.preventDefault(); onApply(c) }}
+        >
+          <span className="slash-menu-icon">{c.icon}</span>
+          <span className="slash-menu-text">
+            <span className="slash-menu-label">{c.label}</span>
+            <span className="slash-menu-desc">{c.desc}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 const PRESET_COLORS = [
   '#000000', '#434343', '#666666', '#999999',
   '#ef4444', '#f97316', '#eab308', '#22c55e',
@@ -758,6 +947,7 @@ export const WysiwygEditor = ({
   placeholder = 'Escreva uma descricao detalhada...',
   mode = 'compact',
 }: WysiwygEditorProps) => {
+  const [slashCmd, setSlashCmd] = useState<SlashCmd | null>(null)
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
   const editorViewportRef = useRef<HTMLDivElement>(null)
@@ -803,6 +993,30 @@ export const WysiwygEditor = ({
     extensions: getExtensions(mode, placeholder),
     content,
     onUpdate: ({ editor: ed }) => {
+      // Slash command detection (full mode only)
+      if (mode === 'full') {
+        const { state, view } = ed
+        const { $from, empty } = state.selection
+        if (empty) {
+          const blockStart = $from.start()
+          const textBefore = state.doc.textBetween(blockStart, $from.pos)
+          const match = textBefore.match(/^\/(\w*)$/)
+          if (match) {
+            const coords = view.coordsAtPos($from.pos)
+            setSlashCmd({
+              query: match[1].toLowerCase(),
+              from: blockStart,
+              to: $from.pos,
+              x: coords.left,
+              y: coords.bottom + 6,
+            })
+          } else {
+            setSlashCmd(null)
+          }
+        } else {
+          setSlashCmd(null)
+        }
+      }
       requestAnimationFrame(() => {
         const html = ed.getHTML()
         onChange(html)
@@ -894,6 +1108,14 @@ export const WysiwygEditor = ({
     }
   }
 
+  // Slash command apply
+  const applySlashCommand = useCallback((command: SlashCommand) => {
+    if (!editor || !slashCmd) return
+    editor.chain().focus().deleteRange({ from: slashCmd.from, to: slashCmd.to }).run()
+    command.action(editor)
+    setSlashCmd(null)
+  }, [editor, slashCmd])
+
   // Sem useEffect de sync - o key prop no NotesView recria o editor ao trocar nota
 
   if (!editor) {
@@ -909,6 +1131,13 @@ export const WysiwygEditor = ({
       )}
       <div ref={editorViewportRef} className="tiptap-editor">
         <EditorContent editor={editor} />
+        {mode === 'full' && slashCmd && (
+          <SlashCommandMenu
+            cmd={slashCmd}
+            onApply={applySlashCommand}
+            onClose={() => setSlashCmd(null)}
+          />
+        )}
         {mode === 'full' && linkQuickMenu && (
           <div
             ref={linkMenuRef}
