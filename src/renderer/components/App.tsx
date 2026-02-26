@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../hooks/useStore'
+import { useAuth } from '../hooks/useAuth'
+import { uploadStore, downloadStore } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
 import { Titlebar } from './Titlebar'
 import { InternalNav } from './InternalNav'
+import { AuthModal } from './AuthModal'
 import { TodayView } from './TodayView'
 import { PlannerView } from './PlannerView'
 import { CalendarView } from './CalendarView'
@@ -166,6 +169,46 @@ export const App = () => {
     updateSettings,
     updateStudy,
   } = useStore()
+
+  const { user, isLoadingAuth, authError, login, register, logout, clearAuthError } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSyncToCloud = async () => {
+    if (!user || !isElectron()) return
+    setIsSyncing(true)
+    try {
+      const rawStore = await window.electronAPI.loadStore()
+      await uploadStore(rawStore, user.$id)
+      alert('Dados enviados para a nuvem com sucesso!')
+    } catch (err) {
+      alert(`Erro ao sincronizar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleSyncFromCloud = async () => {
+    if (!user || !isElectron()) return
+    if (!confirm('Isso irá substituir seus dados locais com os dados da nuvem. Continuar?')) return
+    setIsSyncing(true)
+    try {
+      const cloudStore = await downloadStore(user.$id)
+      if (!cloudStore) {
+        alert('Nenhum dado encontrado na nuvem.')
+        return
+      }
+      await window.electronAPI.saveStore(cloudStore)
+      alert('Dados baixados com sucesso! O app será recarregado.')
+      window.location.reload()
+    } catch (err) {
+      alert(`Erro ao baixar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  void isLoadingAuth // usado internamente pelo useAuth
 
   const [activeView, setActiveView] = useState<AppView>('today')
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
@@ -721,6 +764,12 @@ export const App = () => {
               onAddNote={addNote}
               onAddCard={addCard}
               onAddCalendarEvent={addCalendarEvent}
+              user={user}
+              onOpenAuthModal={() => setShowAuthModal(true)}
+              isSyncing={isSyncing}
+              onSyncToCloud={handleSyncToCloud}
+              onSyncFromCloud={handleSyncFromCloud}
+              onSignOut={logout}
             />
           )}
 
@@ -787,6 +836,16 @@ export const App = () => {
         settings={settings}
         onUpdateSettings={updateSettings}
       />
+
+      {showAuthModal && (
+        <AuthModal
+          onLogin={login}
+          onRegister={register}
+          authError={authError}
+          onClearError={clearAuthError}
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
     </div>
   )
 }

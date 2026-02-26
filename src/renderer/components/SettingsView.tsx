@@ -4,6 +4,12 @@ import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'
 
+interface AppwriteUser {
+  $id: string
+  email: string
+  name: string
+}
+
 interface SettingsViewProps {
   settings: Settings
   onUpdateSettings: (updates: Partial<Settings>) => void
@@ -16,6 +22,12 @@ interface SettingsViewProps {
   onAddNote?: (title: string, folderId?: string | null) => any
   onAddCard?: (title: string, date?: string | null) => any
   onAddCalendarEvent?: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => any
+  user?: AppwriteUser | null
+  onOpenAuthModal?: () => void
+  isSyncing?: boolean
+  onSyncToCloud?: () => Promise<void>
+  onSyncFromCloud?: () => Promise<void>
+  onSignOut?: () => Promise<void>
 }
 
 interface ThemeCardProps {
@@ -61,7 +73,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -985,6 +997,86 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
           </div>
         </section>
       )}
+
+      {/* Conta & Sincronização */}
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Conta &amp; Sincronizacao</h3>
+        </div>
+
+        {user ? (
+          <div className="settings-data-grid">
+            <div className="settings-data-card">
+              <h4>Logado como</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--color-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  {user.name && <div style={{ fontSize: 14, fontWeight: 500 }}>{user.name}</div>}
+                  <div style={{ fontSize: 12, opacity: 0.6 }}>{user.email}</div>
+                </div>
+              </div>
+              <div className="settings-backup-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={onSyncToCloud}
+                  disabled={isSyncing}
+                  title="Envia seus dados locais para a nuvem"
+                >
+                  {isSyncing ? 'Sincronizando...' : 'Enviar para nuvem'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={onSyncFromCloud}
+                  disabled={isSyncing}
+                  title="Baixa os dados da nuvem e substitui os dados locais"
+                >
+                  {isSyncing ? 'Sincronizando...' : 'Baixar da nuvem'}
+                </button>
+                <button
+                  className="btn btn-secondary settings-reset-trigger"
+                  onClick={onSignOut}
+                  disabled={isSyncing}
+                >
+                  Sair da conta
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="settings-data-grid">
+            <div className="settings-data-card">
+              <h4>Nuvem desativada</h4>
+              <p className="settings-help-text">
+                Entre com sua conta para sincronizar seus dados entre dispositivos.
+              </p>
+              <div className="settings-backup-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={onOpenAuthModal}
+                >
+                  Entrar / Criar conta
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
