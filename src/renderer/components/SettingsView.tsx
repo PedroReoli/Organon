@@ -4,6 +4,8 @@ import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'
 
+declare const __APP_VERSION__: string
+
 interface AppwriteUser {
   $id: string
   email: string
@@ -28,6 +30,7 @@ interface SettingsViewProps {
   onSyncToCloud?: () => Promise<void>
   onSyncFromCloud?: () => Promise<void>
   onSignOut?: () => Promise<void>
+  updateAvailable?: { version: string; url: string } | null
 }
 
 interface ThemeCardProps {
@@ -73,7 +76,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut, updateAvailable }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -1076,6 +1079,42 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             </div>
           </div>
         )}
+      </section>
+
+      {/* ── Atualizações ── */}
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Atualizações</h3>
+        </div>
+
+        <div className="settings-section-body">
+          <div className="settings-update-info">
+            <div className="settings-update-version">
+              <span className="settings-label">Versão atual</span>
+              <span className="settings-update-version-value">
+                {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '—'}
+              </span>
+            </div>
+
+            {updateAvailable ? (
+              <div className="settings-update-status settings-update-status--available">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v7M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 13h10" strokeLinecap="round"/></svg>
+                Nova versão <strong>{updateAvailable.version}</strong> disponível.
+                <button
+                  className="settings-btn settings-btn-primary settings-btn-sm"
+                  onClick={() => window.electronAPI.openExternal(updateAvailable.url)}
+                >
+                  Baixar agora
+                </button>
+              </div>
+            ) : (
+              <div className="settings-update-status settings-update-status--ok">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8.5l3.5 3.5 6.5-7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                O app está atualizado.
+              </div>
+            )}
+          </div>
+        </div>
       </section>
     </div>
   )

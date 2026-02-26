@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
+
+declare const __APP_VERSION__: string
 import { useAuth } from '../hooks/useAuth'
 import { uploadStore, downloadStore, syncCollectionsToCloud } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
@@ -176,6 +178,30 @@ export const App = () => {
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
+
+  // ─── Verificação de atualização (GitHub API) ──────────────────────────────
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; url: string } | null>(null)
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/PedroReoli/Organon/releases/latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+        if (!res.ok) return
+        const data = await res.json() as { tag_name?: string; html_url?: string }
+        const latest = (data.tag_name ?? '').replace(/^v/, '')
+        const current = (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0').replace(/^v/, '')
+        if (latest && latest !== current) {
+          setUpdateAvailable({ version: latest, url: data.html_url ?? 'https://github.com/PedroReoli/Organon/releases/latest' })
+        }
+      } catch {
+        // silencioso — não bloqueia o app
+      }
+    }
+    const timer = setTimeout(check, 10000) // verifica 10s após abrir
+    return () => clearTimeout(timer)
+  }, [])
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userRef = useRef(user)
@@ -820,6 +846,7 @@ export const App = () => {
               onSyncToCloud={handleSyncToCloud}
               onSyncFromCloud={handleSyncFromCloud}
               onSignOut={logout}
+              updateAvailable={updateAvailable}
             />
           )}
 

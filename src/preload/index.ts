@@ -316,6 +316,7 @@ const electronAPI = {
   transcribeAudio: (audioPath: string): Promise<string> => {
     return ipcRenderer.invoke('meetings:transcribe', audioPath)
   },
+
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

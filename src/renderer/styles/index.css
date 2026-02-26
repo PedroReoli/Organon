@@ -13842,3 +13842,124 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+
+/* ========================================
+ * AUTO-UPDATE SECTION
+ * ======================================== */
+
+.settings-update-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-update-version {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-update-version-value {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+.settings-update-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.settings-update-status--checking,
+.settings-update-status--downloading {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.settings-update-status--ok {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  gap: 10px;
+}
+
+.settings-update-status--available {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.settings-update-status--ready {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.settings-update-status--error {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.settings-update-available {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-update-downloading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-update-progress-bar {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.settings-update-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.settings-update-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: nav-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.settings-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.settings-btn-ghost:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.settings-btn-sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
