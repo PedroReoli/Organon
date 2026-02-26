@@ -92,13 +92,14 @@ export async function syncCollectionsToCloud(store: Store, userId: string): Prom
 
   async function syncItems<T extends { id: string }>(
     collectionId: string,
-    items: T[],
+    items: T[] | undefined | null,
     toDoc: (item: T) => Record<string, unknown>
   ) {
+    const safeItems = items ?? []
     const col = { sent: 0, errors: 0 }
     try {
       await clearCollection(collectionId, userId)
-      for (const item of items) {
+      for (const item of safeItems) {
         try {
           await createDoc(collectionId, item.id, { userId, ...toDoc(item) })
           col.sent++
@@ -108,7 +109,7 @@ export async function syncCollectionsToCloud(store: Store, userId: string): Prom
       }
     } catch (err) {
       console.warn(`[sync] Falha ao sincronizar collection "${collectionId}":`, err)
-      col.errors += items.length
+      col.errors += safeItems.length
     }
     report.collections[collectionId] = col
     report.totalSent   += col.sent
