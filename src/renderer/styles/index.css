@@ -1942,15 +1942,26 @@ input:focus, textarea:focus, select:focus {
   border-radius: 10px;
   border: 1px solid transparent;
   white-space: nowrap;
-  pointer-events: none;
+  cursor: pointer;
   user-select: none;
+  background: none;
   transition: all var(--transition-fast);
+}
+
+.nav-sync-indicator:disabled {
+  cursor: default;
+  opacity: 0.8;
 }
 
 .nav-sync-indicator--pending {
   color: #f59e0b;
   background: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.2);
+}
+
+.nav-sync-indicator--pending:not(:disabled):hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .nav-sync-indicator--syncing {
@@ -1964,10 +1975,20 @@ input:focus, textarea:focus, select:focus {
   border-color: rgba(34, 197, 94, 0.2);
 }
 
+.nav-sync-indicator--synced:not(:disabled):hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
 .nav-sync-indicator--error {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.2);
+}
+
+.nav-sync-indicator--error:not(:disabled):hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 @keyframes nav-spin {
