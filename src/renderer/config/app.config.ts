@@ -1,8 +1,10 @@
-// Configuração da aplicação
+import appMetadata from '../../../app.json'
+
+// Application config
 // VERSAO APP
-export const APP_VERSION = '1.0.8'
+export const APP_VERSION = appMetadata.version
 
 export const APP_CONFIG = {
   version: APP_VERSION,
-  name: 'Organon',  
+  name: appMetadata.name,
 } as const

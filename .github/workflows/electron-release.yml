@@ -39,18 +39,12 @@ jobs:
         id: meta
         shell: pwsh
         run: |
-<<<<<<< HEAD
-          $version = node -e 'const fs=require("fs"); const s=fs.readFileSync("src/renderer/config/app.config.ts","utf8"); const m=s.match(/APP_VERSION\s*=\s*["'']([^"'']+)["'']/); if(!m){console.error("APP_VERSION nao encontrado em src/renderer/config/app.config.ts"); process.exit(1);} process.stdout.write(m[1]);'
-          $packageVersion = node -p "require('./package.json').version"
-          if ($version -ne $packageVersion) {
-            Write-Error \"Versao divergente: app.config.ts=$version e package.json=$packageVersion\"
+          $version = node -p "require('./app.json').version"
+          if (-not $version) {
+            Write-Error "Versao nao encontrada em app.json"
           }
-          $tag = "v$version"
-=======
-          $version = node -p "require('./package.json').version"
           $shortSha = "${{ github.sha }}".Substring(0,7)
-          $tag = "v$version-$shortSha"
->>>>>>> parent of 440ff86 (Update electron-release.yml)
+          $tag = "v$version"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "short_sha=$shortSha"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag"
