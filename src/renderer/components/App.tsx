@@ -176,6 +176,27 @@ export const App = () => {
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
+
+  // ─── Auto-Update state ────────────────────────────────────────────────────
+  type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'up-to-date' | 'error'
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null)
+  const [updateProgress, setUpdateProgress] = useState(0)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isElectron()) return
+    const cleanup = window.electronAPI.onUpdaterEvent((event, payload) => {
+      const p = payload as Record<string, unknown> | undefined
+      if (event === 'updater:checking') { setUpdateStatus('checking'); setUpdateError(null) }
+      else if (event === 'updater:available') { setUpdateStatus('available'); setUpdateVersion(p?.version as string ?? null) }
+      else if (event === 'updater:not-available') { setUpdateStatus('up-to-date') }
+      else if (event === 'updater:progress') { setUpdateStatus('downloading'); setUpdateProgress((p?.percent as number) ?? 0) }
+      else if (event === 'updater:downloaded') { setUpdateStatus('ready'); setUpdateVersion(p?.version as string ?? null) }
+      else if (event === 'updater:error') { setUpdateStatus('error'); setUpdateError(p?.message as string ?? 'Erro desconhecido') }
+    })
+    return cleanup
+  }, [])
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userRef = useRef(user)
@@ -820,6 +841,28 @@ export const App = () => {
               onSyncToCloud={handleSyncToCloud}
               onSyncFromCloud={handleSyncFromCloud}
               onSignOut={logout}
+              updateStatus={updateStatus}
+              updateVersion={updateVersion}
+              updateProgress={updateProgress}
+              updateError={updateError}
+              onCheckForUpdates={async () => {
+                if (!isElectron()) return
+                setUpdateStatus('checking')
+                setUpdateError(null)
+                const result = await window.electronAPI.checkForUpdates()
+                if (result.error) { setUpdateStatus('error'); setUpdateError(result.error) }
+              }}
+              onDownloadUpdate={async () => {
+                if (!isElectron()) return
+                setUpdateStatus('downloading')
+                setUpdateProgress(0)
+                const result = await window.electronAPI.downloadUpdate()
+                if (result.error) { setUpdateStatus('error'); setUpdateError(result.error) }
+              }}
+              onInstallUpdate={() => {
+                if (!isElectron()) return
+                window.electronAPI.installUpdate()
+              }}
             />
           )}
 

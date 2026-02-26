@@ -316,6 +316,50 @@ const electronAPI = {
   transcribeAudio: (audioPath: string): Promise<string> => {
     return ipcRenderer.invoke('meetings:transcribe', audioPath)
   },
+
+  // ─── Auto-Update ───────────────────────────────────────────────────────────
+  /** Verifica se há atualização disponível. */
+  checkForUpdates: (): Promise<{ ok?: boolean; version?: string | null; error?: string }> => {
+    return ipcRenderer.invoke('updater:check')
+  },
+
+  /** Inicia o download da atualização já encontrada. */
+  downloadUpdate: (): Promise<{ ok?: boolean; error?: string }> => {
+    return ipcRenderer.invoke('updater:download')
+  },
+
+  /** Fecha o app e instala a atualização baixada. */
+  installUpdate: (): void => {
+    ipcRenderer.invoke('updater:install')
+  },
+
+  /** Assina eventos do auto-updater.
+   *  Retorna função de cleanup para remover o listener.
+   */
+  onUpdaterEvent: (
+    callback: (event: string, payload?: unknown) => void
+  ): (() => void) => {
+    const channels = [
+      'updater:checking',
+      'updater:available',
+      'updater:not-available',
+      'updater:progress',
+      'updater:downloaded',
+      'updater:error',
+    ] as const
+
+    const listeners = channels.map(channel => {
+      const handler = (_: Electron.IpcRendererEvent, payload?: unknown) => callback(channel, payload)
+      ipcRenderer.on(channel, handler)
+      return { channel, handler }
+    })
+
+    return () => {
+      for (const { channel, handler } of listeners) {
+        ipcRenderer.removeListener(channel, handler)
+      }
+    }
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
