@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
+
+declare const __APP_VERSION__: string
 import { useAuth } from '../hooks/useAuth'
 import { uploadStore, downloadStore, syncCollectionsToCloud } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
@@ -177,25 +179,28 @@ export const App = () => {
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
 
-  // ─── Auto-Update state ────────────────────────────────────────────────────
-  type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'up-to-date' | 'error'
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
-  const [updateVersion, setUpdateVersion] = useState<string | null>(null)
-  const [updateProgress, setUpdateProgress] = useState(0)
-  const [updateError, setUpdateError] = useState<string | null>(null)
+  // ─── Verificação de atualização (GitHub API) ──────────────────────────────
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; url: string } | null>(null)
 
   useEffect(() => {
-    if (!isElectron()) return
-    const cleanup = window.electronAPI.onUpdaterEvent((event, payload) => {
-      const p = payload as Record<string, unknown> | undefined
-      if (event === 'updater:checking') { setUpdateStatus('checking'); setUpdateError(null) }
-      else if (event === 'updater:available') { setUpdateStatus('available'); setUpdateVersion(p?.version as string ?? null) }
-      else if (event === 'updater:not-available') { setUpdateStatus('up-to-date') }
-      else if (event === 'updater:progress') { setUpdateStatus('downloading'); setUpdateProgress((p?.percent as number) ?? 0) }
-      else if (event === 'updater:downloaded') { setUpdateStatus('ready'); setUpdateVersion(p?.version as string ?? null) }
-      else if (event === 'updater:error') { setUpdateStatus('error'); setUpdateError(p?.message as string ?? 'Erro desconhecido') }
-    })
-    return cleanup
+    const check = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/PedroReoli/Organon/releases/latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+        if (!res.ok) return
+        const data = await res.json() as { tag_name?: string; html_url?: string }
+        const latest = (data.tag_name ?? '').replace(/^v/, '')
+        const current = (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0').replace(/^v/, '')
+        if (latest && latest !== current) {
+          setUpdateAvailable({ version: latest, url: data.html_url ?? 'https://github.com/PedroReoli/Organon/releases/latest' })
+        }
+      } catch {
+        // silencioso — não bloqueia o app
+      }
+    }
+    const timer = setTimeout(check, 10000) // verifica 10s após abrir
+    return () => clearTimeout(timer)
   }, [])
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -841,28 +846,7 @@ export const App = () => {
               onSyncToCloud={handleSyncToCloud}
               onSyncFromCloud={handleSyncFromCloud}
               onSignOut={logout}
-              updateStatus={updateStatus}
-              updateVersion={updateVersion}
-              updateProgress={updateProgress}
-              updateError={updateError}
-              onCheckForUpdates={async () => {
-                if (!isElectron()) return
-                setUpdateStatus('checking')
-                setUpdateError(null)
-                const result = await window.electronAPI.checkForUpdates()
-                if (result.error) { setUpdateStatus('error'); setUpdateError(result.error) }
-              }}
-              onDownloadUpdate={async () => {
-                if (!isElectron()) return
-                setUpdateStatus('downloading')
-                setUpdateProgress(0)
-                const result = await window.electronAPI.downloadUpdate()
-                if (result.error) { setUpdateStatus('error'); setUpdateError(result.error) }
-              }}
-              onInstallUpdate={() => {
-                if (!isElectron()) return
-                window.electronAPI.installUpdate()
-              }}
+              updateAvailable={updateAvailable}
             />
           )}
 

@@ -985,11 +985,6 @@ declare global {
       importMarkdowns: (sourceDir: string) => Promise<{ success: boolean; imported: number; files: Array<{ path: string; name: string; content: string }>; error?: string }>
       selectJsonFile: () => Promise<string | null>
       importPlanningData: (storeJsonPath: string) => Promise<{ success: boolean; cards: number; events: number; cardsData: any[]; eventsData: any[]; error?: string }>
-      // Auto-Update
-      checkForUpdates: () => Promise<{ ok?: boolean; version?: string | null; error?: string }>
-      downloadUpdate: () => Promise<{ ok?: boolean; error?: string }>
-      installUpdate: () => void
-      onUpdaterEvent: (callback: (event: string, payload?: unknown) => void) => () => void
     }
   }
 }

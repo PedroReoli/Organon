@@ -9,69 +9,6 @@ if (!app.isPackaged) {
   try { require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') }) } catch {}
 }
 
-// ─── Auto-Update ────────────────────────────────────────────────────────────
-// Importação condicional: electron-updater só funciona em produção (app empacotado).
-// Em desenvolvimento, as funções são no-ops para evitar erros.
-let autoUpdater: import('electron-updater').AppUpdater | null = null
-
-if (app.isPackaged) {
-  try {
-    const updaterModule = require('electron-updater') as typeof import('electron-updater')
-    autoUpdater = updaterModule.autoUpdater
-    autoUpdater.autoDownload = false          // usuário decide quando baixar
-    autoUpdater.autoInstallOnAppQuit = true   // instala ao fechar o app
-    autoUpdater.allowPrerelease = false
-  } catch {
-    // electron-updater não instalado — no-op
-  }
-}
-
-function setupAutoUpdater(win: BrowserWindow): void {
-  if (!autoUpdater) return
-
-  const send = (channel: string, payload?: unknown) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(channel, payload)
-    }
-  }
-
-  autoUpdater.on('checking-for-update', () => send('updater:checking'))
-  autoUpdater.on('update-available', (info) => send('updater:available', { version: info.version, releaseNotes: info.releaseNotes }))
-  autoUpdater.on('update-not-available', () => send('updater:not-available'))
-  autoUpdater.on('download-progress', (p) => send('updater:progress', { percent: Math.floor(p.percent) }))
-  autoUpdater.on('update-downloaded', (info) => send('updater:downloaded', { version: info.version }))
-  autoUpdater.on('error', (err) => send('updater:error', { message: err.message }))
-
-  // Verifica atualizações automaticamente 8 segundos após a janela estar pronta
-  setTimeout(() => {
-    autoUpdater?.checkForUpdates().catch(() => {})
-  }, 8000)
-}
-
-ipcMain.handle('updater:check', async () => {
-  if (!autoUpdater) return { error: 'Atualizações automáticas indisponíveis em desenvolvimento.' }
-  try {
-    const result = await autoUpdater.checkForUpdates()
-    return { ok: true, version: result?.updateInfo?.version ?? null }
-  } catch (err) {
-    return { error: String(err) }
-  }
-})
-
-ipcMain.handle('updater:download', async () => {
-  if (!autoUpdater) return { error: 'Atualizações automáticas indisponíveis.' }
-  try {
-    await autoUpdater.downloadUpdate()
-    return { ok: true }
-  } catch (err) {
-    return { error: String(err) }
-  }
-})
-
-ipcMain.handle('updater:install', () => {
-  autoUpdater?.quitAndInstall(false, true)
-})
-
 // Tipos para o store
 interface CardLocation {
   day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' | null
@@ -1677,7 +1614,6 @@ const createWindow = (): void => {
   // Mostra janela quando pronta para evitar flash branco
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
-    if (mainWindow) setupAutoUpdater(mainWindow)
   })
 
   // Em desenvolvimento, carrega do servidor Vite

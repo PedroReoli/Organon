@@ -30,14 +30,7 @@ interface SettingsViewProps {
   onSyncToCloud?: () => Promise<void>
   onSyncFromCloud?: () => Promise<void>
   onSignOut?: () => Promise<void>
-  // Auto-update
-  updateStatus?: 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'up-to-date' | 'error'
-  updateVersion?: string | null
-  updateProgress?: number
-  updateError?: string | null
-  onCheckForUpdates?: () => Promise<void>
-  onDownloadUpdate?: () => Promise<void>
-  onInstallUpdate?: () => void
+  updateAvailable?: { version: string; url: string } | null
 }
 
 interface ThemeCardProps {
@@ -83,7 +76,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut, updateStatus = 'idle', updateVersion, updateProgress = 0, updateError, onCheckForUpdates, onDownloadUpdate, onInstallUpdate }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut, updateAvailable }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -1103,89 +1096,21 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
               </span>
             </div>
 
-            {updateStatus === 'idle' && (
-              <div className="settings-backup-actions">
+            {updateAvailable ? (
+              <div className="settings-update-status settings-update-status--available">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v7M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 13h10" strokeLinecap="round"/></svg>
+                Nova versão <strong>{updateAvailable.version}</strong> disponível.
                 <button
-                  className="settings-btn settings-btn-secondary"
-                  onClick={onCheckForUpdates}
-                  disabled={!onCheckForUpdates}
+                  className="settings-btn settings-btn-primary settings-btn-sm"
+                  onClick={() => window.electronAPI.openExternal(updateAvailable.url)}
                 >
-                  Verificar atualizações
+                  Baixar agora
                 </button>
               </div>
-            )}
-
-            {updateStatus === 'checking' && (
-              <div className="settings-update-status settings-update-status--checking">
-                <span className="settings-update-spinner" />
-                Verificando atualizações...
-              </div>
-            )}
-
-            {updateStatus === 'up-to-date' && (
+            ) : (
               <div className="settings-update-status settings-update-status--ok">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8.5l3.5 3.5 6.5-7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 O app está atualizado.
-                <button className="settings-btn settings-btn-ghost settings-btn-sm" onClick={onCheckForUpdates}>
-                  Verificar novamente
-                </button>
-              </div>
-            )}
-
-            {updateStatus === 'available' && (
-              <div className="settings-update-available">
-                <div className="settings-update-status settings-update-status--available">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 3v7M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 13h10" strokeLinecap="round"/></svg>
-                  Nova versão disponível: <strong>{updateVersion}</strong>
-                </div>
-                <div className="settings-backup-actions">
-                  <button className="settings-btn settings-btn-primary" onClick={onDownloadUpdate}>
-                    Baixar atualização
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {updateStatus === 'downloading' && (
-              <div className="settings-update-downloading">
-                <div className="settings-update-status settings-update-status--downloading">
-                  <span className="settings-update-spinner" />
-                  Baixando atualização... {updateProgress}%
-                </div>
-                <div className="settings-update-progress-bar">
-                  <div
-                    className="settings-update-progress-fill"
-                    style={{ width: `${updateProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {updateStatus === 'ready' && (
-              <div className="settings-update-available">
-                <div className="settings-update-status settings-update-status--ready">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8.5l3.5 3.5 6.5-7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Versão <strong>{updateVersion}</strong> pronta para instalar.
-                </div>
-                <div className="settings-backup-actions">
-                  <button className="settings-btn settings-btn-primary" onClick={onInstallUpdate}>
-                    Instalar e reiniciar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {updateStatus === 'error' && (
-              <div className="settings-update-available">
-                <div className="settings-update-status settings-update-status--error">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round"/></svg>
-                  Erro: {updateError ?? 'Falha ao verificar atualizações.'}
-                </div>
-                <div className="settings-backup-actions">
-                  <button className="settings-btn settings-btn-secondary" onClick={onCheckForUpdates}>
-                    Tentar novamente
-                  </button>
-                </div>
               </div>
             )}
           </div>
