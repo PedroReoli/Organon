@@ -358,6 +358,7 @@ export const useStore = () => {
   const [store, setStore] = useState<Store>(getDefaultStore())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [storeVersion, setStoreVersion] = useState(0)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -459,6 +460,7 @@ export const useStore = () => {
       saveStore(next)
       return next
     })
+    setStoreVersion(v => v + 1)
   }, [saveStore])
 
   const addCard = useCallback((title: string) => {
@@ -1885,6 +1887,7 @@ export const useStore = () => {
     // State
     isLoading,
     error,
+    storeVersion,
     // Card methods
     addCard,
     addCardWithDate,

@@ -24,12 +24,16 @@ export type AppView =
   | 'history'
   | 'settings'
 
+type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+
 interface InternalNavProps {
   activeView: AppView
   onChange: (view: AppView) => void
   disabled?: boolean
   navbarConfig?: NavbarConfig
   onOpenNavbarCustomize?: () => void
+  syncStatus?: SyncStatus
+  userLoggedIn?: boolean
 }
 
 interface NavGroupItem {
@@ -58,7 +62,43 @@ const navbarCustomizeIcon = (
   </svg>
 )
 
-export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize }: InternalNavProps) => {
+const syncIcons: Record<SyncStatus, JSX.Element> = {
+  idle: <></>,
+  pending: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v3.5L10 10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  syncing: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="nav-sync-spin">
+      <path d="M13.5 8A5.5 5.5 0 0 0 4 4.5" strokeLinecap="round" />
+      <path d="M2.5 8A5.5 5.5 0 0 0 12 11.5" strokeLinecap="round" />
+      <path d="M2 3l2 1.5L2 6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 10l-2 1.5 2 1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  synced: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 8.5l3.5 3.5 6.5-7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  error: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+    </svg>
+  ),
+}
+
+const syncLabels: Record<SyncStatus, string> = {
+  idle: '',
+  pending: 'Pendente',
+  syncing: 'Sincronizando',
+  synced: 'Sincronizado',
+  error: 'Erro no sync',
+}
+
+export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize, syncStatus = 'idle', userLoggedIn = false }: InternalNavProps) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const groupButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
@@ -198,6 +238,18 @@ export const InternalNav = ({ activeView, onChange, disabled = false, navbarConf
         </div>
 
         <div className="app-nav-actions">
+          {userLoggedIn && syncStatus !== 'idle' && (
+            <div
+              className={`nav-sync-indicator nav-sync-indicator--${syncStatus}`}
+              title={syncLabels[syncStatus]}
+            >
+              <span className="app-nav-icon" aria-hidden="true">
+                {syncIcons[syncStatus]}
+              </span>
+              <span>{syncLabels[syncStatus]}</span>
+            </div>
+          )}
+
           <button
             className="app-nav-action app-nav-action-navbar"
             onClick={handleOpenNavbarCustomize}

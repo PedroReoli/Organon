@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useAuth } from '../hooks/useAuth'
-import { uploadStore, downloadStore } from '../../api/sync'
+import { uploadStore, downloadStore, syncCollectionsToCloud } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
 import { Titlebar } from './Titlebar'
@@ -168,33 +168,64 @@ export const App = () => {
     removePlaybookDialog,
     updateSettings,
     updateStudy,
+    storeVersion,
   } = useStore()
 
   const { user, isLoadingAuth, authError, login, register, logout, clearAuthError } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
+
+  type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
+  const isSyncing = syncStatus === 'syncing'
+  const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
+
+  // Reset status when user logs out
+  useEffect(() => {
+    if (!user) setSyncStatus('idle')
+  }, [user])
+
+  // Auto-sync: any store change triggers a debounced cloud sync (10s)
+  useEffect(() => {
+    if (!userRef.current || !isElectron()) return
+    setSyncStatus('pending')
+    if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current)
+    autoSyncTimerRef.current = setTimeout(async () => {
+      setSyncStatus('syncing')
+      try {
+        const rawStore = await window.electronAPI.loadStore()
+        await uploadStore(rawStore, userRef.current!.$id)
+        await syncCollectionsToCloud(rawStore, userRef.current!.$id)
+        setSyncStatus('synced')
+      } catch {
+        setSyncStatus('error')
+      }
+    }, 10000)
+  }, [storeVersion])
 
   const handleSyncToCloud = async () => {
     if (!user || !isElectron()) return
-    setIsSyncing(true)
+    setSyncStatus('syncing')
     try {
       const rawStore = await window.electronAPI.loadStore()
       await uploadStore(rawStore, user.$id)
-      alert('Dados enviados para a nuvem com sucesso!')
+      await syncCollectionsToCloud(rawStore, user.$id)
+      setSyncStatus('synced')
     } catch (err) {
+      setSyncStatus('error')
       alert(`Erro ao sincronizar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-    } finally {
-      setIsSyncing(false)
     }
   }
 
   const handleSyncFromCloud = async () => {
     if (!user || !isElectron()) return
     if (!confirm('Isso irá substituir seus dados locais com os dados da nuvem. Continuar?')) return
-    setIsSyncing(true)
+    setSyncStatus('syncing')
     try {
       const cloudStore = await downloadStore(user.$id)
       if (!cloudStore) {
+        setSyncStatus('idle')
         alert('Nenhum dado encontrado na nuvem.')
         return
       }
@@ -202,9 +233,8 @@ export const App = () => {
       alert('Dados baixados com sucesso! O app será recarregado.')
       window.location.reload()
     } catch (err) {
+      setSyncStatus('error')
       alert(`Erro ao baixar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-    } finally {
-      setIsSyncing(false)
     }
   }
 
@@ -458,6 +488,8 @@ export const App = () => {
           onChange={setActiveView}
           navbarConfig={settings.navbarConfig}
           onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
+          syncStatus={syncStatus}
+          userLoggedIn={!!user}
         />
 
         <div className="app-view">

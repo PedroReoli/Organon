@@ -1,4 +1,4 @@
-import { Client, Account, Storage, Databases } from 'appwrite'
+import { Client, Account, Storage, Databases, Query } from 'appwrite'
 
 const client = new Client()
   .setEndpoint('https://fra.cloud.appwrite.io/v1')
@@ -11,9 +11,10 @@ client.ping().then(() => {
   console.warn('[Appwrite] Falha na conexão:', err)
 })
 
-export const account = new Account(client)
-export const storage = new Storage(client)
+export const account   = new Account(client)
+export const storage   = new Storage(client)
 export const databases = new Databases(client)
+export { Query }
 
 export const BUCKET_ID   = 'organon-stores'
 export const DATABASE_ID = 'organon-db'

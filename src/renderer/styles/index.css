@@ -1932,6 +1932,54 @@ input:focus, textarea:focus, select:focus {
   flex-shrink: 0;
 }
 
+.nav-sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.nav-sync-indicator--pending {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.nav-sync-indicator--syncing {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.nav-sync-indicator--synced {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.nav-sync-indicator--error {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+@keyframes nav-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.nav-sync-spin {
+  animation: nav-spin 1s linear infinite;
+  display: inline-flex;
+}
+
 /* ========================================
  * NAV DROPDOWN
  * ======================================== */
