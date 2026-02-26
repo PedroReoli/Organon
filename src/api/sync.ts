@@ -87,7 +87,7 @@ export interface SyncReport {
   totalErrors: number
 }
 
-export async function syncCollectionsToCloud(store: Store, userId: string): Promise<SyncReport> {
+export async function syncCollectionsToCloud(store: Store, userId: string, noteContents?: Map<string, string>): Promise<SyncReport> {
   const report: SyncReport = { collections: {}, totalSent: 0, totalErrors: 0 }
 
   async function syncItems<T extends { id: string }>(
@@ -165,7 +165,9 @@ export async function syncCollectionsToCloud(store: Store, userId: string): Prom
   await syncItems('notes', store.notes, (n) => ({
     title:     str(n.title, 500),
     folderId:  str(n.folderId, 255),
-    content:   str(n.content, 200000),
+    projectId: str(n.projectId, 255),
+    mdPath:    str(n.mdPath, 500),
+    content:   str(noteContents?.get(n.id) ?? '', 200000),
     order:     n.order ?? 0,
     createdAt: str(n.createdAt, 30),
     updatedAt: str(n.updatedAt, 30),
@@ -249,6 +251,19 @@ export async function syncCollectionsToCloud(store: Store, userId: string): Prom
     favicon:   str(s.favicon, 500),
     order:     s.order ?? 0,
     createdAt: str(s.createdAt, 30),
+  }))
+
+  // ── playbooks ────────────────────────────────────────────────────────────
+  await syncItems('playbooks', store.playbooks, (p) => ({
+    title:     str(p.title, 500),
+    sector:    str(p.sector, 255),
+    category:  str(p.category, 255),
+    summary:   str(p.summary, 2000),
+    content:   str(p.content, 200000),
+    dialogs:   json(p.dialogs, 50000),
+    order:     p.order ?? 0,
+    createdAt: str(p.createdAt, 30),
+    updatedAt: str(p.updatedAt, 30),
   }))
 
   // ── settings (único doc por usuário) ─────────────────────────────────────

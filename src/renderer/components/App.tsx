@@ -186,6 +186,21 @@ export const App = () => {
     if (!user) setSyncStatus('idle')
   }, [user])
 
+  const readNoteContents = async (storeData: Awaited<ReturnType<typeof window.electronAPI.loadStore>>) => {
+    const noteContents = new Map<string, string>()
+    await Promise.all(
+      storeData.notes.map(async (note) => {
+        try {
+          const content = await window.electronAPI.readNote(note.mdPath)
+          noteContents.set(note.id, content)
+        } catch {
+          // ignora falha ao ler arquivo individual
+        }
+      })
+    )
+    return noteContents
+  }
+
   // Auto-sync: any store change triggers a debounced cloud sync (10s)
   useEffect(() => {
     if (!userRef.current || !isElectron()) return
@@ -195,8 +210,9 @@ export const App = () => {
       setSyncStatus('syncing')
       try {
         const rawStore = await window.electronAPI.loadStore()
+        const noteContents = await readNoteContents(rawStore)
         await uploadStore(rawStore, userRef.current!.$id)
-        await syncCollectionsToCloud(rawStore, userRef.current!.$id)
+        await syncCollectionsToCloud(rawStore, userRef.current!.$id, noteContents)
         setSyncStatus('synced')
       } catch {
         setSyncStatus('error')
@@ -209,8 +225,9 @@ export const App = () => {
     setSyncStatus('syncing')
     try {
       const rawStore = await window.electronAPI.loadStore()
+      const noteContents = await readNoteContents(rawStore)
       await uploadStore(rawStore, user.$id)
-      await syncCollectionsToCloud(rawStore, user.$id)
+      await syncCollectionsToCloud(rawStore, user.$id, noteContents)
       setSyncStatus('synced')
     } catch (err) {
       setSyncStatus('error')
@@ -490,6 +507,7 @@ export const App = () => {
           onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
           syncStatus={syncStatus}
           userLoggedIn={!!user}
+          onSync={handleSyncToCloud}
         />
 
         <div className="app-view">
