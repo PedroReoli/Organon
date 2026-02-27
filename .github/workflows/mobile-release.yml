@@ -46,13 +46,6 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Criar pasta release
-        run: mkdir -p release
-
-      - name: Build Android APK
-        working-directory: mobile
-        run: eas build --platform android --profile production --non-interactive --local --output ../release/organon-mobile.apk
-
       - name: Ler versao e metadados
         id: meta
         run: |
@@ -63,18 +56,44 @@ jobs:
           echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "tag=mobile-v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Renomear APK com versao
+      - name: Build Android APK via EAS Cloud
+        id: eas_build
+        working-directory: mobile
         run: |
-          mv release/organon-mobile.apk "release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk"
+          # EAS Cloud Build (sem --local): nao precisa de Android SDK no runner
+          # O build roda nos servidores da Expo (~5-10 minutos)
+          BUILD_JSON=$(eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --json \
+            2>/dev/null)
+          echo "build_json=$BUILD_JSON" >> $GITHUB_OUTPUT
+          BUILD_ID=$(echo "$BUILD_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if isinstance(d, list) else d['id'])")
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "EAS Build ID: $BUILD_ID"
 
-      - name: Validar APK gerado
+      - name: Aguardar build e baixar APK
+        working-directory: mobile
         run: |
-          APK="release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk"
-          if [ ! -f "$APK" ]; then
-            echo "Erro: APK nao encontrado em $APK"
+          BUILD_ID="${{ steps.eas_build.outputs.build_id }}"
+          echo "Aguardando build $BUILD_ID..."
+          # Espera o build terminar (timeout 30 minutos)
+          eas build:wait --build-id "$BUILD_ID" --timeout 1800
+          # Obter URL de download
+          BUILD_URL=$(eas build:view --json "$BUILD_ID" 2>/dev/null | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print(d.get('artifacts', {}).get('buildUrl', ''))
+          ")
+          echo "APK URL: $BUILD_URL"
+          if [ -z "$BUILD_URL" ]; then
+            echo "Erro: URL do APK nao encontrada"
             exit 1
           fi
-          echo "APK gerado: $APK ($(du -sh "$APK" | cut -f1))"
+          mkdir -p ../release
+          curl -L -o "../release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk" "$BUILD_URL"
+          echo "APK baixado: $(du -sh "../release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk" | cut -f1)"
 
       - name: Publicar GitHub Release
         uses: softprops/action-gh-release@v2
@@ -86,6 +105,7 @@ jobs:
             ## Organon Mobile ${{ steps.meta.outputs.version }}
 
             Versao mobile do Organon para Android.
+            Build: EAS Cloud (sem Android SDK local) · Profile: preview
 
             ### Como instalar
             1. Baixe o arquivo `.apk` abaixo
