@@ -1,0 +1,104 @@
+name: Organon Mobile Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Notas adicionais da release'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Setup Expo e EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Criar pasta release
+        run: mkdir -p release
+
+      - name: Build Android APK
+        working-directory: mobile
+        run: eas build --platform android --profile production --non-interactive --local --output ../release/organon-mobile.apk
+
+      - name: Ler versao e metadados
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./mobile/app.json').expo.version")
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "tag=mobile-v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Renomear APK com versao
+        run: |
+          mv release/organon-mobile.apk "release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk"
+
+      - name: Validar APK gerado
+        run: |
+          APK="release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk"
+          if [ ! -f "$APK" ]; then
+            echo "Erro: APK nao encontrado em $APK"
+            exit 1
+          fi
+          echo "APK gerado: $APK ($(du -sh "$APK" | cut -f1))"
+
+      - name: Publicar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: "Organon Mobile ${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.short_sha }})"
+          body: |
+            ## Organon Mobile ${{ steps.meta.outputs.version }}
+
+            Versao mobile do Organon para Android.
+
+            ### Como instalar
+            1. Baixe o arquivo `.apk` abaixo
+            2. No Android, va em **Configuracoes → Seguranca** e ative **"Instalar de fontes desconhecidas"**
+            3. Abra o arquivo `.apk` para instalar
+
+            > Esta e a versao mobile do Organon, diferente da versao desktop (.exe).
+            > Para a versao desktop, veja as releases sem o prefixo `mobile-`.
+
+            ${{ github.event.inputs.release_notes }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/Organon-Mobile-${{ steps.meta.outputs.version }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
