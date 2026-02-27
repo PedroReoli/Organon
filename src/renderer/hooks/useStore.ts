@@ -147,6 +147,7 @@ const normalizeStudyState = (input: Partial<StudyState> | null | undefined): Stu
 
 const getDefaultStore = (): Store => ({
   version: 12,
+  storeUpdatedAt: new Date().toISOString(),
   cards: [],
   shortcutFolders: [],
   shortcuts: [],
@@ -273,6 +274,7 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
     ...base,
     ...input,
     version: 12,
+    storeUpdatedAt: input.storeUpdatedAt ?? base.storeUpdatedAt,
     cards: normalizedCards.map(c => ({ ...c, projectId: (c as Card & { projectId?: string | null }).projectId ?? null })),
     shortcutFolders: normalizedFolders,
     shortcuts: normalizedShortcuts,
@@ -455,8 +457,9 @@ export const useStore = () => {
   }, [])
 
   const updateStore = useCallback((updater: (prev: Store) => Store) => {
+    const now = new Date().toISOString()
     setStore(prev => {
-      const next = normalizeStore(updater(prev))
+      const next = { ...normalizeStore(updater(prev)), storeUpdatedAt: now }
       saveStore(next)
       return next
     })
@@ -1072,6 +1075,17 @@ export const useStore = () => {
     }))
   }, [updateStore])
 
+  const reorderNoteFolders = useCallback((orderedIds: string[]) => {
+    updateStore(prev => ({
+      ...prev,
+      noteFolders: prev.noteFolders.map(folder => {
+        const idx = orderedIds.indexOf(folder.id)
+        if (idx === -1) return folder
+        return { ...folder, order: idx }
+      }),
+    }))
+  }, [updateStore])
+
   const addNote = useCallback((title: string, folderId?: string | null, projectId?: string | null) => {
     const now = new Date().toISOString()
     const id = generateId()
@@ -1092,12 +1106,23 @@ export const useStore = () => {
     return newNote
   }, [updateStore])
 
-  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId'>>) => {
+  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order'>>) => {
     updateStore(prev => ({
       ...prev,
       notes: prev.notes.map(note => {
         if (note.id !== noteId) return note
         return { ...note, ...updates, updatedAt: new Date().toISOString() }
+      }),
+    }))
+  }, [updateStore])
+
+  const reorderNotes = useCallback((orderedIds: string[]) => {
+    updateStore(prev => ({
+      ...prev,
+      notes: prev.notes.map(note => {
+        const idx = orderedIds.indexOf(note.id)
+        if (idx === -1) return note
+        return { ...note, order: idx }
       }),
     }))
   }, [updateStore])
@@ -1941,8 +1966,10 @@ export const useStore = () => {
     addNoteFolder,
     updateNoteFolder,
     removeNoteFolder,
+    reorderNoteFolders,
     addNote,
     updateNote,
+    reorderNotes,
     removeNote,
     addColorPalette,
     updateColorPalette,

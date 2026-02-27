@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Settings, ThemeName, RegisteredIDE, KeyboardShortcut, CalendarEvent } from '../types'
 import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
@@ -25,9 +25,8 @@ interface SettingsViewProps {
   user?: AppwriteUser | null
   onOpenAuthModal?: () => void
   isSyncing?: boolean
-  onSyncToCloud?: () => Promise<void>
-  onSyncFromCloud?: () => Promise<void>
   onSignOut?: () => Promise<void>
+  syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 }
 
 interface ThemeCardProps {
@@ -73,7 +72,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSyncToCloud, onSyncFromCloud, onSignOut }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSignOut, syncStatus }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -555,16 +554,94 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   }
 
 
+  const [activeSection, setActiveSection] = useState<string>('theme')
+
+  const settingsNavItems: Array<{ id: string; label: string; icon: ReactNode; hidden?: boolean }> = [
+    {
+      id: 'theme',
+      label: 'Tema',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <circle cx="8" cy="8" r="5.5" />
+          <path d="M8 2.5v11M2.5 8h11" />
+        </svg>
+      ),
+    },
+    {
+      id: 'data',
+      label: 'Dados',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <ellipse cx="8" cy="5" rx="5.5" ry="2.5" />
+          <path d="M2.5 5v6c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V5" />
+          <path d="M2.5 8c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5" />
+        </svg>
+      ),
+    },
+    {
+      id: 'ides',
+      label: 'IDEs',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <polyline points="10.5 11.5 13.5 8 10.5 4.5" />
+          <polyline points="5.5 4.5 2.5 8 5.5 11.5" />
+        </svg>
+      ),
+    },
+    {
+      id: 'shortcuts',
+      label: 'Atalhos',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <rect x="2" y="4" width="4" height="3" rx="1" />
+          <rect x="7" y="4" width="2" height="3" rx="1" />
+          <rect x="10" y="4" width="4" height="3" rx="1" />
+          <rect x="2" y="9" width="12" height="3" rx="1" />
+        </svg>
+      ),
+    },
+    {
+      id: 'backup',
+      label: 'Backup',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <path d="M13 10a5 5 0 1 0-9.9-1H2.5A2.5 2.5 0 0 0 5 13.5h8a2 2 0 0 0 0-4H13z" />
+        </svg>
+      ),
+      hidden: !isElectron(),
+    },
+    {
+      id: 'account',
+      label: 'Conta',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <circle cx="8" cy="5.5" r="2.5" />
+          <path d="M2.5 13c0-3 2.5-4.5 5.5-4.5s5.5 1.5 5.5 4.5" />
+        </svg>
+      ),
+    },
+  ]
+
   return (
     <div className="settings-layout">
-      <header className="settings-header">
-        <div>
-          <h2>Configuracoes</h2>
-          <p>Ajuste o tema, a pasta de dados e as IDEs registradas.</p>
-        </div>
-      </header>
+      {/* Left sidebar nav */}
+      <nav className="settings-nav">
+        <div className="settings-nav-title">Config</div>
+        {settingsNavItems.filter(item => !item.hidden).map(item => (
+          <button
+            key={item.id}
+            className={`settings-nav-item ${activeSection === item.id ? 'active' : ''}`}
+            onClick={() => setActiveSection(item.id)}
+          >
+            <span className="settings-nav-item-icon">{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
-      <section className="settings-section">
+      <div className="settings-content">
+
+      <section className={`settings-section ${activeSection !== 'theme' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
           <h3>Tema</h3>
         </div>
@@ -608,7 +685,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
         </div>
       </section>
 
-      <section className="settings-section">
+      <section className={`settings-section ${activeSection !== 'data' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
           <h3>Pasta de dados</h3>
         </div>
@@ -638,7 +715,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
       </section>
 
       {/* IDEs Registradas */}
-      <section className="settings-section">
+      <section className={`settings-section ${activeSection !== 'ides' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
           <h3>IDEs Registradas</h3>
           <button className="btn btn-primary settings-ide-add-btn" onClick={() => { resetIdeForm(); setShowIdeForm(true) }}>
@@ -748,7 +825,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
       </section>
 
       {/* Atalhos de Teclado */}
-      <section className="settings-section">
+      <section className={`settings-section ${activeSection !== 'shortcuts' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
           <h3>Atalhos de Teclado</h3>
         </div>
@@ -810,52 +887,17 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
 
       {/* Dados */}
       {isElectron() && (
-        <section className="settings-section">
+        <section className={`settings-section ${activeSection !== 'backup' ? 'settings-section-hidden' : ''}`}>
           <div className="settings-section-header">
             <h3>Dados e Recuperacao</h3>
           </div>
 
           <div className="settings-data-grid">
             <div className="settings-data-card">
-              <h4>Backup e Recuperacao</h4>
-              <div className="settings-backup-config">
-                <label className="form-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.backupEnabled ?? true}
-                    onChange={(e) => onUpdateSettings({ backupEnabled: e.target.checked })}
-                  />
-                  <span>Ativar backup automatico</span>
-                </label>
-
-                {settings.backupEnabled && (
-                  <div className="settings-backup-interval">
-                    <label className="form-label">
-                      Intervalo de backup (minutos):
-                      <input
-                        type="number"
-                        min="1"
-                        max="1440"
-                        value={settings.backupIntervalMinutes ?? 15}
-                        onChange={(e) => {
-                          const minutes = parseInt(e.target.value, 10)
-                          if (!isNaN(minutes) && minutes > 0) {
-                            onUpdateSettings({ backupIntervalMinutes: minutes })
-                          }
-                        }}
-                        className="form-input"
-                        style={{ width: '100px', marginLeft: '8px' }}
-                      />
-                    </label>
-                  </div>
-                )}
-
-                <p className="settings-help-text">
-                  Backups automaticos sao salvos na pasta <code>backups</code> dentro da pasta de dados.
-                  Cada backup inclui JSONs por tela, arquivo <code>backup.json</code>, markdowns de notas, arquivos importados e audios de reunioes.
-                  Os 50 backups mais recentes sao mantidos automaticamente.
-                </p>
-              </div>
+              <h4>Salvar Localmente</h4>
+              <p className="settings-help-text" style={{ marginBottom: 10 }}>
+                Salva um backup completo local: JSONs, notas, arquivos e audios. Os 50 mais recentes sao mantidos.
+              </p>
 
               <div className="settings-backup-actions">
                 <button
@@ -863,7 +905,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                   onClick={handleCreateBackup}
                   disabled={backupLoading}
                 >
-                  {backupLoading ? 'Criando...' : 'Criar Backup Completo'}
+                  {backupLoading ? 'Salvando...' : 'Salvar Localmente'}
                 </button>
                 <button
                   className="btn btn-secondary"
@@ -999,7 +1041,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
       )}
 
       {/* Conta & Sincronização */}
-      <section className="settings-section">
+      <section className={`settings-section ${activeSection !== 'account' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
           <h3>Conta &amp; Sincronizacao</h3>
         </div>
@@ -1031,23 +1073,18 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                   <div style={{ fontSize: 12, opacity: 0.6 }}>{user.email}</div>
                 </div>
               </div>
+              {syncStatus && syncStatus !== 'idle' && (
+                <p className="settings-help-text" style={{ marginBottom: 10 }}>
+                  {syncStatus === 'pending' && 'Aguardando para sincronizar...'}
+                  {syncStatus === 'syncing' && 'Sincronizando com a nuvem...'}
+                  {syncStatus === 'synced' && 'Sincronizado com a nuvem.'}
+                  {syncStatus === 'error' && 'Erro ao sincronizar. Tentará novamente na próxima alteração.'}
+                </p>
+              )}
+              <p className="settings-help-text" style={{ marginBottom: 10 }}>
+                Sincronização automática ativada. Alterações são enviadas para a nuvem automaticamente. Ao entrar em outro dispositivo, a versão mais recente é baixada.
+              </p>
               <div className="settings-backup-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={onSyncToCloud}
-                  disabled={isSyncing}
-                  title="Envia seus dados locais para a nuvem"
-                >
-                  {isSyncing ? 'Sincronizando...' : 'Enviar para nuvem'}
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={onSyncFromCloud}
-                  disabled={isSyncing}
-                  title="Baixa os dados da nuvem e substitui os dados locais"
-                >
-                  {isSyncing ? 'Sincronizando...' : 'Baixar da nuvem'}
-                </button>
                 <button
                   className="btn btn-secondary settings-reset-trigger"
                   onClick={onSignOut}
@@ -1077,6 +1114,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
           </div>
         )}
       </section>
+      </div>
     </div>
   )
 }

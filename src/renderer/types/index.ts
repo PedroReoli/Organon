@@ -820,6 +820,7 @@ export interface StudyState {
 // Store completo (persistido em JSON)
 export interface Store {
   version: number
+  storeUpdatedAt?: string
   cards: Card[]
   shortcutFolders: ShortcutFolder[]
   shortcuts: ShortcutItem[]

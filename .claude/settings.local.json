@@ -10,7 +10,8 @@
       "Bash(node -e:*)",
       "Bash(npm config:*)",
       "Bash(npx tsc:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npx vite build)"
     ]
   }
 }

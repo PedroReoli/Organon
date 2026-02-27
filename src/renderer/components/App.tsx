@@ -93,8 +93,10 @@ export const App = () => {
     removeFileItem,
     addNoteFolder,
     removeNoteFolder,
+    reorderNoteFolders,
     addNote,
     updateNote,
+    reorderNotes,
     removeNote,
     addColorPalette,
     updateColorPalette,
@@ -179,12 +181,43 @@ export const App = () => {
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userRef = useRef(user)
+  const lastCheckedUserRef = useRef<string | null>(null)
   useEffect(() => { userRef.current = user }, [user])
 
   // Reset status when user logs out
   useEffect(() => {
-    if (!user) setSyncStatus('idle')
+    if (!user) {
+      setSyncStatus('idle')
+      lastCheckedUserRef.current = null
+    }
   }, [user])
+
+  // Startup sync: when user logs in (and store is loaded), check if cloud has newer version
+  useEffect(() => {
+    if (!user || !isElectron() || isLoading) return
+    const userId = user.$id
+    if (lastCheckedUserRef.current === userId) return
+    lastCheckedUserRef.current = userId
+
+    const checkCloudVersion = async () => {
+      try {
+        const [cloudStore, localStore] = await Promise.all([
+          downloadStore(userId),
+          window.electronAPI.loadStore(),
+        ])
+        if (!cloudStore?.storeUpdatedAt || !localStore?.storeUpdatedAt) return
+        if (cloudStore.storeUpdatedAt > localStore.storeUpdatedAt) {
+          await window.electronAPI.saveStore(cloudStore)
+          window.location.reload()
+        }
+      } catch {
+        // Ignore startup sync errors silently
+      }
+    }
+
+    void checkCloudVersion()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.$id, isLoading])
 
   // Auto-sync: any store change triggers a debounced cloud sync (10s)
   useEffect(() => {
@@ -203,40 +236,6 @@ export const App = () => {
       }
     }, 10000)
   }, [storeVersion])
-
-  const handleSyncToCloud = async () => {
-    if (!user || !isElectron()) return
-    setSyncStatus('syncing')
-    try {
-      const rawStore = await window.electronAPI.loadStore()
-      await uploadStore(rawStore, user.$id)
-      await syncCollectionsToCloud(rawStore, user.$id)
-      setSyncStatus('synced')
-    } catch (err) {
-      setSyncStatus('error')
-      alert(`Erro ao sincronizar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-    }
-  }
-
-  const handleSyncFromCloud = async () => {
-    if (!user || !isElectron()) return
-    if (!confirm('Isso irá substituir seus dados locais com os dados da nuvem. Continuar?')) return
-    setSyncStatus('syncing')
-    try {
-      const cloudStore = await downloadStore(user.$id)
-      if (!cloudStore) {
-        setSyncStatus('idle')
-        alert('Nenhum dado encontrado na nuvem.')
-        return
-      }
-      await window.electronAPI.saveStore(cloudStore)
-      alert('Dados baixados com sucesso! O app será recarregado.')
-      window.location.reload()
-    } catch (err) {
-      setSyncStatus('error')
-      alert(`Erro ao baixar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-    }
-  }
 
   void isLoadingAuth // usado internamente pelo useAuth
 
@@ -656,6 +655,8 @@ export const App = () => {
               folders={noteFolders}
               onAddNote={addNote}
               onUpdateNote={updateNote}
+              onReorderNotes={reorderNotes}
+              onReorderFolders={reorderNoteFolders}
               onRemoveNote={removeNote}
               onAddFolder={addNoteFolder}
               onRemoveFolder={removeNoteFolder}
@@ -799,8 +800,7 @@ export const App = () => {
               user={user}
               onOpenAuthModal={() => setShowAuthModal(true)}
               isSyncing={isSyncing}
-              onSyncToCloud={handleSyncToCloud}
-              onSyncFromCloud={handleSyncFromCloud}
+              syncStatus={syncStatus}
               onSignOut={logout}
             />
           )}
