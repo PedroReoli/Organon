@@ -132,21 +132,36 @@ const CopyNodeControlsExtension = Extension.create({
 
 // ---- Resizable Image Node View ----
 
-const ResizableImageView = ({ node, updateAttributes, selected }: NodeViewProps) => {
+type ImageAlign = 'left' | 'center' | 'right'
+type ImageMode = 'free' | 'frame'
+type FrameAspect = '16:9' | '4:3' | '1:1' | '3:4'
+
+const FRAME_ASPECTS: { label: string; value: FrameAspect; css: string }[] = [
+  { label: '16:9', value: '16:9', css: '16 / 9' },
+  { label: '4:3',  value: '4:3',  css: '4 / 3'  },
+  { label: '1:1',  value: '1:1',  css: '1 / 1'  },
+  { label: '3:4',  value: '3:4',  css: '3 / 4'  },
+]
+
+const ResizableImageView = ({ node, updateAttributes, selected, deleteNode }: NodeViewProps) => {
   const src = node.attrs.src as string
   const alt = (node.attrs.alt as string | undefined) ?? ''
   const title = (node.attrs.title as string | undefined) ?? ''
   const width = node.attrs.width as number | null | undefined
+  const align: ImageAlign = (node.attrs.align as ImageAlign | undefined) ?? 'center'
+  const mode: ImageMode = (node.attrs.mode as ImageMode | undefined) ?? 'free'
+  const frameAspect: FrameAspect = (node.attrs.frameAspect as FrameAspect | undefined) ?? '16:9'
+
   const [isResizing, setIsResizing] = useState(false)
   const startXRef = useRef(0)
   const startWRef = useRef(0)
-  const imgRef = useRef<HTMLImageElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     startXRef.current = e.clientX
-    startWRef.current = imgRef.current?.offsetWidth ?? (width ?? 200)
+    startWRef.current = innerRef.current?.offsetWidth ?? (width ?? 200)
     setIsResizing(true)
 
     const handleMouseMove = (ev: MouseEvent) => {
@@ -163,23 +178,146 @@ const ResizableImageView = ({ node, updateAttributes, selected }: NodeViewProps)
     document.addEventListener('mouseup', handleMouseUp)
   }
 
+  const textAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left'
+  const aspectCss = FRAME_ASPECTS.find(a => a.value === frameAspect)?.css ?? '16 / 9'
+
+  const showToolbar = selected && !isResizing
+
   return (
-    <NodeViewWrapper as="span" className="resizable-image-wrapper" data-drag-handle="">
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt ?? ''}
-        title={title ?? ''}
-        className={`resizable-image ${selected || isResizing ? 'is-selected' : ''}`}
-        style={{ width: width ? `${width}px` : undefined }}
-        draggable={false}
-      />
-      {(selected || isResizing) && (
-        <span
-          className="resizable-image-handle"
-          onMouseDown={handleResizeStart}
-        />
-      )}
+    <NodeViewWrapper as="div" className="resizable-image-outer" data-drag-handle="" style={{ textAlign }}>
+      <div
+        ref={innerRef}
+        className={`resizable-image-inner${selected || isResizing ? ' is-selected' : ''}`}
+        style={width ? { width: `${width}px` } : undefined}
+      >
+        {/* Floating toolbar */}
+        {showToolbar && (
+          <div className="image-floating-toolbar" contentEditable={false}>
+            {/* Alignment */}
+            <div className="image-toolbar-group">
+              <button
+                type="button"
+                className={`image-toolbar-btn${align === 'left' ? ' active' : ''}`}
+                onMouseDown={e => { e.preventDefault(); updateAttributes({ align: 'left' }) }}
+                title="Alinhar à esquerda"
+              >
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                  <rect x="1" y="2" width="14" height="2" rx="1"/>
+                  <rect x="1" y="6" width="9" height="2" rx="1"/>
+                  <rect x="1" y="10" width="11" height="2" rx="1"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`image-toolbar-btn${align === 'center' ? ' active' : ''}`}
+                onMouseDown={e => { e.preventDefault(); updateAttributes({ align: 'center' }) }}
+                title="Centralizar"
+              >
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                  <rect x="1" y="2" width="14" height="2" rx="1"/>
+                  <rect x="3.5" y="6" width="9" height="2" rx="1"/>
+                  <rect x="2.5" y="10" width="11" height="2" rx="1"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`image-toolbar-btn${align === 'right' ? ' active' : ''}`}
+                onMouseDown={e => { e.preventDefault(); updateAttributes({ align: 'right' }) }}
+                title="Alinhar à direita"
+              >
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                  <rect x="1" y="2" width="14" height="2" rx="1"/>
+                  <rect x="6" y="6" width="9" height="2" rx="1"/>
+                  <rect x="4" y="10" width="11" height="2" rx="1"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="image-toolbar-sep" />
+
+            {/* Mode */}
+            <div className="image-toolbar-group">
+              <button
+                type="button"
+                className={`image-toolbar-btn image-toolbar-btn-text${mode === 'free' ? ' active' : ''}`}
+                onMouseDown={e => { e.preventDefault(); updateAttributes({ mode: 'free' }) }}
+                title="Tamanho original"
+              >
+                Livre
+              </button>
+              <button
+                type="button"
+                className={`image-toolbar-btn image-toolbar-btn-text${mode === 'frame' ? ' active' : ''}`}
+                onMouseDown={e => { e.preventDefault(); updateAttributes({ mode: 'frame' }) }}
+                title="Frame com proporção fixa"
+              >
+                Frame
+              </button>
+            </div>
+
+            {/* Frame aspect ratios */}
+            {mode === 'frame' && (
+              <>
+                <div className="image-toolbar-sep" />
+                <div className="image-toolbar-group">
+                  {FRAME_ASPECTS.map(a => (
+                    <button
+                      key={a.value}
+                      type="button"
+                      className={`image-toolbar-btn image-toolbar-btn-text${frameAspect === a.value ? ' active' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); updateAttributes({ frameAspect: a.value }) }}
+                      title={a.label}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="image-toolbar-sep" />
+
+            {/* Delete */}
+            <button
+              type="button"
+              className="image-toolbar-btn image-toolbar-btn-danger"
+              onMouseDown={e => { e.preventDefault(); deleteNode() }}
+              title="Remover imagem"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                <path d="M6 2h4a1 1 0 0 1 1 1H5a1 1 0 0 1 1-1zM2 4h12v1H3.1l.8 8h8.2l.8-8H14v-1H2zm2.9 1h6.2L10.3 13H5.7L4.9 5z"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Image content */}
+        {mode === 'frame' ? (
+          <div className="image-frame" style={{ aspectRatio: aspectCss }}>
+            <img
+              src={src}
+              alt={alt}
+              title={title}
+              className="image-frame-img"
+              draggable={false}
+            />
+          </div>
+        ) : (
+          <img
+            src={src}
+            alt={alt}
+            title={title}
+            className="resizable-image-img"
+            style={width ? { width: '100%', height: 'auto' } : { maxWidth: '100%', height: 'auto', display: 'block' }}
+            draggable={false}
+          />
+        )}
+
+        {/* Resize handle */}
+        {(selected || isResizing) && (
+          <span className="resizable-image-handle" onMouseDown={handleResizeStart} />
+        )}
+      </div>
     </NodeViewWrapper>
   )
 }
@@ -192,6 +330,21 @@ const ResizableImage = Image.extend({
         default: null,
         parseHTML: el => el.getAttribute('width') ? Number(el.getAttribute('width')) : null,
         renderHTML: attrs => (attrs.width ? { width: String(attrs.width) } : {}),
+      },
+      align: {
+        default: 'center',
+        parseHTML: el => (el.getAttribute('data-align') as ImageAlign | null) ?? 'center',
+        renderHTML: attrs => ({ 'data-align': attrs.align ?? 'center' }),
+      },
+      mode: {
+        default: 'free',
+        parseHTML: el => (el.getAttribute('data-mode') as ImageMode | null) ?? 'free',
+        renderHTML: attrs => ({ 'data-mode': attrs.mode ?? 'free' }),
+      },
+      frameAspect: {
+        default: '16:9',
+        parseHTML: el => (el.getAttribute('data-frame-aspect') as FrameAspect | null) ?? '16:9',
+        renderHTML: attrs => ({ 'data-frame-aspect': attrs.frameAspect ?? '16:9' }),
       },
     }
   },
