@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { Feather } from '@expo/vector-icons'
 import { BottomSheet } from '../components/shared/BottomSheet'
 import { FormInput } from '../components/shared/FormInput'
+import { Header } from '../components/shared/Header'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import {
@@ -84,6 +85,12 @@ export function BacklogScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <Header title="Backlog" rightIcon="plus" onRightPress={openAdd} />
+      <View style={[styles.summaryBar, { borderBottomColor: theme.text + '12' }]}>
+        <Text style={[styles.summaryText, { color: theme.text + '50' }]}>
+          {backlogCards.length} nao agendados - {backlogCards.filter(c => c.status === 'done').length} concluidos
+        </Text>
+      </View>
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.text + '12' }]}>
@@ -293,8 +300,10 @@ export function BacklogScreen() {
 
 const styles = StyleSheet.create({
   root:         { flex: 1 },
+  summaryBar:   { borderBottomWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
+  summaryText:  { fontSize: 12.5, fontWeight: '500' },
 
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
+  header:       { display: 'none', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
   headerTitle:  { fontSize: 18, fontWeight: '700' },
   headerSub:    { fontSize: 12, marginTop: 2 },
   addBtn:       { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },

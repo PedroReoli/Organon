@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "full": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "cell": "npm --prefix mobile run start",
     "dev:vite": "vite",
     "dev:electron": "tsc -p tsconfig.node.json && electron .",
     "build": "tsc -p tsconfig.node.json && vite build",

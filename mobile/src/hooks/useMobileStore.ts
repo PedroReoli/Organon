@@ -191,7 +191,7 @@ export function StoreProvider({ children, onStoreChange }: {
       location: { day: null, period: null }, order: 0,
       date: null, time: null, hasDate: false,
       priority: null, status: 'todo', checklist: [],
-      projectId: null, createdAt: now(), updatedAt: now(),
+      projectId: null, calendarEventId: null, createdAt: now(), updatedAt: now(),
       ...data,
     }
     updateStore(s => ({ ...s, cards: [...s.cards, card] }))
@@ -575,6 +575,7 @@ export function StoreProvider({ children, onStoreChange }: {
         status: c.status ?? 'todo',
         priority: c.priority ?? null,
         projectId: c.projectId ?? null,
+        calendarEventId: c.calendarEventId ?? null,
       })),
     }
     setStore(merged)

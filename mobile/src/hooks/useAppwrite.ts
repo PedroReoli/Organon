@@ -37,19 +37,28 @@ export function useAppwrite(
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestStoreRef = useRef<MobileStore | null>(null)
+  const isHydratingRef = useRef(false)
+
+  const hydrateFromCloud = useCallback(async (userId: string) => {
+    isHydratingRef.current = true
+    try {
+      const cloudStore = await downloadStore(userId)
+      if (cloudStore) {
+        onCloudStoreDownloaded?.(cloudStore)
+      }
+    } catch {
+      // ignore
+    } finally {
+      isHydratingRef.current = false
+    }
+  }, [onCloudStoreDownloaded])
 
   // On mount: check current session
   useEffect(() => {
     getCurrentUser().then(async (u) => {
       setUser(u)
       if (u) {
-        // Startup sync: download cloud store
-        try {
-          const cloudStore = await downloadStore(u.$id)
-          if (cloudStore) {
-            onCloudStoreDownloaded?.(cloudStore)
-          }
-        } catch { /* ignore */ }
+        await hydrateFromCloud(u.$id)
       }
     }).finally(() => setIsLoadingAuth(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,12 +73,7 @@ export function useAppwrite(
       setSyncStatus('idle')
       // Download cloud store after login
       if (u) {
-        try {
-          const cloudStore = await downloadStore(u.$id)
-          if (cloudStore) {
-            onCloudStoreDownloaded?.(cloudStore)
-          }
-        } catch { /* ignore */ }
+        await hydrateFromCloud(u.$id)
       }
     } catch (err) {
       setAuthError(translateError(err))
@@ -101,7 +105,7 @@ export function useAppwrite(
 
   // Debounced auto-sync: called every time store changes
   const triggerSync = useCallback((store: MobileStore) => {
-    if (!user) return
+    if (!user || isHydratingRef.current) return
     latestStoreRef.current = store
     setSyncStatus('pending')
     if (debounceRef.current) clearTimeout(debounceRef.current)

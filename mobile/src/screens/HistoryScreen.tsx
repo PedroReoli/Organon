@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
+import { Header } from '../components/shared/Header'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 
@@ -171,6 +172,10 @@ export function HistoryScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <Header title="Historico" />
+      <View style={[styles.summaryBar, { borderBottomColor: theme.text + '12' }]}>
+        <Text style={[styles.summaryText, { color: theme.text + '55' }]}>{items.length} registros</Text>
+      </View>
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.text + '12' }]}>
@@ -286,8 +291,10 @@ export function HistoryScreen() {
 
 const styles = StyleSheet.create({
   root:         { flex: 1 },
+  summaryBar:   { borderBottomWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
+  summaryText:  { fontSize: 12.5, fontWeight: '500' },
 
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
+  header:       { display: 'none', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
   headerTitle:  { fontSize: 18, fontWeight: '700' },
   headerCount:  { fontSize: 13, fontWeight: '500' },
 

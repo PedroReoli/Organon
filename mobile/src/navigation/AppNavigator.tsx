@@ -7,7 +7,6 @@ import { AppDrawer } from '../components/drawer/AppDrawer'
 import { TodayScreen }    from '../screens/TodayScreen'
 import { PlannerScreen }  from '../screens/PlannerScreen'
 import { CalendarScreen } from '../screens/CalendarScreen'
-import { BacklogScreen }  from '../screens/BacklogScreen'
 import { NotesScreen }    from '../screens/NotesScreen'
 import { CRMScreen }      from '../screens/CRMScreen'
 import { PlaybookScreen } from '../screens/PlaybookScreen'
@@ -41,7 +40,6 @@ export function AppNavigator() {
       <Drawer.Screen name="Today"     component={TodayScreen} />
       <Drawer.Screen name="Planner"   component={PlannerScreen} />
       <Drawer.Screen name="Calendar"  component={CalendarScreen} />
-      <Drawer.Screen name="Backlog"   component={BacklogScreen} />
       <Drawer.Screen name="Notes"     component={NotesScreen} />
       <Drawer.Screen name="CRM"       component={CRMScreen} />
       <Drawer.Screen name="Playbook"  component={PlaybookScreen} />

@@ -43,6 +43,7 @@ export interface Card {
   status: CardStatus
   checklist: ChecklistItem[]
   projectId: string | null
+  calendarEventId?: string | null
   createdAt: string
   updatedAt: string
 }
