@@ -62,10 +62,20 @@ export function useAppwrite(
       const u = await getCurrentUser()
       setUser(u)
       setSyncStatus('idle')
+      // Download cloud store after login
+      if (u) {
+        try {
+          const cloudStore = await downloadStore(u.$id)
+          if (cloudStore && cloudStore.storeUpdatedAt) {
+            onCloudStoreDownloaded?.(cloudStore)
+          }
+        } catch { /* ignore */ }
+      }
     } catch (err) {
       setAuthError(translateError(err))
       throw err
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const register = useCallback(async (email: string, password: string, name: string) => {
