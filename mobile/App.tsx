@@ -13,12 +13,12 @@ import type { MobileStore } from './src/types'
 // ── Inner app: has access to StoreContext + SafeAreaProvider ───────────────────
 
 function InnerApp() {
-  const { isLoaded } = useStore()
+  const { isLoaded, loadStore } = useStore()
   const insets = useSafeAreaInsets()
 
   const handleCloudStore = useCallback((cloudStore: MobileStore) => {
-    console.log('[sync] Cloud store downloaded, storeUpdatedAt:', cloudStore.storeUpdatedAt)
-  }, [])
+    loadStore(cloudStore)
+  }, [loadStore])
 
   if (!isLoaded) return null
 
