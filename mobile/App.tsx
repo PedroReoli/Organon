@@ -1,12 +1,12 @@
 import 'react-native-gesture-handler'
 import './global.css'
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import { StatusBar, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StoreProvider, useStore } from './src/hooks/useMobileStore'
-import { AppwriteProvider } from './src/hooks/useAppwriteContext'
+import { AppwriteProvider, useAppwriteContext } from './src/hooks/useAppwriteContext'
 import { AppNavigator } from './src/navigation/AppNavigator'
 import type { MobileStore } from './src/types'
 
@@ -25,12 +25,25 @@ function InnerApp() {
   return (
     <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <AppwriteProvider onCloudStoreDownloaded={handleCloudStore}>
+        <StoreSyncBridge />
         <NavigationContainer>
           <AppNavigator />
         </NavigationContainer>
       </AppwriteProvider>
     </View>
   )
+}
+
+function StoreSyncBridge() {
+  const { isLoaded, store } = useStore()
+  const { triggerSync } = useAppwriteContext()
+
+  useEffect(() => {
+    if (!isLoaded) return
+    triggerSync(store)
+  }, [isLoaded, store, triggerSync])
+
+  return null
 }
 
 // ── Root app ───────────────────────────────────────────────────────────────────
