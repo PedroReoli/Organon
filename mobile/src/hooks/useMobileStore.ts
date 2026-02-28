@@ -81,6 +81,7 @@ interface StoreContextValue {
   updateStudySettings: (focusMinutes: number, breakMinutes: number) => void
   // Settings
   updateSettings: (data: Partial<Settings>) => void
+  loadStore: (data: MobileStore) => void
 }
 
 export const StoreContext = createContext<StoreContextValue>({
@@ -138,6 +139,7 @@ export const StoreContext = createContext<StoreContextValue>({
   addStudySession: () => {},
   updateStudySettings: () => {},
   updateSettings: () => {},
+  loadStore: () => {},
 })
 
 // ── Provider ───────────────────────────────────────────────────────────────────
@@ -545,6 +547,15 @@ export function StoreProvider({ children, onStoreChange }: {
     updateStore(s => ({ ...s, settings: { ...s.settings, ...data } }))
   }, [updateStore])
 
+  // ── Cloud load (replaces entire store with downloaded cloud data) ───────────
+  const loadStore = useCallback((data: MobileStore) => {
+    const merged = { ...DEFAULT_MOBILE_STORE, ...data }
+    setStore(merged)
+    AsyncStorage.setItem(STORE_KEY, JSON.stringify(merged)).catch(err =>
+      console.warn('[Store] Failed to persist cloud data:', err)
+    )
+  }, [])
+
   const value: StoreContextValue = {
     store, isLoaded,
     addCard, updateCard, deleteCard,
@@ -565,6 +576,7 @@ export function StoreProvider({ children, onStoreChange }: {
     addStudyGoal, updateStudyGoal, deleteStudyGoal,
     addStudySession, updateStudySettings,
     updateSettings,
+    loadStore,
   }
 
   return React.createElement(StoreContext.Provider, { value }, children)
