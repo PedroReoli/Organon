@@ -16,7 +16,7 @@ export function Header({ title, rightIcon, onRightPress, rightLabel }: HeaderPro
   const theme = useTheme()
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface }]}>
+    <View style={[styles.container, { backgroundColor: theme.surface, borderBottomColor: theme.text + '12' }]}>
       <TouchableOpacity
         style={styles.menuBtn}
         onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
@@ -25,9 +25,11 @@ export function Header({ title, rightIcon, onRightPress, rightLabel }: HeaderPro
         <Feather name="menu" size={22} color={theme.text} />
       </TouchableOpacity>
 
-      <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={styles.titleWrap} pointerEvents="none">
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
 
       {rightIcon || rightLabel ? (
         <TouchableOpacity
@@ -51,27 +53,38 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     height: 56,
-    paddingHorizontal: 16,
-    elevation: 2,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 1.5,
   },
   menuBtn: {
-    width: 36,
-    alignItems: 'flex-start',
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleWrap: {
+    position: 'absolute',
+    left: 56,
+    right: 56,
+    alignItems: 'center',
   },
   title: {
-    flex: 1,
     fontSize: 18,
-    fontWeight: '600',
-    marginHorizontal: 8,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   rightBtn: {
-    width: 36,
-    alignItems: 'flex-end',
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rightLabel: {
     fontSize: 14,
