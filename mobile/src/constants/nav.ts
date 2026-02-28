@@ -2,7 +2,6 @@ export type ScreenName =
   | 'Today'
   | 'Planner'
   | 'Calendar'
-  | 'Backlog'
   | 'Notes'
   | 'CRM'
   | 'Playbook'
@@ -33,7 +32,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Today',    label: 'Hoje',       icon: 'sun' },
       { name: 'Planner',  label: 'Planejador', icon: 'grid' },
       { name: 'Calendar', label: 'Calendário', icon: 'calendar' },
-      { name: 'Backlog',  label: 'Backlog',    icon: 'list' },
     ],
   },
   {
