@@ -1,246 +1,323 @@
 import React, { useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native'
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+} from 'react-native'
 import { Feather } from '@expo/vector-icons'
-import { Header } from '../components/shared/Header'
-import { EmptyState } from '../components/shared/EmptyState'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
-import { formatDate } from '../utils/date'
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 type Domain = 'all' | 'cards' | 'notes' | 'events' | 'habits' | 'financial' | 'crm'
 
-interface ActivityItem {
+interface HistoryItem {
   id: string
   domain: Exclude<Domain, 'all'>
-  icon: string
   title: string
-  subtitle: string
-  date: string
+  subtitle?: string
+  timestamp: string
+  color: string
+  icon: string
 }
 
-const DOMAIN_FILTERS: { id: Domain; label: string }[] = [
-  { id: 'all', label: 'Todos' },
-  { id: 'cards', label: 'Cards' },
-  { id: 'notes', label: 'Notas' },
-  { id: 'events', label: 'Eventos' },
-  { id: 'habits', label: 'Hábitos' },
-  { id: 'financial', label: 'Financeiro' },
-  { id: 'crm', label: 'CRM' },
-]
+// ── Domain config ──────────────────────────────────────────────────────────────
 
-const DOMAIN_COLORS: Record<Exclude<Domain, 'all'>, string> = {
-  cards: '#6366f1',
-  notes: '#22c55e',
-  events: '#3b82f6',
-  habits: '#f97316',
-  financial: '#eab308',
-  crm: '#ec4899',
+const DOMAIN_CONFIG: Record<Exclude<Domain, 'all'>, { label: string; color: string; icon: string }> = {
+  cards:     { label: 'Tarefas',    color: '#6366f1', icon: 'check-square' },
+  notes:     { label: 'Notas',      color: '#f59e0b', icon: 'file-text' },
+  events:    { label: 'Eventos',    color: '#3b82f6', icon: 'calendar' },
+  habits:    { label: 'Hábitos',    color: '#22c55e', icon: 'activity' },
+  financial: { label: 'Financeiro', color: '#10b981', icon: 'dollar-sign' },
+  crm:       { label: 'CRM',        color: '#ec4899', icon: 'users' },
 }
+
+const DOMAINS: Domain[] = ['all', 'cards', 'notes', 'events', 'habits', 'financial', 'crm']
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  } catch { return iso }
+}
+
+function formatTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  } catch { return '' }
+}
+
+function groupByDate(items: HistoryItem[]): { date: string; items: HistoryItem[] }[] {
+  const map = new Map<string, HistoryItem[]>()
+  for (const item of items) {
+    const key = item.timestamp.slice(0, 10)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(item)
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, items]) => ({ date, items }))
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export function HistoryScreen() {
   const theme = useTheme()
   const { store } = useStore()
-  const [domain, setDomain] = useState<Domain>('all')
+  const [filter, setFilter] = useState<Domain>('all')
 
-  const activities = useMemo<ActivityItem[]>(() => {
-    const items: ActivityItem[] = []
+  const items = useMemo<HistoryItem[]>(() => {
+    const list: HistoryItem[] = []
 
-    // Cards
-    store.cards.forEach(c => {
-      items.push({
-        id: c.id,
-        domain: 'cards',
-        icon: 'check-square',
-        title: c.title || 'Card sem título',
-        subtitle: c.status === 'done' ? 'Concluído' : c.status === 'in_progress' ? 'Em andamento' : 'A fazer',
-        date: c.updatedAt,
-      })
-    })
+    store.cards.forEach(c => list.push({
+      id: 'card-' + c.id,
+      domain: 'cards',
+      title: c.title || '(sem título)',
+      subtitle: c.status.replace('_', ' '),
+      timestamp: c.updatedAt,
+      color: DOMAIN_CONFIG.cards.color,
+      icon: 'check-square',
+    }))
 
-    // Notes
-    store.notes.forEach(n => {
-      items.push({
-        id: n.id,
-        domain: 'notes',
-        icon: 'file-text',
-        title: n.title || 'Nota sem título',
-        subtitle: n.folderId
-          ? (store.noteFolders.find(f => f.id === n.folderId)?.name ?? 'Pasta')
-          : 'Sem pasta',
-        date: n.updatedAt,
-      })
-    })
+    store.notes.forEach(n => list.push({
+      id: 'note-' + n.id,
+      domain: 'notes',
+      title: n.title || '(sem título)',
+      subtitle: n.folderId
+        ? store.noteFolders.find(f => f.id === n.folderId)?.name
+        : undefined,
+      timestamp: n.updatedAt,
+      color: DOMAIN_CONFIG.notes.color,
+      icon: 'file-text',
+    }))
 
-    // Events
-    store.calendarEvents.forEach(e => {
-      items.push({
-        id: e.id,
-        domain: 'events',
-        icon: 'calendar',
-        title: e.title,
-        subtitle: formatDate(e.date) + (e.time ? ` às ${e.time}` : ''),
-        date: e.updatedAt,
-      })
-    })
+    store.calendarEvents.forEach(e => list.push({
+      id: 'ev-' + e.id,
+      domain: 'events',
+      title: e.title || '(sem título)',
+      subtitle: e.date + (e.time ? ' às ' + e.time : ''),
+      timestamp: e.updatedAt,
+      color: DOMAIN_CONFIG.events.color,
+      icon: 'calendar',
+    }))
 
-    // Habits
-    store.habits.forEach(h => {
-      items.push({
-        id: h.id,
-        domain: 'habits',
-        icon: 'activity',
-        title: h.name,
-        subtitle: h.frequency === 'daily' ? 'Diário' : 'Semanal',
-        date: h.createdAt,
-      })
-    })
+    store.habits.forEach(h => list.push({
+      id: 'habit-' + h.id,
+      domain: 'habits',
+      title: h.name,
+      subtitle: h.frequency,
+      timestamp: h.createdAt,
+      color: DOMAIN_CONFIG.habits.color,
+      icon: 'activity',
+    }))
 
-    // Habit entries (recent)
-    store.habitEntries.slice(0, 50).forEach(e => {
-      const habit = store.habits.find(h => h.id === e.habitId)
-      if (!habit) return
-      items.push({
-        id: e.id,
-        domain: 'habits',
-        icon: 'check-circle',
-        title: `${habit.name} — ${formatDate(e.date)}`,
-        subtitle: e.skipped ? `Pulado: ${e.skipReason || 'sem motivo'}` : `Valor: ${e.value}`,
-        date: e.date + 'T12:00:00.000Z',
-      })
-    })
+    store.habitEntries.forEach(e => list.push({
+      id: 'hentry-' + e.id,
+      domain: 'habits',
+      title: store.habits.find(h => h.id === e.habitId)?.name ?? 'Hábito',
+      subtitle: e.value != null ? String(e.value) : e.skipped ? 'pulado' : 'feito',
+      timestamp: e.date + 'T12:00:00',
+      color: DOMAIN_CONFIG.habits.color,
+      icon: 'check-circle',
+    }))
 
-    // Financial - Expenses
-    store.expenses.forEach(exp => {
-      items.push({
-        id: exp.id,
-        domain: 'financial',
-        icon: 'arrow-down',
-        title: exp.description || 'Despesa',
-        subtitle: `R$ ${exp.amount.toFixed(2).replace('.', ',')} · ${exp.category}`,
-        date: exp.date + 'T12:00:00.000Z',
-      })
-    })
+    store.expenses.forEach(e => list.push({
+      id: 'exp-' + e.id,
+      domain: 'financial',
+      title: e.description || e.category,
+      subtitle: `- R$ ${e.amount.toFixed(2)}`,
+      timestamp: e.date + 'T12:00:00',
+      color: '#ef4444',
+      icon: 'trending-down',
+    }))
 
-    // Financial - Incomes
-    store.incomes.forEach(inc => {
-      items.push({
-        id: inc.id,
-        domain: 'financial',
-        icon: 'arrow-up',
-        title: inc.source || 'Receita',
-        subtitle: `R$ ${inc.amount.toFixed(2).replace('.', ',')} · ${formatDate(inc.date)}`,
-        date: inc.date + 'T12:00:00.000Z',
-      })
-    })
+    store.incomes.forEach(e => list.push({
+      id: 'inc-' + e.id,
+      domain: 'financial',
+      title: e.source,
+      subtitle: `+ R$ ${e.amount.toFixed(2)}`,
+      timestamp: e.date + 'T12:00:00',
+      color: DOMAIN_CONFIG.financial.color,
+      icon: 'trending-up',
+    }))
 
-    // CRM Contacts
-    store.crmContacts.forEach(c => {
-      items.push({
-        id: c.id,
-        domain: 'crm',
-        icon: 'user',
-        title: c.name,
-        subtitle: c.company ? `${c.company} · ${c.stageId}` : c.stageId,
-        date: c.updatedAt,
-      })
-    })
+    store.crmContacts.forEach(c => list.push({
+      id: 'crm-' + c.id,
+      domain: 'crm',
+      title: c.name,
+      subtitle: c.company ?? c.stage,
+      timestamp: c.createdAt,
+      color: DOMAIN_CONFIG.crm.color,
+      icon: 'users',
+    }))
 
-    // CRM Interactions
-    store.crmInteractions.forEach(i => {
-      const contact = store.crmContacts.find(c => c.id === i.contactId)
-      items.push({
-        id: i.id,
-        domain: 'crm',
-        icon: 'message-circle',
-        title: contact?.name ?? 'Contato',
-        subtitle: `${i.type} · ${formatDate(i.date)}`,
-        date: i.createdAt,
-      })
-    })
+    store.crmInteractions.forEach(i => list.push({
+      id: 'crmi-' + i.id,
+      domain: 'crm',
+      title: store.crmContacts.find(c => c.id === i.contactId)?.name ?? 'Contato',
+      subtitle: i.type + (i.date ? ' · ' + i.date : ''),
+      timestamp: i.date + 'T12:00:00',
+      color: DOMAIN_CONFIG.crm.color,
+      icon: 'message-circle',
+    }))
 
-    // Sort by date desc, take top 200
-    return items
-      .sort((a, b) => b.date.localeCompare(a.date))
+    return list
+      .filter(i => filter === 'all' || i.domain === filter)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
       .slice(0, 200)
-  }, [store])
+  }, [store, filter])
 
-  const filtered = useMemo(() =>
-    domain === 'all' ? activities : activities.filter(a => a.domain === domain),
-    [activities, domain]
-  )
-
-  // Group by date
-  const grouped = useMemo(() => {
-    const map: Record<string, ActivityItem[]> = {}
-    filtered.forEach(item => {
-      const dateKey = item.date.slice(0, 10)
-      if (!map[dateKey]) map[dateKey] = []
-      map[dateKey].push(item)
-    })
-    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a))
-  }, [filtered])
-
-  const s = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: theme.background },
-    filterRow: { paddingHorizontal: 12, paddingVertical: 8 },
-    chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginRight: 6, borderWidth: 1 },
-    chipTxt: { fontSize: 12, fontWeight: '600' },
-    list: { flex: 1, paddingHorizontal: 12 },
-    dateHeader: { color: theme.text + '50', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 16, marginBottom: 6 },
-    row: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 8, padding: 12, marginBottom: 4, gap: 10 },
-    iconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-    rowTitle: { flex: 1, color: theme.text, fontSize: 14 },
-    rowSub: { color: theme.text + '60', fontSize: 12, marginTop: 1 },
-  })
+  const groups = useMemo(() => groupByDate(items), [items])
 
   return (
-    <SafeAreaView style={s.screen}>
-      <Header title="Histórico" />
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
 
-      {/* Domain filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow}>
-        {DOMAIN_FILTERS.map(f => {
-          const active = domain === f.id
-          const color = f.id === 'all' ? theme.primary : DOMAIN_COLORS[f.id as Exclude<Domain, 'all'>]
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: theme.text + '12' }]}>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Histórico</Text>
+        <Text style={[styles.headerCount, { color: theme.text + '45' }]}>{items.length} registros</Text>
+      </View>
+
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterContent}
+      >
+        {DOMAINS.map(d => {
+          const isAll  = d === 'all'
+          const cfg    = isAll ? null : DOMAIN_CONFIG[d]
+          const color  = cfg?.color ?? theme.primary
+          const active = filter === d
           return (
             <TouchableOpacity
-              key={f.id}
-              style={[s.chip, { borderColor: active ? color : theme.text + '25', backgroundColor: active ? color + '20' : 'transparent' }]}
-              onPress={() => setDomain(f.id)}
+              key={d}
+              style={[
+                styles.filterChip,
+                active
+                  ? { backgroundColor: color, borderColor: color }
+                  : { backgroundColor: theme.text + '08', borderColor: theme.text + '15' },
+              ]}
+              onPress={() => setFilter(d)}
             >
-              <Text style={[s.chipTxt, { color: active ? color : theme.text + '60' }]}>{f.label}</Text>
+              {cfg && (
+                <Feather name={cfg.icon as any} size={11} color={active ? '#fff' : color} />
+              )}
+              <Text style={[styles.filterLabel, { color: active ? '#fff' : theme.text + '80' }]}>
+                {isAll ? 'Todos' : cfg!.label}
+              </Text>
             </TouchableOpacity>
           )
         })}
       </ScrollView>
 
-      <ScrollView style={s.list}>
-        {filtered.length === 0 && (
-          <EmptyState icon="clock" title="Nenhuma atividade" subtitle="Suas ações recentes aparecerão aqui" />
+      {/* Timeline */}
+      <ScrollView contentContainerStyle={styles.timelineContent} showsVerticalScrollIndicator={false}>
+
+        {groups.length === 0 && (
+          <View style={styles.empty}>
+            <Feather name="clock" size={44} color={theme.text + '20'} />
+            <Text style={[styles.emptyText, { color: theme.text + '35' }]}>Nenhum registro ainda</Text>
+          </View>
         )}
 
-        {grouped.map(([dateKey, items]) => (
-          <View key={dateKey}>
-            <Text style={s.dateHeader}>{formatDate(dateKey)}</Text>
-            {items.map(item => {
-              const color = DOMAIN_COLORS[item.domain]
-              return (
-                <View key={item.id + item.date} style={s.row}>
-                  <View style={[s.iconWrap, { backgroundColor: color + '20' }]}>
-                    <Feather name={item.icon as any} size={15} color={color} />
+        {groups.map(group => (
+          <View key={group.date}>
+
+            {/* Date divider */}
+            <View style={styles.dateDivider}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.text + '12' }]} />
+              <View style={[styles.dividerPill, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.dividerText, { color: theme.text + '55' }]}>
+                  {formatDate(group.date + 'T12:00:00')}
+                </Text>
+              </View>
+              <View style={[styles.dividerLine, { backgroundColor: theme.text + '12' }]} />
+            </View>
+
+            {/* Items with timeline */}
+            <View style={styles.groupRows}>
+              <View style={[styles.verticalLine, { backgroundColor: theme.text + '10' }]} />
+
+              <View style={styles.groupItems}>
+                {group.items.map(item => (
+                  <View key={item.id} style={styles.itemRow}>
+                    {/* Dot */}
+                    <View style={[styles.dot, { backgroundColor: item.color }]}>
+                      <Feather name={item.icon as any} size={10} color="#fff" />
+                    </View>
+
+                    {/* Card */}
+                    <View style={[styles.itemCard, { backgroundColor: theme.surface }]}>
+                      <View style={styles.cardTop}>
+                        <View style={[styles.domainTag, { backgroundColor: item.color + '18' }]}>
+                          <Text style={[styles.domainTagText, { color: item.color }]}>
+                            {DOMAIN_CONFIG[item.domain].label}
+                          </Text>
+                        </View>
+                        <Text style={[styles.timeText, { color: theme.text + '40' }]}>
+                          {formatTime(item.timestamp)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      {item.subtitle ? (
+                        <Text style={[styles.itemSub, { color: theme.text + '50' }]} numberOfLines={1}>
+                          {item.subtitle}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={s.rowSub} numberOfLines={1}>{item.subtitle}</Text>
-                  </View>
-                </View>
-              )
-            })}
+                ))}
+              </View>
+            </View>
           </View>
         ))}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 32 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root:         { flex: 1 },
+
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
+  headerTitle:  { fontSize: 18, fontWeight: '700' },
+  headerCount:  { fontSize: 13, fontWeight: '500' },
+
+  filterScroll:  { flexGrow: 0, maxHeight: 52 },
+  filterContent: { paddingHorizontal: 14, paddingVertical: 10, gap: 7, flexDirection: 'row', alignItems: 'center' },
+  filterChip:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, gap: 5 },
+  filterLabel:   { fontSize: 12, fontWeight: '600' },
+
+  timelineContent: { paddingTop: 8, paddingBottom: 32 },
+
+  dateDivider:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 16, marginBottom: 10 },
+  dividerLine:  { flex: 1, height: 1 },
+  dividerPill:  { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginHorizontal: 8 },
+  dividerText:  { fontSize: 12, fontWeight: '600' },
+
+  groupRows:    { flexDirection: 'row', paddingLeft: 28, paddingRight: 16 },
+  verticalLine: { width: 2, borderRadius: 1, marginRight: 0 },
+  groupItems:   { flex: 1, paddingLeft: 16, gap: 8 },
+
+  itemRow:      { flexDirection: 'row', alignItems: 'flex-start', marginLeft: -29 },
+  dot:          { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 10, flexShrink: 0 },
+
+  itemCard:     { flex: 1, borderRadius: 12, padding: 12, marginBottom: 2 },
+  cardTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
+  domainTag:    { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  domainTagText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  timeText:     { fontSize: 11, fontWeight: '500' },
+  itemTitle:    { fontSize: 14, fontWeight: '600', lineHeight: 20 },
+  itemSub:      { fontSize: 12, marginTop: 3 },
+
+  empty:        { alignItems: 'center', justifyContent: 'center', paddingTop: 100, gap: 14 },
+  emptyText:    { fontSize: 15, fontWeight: '500' },
+})
