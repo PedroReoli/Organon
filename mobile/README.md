@@ -33,7 +33,7 @@ O app mantém os mesmos pilares:
 
 ## Stack resumida
 
-- **React Native + Expo SDK 51+**
+- **React Native + Expo SDK 54+**
 - **React Navigation 6** (Drawer + Stack)
 - **expo-sqlite** para dados estruturados
 - **expo-file-system** para arquivos e notas
