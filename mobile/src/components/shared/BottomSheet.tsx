@@ -12,9 +12,18 @@ interface BottomSheetProps {
   children: React.ReactNode
   onSave?: () => void
   saveLabel?: string
+  maxHeight?: number | `${number}%`
 }
 
-export function BottomSheet({ visible, onClose, title, children, onSave, saveLabel = 'Salvar' }: BottomSheetProps) {
+export function BottomSheet({
+  visible,
+  onClose,
+  title,
+  children,
+  onSave,
+  saveLabel = 'Salvar',
+  maxHeight = '90%',
+}: BottomSheetProps) {
   const theme = useTheme()
 
   return (
@@ -27,7 +36,7 @@ export function BottomSheet({ visible, onClose, title, children, onSave, saveLab
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.sheetWrapper}
       >
-        <View style={[styles.sheet, { backgroundColor: theme.surface }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.surface, maxHeight }]}>
           {/* Handle */}
           <View style={[styles.handle, { backgroundColor: theme.text + '30' }]} />
 
@@ -66,7 +75,6 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
     paddingBottom: 32,
   },
   handle: {
