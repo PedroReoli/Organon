@@ -1,4 +1,4 @@
-import { storage, databases, BUCKET_ID, DATABASE_ID, Query } from './appwrite'
+import { account, storage, databases, BUCKET_ID, DATABASE_ID, PROJECT_ID, Query } from './appwrite'
 import type { MobileStore } from '../types'
 
 function getFileId(userId: string): string {
@@ -54,8 +54,15 @@ export async function uploadStore(store: MobileStore, userId: string): Promise<v
 export async function downloadStore(userId: string): Promise<MobileStore | null> {
   const fileId = getFileId(userId)
   try {
+    // Cria JWT para autenticar o fetch (o fetch puro não inclui sessão do SDK)
+    const jwt = await account.createJWT()
     const url = storage.getFileDownload(BUCKET_ID, fileId)
-    const response = await fetch(url.toString())
+    const response = await fetch(url.toString(), {
+      headers: {
+        'X-Appwrite-JWT': jwt.jwt,
+        'X-Appwrite-Project': PROJECT_ID,
+      },
+    })
     if (!response.ok) return null
     return await response.json() as MobileStore
   } catch {

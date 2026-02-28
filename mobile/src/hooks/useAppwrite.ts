@@ -43,10 +43,10 @@ export function useAppwrite(
     getCurrentUser().then(async (u) => {
       setUser(u)
       if (u) {
-        // Startup sync: download if cloud is newer
+        // Startup sync: download cloud store
         try {
           const cloudStore = await downloadStore(u.$id)
-          if (cloudStore && cloudStore.storeUpdatedAt) {
+          if (cloudStore) {
             onCloudStoreDownloaded?.(cloudStore)
           }
         } catch { /* ignore */ }
@@ -66,7 +66,7 @@ export function useAppwrite(
       if (u) {
         try {
           const cloudStore = await downloadStore(u.$id)
-          if (cloudStore && cloudStore.storeUpdatedAt) {
+          if (cloudStore) {
             onCloudStoreDownloaded?.(cloudStore)
           }
         } catch { /* ignore */ }

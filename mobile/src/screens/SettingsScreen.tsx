@@ -7,6 +7,7 @@ import { FormInput } from '../components/shared/FormInput'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAppwriteContext } from '../hooks/useAppwriteContext'
+import { downloadStore } from '../api/sync'
 import { THEMES, THEME_LABELS, type ThemeName } from '../types'
 
 const THEME_NAMES = Object.keys(THEMES) as ThemeName[]
@@ -29,10 +30,29 @@ const SYNC_STATUS_COLORS = {
 
 export function SettingsScreen() {
   const theme = useTheme()
-  const { store, updateSettings } = useStore()
+  const { store, updateSettings, loadStore } = useStore()
   const { user, isLoadingAuth, authError, syncStatus, login, register, logout, clearAuthError } = useAppwriteContext()
 
   const [showAuthSheet, setShowAuthSheet] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownloadNow = async () => {
+    if (!user) return
+    setDownloading(true)
+    try {
+      const cloudStore = await downloadStore(user.$id)
+      if (cloudStore) {
+        loadStore(cloudStore)
+        Alert.alert('Sincronizado!', 'Dados da nuvem carregados com sucesso.')
+      } else {
+        Alert.alert('Nenhum dado', 'Nenhum backup encontrado na nuvem para esta conta.')
+      }
+    } catch {
+      Alert.alert('Erro', 'Não foi possível baixar os dados. Verifique sua conexão.')
+    } finally {
+      setDownloading(false)
+    }
+  }
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authLoading, setAuthLoading] = useState(false)
   const [loginForm, setLoginForm] = useState({ email: '', password: '', name: '' })
@@ -130,6 +150,15 @@ export function SettingsScreen() {
                   </Text>
                 </View>
               </View>
+
+              <TouchableOpacity
+                style={[s.loginBtn, { marginTop: 8, opacity: downloading ? 0.6 : 1 }]}
+                onPress={handleDownloadNow}
+                disabled={downloading}
+              >
+                <Feather name="download-cloud" size={16} color={theme.primary} />
+                <Text style={s.loginBtnTxt}>{downloading ? 'Baixando...' : 'Baixar da nuvem agora'}</Text>
+              </TouchableOpacity>
 
               <Text style={{ color: theme.text + '40', fontSize: 12, marginTop: 8, lineHeight: 17 }}>
                 Sincronização automática a cada 10 segundos após uma alteração.

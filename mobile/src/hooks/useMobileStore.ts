@@ -549,7 +549,34 @@ export function StoreProvider({ children, onStoreChange }: {
 
   // ── Cloud load (replaces entire store with downloaded cloud data) ───────────
   const loadStore = useCallback((data: MobileStore) => {
-    const merged = { ...DEFAULT_MOBILE_STORE, ...data }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = data as any
+    const merged: MobileStore = {
+      ...DEFAULT_MOBILE_STORE,
+      ...data,
+      // Notas do desktop não têm campo content (ficam em arquivos .md)
+      // Garante que content sempre existe como string
+      notes: (raw.notes ?? []).map((n: any) => ({
+        id: n.id ?? '',
+        title: n.title ?? '',
+        content: n.content ?? '',
+        folderId: n.folderId ?? null,
+        projectId: n.projectId ?? null,
+        createdAt: n.createdAt ?? new Date().toISOString(),
+        updatedAt: n.updatedAt ?? new Date().toISOString(),
+        order: n.order ?? 0,
+      })),
+      // Cards: garante campos obrigatórios
+      cards: (raw.cards ?? []).map((c: any) => ({
+        ...c,
+        descriptionHtml: c.descriptionHtml ?? '',
+        location: c.location ?? { day: null, period: null },
+        checklist: c.checklist ?? [],
+        status: c.status ?? 'todo',
+        priority: c.priority ?? null,
+        projectId: c.projectId ?? null,
+      })),
+    }
     setStore(merged)
     AsyncStorage.setItem(STORE_KEY, JSON.stringify(merged)).catch(err =>
       console.warn('[Store] Failed to persist cloud data:', err)

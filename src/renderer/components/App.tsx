@@ -228,8 +228,24 @@ export const App = () => {
       setSyncStatus('syncing')
       try {
         const rawStore = await window.electronAPI.loadStore()
-        await uploadStore(rawStore, userRef.current!.$id)
-        await syncCollectionsToCloud(rawStore, userRef.current!.$id)
+
+        // Lê conteúdo das notas (.md) para incluir no upload (mobile precisa do content inline)
+        const noteContents = new Map<string, string>()
+        await Promise.all(rawStore.notes.map(async (note) => {
+          try {
+            const content = await window.electronAPI.readNote(note.mdPath)
+            noteContents.set(note.id, content ?? '')
+          } catch { /* ignora erros individuais */ }
+        }))
+
+        // Cria uma versão do store com content embutido em cada nota
+        const storeWithNoteContent = {
+          ...rawStore,
+          notes: rawStore.notes.map(n => ({ ...n, content: noteContents.get(n.id) ?? '' })),
+        }
+
+        await uploadStore(storeWithNoteContent as unknown as typeof rawStore, userRef.current!.$id)
+        await syncCollectionsToCloud(rawStore, userRef.current!.$id, noteContents)
         setSyncStatus('synced')
       } catch {
         setSyncStatus('error')
