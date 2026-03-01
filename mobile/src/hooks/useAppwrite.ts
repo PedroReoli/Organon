@@ -38,6 +38,7 @@ export function useAppwrite(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestStoreRef = useRef<MobileStore | null>(null)
   const isHydratingRef = useRef(false)
+  const backupUploadDisabledRef = useRef(false)
 
   const hydrateFromCloud = useCallback(async (userId: string) => {
     isHydratingRef.current = true
@@ -113,9 +114,19 @@ export function useAppwrite(
       if (!latestStoreRef.current || !user) return
       setSyncStatus('syncing')
       try {
-        await uploadStore(latestStoreRef.current, user.$id)
-        await syncCollectionsToCloud(latestStoreRef.current, user.$id)
-        setSyncStatus('synced')
+        // RN + Appwrite SDK can fail creating File() for storage backup.
+        // If this happens, keep syncing collections so planner/calendar/notes still reach cloud.
+        if (!backupUploadDisabledRef.current) {
+          try {
+            await uploadStore(latestStoreRef.current, user.$id)
+          } catch (backupErr) {
+            backupUploadDisabledRef.current = true
+            console.warn('[sync] Backup upload disabled on this device/runtime:', backupErr)
+          }
+        }
+
+        const report = await syncCollectionsToCloud(latestStoreRef.current, user.$id)
+        setSyncStatus(report.totalErrors > 0 ? 'error' : 'synced')
       } catch (err) {
         console.warn('[sync] Error:', err)
         setSyncStatus('error')

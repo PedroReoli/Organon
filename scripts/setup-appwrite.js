@@ -194,6 +194,8 @@ async function main() {
   await strAttr(db, 'notes', 'userId', 255, true)
   await strAttr(db, 'notes', 'title', 500, true)
   await strAttr(db, 'notes', 'folderId', 255)
+  await strAttr(db, 'notes', 'projectId', 255)
+  await strAttr(db, 'notes', 'mdPath', 500)
   await strAttr(db, 'notes', 'content', 200000) // HTML/markdown content
   await intAttr(db, 'notes', 'order')
   await strAttr(db, 'notes', 'createdAt', 30)
@@ -314,7 +316,24 @@ async function main() {
   await idx(db, 'shortcuts', 'idx_userId',   ['userId'])
   await idx(db, 'shortcuts', 'idx_folderId', ['folderId'])
 
-  // ── 3.12 settings ─────────────────────────────────────────────────────────
+  // ── 3.12 playbooks ────────────────────────────────────────────────────────
+  console.log('\n📘 Collection: playbooks\n')
+  await tryRun('collection: playbooks', () =>
+    db.createCollection(DATABASE_ID, 'playbooks', 'Playbooks', userPerms)
+  )
+  await strAttr(db, 'playbooks', 'userId', 255, true)
+  await strAttr(db, 'playbooks', 'title', 500, true)
+  await strAttr(db, 'playbooks', 'sector', 255)
+  await strAttr(db, 'playbooks', 'category', 255)
+  await strAttr(db, 'playbooks', 'summary', 2000)
+  await strAttr(db, 'playbooks', 'content', 200000)
+  await strAttr(db, 'playbooks', 'dialogs', 50000) // JSON array
+  await intAttr(db, 'playbooks', 'order')
+  await strAttr(db, 'playbooks', 'createdAt', 30)
+  await strAttr(db, 'playbooks', 'updatedAt', 30)
+  await idx(db, 'playbooks', 'idx_userId', ['userId'])
+
+  // ── 3.13 settings ─────────────────────────────────────────────────────────
   console.log('\n⚙️  Collection: settings\n')
   await tryRun('collection: settings', () =>
     db.createCollection(DATABASE_ID, 'settings', 'Settings', userPerms)

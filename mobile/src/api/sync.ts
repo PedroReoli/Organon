@@ -1,6 +1,8 @@
 import { account, storage, databases, BUCKET_ID, DATABASE_ID, PROJECT_ID, Query } from './appwrite'
 import type { MobileStore } from '../types'
 
+const missingCollections = new Set<string>()
+
 function getFileId(userId: string): string {
   return userId.replace(/[^a-zA-Z0-9_.-]/g, '_').substring(0, 36)
 }
@@ -32,13 +34,43 @@ async function clearCollection(collectionId: string, userId: string): Promise<vo
   }
 }
 
-async function createDoc(collectionId: string, id: string, data: Record<string, unknown>): Promise<void> {
-  try {
-    await databases.createDocument(DATABASE_ID, collectionId, id, data)
-  } catch (err: unknown) {
-    const code = (err as { code?: number }).code
-    if (code !== 409) console.warn(`[sync] Falha ao criar ${collectionId}/${id}:`, err)
+function extractUnknownAttribute(err: unknown): string | null {
+  const message = (err as { message?: string })?.message ?? ''
+  const match = message.match(/Unknown attribute:\s*"([^"]+)"/i)
+  return match?.[1] ?? null
+}
+
+function isCollectionMissing(err: unknown): boolean {
+  const message = (err as { message?: string })?.message ?? ''
+  return /Collection with the requested ID .* could not be found/i.test(message)
+}
+
+async function createDoc(collectionId: string, id: string, data: Record<string, unknown>): Promise<boolean> {
+  const payload: Record<string, unknown> = { ...data }
+  let retry = 0
+
+  while (retry < 20) {
+    try {
+      await databases.createDocument(DATABASE_ID, collectionId, id, payload)
+      return true
+    } catch (err: unknown) {
+      const code = (err as { code?: number }).code
+      if (code === 409) return true
+
+      const unknownAttr = extractUnknownAttribute(err)
+      if (unknownAttr && Object.prototype.hasOwnProperty.call(payload, unknownAttr)) {
+        delete payload[unknownAttr]
+        retry += 1
+        continue
+      }
+
+      console.warn(`[sync] Falha ao criar ${collectionId}/${id}:`, err)
+      return false
+    }
   }
+
+  console.warn(`[sync] Falha ao criar ${collectionId}/${id}: limite de tentativas atingido`)
+  return false
 }
 
 // ── Storage: backup completo ──────────────────────────────────────────────────
@@ -88,15 +120,24 @@ export async function syncCollectionsToCloud(store: MobileStore, userId: string)
   ) {
     const safeItems = items ?? []
     const col = { sent: 0, errors: 0 }
+    if (missingCollections.has(collectionId)) {
+      report.collections[collectionId] = col
+      return
+    }
     try {
       await clearCollection(collectionId, userId)
       for (const item of safeItems) {
-        try {
-          await createDoc(collectionId, item.id, { userId, ...toDoc(item) })
-          col.sent++
-        } catch { col.errors++ }
+        const ok = await createDoc(collectionId, item.id, { userId, ...toDoc(item) })
+        if (ok) col.sent++
+        else col.errors++
       }
     } catch (err) {
+      if (isCollectionMissing(err)) {
+        missingCollections.add(collectionId)
+        console.warn(`[sync] Collection "${collectionId}" nao existe no Appwrite. Pulando.`)
+        report.collections[collectionId] = col
+        return
+      }
       console.warn(`[sync] Falha em "${collectionId}":`, err)
       col.errors += safeItems.length
     }
@@ -221,13 +262,14 @@ export async function syncCollectionsToCloud(store: MobileStore, userId: string)
   // Settings (único doc por usuário)
   try {
     await clearCollection('settings', userId)
-    await createDoc('settings', userId, {
+    const ok = await createDoc('settings', userId, {
       userId,
       themeName: str(store.settings.themeName, 50),
       updatedAt: new Date().toISOString(),
     })
-    report.collections['settings'] = { sent: 1, errors: 0 }
-    report.totalSent++
+    report.collections['settings'] = ok ? { sent: 1, errors: 0 } : { sent: 0, errors: 1 }
+    if (ok) report.totalSent++
+    else report.totalErrors++
   } catch (err) {
     console.warn('[sync] Falha ao sincronizar settings:', err)
     report.collections['settings'] = { sent: 0, errors: 1 }
