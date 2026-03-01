@@ -12,6 +12,18 @@ function str(v: unknown, max = 255): string | null {
   return String(v).substring(0, max)
 }
 
+/** Codifica conteúdo escrito em base64 (UTF-8 safe via encodeURIComponent). Retorna null se vazio. */
+function b64(v: unknown): string | null {
+  if (v == null) return null
+  const s = String(v)
+  if (!s) return null
+  try {
+    return btoa(unescape(encodeURIComponent(s)))
+  } catch {
+    return null
+  }
+}
+
 function json(v: unknown, max = 3000): string | null {
   if (v == null) return null
   try { return JSON.stringify(v).substring(0, max) } catch { return null }
@@ -178,7 +190,7 @@ export async function syncCollectionsToCloud(store: MobileStore, userId: string)
     title:     str(n.title, 500),
     folderId:  str(n.folderId, 255),
     projectId: str(n.projectId, 255),
-    content:   str(n.content, 200000),
+    content:   b64(n.content),
     order:     n.order ?? 0,
     createdAt: str(n.createdAt, 30),
     updatedAt: str(n.updatedAt, 30),
@@ -216,7 +228,7 @@ export async function syncCollectionsToCloud(store: MobileStore, userId: string)
     stage:        str(c.stageId, 50),
     priority:     str(c.priority, 10),
     tags:         json(c.tags, 1000),
-    notes:        str(c.description, 5000),
+    notes:        b64(c.description),
     followUpDate: str(c.followUpDate, 20),
     order:        c.order ?? 0,
     createdAt:    str(c.createdAt, 30),
@@ -251,9 +263,9 @@ export async function syncCollectionsToCloud(store: MobileStore, userId: string)
     title:     str(p.title, 500),
     sector:    str(p.sector, 255),
     category:  str(p.category, 255),
-    summary:   str(p.summary, 2000),
-    content:   str(p.content, 200000),
-    dialogs:   json(p.dialogs, 50000),
+    summary:   b64(p.summary),
+    content:   b64(p.content),
+    dialogs:   b64(JSON.stringify(p.dialogs ?? [])),
     order:     p.order ?? 0,
     createdAt: str(p.createdAt, 30),
     updatedAt: str(p.updatedAt, 30),

@@ -196,7 +196,7 @@ async function main() {
   await strAttr(db, 'notes', 'folderId', 255)
   await strAttr(db, 'notes', 'projectId', 255)
   await strAttr(db, 'notes', 'mdPath', 500)
-  await strAttr(db, 'notes', 'content', 200000) // HTML/markdown content
+  await strAttr(db, 'notes', 'content', 300000) // HTML/markdown content — base64 (200k texto ≈ 267k b64)
   await intAttr(db, 'notes', 'order')
   await strAttr(db, 'notes', 'createdAt', 30)
   await strAttr(db, 'notes', 'updatedAt', 30)
@@ -260,7 +260,7 @@ async function main() {
   await strAttr(db, 'crmContacts', 'stage', 50)
   await strAttr(db, 'crmContacts', 'priority', 10)
   await strAttr(db, 'crmContacts', 'tags', 1000)    // JSON array
-  await strAttr(db, 'crmContacts', 'notes', 5000)
+  await strAttr(db, 'crmContacts', 'notes', 8000)  // base64 (5k texto ≈ 6.7k b64)
   await strAttr(db, 'crmContacts', 'followUpDate', 20)
   await intAttr(db, 'crmContacts', 'order')
   await strAttr(db, 'crmContacts', 'createdAt', 30)
@@ -325,9 +325,9 @@ async function main() {
   await strAttr(db, 'playbooks', 'title', 500, true)
   await strAttr(db, 'playbooks', 'sector', 255)
   await strAttr(db, 'playbooks', 'category', 255)
-  await strAttr(db, 'playbooks', 'summary', 2000)
-  await strAttr(db, 'playbooks', 'content', 200000)
-  await strAttr(db, 'playbooks', 'dialogs', 50000) // JSON array
+  await strAttr(db, 'playbooks', 'summary', 4000)   // base64 (2k texto ≈ 2.7k b64)
+  await strAttr(db, 'playbooks', 'content', 300000) // base64 (200k texto ≈ 267k b64)
+  await strAttr(db, 'playbooks', 'dialogs', 70000)  // base64 JSON (50k ≈ 67k b64)
   await intAttr(db, 'playbooks', 'order')
   await strAttr(db, 'playbooks', 'createdAt', 30)
   await strAttr(db, 'playbooks', 'updatedAt', 30)
