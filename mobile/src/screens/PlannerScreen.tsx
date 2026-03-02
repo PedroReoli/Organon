@@ -20,6 +20,7 @@ import { uid } from '../utils/format'
 import { addDays, getDayOfWeek, getWeekRange, today } from '../utils/date'
 import {
   DAYS_ORDER,
+  DAY_LABELS,
   DAY_LABELS_FULL,
   PERIODS_ORDER,
   PERIOD_LABELS,
@@ -92,6 +93,16 @@ export function PlannerScreen() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editCard, setEditCard] = useState<Card | null>(null)
   const [newChecklistText, setNewChecklistText] = useState('')
+  const [backlogOpen, setBacklogOpen] = useState(false)
+  const [backlogStatusFilter, setBacklogStatusFilter] = useState<CardStatus | 'all'>('all')
+  const [backlogEditCard, setBacklogEditCard] = useState<Card | null>(null)
+  const [backlogSheetOpen, setBacklogSheetOpen] = useState(false)
+  const [backlogForm, setBacklogForm] = useState<{ title: string; priority: CardPriority | null; status: CardStatus }>({
+    title: '', priority: null, status: 'todo',
+  })
+  const [scheduleCard, setScheduleCard] = useState<Card | null>(null)
+  const [scheduleDay, setScheduleDay] = useState<Day>('mon')
+  const [schedulePeriod, setSchedulePeriod] = useState<Period>('morning')
   const dragX = useRef(new Animated.Value(0)).current
   const isAnimatingRef = useRef(false)
 
@@ -137,6 +148,59 @@ export function PlannerScreen() {
       return acc
     }, {} as Record<Period, Card[]>)
   }, [selectedDay, store.cards])
+
+  // Count cards per day for the week strip badges
+  const cardCountByDay = useMemo(() =>
+    DAYS_ORDER.reduce((acc, day) => {
+      acc[day] = store.cards.filter(c => c.location.day === day && c.status !== 'done').length
+      return acc
+    }, {} as Record<Day, number>),
+  [store.cards])
+
+  // Backlog
+  const backlogCards = useMemo(() => store.cards.filter(c => !c.location.day), [store.cards])
+  const backlogFiltered = useMemo(() =>
+    backlogCards.filter(c => backlogStatusFilter === 'all' || c.status === backlogStatusFilter),
+  [backlogCards, backlogStatusFilter])
+
+  function openBacklogAdd() {
+    setBacklogEditCard(null)
+    setBacklogForm({ title: '', priority: null, status: 'todo' })
+    setBacklogSheetOpen(true)
+  }
+
+  function openBacklogEdit(card: Card) {
+    setBacklogEditCard(card)
+    setBacklogForm({ title: card.title, priority: card.priority, status: card.status })
+    setBacklogSheetOpen(true)
+  }
+
+  function saveBacklog() {
+    if (!backlogForm.title.trim()) return
+    if (backlogEditCard) {
+      updateCard(backlogEditCard.id, { title: backlogForm.title, priority: backlogForm.priority, status: backlogForm.status })
+    } else {
+      addCard({ title: backlogForm.title, priority: backlogForm.priority, status: backlogForm.status, location: { day: null, period: null } })
+    }
+    setBacklogSheetOpen(false)
+  }
+
+  function openSchedule(card: Card) {
+    setScheduleCard(card)
+    setScheduleDay(todayDay)
+    setSchedulePeriod('morning')
+  }
+
+  function confirmSchedule() {
+    if (!scheduleCard) return
+    updateCard(scheduleCard.id, { location: { day: scheduleDay, period: schedulePeriod } })
+    setScheduleCard(null)
+  }
+
+  function cycleBacklogStatus(card: Card) {
+    const next = STATUS_ORDER[(STATUS_ORDER.indexOf(card.status) + 1) % STATUS_ORDER.length]
+    updateCard(card.id, { status: next })
+  }
 
   const travelDistance = Math.max(240, viewportWidth * 0.92)
   const swipeThreshold = Math.max(58, viewportWidth * 0.17)
@@ -441,6 +505,50 @@ export function PlannerScreen() {
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Header title="Planejador" />
 
+      {/* Week strip */}
+      <View style={[styles.weekStrip, { backgroundColor: theme.surface, borderBottomColor: theme.text + '10' }]}>
+        {DAYS_ORDER.map(day => {
+          const isToday   = day === getDayOfWeek(today())
+          const isSelected = day === selectedDay
+          const count     = cardCountByDay[day]
+          return (
+            <TouchableOpacity
+              key={day}
+              style={[
+                styles.weekDay,
+                isSelected && { backgroundColor: theme.primary + '1a', borderRadius: 8 },
+              ]}
+              onPress={() => {
+                if (day !== selectedDay) runDayTransition(day, DAYS_ORDER.indexOf(day) > DAYS_ORDER.indexOf(selectedDay) ? 'next' : 'prev')
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.weekDayLabel,
+                { color: isSelected ? theme.primary : isToday ? theme.primary + 'aa' : theme.text + '70' },
+                isSelected && { fontWeight: '700' },
+              ]}>
+                {DAY_LABELS[day]}
+              </Text>
+              {count > 0 ? (
+                <View style={[styles.weekDayBadge, { backgroundColor: isSelected ? theme.primary : theme.text + '22' }]}>
+                  <Text style={[styles.weekDayBadgeText, { color: isSelected ? '#fff' : theme.text + '90' }]}>
+                    {count}
+                  </Text>
+                </View>
+              ) : (
+                isToday ? (
+                  <View style={[styles.weekDayDot, { backgroundColor: theme.primary + '70' }]} />
+                ) : (
+                  <View style={styles.weekDayDot} />
+                )
+              )}
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {/* Selected day info bar */}
       <View style={[styles.selectedDayBar, { backgroundColor: theme.surface, borderColor: theme.text + '12' }]}>
         <TouchableOpacity
           style={[styles.dayNavBtn, { backgroundColor: theme.text + '0a' }]}
@@ -451,11 +559,11 @@ export function PlannerScreen() {
         </TouchableOpacity>
 
         <View style={styles.selectedDayCenter}>
-          <Text style={[styles.selectedDayTitle, { color: theme.text }]}> 
+          <Text style={[styles.selectedDayTitle, { color: theme.text }]}>
             {DAY_LABELS_FULL[selectedDay]}
           </Text>
-          <Text style={[styles.selectedDaySub, { color: theme.text + '60' }]}> 
-            {selectedDateShort} - {selectedDayCount} tarefa{selectedDayCount === 1 ? '' : 's'}
+          <Text style={[styles.selectedDaySub, { color: theme.text + '60' }]}>
+            {selectedDateShort} · {selectedDayCount} tarefa{selectedDayCount === 1 ? '' : 's'}
           </Text>
         </View>
 
@@ -544,8 +652,171 @@ export function PlannerScreen() {
           <Feather name="plus" size={22} color="#fff" />
         </TouchableOpacity>
 
-        <View style={styles.footerSide} />
+        <View style={[styles.footerSide, { alignItems: 'flex-end' }]}>
+          <TouchableOpacity
+            style={[styles.todayBtn, { backgroundColor: backlogCards.length > 0 ? '#8b5cf615' : theme.text + '0a', borderColor: backlogCards.length > 0 ? '#8b5cf630' : theme.text + '12' }]}
+            onPress={() => setBacklogOpen(true)}
+          >
+            <Feather name="inbox" size={14} color={backlogCards.length > 0 ? '#8b5cf6' : theme.text + '85'} />
+            <Text style={[styles.todayBtnText, { color: backlogCards.length > 0 ? '#8b5cf6' : theme.text + '85' }]}>
+              {backlogCards.length > 0 ? String(backlogCards.length) : 'Backlog'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* ── Backlog main sheet ── */}
+      <BottomSheet visible={backlogOpen} onClose={() => setBacklogOpen(false)} title={`Backlog (${backlogCards.length})`} maxHeight="88%">
+        {/* Status filter */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, maxHeight: 44 }} contentContainerStyle={{ paddingHorizontal: 2, paddingVertical: 4, gap: 7, flexDirection: 'row', alignItems: 'center' }}>
+          {(['all', ...STATUS_ORDER] as (CardStatus | 'all')[]).map(s => {
+            const active = backlogStatusFilter === s
+            const color  = s === 'all' ? theme.primary : STATUS_COLORS[s]
+            return (
+              <TouchableOpacity
+                key={s}
+                style={[styles.blChip, active ? { backgroundColor: color } : { backgroundColor: theme.text + '08', borderColor: theme.text + '15' }]}
+                onPress={() => setBacklogStatusFilter(s)}
+              >
+                {s !== 'all' && <View style={[styles.blDot, { backgroundColor: active ? '#fff' : STATUS_COLORS[s] }]} />}
+                <Text style={[styles.blChipText, { color: active ? '#fff' : theme.text + '80' }]}>
+                  {s === 'all' ? 'Todos' : s.replace('_', ' ')}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+
+        {/* Cards list */}
+        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
+          {backlogFiltered.length === 0 && (
+            <View style={{ alignItems: 'center', paddingTop: 32 }}>
+              <Feather name="inbox" size={38} color={theme.text + '20'} />
+              <Text style={{ color: theme.text + '40', fontSize: 14, marginTop: 10 }}>Backlog vazio</Text>
+            </View>
+          )}
+          {backlogFiltered.map(card => (
+            <View key={card.id} style={[styles.blCard, { backgroundColor: theme.background }]}>
+              <TouchableOpacity
+                style={[styles.blStatusDot, { backgroundColor: STATUS_COLORS[card.status] }]}
+                onPress={() => cycleBacklogStatus(card)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              />
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => openBacklogEdit(card)}>
+                <Text style={[styles.blCardTitle, { color: theme.text }]} numberOfLines={2}>{card.title}</Text>
+                {card.priority && (
+                  <View style={[styles.blPriBadge, { backgroundColor: PRIORITY_COLORS[card.priority] + '18' }]}>
+                    <Text style={[styles.blPriText, { color: PRIORITY_COLORS[card.priority] }]}>{card.priority}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.blScheduleBtn, { backgroundColor: theme.primary + '15' }]}
+                onPress={() => openSchedule(card)}
+              >
+                <Feather name="calendar" size={14} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <View style={{ height: 16 }} />
+        </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.blAddBtn, { backgroundColor: theme.primary }]}
+          onPress={() => { setBacklogOpen(false); setTimeout(openBacklogAdd, 300) }}
+        >
+          <Feather name="plus" size={16} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Nova tarefa no backlog</Text>
+        </TouchableOpacity>
+      </BottomSheet>
+
+      {/* ── Backlog edit/create sheet ── */}
+      <BottomSheet visible={backlogSheetOpen} onClose={() => setBacklogSheetOpen(false)} title={backlogEditCard ? 'Editar card' : 'Novo card'}>
+        <FormInput
+          label="Título"
+          value={backlogForm.title}
+          onChangeText={t => setBacklogForm(f => ({ ...f, title: t }))}
+          placeholder="O que precisa ser feito?"
+          autoFocus
+        />
+        <Text style={[styles.sheetSectionLabel, { color: theme.text + '70' }]}>STATUS</Text>
+        <View style={styles.chipRow}>
+          {STATUS_ORDER.map(s => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.sheetChip, backlogForm.status === s ? { backgroundColor: STATUS_COLORS[s] + '28', borderColor: STATUS_COLORS[s], borderWidth: 1 } : { backgroundColor: theme.text + '08', borderColor: 'transparent', borderWidth: 1 }]}
+              onPress={() => setBacklogForm(f => ({ ...f, status: s }))}
+            >
+              <View style={[styles.blDot, { backgroundColor: STATUS_COLORS[s] }]} />
+              <Text style={[styles.blChipText, { color: theme.text }]}>{s.replace('_', ' ')}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={[styles.sheetSectionLabel, { color: theme.text + '70', marginTop: 14 }]}>PRIORIDADE</Text>
+        <View style={styles.chipRow}>
+          {(['P1', 'P2', 'P3', 'P4'] as CardPriority[]).map(p => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.sheetChip, backlogForm.priority === p ? { backgroundColor: PRIORITY_COLORS[p] + '28', borderColor: PRIORITY_COLORS[p], borderWidth: 1 } : { backgroundColor: theme.text + '08', borderColor: 'transparent', borderWidth: 1 }]}
+              onPress={() => setBacklogForm(f => ({ ...f, priority: f.priority === p ? null : p }))}
+            >
+              <Text style={[styles.blChipText, { color: PRIORITY_COLORS[p], fontWeight: '700' }]}>{p}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={[styles.sheetActions, { marginTop: 22 }]}>
+          {backlogEditCard && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: '#ef444415', flex: 1 }]}
+              onPress={() => { deleteCard(backlogEditCard.id); setBacklogSheetOpen(false) }}
+            >
+              <Text style={{ color: '#ef4444', fontWeight: '600' }}>Excluir</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.primary, flex: backlogEditCard ? 2 : 1 }]}
+            onPress={saveBacklog}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Salvar</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
+
+      {/* ── Schedule sheet ── */}
+      <BottomSheet visible={!!scheduleCard} onClose={() => setScheduleCard(null)} title={`Agendar: ${scheduleCard?.title?.slice(0, 30) ?? ''}`}>
+        <Text style={[styles.sheetSectionLabel, { color: theme.text + '70' }]}>DIA DA SEMANA</Text>
+        <View style={styles.chipRow}>
+          {DAYS_ORDER.map(d => (
+            <TouchableOpacity
+              key={d}
+              style={[styles.sheetChip, scheduleDay === d ? { backgroundColor: theme.primary, borderColor: theme.primary, borderWidth: 1 } : { backgroundColor: theme.text + '08', borderColor: 'transparent', borderWidth: 1 }]}
+              onPress={() => setScheduleDay(d)}
+            >
+              <Text style={[styles.blChipText, { color: scheduleDay === d ? '#fff' : theme.text }]}>{DAY_LABELS[d]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={[styles.sheetSectionLabel, { color: theme.text + '70', marginTop: 14 }]}>PERÍODO</Text>
+        <View style={styles.chipRow}>
+          {PERIODS_ORDER.map(p => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.sheetChip, schedulePeriod === p ? { backgroundColor: theme.primary, borderColor: theme.primary, borderWidth: 1 } : { backgroundColor: theme.text + '08', borderColor: 'transparent', borderWidth: 1 }]}
+              onPress={() => setSchedulePeriod(p)}
+            >
+              <Text style={[styles.blChipText, { color: schedulePeriod === p ? '#fff' : theme.text }]}>{PERIOD_LABELS[p]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: theme.primary, marginTop: 22 }]}
+          onPress={confirmSchedule}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>
+            Agendar para {DAY_LABELS_FULL[scheduleDay]} — {PERIOD_LABELS[schedulePeriod]}
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
 
       <BottomSheet
         visible={sheetOpen}
@@ -790,6 +1061,24 @@ export function PlannerScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
+  weekStrip: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    gap: 2,
+  },
+  weekDay: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 4,
+  },
+  weekDayLabel:  { fontSize: 11.5, fontWeight: '600' },
+  weekDayBadge:  { minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  weekDayBadgeText: { fontSize: 10, fontWeight: '700' },
+  weekDayDot:    { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
+
   selectedDayBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -936,4 +1225,16 @@ const styles = StyleSheet.create({
 
   sheetActions: { flexDirection: 'row', gap: 10 },
   actionBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+
+  // Backlog
+  blChip:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 5, borderWidth: 1 },
+  blDot:        { width: 8, height: 8, borderRadius: 4 },
+  blChipText:   { fontSize: 12, fontWeight: '600' },
+  blCard:       { flexDirection: 'row', alignItems: 'center', borderRadius: 10, padding: 12, gap: 10 },
+  blStatusDot:  { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },
+  blCardTitle:  { fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  blPriBadge:   { marginTop: 3, alignSelf: 'flex-start', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
+  blPriText:    { fontSize: 10.5, fontWeight: '700' },
+  blScheduleBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  blAddBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, marginTop: 10 },
 })
