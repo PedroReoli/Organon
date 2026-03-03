@@ -25,6 +25,7 @@ import {
   PERIODS_ORDER,
   PERIOD_LABELS,
   STATUS_COLORS,
+  STATUS_LABELS,
   PRIORITY_COLORS,
   STATUS_ORDER,
   type Day,
@@ -51,6 +52,10 @@ const STATUS_ICONS: Record<CardStatus, string | null> = {
   in_progress: 'loader',
   blocked: 'alert-circle',
   done: 'check-circle',
+}
+
+function statusLabel(status: CardStatus): string {
+  return STATUS_LABELS[status]
 }
 
 function formatDateShort(iso: string): string {
@@ -678,7 +683,7 @@ export function PlannerScreen() {
               >
                 {s !== 'all' && <View style={[styles.blDot, { backgroundColor: active ? '#fff' : STATUS_COLORS[s] }]} />}
                 <Text style={[styles.blChipText, { color: active ? '#fff' : theme.text + '80' }]}>
-                  {s === 'all' ? 'Todos' : s.replace('_', ' ')}
+                  {s === 'all' ? 'Todos' : statusLabel(s)}
                 </Text>
               </TouchableOpacity>
             )
@@ -746,7 +751,7 @@ export function PlannerScreen() {
               onPress={() => setBacklogForm(f => ({ ...f, status: s }))}
             >
               <View style={[styles.blDot, { backgroundColor: STATUS_COLORS[s] }]} />
-              <Text style={[styles.blChipText, { color: theme.text }]}>{s.replace('_', ' ')}</Text>
+              <Text style={[styles.blChipText, { color: theme.text }]}>{statusLabel(s)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -951,7 +956,7 @@ export function PlannerScreen() {
                   <View style={[styles.smallDot, { borderColor: STATUS_COLORS[status] }]} />
                 )}
                 <Text style={[styles.chipLabel, { color: active ? theme.text : theme.text + '80' }]}>
-                  {status.replace('_', ' ')}
+                  {statusLabel(status)}
                 </Text>
               </TouchableOpacity>
             )

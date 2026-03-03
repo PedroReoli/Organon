@@ -19,6 +19,17 @@ const HABIT_TYPES: { value: HabitType; label: string }[] = [
   { value: 'time', label: 'Tempo (min)' },
 ]
 
+const HABIT_TYPE_LABELS: Record<HabitType, string> = {
+  boolean: 'Sim/Nao',
+  count: 'Contagem',
+  quantity: 'Quantidade',
+  time: 'Tempo (min)',
+}
+const HABIT_FREQUENCY_LABELS: Record<'daily' | 'weekly', string> = {
+  daily: 'Diaria',
+  weekly: 'Semanal',
+}
+
 const COLORS = ['#6366f1','#22c55e','#ef4444','#f97316','#3b82f6','#8b5cf6','#ec4899','#eab308']
 
 function formatDateShort(iso: string): string {
@@ -505,8 +516,8 @@ export function HabitsScreen() {
 
             <View style={[s.reportPanel, { backgroundColor: theme.background, borderColor: theme.text + '14' }]}>
               <Text style={[s.reportTitle, { color: theme.text }]}>Configuracao</Text>
-              <Text style={[s.infoRow, { color: theme.text + '72' }]}>Tipo: {detailHabit.type}</Text>
-              <Text style={[s.infoRow, { color: theme.text + '72' }]}>Frequencia: {detailHabit.frequency}</Text>
+              <Text style={[s.infoRow, { color: theme.text + '72' }]}>Tipo: {HABIT_TYPE_LABELS[detailHabit.type]}</Text>
+              <Text style={[s.infoRow, { color: theme.text + '72' }]}>Frequencia: {HABIT_FREQUENCY_LABELS[detailHabit.frequency]}</Text>
               <Text style={[s.infoRow, { color: theme.text + '72' }]}>Meta: {detailHabit.target}</Text>
               {detailHabit.trigger ? <Text style={[s.infoRow, { color: theme.text + '72' }]}>Gatilho: {detailHabit.trigger}</Text> : null}
               {detailHabit.reason ? <Text style={[s.infoRow, { color: theme.text + '72' }]}>Motivo: {detailHabit.reason}</Text> : null}

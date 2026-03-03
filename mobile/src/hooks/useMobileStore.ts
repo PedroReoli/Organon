@@ -45,6 +45,7 @@ interface StoreContextValue {
   addExpense: (data: Partial<Expense>) => Expense
   updateExpense: (id: string, data: Partial<Expense>) => void
   deleteExpense: (id: string) => void
+  setBudgetCategories: (categories: BudgetCategory[]) => void
   addIncome: (data: Partial<IncomeEntry>) => IncomeEntry
   deleteIncome: (id: string) => void
   updateFinancialConfig: (config: FinancialConfig) => void
@@ -109,6 +110,7 @@ export const StoreContext = createContext<StoreContextValue>({
   addExpense: () => ({} as Expense),
   updateExpense: () => {},
   deleteExpense: () => {},
+  setBudgetCategories: () => {},
   addIncome: () => ({} as IncomeEntry),
   deleteIncome: () => {},
   updateFinancialConfig: () => {},
@@ -346,6 +348,10 @@ export function StoreProvider({ children, onStoreChange }: {
 
   const deleteExpense = useCallback((id: string) => {
     updateStore(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }))
+  }, [updateStore])
+
+  const setBudgetCategories = useCallback((categories: BudgetCategory[]) => {
+    updateStore(s => ({ ...s, budgetCategories: categories }))
   }, [updateStore])
 
   const addIncome = useCallback((data: Partial<IncomeEntry>): IncomeEntry => {
@@ -593,6 +599,7 @@ export function StoreProvider({ children, onStoreChange }: {
     addHabit, updateHabit, deleteHabit, upsertHabitEntry,
     addBill, updateBill, deleteBill,
     addExpense, updateExpense, deleteExpense,
+    setBudgetCategories,
     addIncome, deleteIncome, updateFinancialConfig,
     addSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
     addCRMContact, updateCRMContact, deleteCRMContact,

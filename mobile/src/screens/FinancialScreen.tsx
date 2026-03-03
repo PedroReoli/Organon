@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+﻿
+import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
@@ -9,256 +10,674 @@ import { EmptyState } from '../components/shared/EmptyState'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import { today, now, formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/format'
-import { EXPENSE_CATEGORY_LABELS, EXPENSE_CATEGORY_COLORS, type ExpenseCategory, type Expense, type Bill, type IncomeEntry } from '../types'
+import { formatCurrency, uid } from '../utils/format'
+import {
+  EXPENSE_CATEGORY_LABELS,
+  EXPENSE_CATEGORY_COLORS,
+  type ExpenseCategory,
+  type Expense,
+  type Bill,
+  type IncomeEntry,
+  type SavingsGoal,
+} from '../types'
 
-type Tab = 'overview' | 'expenses' | 'incomes' | 'bills'
+type Tab = 'overview' | 'expenses' | 'incomes' | 'bills' | 'goals' | 'config'
+type EntrySheetType = 'expense' | 'bill' | 'income'
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 
+function parseMoney(value: string): number {
+  return Number.parseFloat(value.replace(',', '.'))
+}
+
+function addMonthsToISO(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const base = new Date(y, (m || 1) - 1 + months, d || 1)
+  const yyyy = base.getFullYear()
+  const mm = String(base.getMonth() + 1).padStart(2, '0')
+  const dd = String(base.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function getMonthView(baseISO: string, offset: number): { ym: string; label: string } {
+  const [y, m] = baseISO.split('-').map(Number)
+  const base = new Date(y, (m || 1) - 1 + offset, 1)
+  const yyyy = base.getFullYear()
+  const mm = String(base.getMonth() + 1).padStart(2, '0')
+  const ym = `${yyyy}-${mm}`
+  const label = base.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return { ym, label }
+}
+
+function getDaysUntilDue(todayISO: string, dueDay: number): number {
+  const todayDate = new Date(todayISO + 'T00:00:00')
+  const currentDay = todayDate.getDate()
+  if (dueDay >= currentDay) return dueDay - currentDay
+  const lastDay = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate()
+  return (lastDay - currentDay) + dueDay
+}
+
 export function FinancialScreen() {
   const theme = useTheme()
-  const { store, addExpense, deleteExpense, addBill, deleteBill, addIncome, deleteIncome } = useStore()
-  const [tab, setTab] = useState<Tab>('overview')
-  const [showSheet, setShowSheet] = useState(false)
-  const [sheetType, setSheetType] = useState<'expense' | 'bill' | 'income'>('expense')
-  const [form, setForm] = useState({ description: '', amount: '', category: 'outro' as ExpenseCategory, date: today(), source: '', dueDay: '1', kind: 'fixed' })
+  const {
+    store,
+    addExpense,
+    deleteExpense,
+    addBill,
+    updateBill,
+    deleteBill,
+    addIncome,
+    deleteIncome,
+    updateFinancialConfig,
+    addSavingsGoal,
+    updateSavingsGoal,
+    deleteSavingsGoal,
+    setBudgetCategories,
+  } = useStore()
 
   const todayStr = today()
-  const ym = todayStr.substring(0, 7)
+  const currentMonth = todayStr.slice(0, 7)
 
-  const monthExpenses = useMemo(() => store.expenses.filter(e => e.date.startsWith(ym)), [store.expenses, ym])
-  const monthIncomes = useMemo(() => store.incomes.filter(i => i.date.startsWith(ym)), [store.incomes, ym])
-  const totalExpenses = useMemo(() => monthExpenses.reduce((s, e) => s + e.amount, 0), [monthExpenses])
-  const totalIncome = useMemo(() => monthIncomes.reduce((s, i) => s + i.amount, 0) + store.financialConfig.monthlyIncome, [monthIncomes, store.financialConfig.monthlyIncome])
-  const balance = totalIncome - totalExpenses
+  const [tab, setTab] = useState<Tab>('overview')
+  const [showEntrySheet, setShowEntrySheet] = useState(false)
+  const [sheetType, setSheetType] = useState<EntrySheetType>('expense')
+  const [showGoalSheet, setShowGoalSheet] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null)
+  const [expenseMonthOffset, setExpenseMonthOffset] = useState(0)
+  const [incomeMonthOffset, setIncomeMonthOffset] = useState(0)
 
-  const expensesByCategory = useMemo(() => {
-    const map: Partial<Record<ExpenseCategory, number>> = {}
-    monthExpenses.forEach(e => { map[e.category] = (map[e.category] ?? 0) + e.amount })
-    return map
-  }, [monthExpenses])
+  const [entryForm, setEntryForm] = useState({
+    description: '', source: '', amount: '', category: 'outro' as ExpenseCategory,
+    date: todayStr, dueDay: '1', recurrence: 'monthly' as 'monthly' | 'yearly',
+    kind: 'fixed' as 'fixed' | 'extra', installments: '1', repeatMonths: '1', note: '',
+  })
 
-  const openNew = (type: 'expense' | 'bill' | 'income') => {
-    setSheetType(type)
-    setForm({ description: '', amount: '', category: 'outro', date: todayStr, source: '', dueDay: '1', kind: 'fixed' })
-    setShowSheet(true)
-  }
+  const [goalForm, setGoalForm] = useState({ name: '', targetAmount: '', currentAmount: '', deadline: '' })
+  const [configForm, setConfigForm] = useState({
+    monthlyIncome: store.financialConfig.monthlyIncome > 0 ? String(store.financialConfig.monthlyIncome) : '',
+    monthlySpendingLimit: store.financialConfig.monthlySpendingLimit > 0 ? String(store.financialConfig.monthlySpendingLimit) : '',
+  })
+  const [budgetForm, setBudgetForm] = useState<Record<ExpenseCategory, string>>({
+    alimentacao: '', transporte: '', lazer: '', moradia: '', saude: '', educacao: '', outro: '',
+  })
 
-  const handleSave = () => {
-    const amt = parseFloat(form.amount.replace(',', '.'))
-    if (isNaN(amt) || amt <= 0) return
-    if (sheetType === 'expense') {
-      if (!form.description.trim()) return
-      addExpense({ description: form.description, amount: amt, category: form.category, date: form.date, installments: 1, currentInstallment: 1, parentId: null, note: '', createdAt: now() })
-    } else if (sheetType === 'bill') {
-      if (!form.description.trim()) return
-      addBill({ name: form.description, amount: amt, dueDay: parseInt(form.dueDay) || 1, category: form.category, recurrence: 'monthly', isPaid: false, paidDate: null, createdAt: now() })
-    } else {
-      if (!form.source.trim()) return
-      addIncome({ source: form.source, amount: amt, date: form.date, kind: form.kind as 'fixed' | 'extra', recurrenceMonths: 1, recurrenceIndex: 1, recurrenceGroupId: null, note: '', createdAt: now() })
+  useEffect(() => {
+    setConfigForm({
+      monthlyIncome: store.financialConfig.monthlyIncome > 0 ? String(store.financialConfig.monthlyIncome) : '',
+      monthlySpendingLimit: store.financialConfig.monthlySpendingLimit > 0 ? String(store.financialConfig.monthlySpendingLimit) : '',
+    })
+  }, [store.financialConfig.monthlyIncome, store.financialConfig.monthlySpendingLimit])
+
+  useEffect(() => {
+    const next: Record<ExpenseCategory, string> = {
+      alimentacao: '', transporte: '', lazer: '', moradia: '', saude: '', educacao: '', outro: '',
     }
-    setShowSheet(false)
+    for (const budget of store.budgetCategories) next[budget.category] = String(budget.limit)
+    setBudgetForm(next)
+  }, [store.budgetCategories])
+
+  const expenseMonthView = useMemo(() => getMonthView(todayStr, expenseMonthOffset), [todayStr, expenseMonthOffset])
+  const incomeMonthView = useMemo(() => getMonthView(todayStr, incomeMonthOffset), [todayStr, incomeMonthOffset])
+
+  const monthExpensesCurrent = useMemo(() => store.expenses.filter(e => e.date.startsWith(currentMonth)), [store.expenses, currentMonth])
+  const monthIncomesCurrent = useMemo(() => store.incomes.filter(i => i.date.startsWith(currentMonth)), [store.incomes, currentMonth])
+  const monthExpensesView = useMemo(() => store.expenses.filter(e => e.date.startsWith(expenseMonthView.ym)), [store.expenses, expenseMonthView.ym])
+  const monthIncomesView = useMemo(() => store.incomes.filter(i => i.date.startsWith(incomeMonthView.ym)), [store.incomes, incomeMonthView.ym])
+
+  const totalCurrentExpenses = useMemo(() => monthExpensesCurrent.reduce((sum, e) => sum + e.amount, 0), [monthExpensesCurrent])
+  const totalCurrentIncomesExtra = useMemo(() => monthIncomesCurrent.reduce((sum, i) => sum + i.amount, 0), [monthIncomesCurrent])
+  const configuredIncome = store.financialConfig.monthlyIncome
+  const totalCurrentIncomes = configuredIncome + totalCurrentIncomesExtra
+  const currentBalance = totalCurrentIncomes - totalCurrentExpenses
+
+  const expensesByCategoryCurrent = useMemo(() => {
+    const map: Record<ExpenseCategory, number> = { alimentacao: 0, transporte: 0, lazer: 0, moradia: 0, saude: 0, educacao: 0, outro: 0 }
+    for (const expense of monthExpensesCurrent) map[expense.category] += expense.amount
+    return map
+  }, [monthExpensesCurrent])
+
+  const budgetLimitByCategory = useMemo(() => {
+    const map: Record<ExpenseCategory, number> = { alimentacao: 0, transporte: 0, lazer: 0, moradia: 0, saude: 0, educacao: 0, outro: 0 }
+    for (const budget of store.budgetCategories) map[budget.category] = budget.limit
+    return map
+  }, [store.budgetCategories])
+
+  const totalBudgetLimit = useMemo(() => store.budgetCategories.reduce((sum, b) => sum + b.limit, 0), [store.budgetCategories])
+  const spendingLimit = store.financialConfig.monthlySpendingLimit
+  const spendingLimitRemaining = spendingLimit > 0 ? spendingLimit - totalCurrentExpenses : null
+
+  const billsSorted = useMemo(() => [...store.bills].sort((a, b) => a.dueDay - b.dueDay), [store.bills])
+  const unpaidBills = useMemo(() => billsSorted.filter(b => !b.isPaid), [billsSorted])
+  const unpaidBillsAmount = useMemo(() => unpaidBills.reduce((sum, b) => sum + b.amount, 0), [unpaidBills])
+
+  const goalsSorted = useMemo(() => [...store.savingsGoals].sort((a, b) => a.name.localeCompare(b.name)), [store.savingsGoals])
+  const totalGoalsSaved = useMemo(() => goalsSorted.reduce((sum, g) => sum + g.currentAmount, 0), [goalsSorted])
+  const totalGoalsTarget = useMemo(() => goalsSorted.reduce((sum, g) => sum + g.targetAmount, 0), [goalsSorted])
+  function openEntry(type: EntrySheetType) {
+    setSheetType(type)
+    setEntryForm({
+      description: '', source: '', amount: '', category: 'outro', date: todayStr, dueDay: '1',
+      recurrence: 'monthly', kind: 'fixed', installments: '1', repeatMonths: '1', note: '',
+    })
+    setShowEntrySheet(true)
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'overview', label: 'Visão Geral' },
+  function handleSaveEntry() {
+    const amount = parseMoney(entryForm.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Alert.alert('Valor invalido', 'Informe um valor maior que zero.')
+      return
+    }
+
+    if (sheetType === 'expense') {
+      if (!entryForm.description.trim()) return
+      const installments = Math.max(1, Math.min(60, Number.parseInt(entryForm.installments, 10) || 1))
+      const parentId = installments > 1 ? uid() : null
+      for (let i = 0; i < installments; i += 1) {
+        addExpense({
+          description: entryForm.description.trim(), amount, category: entryForm.category,
+          date: addMonthsToISO(entryForm.date, i), installments, currentInstallment: i + 1,
+          parentId, note: entryForm.note.trim(), createdAt: now(),
+        })
+      }
+    } else if (sheetType === 'bill') {
+      if (!entryForm.description.trim()) return
+      const dueDay = Math.max(1, Math.min(31, Number.parseInt(entryForm.dueDay, 10) || 1))
+      addBill({
+        name: entryForm.description.trim(), amount, dueDay, category: entryForm.category,
+        recurrence: entryForm.recurrence, isPaid: false, paidDate: null, createdAt: now(),
+      })
+    } else {
+      if (!entryForm.source.trim()) return
+      const repeatMonths = Math.max(1, Math.min(60, Number.parseInt(entryForm.repeatMonths, 10) || 1))
+      const recurrenceGroupId = repeatMonths > 1 ? uid() : null
+      for (let i = 0; i < repeatMonths; i += 1) {
+        addIncome({
+          source: entryForm.source.trim(), amount, date: addMonthsToISO(entryForm.date, i),
+          kind: entryForm.kind, recurrenceMonths: repeatMonths, recurrenceIndex: i + 1,
+          recurrenceGroupId, note: entryForm.note.trim(), createdAt: now(),
+        })
+      }
+    }
+
+    setShowEntrySheet(false)
+  }
+
+  function toggleBillPaid(bill: Bill) {
+    updateBill(bill.id, { isPaid: !bill.isPaid, paidDate: !bill.isPaid ? todayStr : null })
+  }
+
+  function openGoal(goal?: SavingsGoal) {
+    if (goal) {
+      setEditingGoal(goal)
+      setGoalForm({
+        name: goal.name,
+        targetAmount: String(goal.targetAmount),
+        currentAmount: String(goal.currentAmount),
+        deadline: goal.deadline ?? '',
+      })
+    } else {
+      setEditingGoal(null)
+      setGoalForm({ name: '', targetAmount: '', currentAmount: '', deadline: '' })
+    }
+    setShowGoalSheet(true)
+  }
+
+  function saveGoal() {
+    const targetAmount = parseMoney(goalForm.targetAmount)
+    const currentAmount = parseMoney(goalForm.currentAmount || '0')
+    if (!goalForm.name.trim() || !Number.isFinite(targetAmount) || targetAmount <= 0 || !Number.isFinite(currentAmount) || currentAmount < 0) {
+      Alert.alert('Dados invalidos', 'Confira nome e valores da meta.')
+      return
+    }
+
+    const data = { name: goalForm.name.trim(), targetAmount, currentAmount, deadline: goalForm.deadline.trim() || null }
+    if (editingGoal) updateSavingsGoal(editingGoal.id, data)
+    else addSavingsGoal({ ...data, createdAt: now() })
+    setShowGoalSheet(false)
+  }
+
+  function saveFinancialConfig() {
+    const monthlyIncome = Math.max(0, parseMoney(configForm.monthlyIncome || '0') || 0)
+    const monthlySpendingLimit = Math.max(0, parseMoney(configForm.monthlySpendingLimit || '0') || 0)
+    updateFinancialConfig({ monthlyIncome, monthlySpendingLimit })
+    const categories = CATEGORIES.map(category => ({ category, limit: Math.max(0, parseMoney(budgetForm[category] || '0') || 0) })).filter(entry => entry.limit > 0)
+    setBudgetCategories(categories)
+    Alert.alert('Configuracoes salvas', 'Dados financeiros atualizados.')
+  }
+
+  const tabs: Array<{ key: Tab; label: string }> = [
+    { key: 'overview', label: 'Visao geral' },
     { key: 'expenses', label: 'Despesas' },
     { key: 'incomes', label: 'Receitas' },
     { key: 'bills', label: 'Contas' },
+    { key: 'goals', label: 'Metas' },
+    { key: 'config', label: 'Configuracoes' },
   ]
 
   const s = StyleSheet.create({
     screen: { flex: 1, backgroundColor: theme.background },
-    tabRow: { flexDirection: 'row', backgroundColor: theme.surface, paddingHorizontal: 8 },
-    tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-    tabTxt: { fontSize: 12, color: theme.text + '60' },
-    tabActive: { borderBottomWidth: 2, borderBottomColor: theme.primary },
-    tabActiveTxt: { color: theme.primary, fontWeight: '700' },
+    tabScroll: { flexGrow: 0, maxHeight: 44, borderBottomWidth: 1, borderBottomColor: theme.text + '10', backgroundColor: theme.surface },
+    tabRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 6 },
+    tabBtn: { minHeight: 30, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    tabTxt: { fontSize: 12.5, fontWeight: '600' },
     list: { flex: 1, padding: 12 },
-    card: { backgroundColor: theme.surface, borderRadius: 10, padding: 14, marginBottom: 8 },
-    cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    catDot: { width: 10, height: 10, borderRadius: 5 },
-    itemTitle: { flex: 1, color: theme.text, fontSize: 14 },
-    amount: { fontWeight: '700' },
-    amountExpense: { color: '#ef4444' },
-    amountIncome: { color: '#22c55e' },
-    meta: { color: theme.text + '60', fontSize: 11, marginTop: 4 },
-    deleteBtn: { padding: 4 },
-    overviewCard: { backgroundColor: theme.surface, borderRadius: 14, padding: 16, marginBottom: 12 },
-    balanceLabel: { color: theme.text + '80', fontSize: 13, marginBottom: 4 },
-    balanceValue: { fontSize: 28, fontWeight: '700' },
-    row2: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-    miniCard: { flex: 1, backgroundColor: theme.surface, borderRadius: 12, padding: 14 },
-    miniLabel: { color: theme.text + '80', fontSize: 11, marginBottom: 4 },
-    miniValue: { fontSize: 18, fontWeight: '700' },
-    catList: { gap: 8 },
-    catRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    catBar: { flex: 1, height: 6, backgroundColor: theme.text + '15', borderRadius: 3, overflow: 'hidden' },
-    catFill: { height: 6, borderRadius: 3 },
-    formRow: { marginBottom: 12 },
-    rowLabel: { color: theme.text + '80', fontSize: 12, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase' },
-    chips: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-    chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
-    chipTxt: { fontSize: 12 },
+    panel: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 10 },
+    panelTitle: { fontSize: 13.5, fontWeight: '700', marginBottom: 10 },
+    statsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    statCard: { flexBasis: '48%', flexGrow: 1, borderRadius: 11, borderWidth: 1, paddingVertical: 10, alignItems: 'center' },
+    statValue: { fontSize: 15.5, fontWeight: '800' },
+    statLabel: { fontSize: 10.5, fontWeight: '600', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
+    row: { flexDirection: 'row', alignItems: 'center' },
+    catDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+    catLabel: { flex: 1, fontSize: 12.5, fontWeight: '600' },
+    catMoney: { fontSize: 12, fontWeight: '700' },
+    catMeta: { fontSize: 11, marginTop: 2 },
+    barWrap: { width: '100%', height: 6, borderRadius: 4, overflow: 'hidden', marginTop: 5 },
+    barFill: { height: 6, borderRadius: 4 },
+    monthBar: { borderRadius: 11, borderWidth: 1, minHeight: 40, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    monthBtn: { width: 40, height: 38, alignItems: 'center', justifyContent: 'center' },
+    monthLabel: { flex: 1, textAlign: 'center', fontSize: 13.5, fontWeight: '700', textTransform: 'capitalize' },
+    itemCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8 },
+    itemTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    itemTitle: { flex: 1, fontSize: 14, fontWeight: '600' },
+    amountExpense: { color: '#ef4444', fontWeight: '700', fontSize: 13 },
+    amountIncome: { color: '#22c55e', fontWeight: '700', fontSize: 13 },
+    itemMeta: { fontSize: 11.5, marginTop: 4 },
+    iconBtn: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    billBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+    billBadgeTxt: { fontSize: 10.5, fontWeight: '700' },
+    goalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
+    goalName: { flex: 1, fontSize: 14, fontWeight: '700' },
+    goalPct: { fontSize: 12, fontWeight: '700' },
+    goalBarWrap: { width: '100%', height: 7, borderRadius: 4, overflow: 'hidden' },
+    goalBarFill: { height: 7, borderRadius: 4 },
+    goalMeta: { fontSize: 11.5, marginTop: 4 },
+    goalActions: { flexDirection: 'row', gap: 8, marginTop: 9 },
+    goalActionBtn: { borderRadius: 9, borderWidth: 1, minHeight: 34, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+    sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
+    chip: { borderRadius: 16, borderWidth: 1, minHeight: 32, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
+    chipTxt: { fontSize: 12, fontWeight: '600' },
+    configRow: { marginBottom: 9 },
+    saveBtn: { borderRadius: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+    saveBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 13.5 },
   })
 
+  const renderMonthSelector = (label: string, onPrev: () => void, onNext: () => void) => (
+    <View style={[s.monthBar, { borderColor: theme.text + '14', backgroundColor: theme.surface }]}>
+      <TouchableOpacity style={s.monthBtn} onPress={onPrev}><Feather name="chevron-left" size={18} color={theme.text + 'a0'} /></TouchableOpacity>
+      <Text style={[s.monthLabel, { color: theme.text }]}>{label}</Text>
+      <TouchableOpacity style={s.monthBtn} onPress={onNext}><Feather name="chevron-right" size={18} color={theme.text + 'a0'} /></TouchableOpacity>
+    </View>
+  )
   const renderOverview = () => (
-    <ScrollView style={s.list}>
-      <View style={s.overviewCard}>
-        <Text style={s.balanceLabel}>Saldo do mês</Text>
-        <Text style={[s.balanceValue, { color: balance >= 0 ? '#22c55e' : '#ef4444' }]}>{formatCurrency(balance)}</Text>
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      <View style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+        <Text style={[s.panelTitle, { color: theme.text }]}>Resumo do mes atual</Text>
+        <View style={s.statsWrap}>
+          <View style={[s.statCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+            <Text style={[s.statValue, { color: currentBalance >= 0 ? '#22c55e' : '#ef4444' }]}>{formatCurrency(currentBalance)}</Text>
+            <Text style={[s.statLabel, { color: theme.text + '65' }]}>Saldo</Text>
+          </View>
+          <View style={[s.statCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+            <Text style={[s.statValue, { color: '#22c55e' }]}>{formatCurrency(totalCurrentIncomes)}</Text>
+            <Text style={[s.statLabel, { color: theme.text + '65' }]}>Receitas</Text>
+          </View>
+          <View style={[s.statCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+            <Text style={[s.statValue, { color: '#ef4444' }]}>{formatCurrency(totalCurrentExpenses)}</Text>
+            <Text style={[s.statLabel, { color: theme.text + '65' }]}>Despesas</Text>
+          </View>
+          <View style={[s.statCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+            <Text style={[s.statValue, { color: unpaidBills.length > 0 ? '#f59e0b' : theme.text }]}>{unpaidBills.length}</Text>
+            <Text style={[s.statLabel, { color: theme.text + '65' }]}>Contas pendentes</Text>
+          </View>
+        </View>
+        <Text style={[s.itemMeta, { color: theme.text + '6e', marginTop: 10 }]}>Pendencias em valor: {formatCurrency(unpaidBillsAmount)}</Text>
       </View>
 
-      <View style={s.row2}>
-        <View style={s.miniCard}>
-          <Text style={s.miniLabel}>Renda</Text>
-          <Text style={[s.miniValue, { color: '#22c55e' }]}>{formatCurrency(totalIncome)}</Text>
-        </View>
-        <View style={s.miniCard}>
-          <Text style={s.miniLabel}>Gastos</Text>
-          <Text style={[s.miniValue, { color: '#ef4444' }]}>{formatCurrency(totalExpenses)}</Text>
-        </View>
+      <View style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+        <Text style={[s.panelTitle, { color: theme.text }]}>Limites e orcamento</Text>
+        <Text style={[s.itemMeta, { color: theme.text + '72' }]}>Renda fixa configurada: {formatCurrency(configuredIncome)}</Text>
+        <Text style={[s.itemMeta, { color: theme.text + '72' }]}>Limite mensal de gastos: {spendingLimit > 0 ? formatCurrency(spendingLimit) : 'Nao definido'}</Text>
+        {spendingLimitRemaining !== null && <Text style={[s.itemMeta, { color: spendingLimitRemaining >= 0 ? '#22c55e' : '#ef4444' }]}>Saldo do limite: {formatCurrency(spendingLimitRemaining)}</Text>}
+        <Text style={[s.itemMeta, { color: theme.text + '72' }]}>Soma de limites por categoria: {formatCurrency(totalBudgetLimit)}</Text>
       </View>
 
-      <View style={s.overviewCard}>
-        <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', marginBottom: 12 }}>Por categoria</Text>
-        <View style={s.catList}>
-          {CATEGORIES.filter(c => (expensesByCategory[c] ?? 0) > 0).map(cat => {
-            const val = expensesByCategory[cat] ?? 0
-            const pct = totalExpenses > 0 ? val / totalExpenses : 0
-            return (
-              <View key={cat} style={s.catRow}>
-                <View style={[s.catDot, { backgroundColor: EXPENSE_CATEGORY_COLORS[cat] }]} />
-                <Text style={{ color: theme.text, fontSize: 12, width: 80 }}>{EXPENSE_CATEGORY_LABELS[cat]}</Text>
-                <View style={s.catBar}>
-                  <View style={[s.catFill, { width: `${pct * 100}%`, backgroundColor: EXPENSE_CATEGORY_COLORS[cat] }]} />
-                </View>
-                <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600', width: 70, textAlign: 'right' }}>{formatCurrency(val)}</Text>
+      <View style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+        <Text style={[s.panelTitle, { color: theme.text }]}>Categorias (gasto x limite)</Text>
+        {CATEGORIES.map(category => {
+          const spent = expensesByCategoryCurrent[category]
+          const limit = budgetLimitByCategory[category]
+          if (spent <= 0 && limit <= 0) return null
+          const pct = limit > 0 ? Math.min(1, spent / limit) : 0
+          return (
+            <View key={category} style={{ marginBottom: 10 }}>
+              <View style={s.row}>
+                <View style={[s.catDot, { backgroundColor: EXPENSE_CATEGORY_COLORS[category] }]} />
+                <Text style={[s.catLabel, { color: theme.text }]}>{EXPENSE_CATEGORY_LABELS[category]}</Text>
+                <Text style={[s.catMoney, { color: theme.text + '88' }]}>{formatCurrency(spent)}</Text>
               </View>
-            )
-          })}
-        </View>
+              <Text style={[s.catMeta, { color: theme.text + '66' }]}>{limit > 0 ? `Limite ${formatCurrency(limit)}` : 'Sem limite definido'}</Text>
+              <View style={[s.barWrap, { backgroundColor: theme.text + '16' }]}>
+                <View style={[s.barFill, { width: `${limit > 0 ? pct * 100 : 0}%`, backgroundColor: EXPENSE_CATEGORY_COLORS[category] }]} />
+              </View>
+            </View>
+          )
+        })}
       </View>
-      <View style={{ height: 100 }} />
+
+      <View style={{ height: 24 }} />
     </ScrollView>
   )
 
   const renderExpenses = () => (
-    <ScrollView style={s.list}>
-      {monthExpenses.length === 0 && <EmptyState icon="dollar-sign" title="Sem despesas este mês" />}
-      {monthExpenses.map((expense: Expense) => (
-        <View key={expense.id} style={s.card}>
-          <View style={s.cardRow}>
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      {renderMonthSelector(expenseMonthView.label, () => setExpenseMonthOffset(v => v - 1), () => setExpenseMonthOffset(v => v + 1))}
+      {monthExpensesView.length === 0 && <EmptyState icon="dollar-sign" title="Sem despesas nesse mes" subtitle="Toque no + para registrar" />}
+      {[...monthExpensesView].sort((a, b) => b.date.localeCompare(a.date)).map((expense: Expense) => (
+        <View key={expense.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
+          <View style={s.itemTop}>
             <View style={[s.catDot, { backgroundColor: EXPENSE_CATEGORY_COLORS[expense.category] }]} />
-            <Text style={s.itemTitle} numberOfLines={1}>{expense.description}</Text>
-            <Text style={[s.amount, s.amountExpense]}>{formatCurrency(expense.amount)}</Text>
-            <TouchableOpacity style={s.deleteBtn} onPress={() => Alert.alert('Excluir', 'Excluir esta despesa?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => deleteExpense(expense.id) }])}>
-              <Feather name="trash-2" size={15} color={theme.text + '40'} />
+            <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{expense.description}</Text>
+            <Text style={s.amountExpense}>{formatCurrency(expense.amount)}</Text>
+            <TouchableOpacity
+              style={[s.iconBtn, { backgroundColor: theme.text + '08' }]}
+              onPress={() => Alert.alert('Excluir', 'Excluir esta despesa?', [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Excluir', style: 'destructive', onPress: () => deleteExpense(expense.id) },
+              ])}
+            >
+              <Feather name="trash-2" size={14} color={theme.text + '55'} />
             </TouchableOpacity>
           </View>
-          <Text style={s.meta}>{EXPENSE_CATEGORY_LABELS[expense.category]} · {formatDate(expense.date)}</Text>
+          <Text style={[s.itemMeta, { color: theme.text + '70' }]}>{EXPENSE_CATEGORY_LABELS[expense.category]} - {formatDate(expense.date)}</Text>
         </View>
       ))}
-      <View style={{ height: 100 }} />
+      <View style={{ height: 24 }} />
     </ScrollView>
   )
 
   const renderIncomes = () => (
-    <ScrollView style={s.list}>
-      {store.incomes.length === 0 && <EmptyState icon="trending-up" title="Sem receitas" subtitle="Toque no + para registrar" />}
-      {store.incomes.map((income: IncomeEntry) => (
-        <View key={income.id} style={s.card}>
-          <View style={s.cardRow}>
-            <Feather name="arrow-down-circle" size={18} color="#22c55e" />
-            <Text style={s.itemTitle} numberOfLines={1}>{income.source}</Text>
-            <Text style={[s.amount, s.amountIncome]}>{formatCurrency(income.amount)}</Text>
-            <TouchableOpacity style={s.deleteBtn} onPress={() => Alert.alert('Excluir', 'Excluir receita?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => deleteIncome(income.id) }])}>
-              <Feather name="trash-2" size={15} color={theme.text + '40'} />
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      {renderMonthSelector(incomeMonthView.label, () => setIncomeMonthOffset(v => v - 1), () => setIncomeMonthOffset(v => v + 1))}
+      {monthIncomesView.length === 0 && <EmptyState icon="trending-up" title="Sem receitas nesse mes" subtitle="Toque no + para registrar" />}
+      {[...monthIncomesView].sort((a, b) => b.date.localeCompare(a.date)).map((income: IncomeEntry) => (
+        <View key={income.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
+          <View style={s.itemTop}>
+            <Feather name="arrow-down-circle" size={16} color="#22c55e" />
+            <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{income.source}</Text>
+            <Text style={s.amountIncome}>{formatCurrency(income.amount)}</Text>
+            <TouchableOpacity
+              style={[s.iconBtn, { backgroundColor: theme.text + '08' }]}
+              onPress={() => Alert.alert('Excluir', 'Excluir esta receita?', [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Excluir', style: 'destructive', onPress: () => deleteIncome(income.id) },
+              ])}
+            >
+              <Feather name="trash-2" size={14} color={theme.text + '55'} />
             </TouchableOpacity>
           </View>
-          <Text style={s.meta}>{income.kind === 'fixed' ? 'Fixa' : 'Extra'} · {formatDate(income.date)}</Text>
+          <Text style={[s.itemMeta, { color: theme.text + '70' }]}>{income.kind === 'fixed' ? 'Fixa' : 'Extra'} - {formatDate(income.date)}</Text>
         </View>
       ))}
-      <View style={{ height: 100 }} />
+      <View style={{ height: 24 }} />
     </ScrollView>
   )
-
   const renderBills = () => (
-    <ScrollView style={s.list}>
-      {store.bills.length === 0 && <EmptyState icon="credit-card" title="Sem contas cadastradas" />}
-      {store.bills.map((bill: Bill) => (
-        <View key={bill.id} style={[s.card, bill.isPaid && { opacity: 0.5 }]}>
-          <View style={s.cardRow}>
-            <View style={[s.catDot, { backgroundColor: EXPENSE_CATEGORY_COLORS[bill.category] }]} />
-            <Text style={s.itemTitle} numberOfLines={1}>{bill.name}</Text>
-            <Text style={[s.amount, s.amountExpense]}>{formatCurrency(bill.amount)}</Text>
-            <TouchableOpacity style={s.deleteBtn} onPress={() => Alert.alert('Excluir', 'Excluir esta conta?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => deleteBill(bill.id) }])}>
-              <Feather name="trash-2" size={15} color={theme.text + '40'} />
-            </TouchableOpacity>
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      {billsSorted.length === 0 && <EmptyState icon="credit-card" title="Sem contas cadastradas" subtitle="Toque no + para criar" />}
+      {billsSorted.map((bill: Bill) => {
+        const days = getDaysUntilDue(todayStr, bill.dueDay)
+        const badgeColor = bill.isPaid ? '#22c55e' : days === 0 ? '#ef4444' : days <= 3 ? '#f97316' : days <= 7 ? '#eab308' : theme.text + '66'
+        const badgeLabel = bill.isPaid ? 'Pago' : days === 0 ? 'Hoje' : `${days}d`
+        return (
+          <View key={bill.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface, opacity: bill.isPaid ? 0.64 : 1 }]}>
+            <View style={s.itemTop}>
+              <View style={[s.catDot, { backgroundColor: EXPENSE_CATEGORY_COLORS[bill.category] }]} />
+              <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{bill.name}</Text>
+              <Text style={s.amountExpense}>{formatCurrency(bill.amount)}</Text>
+              <View style={[s.billBadge, { borderColor: badgeColor + '55', backgroundColor: badgeColor + '14' }]}><Text style={[s.billBadgeTxt, { color: badgeColor }]}>{badgeLabel}</Text></View>
+            </View>
+            <Text style={[s.itemMeta, { color: theme.text + '70' }]}>Vence dia {bill.dueDay} - {bill.recurrence === 'monthly' ? 'Mensal' : 'Anual'}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity style={[s.goalActionBtn, { borderColor: theme.text + '20', backgroundColor: theme.background }]} onPress={() => toggleBillPaid(bill)}>
+                <Text style={[s.chipTxt, { color: theme.text + 'd0' }]}>{bill.isPaid ? 'Marcar pendente' : 'Marcar paga'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.goalActionBtn, { borderColor: '#ef444480', backgroundColor: '#ef444412' }]}
+                onPress={() => Alert.alert('Excluir', 'Excluir esta conta?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Excluir', style: 'destructive', onPress: () => deleteBill(bill.id) },
+                ])}
+              >
+                <Text style={[s.chipTxt, { color: '#ef4444' }]}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={s.meta}>Vence dia {bill.dueDay} · {bill.recurrence === 'monthly' ? 'Mensal' : 'Anual'}</Text>
-        </View>
-      ))}
-      <View style={{ height: 100 }} />
+        )
+      })}
+      <View style={{ height: 24 }} />
     </ScrollView>
   )
 
-  const getFabAction = (): (() => void) => {
-    if (tab === 'expenses') return () => openNew('expense')
-    if (tab === 'incomes') return () => openNew('income')
-    if (tab === 'bills') return () => openNew('bill')
-    return () => openNew('expense')
-  }
+  const renderGoals = () => (
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      {goalsSorted.length === 0 && <EmptyState icon="target" title="Sem metas" subtitle="Toque no + para criar" />}
+      {goalsSorted.map(goal => {
+        const pct = goal.targetAmount > 0 ? Math.min(1, goal.currentAmount / goal.targetAmount) : 0
+        return (
+          <View key={goal.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
+            <View style={s.goalHeader}>
+              <Text style={[s.goalName, { color: theme.text }]} numberOfLines={1}>{goal.name}</Text>
+              <Text style={[s.goalPct, { color: theme.primary }]}>{Math.round(pct * 100)}%</Text>
+            </View>
+            <View style={[s.goalBarWrap, { backgroundColor: theme.text + '16' }]}><View style={[s.goalBarFill, { width: `${pct * 100}%`, backgroundColor: theme.primary }]} /></View>
+            <Text style={[s.goalMeta, { color: theme.text + '70' }]}>{formatCurrency(goal.currentAmount)} de {formatCurrency(goal.targetAmount)}</Text>
+            {goal.deadline ? <Text style={[s.goalMeta, { color: theme.text + '70' }]}>Prazo: {formatDate(goal.deadline)}</Text> : null}
+            <View style={s.goalActions}>
+              <TouchableOpacity style={[s.goalActionBtn, { borderColor: theme.primary + '70', backgroundColor: theme.primary + '12' }]} onPress={() => updateSavingsGoal(goal.id, { currentAmount: goal.currentAmount + 100 })}><Text style={[s.chipTxt, { color: theme.primary }]}>+100</Text></TouchableOpacity>
+              <TouchableOpacity style={[s.goalActionBtn, { borderColor: theme.text + '20', backgroundColor: theme.background }]} onPress={() => openGoal(goal)}><Text style={[s.chipTxt, { color: theme.text + 'd0' }]}>Editar</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={[s.goalActionBtn, { borderColor: '#ef444480', backgroundColor: '#ef444412' }]}
+                onPress={() => Alert.alert('Excluir meta', `Excluir "${goal.name}"?`, [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Excluir', style: 'destructive', onPress: () => deleteSavingsGoal(goal.id) },
+                ])}
+              >
+                <Text style={[s.chipTxt, { color: '#ef4444' }]}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )
+      })}
+      <View style={{ height: 24 }} />
+    </ScrollView>
+  )
+
+  const renderConfig = () => (
+    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      <View style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+        <Text style={[s.panelTitle, { color: theme.text }]}>Configuracao mensal</Text>
+        <FormInput label="Renda mensal fixa (R$)" value={configForm.monthlyIncome} onChangeText={value => setConfigForm(prev => ({ ...prev, monthlyIncome: value }))} placeholder="0,00" keyboardType="decimal-pad" />
+        <FormInput label="Limite mensal de gastos (R$)" value={configForm.monthlySpendingLimit} onChangeText={value => setConfigForm(prev => ({ ...prev, monthlySpendingLimit: value }))} placeholder="0,00" keyboardType="decimal-pad" />
+      </View>
+      <View style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+        <Text style={[s.panelTitle, { color: theme.text }]}>Limite por categoria</Text>
+        {CATEGORIES.map(category => (
+          <View key={category} style={s.configRow}>
+            <FormInput label={EXPENSE_CATEGORY_LABELS[category]} value={budgetForm[category]} onChangeText={value => setBudgetForm(prev => ({ ...prev, [category]: value }))} placeholder="0,00" keyboardType="decimal-pad" />
+          </View>
+        ))}
+      </View>
+      <TouchableOpacity style={[s.saveBtn, { backgroundColor: theme.primary }]} onPress={saveFinancialConfig}><Text style={s.saveBtnTxt}>Salvar configuracoes</Text></TouchableOpacity>
+      <View style={{ height: 24 }} />
+    </ScrollView>
+  )
+
+  const fabAction = (() => {
+    if (tab === 'expenses') return () => openEntry('expense')
+    if (tab === 'incomes') return () => openEntry('income')
+    if (tab === 'bills') return () => openEntry('bill')
+    if (tab === 'goals') return () => openGoal()
+    return null
+  })()
 
   return (
     <SafeAreaView style={s.screen}>
       <Header title="Financeiro" />
-      <View style={s.tabRow}>
-        {tabs.map(({ key, label }) => (
-          <TouchableOpacity key={key} style={[s.tab, tab === key && s.tabActive]} onPress={() => setTab(key)}>
-            <Text style={[s.tabTxt, tab === key && s.tabActiveTxt]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroll} contentContainerStyle={s.tabRow}>
+        {tabs.map(({ key, label }) => {
+          const active = tab === key
+          return (
+            <TouchableOpacity key={key} style={[s.tabBtn, active ? { borderColor: theme.primary, backgroundColor: theme.primary + '20' } : { borderColor: theme.text + '1a', backgroundColor: theme.surface }]} onPress={() => setTab(key)}>
+              <Text style={[s.tabTxt, { color: active ? theme.primary : theme.text + '80' }]}>{label}</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
 
       {tab === 'overview' && renderOverview()}
       {tab === 'expenses' && renderExpenses()}
       {tab === 'incomes' && renderIncomes()}
       {tab === 'bills' && renderBills()}
+      {tab === 'goals' && renderGoals()}
+      {tab === 'config' && renderConfig()}
 
-      {tab !== 'overview' && <FAB onPress={getFabAction()} />}
+      {fabAction && <FAB onPress={fabAction} />}
 
-      <BottomSheet visible={showSheet} onClose={() => setShowSheet(false)} title={{ expense: 'Nova despesa', bill: 'Nova conta fixa', income: 'Nova receita' }[sheetType]} onSave={handleSave}>
+      <BottomSheet visible={showEntrySheet} onClose={() => setShowEntrySheet(false)} title={{ expense: 'Nova despesa', bill: 'Nova conta', income: 'Nova receita' }[sheetType]} onSave={handleSaveEntry}>
         {sheetType === 'income'
-          ? <FormInput label="Fonte" value={form.source} onChangeText={t => setForm(f => ({ ...f, source: t }))} placeholder="Ex: Salário" autoFocus />
-          : <FormInput label="Descrição" value={form.description} onChangeText={t => setForm(f => ({ ...f, description: t }))} placeholder="Ex: Supermercado" autoFocus />
-        }
-        <FormInput label="Valor (R$)" value={form.amount} onChangeText={t => setForm(f => ({ ...f, amount: t }))} placeholder="0,00" keyboardType="decimal-pad" />
+          ? <FormInput label="Fonte" value={entryForm.source} onChangeText={value => setEntryForm(prev => ({ ...prev, source: value }))} placeholder="Ex: Salario" autoFocus />
+          : <FormInput label={sheetType === 'bill' ? 'Nome da conta' : 'Descricao'} value={entryForm.description} onChangeText={value => setEntryForm(prev => ({ ...prev, description: value }))} placeholder={sheetType === 'bill' ? 'Ex: Internet' : 'Ex: Supermercado'} autoFocus />}
+        <FormInput label="Valor (R$)" value={entryForm.amount} onChangeText={value => setEntryForm(prev => ({ ...prev, amount: value }))} placeholder="0,00" keyboardType="decimal-pad" />
         {sheetType !== 'income' && (
-          <View style={s.formRow}>
-            <Text style={s.rowLabel}>Categoria</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={s.chips}>
-                {CATEGORIES.map(cat => {
-                  const active = form.category === cat
-                  return (
-                    <TouchableOpacity key={cat}
-                      style={[s.chip, { borderColor: active ? EXPENSE_CATEGORY_COLORS[cat] : theme.text + '30', backgroundColor: active ? EXPENSE_CATEGORY_COLORS[cat] + '30' : 'transparent' }]}
-                      onPress={() => setForm(f => ({ ...f, category: cat }))}>
-                      <Text style={[s.chipTxt, { color: active ? EXPENSE_CATEGORY_COLORS[cat] : theme.text + '60' }]}>{EXPENSE_CATEGORY_LABELS[cat]}</Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
-            </ScrollView>
-          </View>
+          <>
+            <Text style={[s.sectionLabel, { color: theme.text + '72' }]}>Categoria</Text>
+            <View style={s.chips}>
+              {CATEGORIES.map(category => {
+                const active = entryForm.category === category
+                return (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      s.chip,
+                      active
+                        ? { borderColor: EXPENSE_CATEGORY_COLORS[category], backgroundColor: EXPENSE_CATEGORY_COLORS[category] + '22' }
+                        : { borderColor: theme.text + '22', backgroundColor: theme.text + '08' },
+                    ]}
+                    onPress={() => setEntryForm(prev => ({ ...prev, category }))}
+                  >
+                    <Text style={[s.chipTxt, { color: active ? EXPENSE_CATEGORY_COLORS[category] : theme.text + '85' }]}>{EXPENSE_CATEGORY_LABELS[category]}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </>
         )}
-        {sheetType === 'bill'
-          ? <FormInput label="Dia do vencimento" value={form.dueDay} onChangeText={t => setForm(f => ({ ...f, dueDay: t }))} placeholder="1-31" keyboardType="numeric" />
-          : <FormInput label="Data (YYYY-MM-DD)" value={form.date} onChangeText={t => setForm(f => ({ ...f, date: t }))} placeholder={todayStr} />
-        }
-        <View style={{ height: 20 }} />
+
+        {sheetType === 'income' ? (
+          <>
+            <FormInput
+              label="Data (YYYY-MM-DD)"
+              value={entryForm.date}
+              onChangeText={value => setEntryForm(prev => ({ ...prev, date: value }))}
+              placeholder={todayStr}
+              keyboardType="numbers-and-punctuation"
+            />
+            <Text style={[s.sectionLabel, { color: theme.text + '72' }]}>Tipo de receita</Text>
+            <View style={s.chips}>
+              {(['fixed', 'extra'] as const).map(kind => {
+                const active = entryForm.kind === kind
+                return (
+                  <TouchableOpacity
+                    key={kind}
+                    style={[
+                      s.chip,
+                      active
+                        ? { borderColor: theme.primary, backgroundColor: theme.primary + '22' }
+                        : { borderColor: theme.text + '22', backgroundColor: theme.text + '08' },
+                    ]}
+                    onPress={() => setEntryForm(prev => ({ ...prev, kind }))}
+                  >
+                    <Text style={[s.chipTxt, { color: active ? theme.primary : theme.text + '85' }]}>{kind === 'fixed' ? 'Fixa' : 'Extra'}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <FormInput
+              label="Repetir por meses"
+              value={entryForm.repeatMonths}
+              onChangeText={value => setEntryForm(prev => ({ ...prev, repeatMonths: value }))}
+              placeholder="1"
+              keyboardType="number-pad"
+            />
+          </>
+        ) : sheetType === 'bill' ? (
+          <>
+            <FormInput
+              label="Dia do vencimento"
+              value={entryForm.dueDay}
+              onChangeText={value => setEntryForm(prev => ({ ...prev, dueDay: value }))}
+              placeholder="1-31"
+              keyboardType="number-pad"
+            />
+            <Text style={[s.sectionLabel, { color: theme.text + '72' }]}>Recorrencia</Text>
+            <View style={s.chips}>
+              {(['monthly', 'yearly'] as const).map(recurrence => {
+                const active = entryForm.recurrence === recurrence
+                return (
+                  <TouchableOpacity
+                    key={recurrence}
+                    style={[
+                      s.chip,
+                      active
+                        ? { borderColor: theme.primary, backgroundColor: theme.primary + '22' }
+                        : { borderColor: theme.text + '22', backgroundColor: theme.text + '08' },
+                    ]}
+                    onPress={() => setEntryForm(prev => ({ ...prev, recurrence }))}
+                  >
+                    <Text style={[s.chipTxt, { color: active ? theme.primary : theme.text + '85' }]}>{recurrence === 'monthly' ? 'Mensal' : 'Anual'}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </>
+        ) : (
+          <>
+            <FormInput
+              label="Data (YYYY-MM-DD)"
+              value={entryForm.date}
+              onChangeText={value => setEntryForm(prev => ({ ...prev, date: value }))}
+              placeholder={todayStr}
+              keyboardType="numbers-and-punctuation"
+            />
+            <FormInput
+              label="Parcelas"
+              value={entryForm.installments}
+              onChangeText={value => setEntryForm(prev => ({ ...prev, installments: value }))}
+              placeholder="1"
+              keyboardType="number-pad"
+            />
+          </>
+        )}
+        {sheetType !== 'bill' && (
+          <FormInput
+            label="Nota"
+            value={entryForm.note}
+            onChangeText={value => setEntryForm(prev => ({ ...prev, note: value }))}
+            placeholder="Opcional"
+            multiline
+            numberOfLines={3}
+          />
+        )}
+      </BottomSheet>
+
+      <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)} title={editingGoal ? 'Editar meta' : 'Nova meta'} onSave={saveGoal}>
+        <FormInput label="Nome" value={goalForm.name} onChangeText={value => setGoalForm(prev => ({ ...prev, name: value }))} placeholder="Ex: Reserva" autoFocus />
+        <FormInput label="Valor alvo (R$)" value={goalForm.targetAmount} onChangeText={value => setGoalForm(prev => ({ ...prev, targetAmount: value }))} placeholder="0,00" keyboardType="decimal-pad" />
+        <FormInput label="Valor atual (R$)" value={goalForm.currentAmount} onChangeText={value => setGoalForm(prev => ({ ...prev, currentAmount: value }))} placeholder="0,00" keyboardType="decimal-pad" />
+        <FormInput label="Prazo (YYYY-MM-DD)" value={goalForm.deadline} onChangeText={value => setGoalForm(prev => ({ ...prev, deadline: value }))} placeholder="Opcional" keyboardType="numbers-and-punctuation" />
       </BottomSheet>
     </SafeAreaView>
   )
