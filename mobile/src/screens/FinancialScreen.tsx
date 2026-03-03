@@ -1,6 +1,6 @@
 ﻿
-import React, { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, PanResponder } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, PanResponder, Animated, Easing, useWindowDimensions } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
 import { BottomSheet } from '../components/shared/BottomSheet'
@@ -22,9 +22,19 @@ import {
 
 type Tab = 'overview' | 'expenses' | 'incomes' | 'bills' | 'goals' | 'config'
 type EntrySheetType = 'expense' | 'bill' | 'income'
+type MonthPickerTarget = 'expenses' | 'incomes'
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const TAB_ORDER: Tab[] = ['overview', 'expenses', 'incomes', 'bills', 'goals', 'config']
+const TAB_LABELS: Record<Tab, string> = {
+  overview: 'Resumo',
+  expenses: 'Despesas',
+  incomes: 'Receitas',
+  bills: 'Contas',
+  goals: 'Metas',
+  config: 'Configuracoes',
+}
+const MONTH_SHORT_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 function parseMoney(value: string): number {
   return Number.parseFloat(value.replace(',', '.'))
@@ -59,6 +69,7 @@ function getDaysUntilDue(todayISO: string, dueDay: number): number {
 
 export function FinancialScreen() {
   const theme = useTheme()
+  const { width: viewportWidth } = useWindowDimensions()
   const {
     store,
     addExpense,
@@ -85,6 +96,11 @@ export function FinancialScreen() {
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null)
   const [expenseMonthOffset, setExpenseMonthOffset] = useState(0)
   const [incomeMonthOffset, setIncomeMonthOffset] = useState(0)
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false)
+  const [monthPickerTarget, setMonthPickerTarget] = useState<MonthPickerTarget>('expenses')
+  const [monthPickerYear, setMonthPickerYear] = useState(new Date(todayStr + 'T00:00:00').getFullYear())
+  const dragX = useRef(new Animated.Value(0)).current
+  const isAnimatingRef = useRef(false)
 
   const [entryForm, setEntryForm] = useState({
     description: '', source: '', amount: '', category: 'outro' as ExpenseCategory,
@@ -118,6 +134,14 @@ export function FinancialScreen() {
 
   const expenseMonthView = useMemo(() => getMonthView(todayStr, expenseMonthOffset), [todayStr, expenseMonthOffset])
   const incomeMonthView = useMemo(() => getMonthView(todayStr, incomeMonthOffset), [todayStr, incomeMonthOffset])
+  const expenseMonthSelection = useMemo(() => {
+    const [year, month] = expenseMonthView.ym.split('-').map(Number)
+    return { year: year || monthPickerYear, monthIndex: Math.max(0, (month || 1) - 1) }
+  }, [expenseMonthView.ym, monthPickerYear])
+  const incomeMonthSelection = useMemo(() => {
+    const [year, month] = incomeMonthView.ym.split('-').map(Number)
+    return { year: year || monthPickerYear, monthIndex: Math.max(0, (month || 1) - 1) }
+  }, [incomeMonthView.ym, monthPickerYear])
 
   const monthExpensesCurrent = useMemo(() => store.expenses.filter(e => e.date.startsWith(currentMonth)), [store.expenses, currentMonth])
   const monthIncomesCurrent = useMemo(() => store.incomes.filter(i => i.date.startsWith(currentMonth)), [store.incomes, currentMonth])
@@ -246,35 +270,113 @@ export function FinancialScreen() {
     Alert.alert('Configuracoes salvas', 'Dados financeiros atualizados.')
   }
 
-  const tabs: Array<{ key: Tab; label: string }> = [
-    { key: 'overview', label: 'Visao geral' },
-    { key: 'expenses', label: 'Despesas' },
-    { key: 'incomes', label: 'Receitas' },
-    { key: 'bills', label: 'Contas' },
-    { key: 'goals', label: 'Metas' },
-    { key: 'config', label: 'Configuracoes' },
-  ]
+  const travelDistance = Math.max(240, viewportWidth * 0.92)
+  const swipeThreshold = Math.max(58, viewportWidth * 0.17)
 
-  const swipeThreshold = 72
+  const snapBack = useCallback(() => {
+    Animated.spring(dragX, {
+      toValue: 0,
+      damping: 18,
+      stiffness: 240,
+      mass: 0.8,
+      useNativeDriver: true,
+    }).start()
+  }, [dragX])
+
+  const runTabTransition = useCallback((nextTab: Tab, direction: 'next' | 'prev', fromDrag = false) => {
+    if (nextTab === tab || isAnimatingRef.current) {
+      if (fromDrag) snapBack()
+      return
+    }
+
+    isAnimatingRef.current = true
+    const exitX = direction === 'next' ? -travelDistance : travelDistance
+    const enterX = -exitX
+
+    Animated.timing(dragX, {
+      toValue: exitX,
+      duration: fromDrag ? 120 : 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setTab(nextTab)
+      dragX.setValue(enterX)
+
+      Animated.spring(dragX, {
+        toValue: 0,
+        damping: 18,
+        stiffness: 240,
+        mass: 0.8,
+        useNativeDriver: true,
+      }).start(() => {
+        isAnimatingRef.current = false
+      })
+    })
+  }, [dragX, snapBack, tab, travelDistance])
+
+  const shiftTab = useCallback((direction: 'next' | 'prev', fromDrag = false) => {
+    const currentIndex = TAB_ORDER.indexOf(tab)
+    if (currentIndex < 0) {
+      if (fromDrag) snapBack()
+      return
+    }
+
+    if (direction === 'next') {
+      if (currentIndex >= TAB_ORDER.length - 1) {
+        if (fromDrag) snapBack()
+        return
+      }
+      runTabTransition(TAB_ORDER[currentIndex + 1], 'next', fromDrag)
+      return
+    }
+
+    if (currentIndex <= 0) {
+      if (fromDrag) snapBack()
+      return
+    }
+    runTabTransition(TAB_ORDER[currentIndex - 1], 'prev', fromDrag)
+  }, [runTabTransition, snapBack, tab])
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (_, gesture) =>
           Math.abs(gesture.dx) > 14 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onPanResponderGrant: () => {
+          dragX.stopAnimation()
+        },
+        onPanResponderMove: (_, gesture) => {
+          if (isAnimatingRef.current) return
+          const clampedX = Math.max(-travelDistance, Math.min(travelDistance, gesture.dx))
+          dragX.setValue(clampedX)
+        },
         onPanResponderRelease: (_, gesture) => {
-          if (Math.abs(gesture.dx) < swipeThreshold) return
-          const currentIndex = TAB_ORDER.indexOf(tab)
-          if (currentIndex < 0) return
-          if (gesture.dx < 0 && currentIndex < TAB_ORDER.length - 1) {
-            setTab(TAB_ORDER[currentIndex + 1])
-          } else if (gesture.dx > 0 && currentIndex > 0) {
-            setTab(TAB_ORDER[currentIndex - 1])
+          if (Math.abs(gesture.dx) < swipeThreshold || Math.abs(gesture.dx) < Math.abs(gesture.dy)) {
+            snapBack()
+            return
           }
+          if (gesture.dx < 0) shiftTab('next', true)
+          else shiftTab('prev', true)
+        },
+        onPanResponderTerminate: () => {
+          snapBack()
         },
       }),
-    [tab],
+    [dragX, shiftTab, snapBack, swipeThreshold, travelDistance],
   )
+
+  const contentOpacity = dragX.interpolate({
+    inputRange: [-travelDistance, 0, travelDistance],
+    outputRange: [0.82, 1, 0.82],
+    extrapolate: 'clamp',
+  })
+
+  const contentScale = dragX.interpolate({
+    inputRange: [-travelDistance, 0, travelDistance],
+    outputRange: [0.985, 1, 0.985],
+    extrapolate: 'clamp',
+  })
 
   function handleFooterAdd() {
     if (tab === 'incomes') return openEntry('income')
@@ -283,12 +385,46 @@ export function FinancialScreen() {
     return openEntry('expense')
   }
 
+  function openMonthPicker(target: MonthPickerTarget) {
+    setMonthPickerTarget(target)
+    const selected = target === 'expenses' ? expenseMonthSelection : incomeMonthSelection
+    setMonthPickerYear(selected.year)
+    setMonthPickerOpen(true)
+  }
+
+  function selectMonth(monthIndex: number) {
+    const todayDate = new Date(todayStr + 'T00:00:00')
+    const todayIndex = (todayDate.getFullYear() * 12) + todayDate.getMonth()
+    const targetIndex = (monthPickerYear * 12) + monthIndex
+    const nextOffset = targetIndex - todayIndex
+
+    if (monthPickerTarget === 'expenses') setExpenseMonthOffset(nextOffset)
+    else setIncomeMonthOffset(nextOffset)
+
+    setMonthPickerOpen(false)
+  }
+
   const s = StyleSheet.create({
     screen: { flex: 1, backgroundColor: theme.background },
-    tabScroll: { flexGrow: 0, maxHeight: 44, borderBottomWidth: 1, borderBottomColor: theme.text + '10', backgroundColor: theme.surface },
-    tabRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 6 },
-    tabBtn: { minHeight: 30, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    tabTxt: { fontSize: 12.5, fontWeight: '600' },
+    sectionBar: {
+      height: 44,
+      borderBottomWidth: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.surface,
+      paddingHorizontal: 10,
+    },
+    sectionNavBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionBarTitle: { fontSize: 14, fontWeight: '700' },
+    swipeArea: { flex: 1 },
     list: { flex: 1, padding: 12 },
     panel: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 10 },
     panelTitle: { fontSize: 13.5, fontWeight: '700', marginBottom: 10 },
@@ -303,9 +439,38 @@ export function FinancialScreen() {
     catMeta: { fontSize: 11, marginTop: 2 },
     barWrap: { width: '100%', height: 6, borderRadius: 4, overflow: 'hidden', marginTop: 5 },
     barFill: { height: 6, borderRadius: 4 },
-    monthBar: { borderRadius: 11, borderWidth: 1, minHeight: 40, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-    monthBtn: { width: 40, height: 38, alignItems: 'center', justifyContent: 'center' },
-    monthLabel: { flex: 1, textAlign: 'center', fontSize: 13.5, fontWeight: '700', textTransform: 'capitalize' },
+    monthBar: {
+      borderRadius: 11,
+      borderWidth: 1,
+      minHeight: 42,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 10,
+      gap: 8,
+      paddingHorizontal: 12,
+    },
+    monthLabel: { fontSize: 13.5, fontWeight: '700', textTransform: 'capitalize' },
+    monthPickerYearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    monthPickerYearBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    monthPickerYearTxt: { fontSize: 16, fontWeight: '700' },
+    monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 12 },
+    monthCard: {
+      width: '31%',
+      minHeight: 44,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    monthCardTxt: { fontSize: 13, fontWeight: '600' },
     itemCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8 },
     itemTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     itemTitle: { flex: 1, fontSize: 14, fontWeight: '600' },
@@ -363,12 +528,15 @@ export function FinancialScreen() {
     },
   })
 
-  const renderMonthSelector = (label: string, onPrev: () => void, onNext: () => void) => (
-    <View style={[s.monthBar, { borderColor: theme.text + '14', backgroundColor: theme.surface }]}>
-      <TouchableOpacity style={s.monthBtn} onPress={onPrev}><Feather name="chevron-left" size={18} color={theme.text + 'a0'} /></TouchableOpacity>
+  const renderMonthSelector = (label: string, onPress: () => void) => (
+    <TouchableOpacity
+      style={[s.monthBar, { borderColor: theme.text + '14', backgroundColor: theme.surface }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
       <Text style={[s.monthLabel, { color: theme.text }]}>{label}</Text>
-      <TouchableOpacity style={s.monthBtn} onPress={onNext}><Feather name="chevron-right" size={18} color={theme.text + 'a0'} /></TouchableOpacity>
-    </View>
+      <Feather name="chevron-down" size={16} color={theme.text + 'a0'} />
+    </TouchableOpacity>
   )
   const renderOverview = () => (
     <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
@@ -432,7 +600,7 @@ export function FinancialScreen() {
 
   const renderExpenses = () => (
     <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-      {renderMonthSelector(expenseMonthView.label, () => setExpenseMonthOffset(v => v - 1), () => setExpenseMonthOffset(v => v + 1))}
+      {renderMonthSelector(expenseMonthView.label, () => openMonthPicker('expenses'))}
       {monthExpensesView.length === 0 && <EmptyState icon="dollar-sign" title="Sem despesas nesse mes" subtitle="Toque no + para registrar" />}
       {[...monthExpensesView].sort((a, b) => b.date.localeCompare(a.date)).map((expense: Expense) => (
         <View key={expense.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
@@ -459,7 +627,7 @@ export function FinancialScreen() {
 
   const renderIncomes = () => (
     <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-      {renderMonthSelector(incomeMonthView.label, () => setIncomeMonthOffset(v => v - 1), () => setIncomeMonthOffset(v => v + 1))}
+      {renderMonthSelector(incomeMonthView.label, () => openMonthPicker('incomes'))}
       {monthIncomesView.length === 0 && <EmptyState icon="trending-up" title="Sem receitas nesse mes" subtitle="Toque no + para registrar" />}
       {[...monthIncomesView].sort((a, b) => b.date.localeCompare(a.date)).map((income: IncomeEntry) => (
         <View key={income.id} style={[s.itemCard, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
@@ -574,27 +742,41 @@ export function FinancialScreen() {
     </ScrollView>
   )
 
+  const monthPickerSelected = monthPickerTarget === 'expenses' ? expenseMonthSelection : incomeMonthSelection
+  const monthPickerTitle = monthPickerTarget === 'expenses' ? 'Mes de despesas' : 'Mes de receitas'
+
   return (
     <SafeAreaView style={s.screen}>
       <Header title="Financeiro" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroll} contentContainerStyle={s.tabRow}>
-        {tabs.map(({ key, label }) => {
-          const active = tab === key
-          return (
-            <TouchableOpacity key={key} style={[s.tabBtn, active ? { borderColor: theme.primary, backgroundColor: theme.primary + '20' } : { borderColor: theme.text + '1a', backgroundColor: theme.surface }]} onPress={() => setTab(key)}>
-              <Text style={[s.tabTxt, { color: active ? theme.primary : theme.text + '80' }]}>{label}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <View style={[s.sectionBar, { borderBottomColor: theme.text + '10' }]}>
+        <TouchableOpacity
+          style={[s.sectionNavBtn, { borderColor: theme.text + '1f', backgroundColor: theme.text + '08' }]}
+          onPress={() => shiftTab('prev')}
+        >
+          <Feather name="chevron-left" size={16} color={theme.text + '86'} />
+        </TouchableOpacity>
+        <Text style={[s.sectionBarTitle, { color: theme.text }]}>{TAB_LABELS[tab]}</Text>
+        <TouchableOpacity
+          style={[s.sectionNavBtn, { borderColor: theme.text + '1f', backgroundColor: theme.text + '08' }]}
+          onPress={() => shiftTab('next')}
+        >
+          <Feather name="chevron-right" size={16} color={theme.text + '86'} />
+        </TouchableOpacity>
+      </View>
+      <Animated.View
+        style={[
+          s.swipeArea,
+          { opacity: contentOpacity, transform: [{ translateX: dragX }, { scale: contentScale }] },
+        ]}
+        {...panResponder.panHandlers}
+      >
         {tab === 'overview' && renderOverview()}
         {tab === 'expenses' && renderExpenses()}
         {tab === 'incomes' && renderIncomes()}
         {tab === 'bills' && renderBills()}
         {tab === 'goals' && renderGoals()}
         {tab === 'config' && renderConfig()}
-      </View>
+      </Animated.View>
 
       <View style={[s.footer, { backgroundColor: theme.surface, borderTopColor: theme.text + '12' }]}>
         <View style={s.footerSide}>
@@ -625,6 +807,49 @@ export function FinancialScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <BottomSheet
+        visible={monthPickerOpen}
+        onClose={() => setMonthPickerOpen(false)}
+        title={monthPickerTitle}
+        maxHeight="62%"
+      >
+        <View style={s.monthPickerYearRow}>
+          <TouchableOpacity
+            style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
+            onPress={() => setMonthPickerYear(prev => prev - 1)}
+          >
+            <Feather name="chevron-left" size={16} color={theme.text + '80'} />
+          </TouchableOpacity>
+          <Text style={[s.monthPickerYearTxt, { color: theme.text }]}>{monthPickerYear}</Text>
+          <TouchableOpacity
+            style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
+            onPress={() => setMonthPickerYear(prev => prev + 1)}
+          >
+            <Feather name="chevron-right" size={16} color={theme.text + '80'} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={s.monthGrid}>
+          {MONTH_SHORT_LABELS.map((label, idx) => {
+            const active = monthPickerYear === monthPickerSelected.year && idx === monthPickerSelected.monthIndex
+            return (
+              <TouchableOpacity
+                key={label}
+                style={[
+                  s.monthCard,
+                  active
+                    ? { borderColor: theme.primary, backgroundColor: theme.primary + '18' }
+                    : { borderColor: theme.text + '20', backgroundColor: theme.text + '08' },
+                ]}
+                onPress={() => selectMonth(idx)}
+              >
+                <Text style={[s.monthCardTxt, { color: active ? theme.primary : theme.text + '90' }]}>{label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      </BottomSheet>
 
       <BottomSheet visible={showEntrySheet} onClose={() => setShowEntrySheet(false)} title={{ expense: 'Nova despesa', bill: 'Nova conta', income: 'Nova receita' }[sheetType]} onSave={handleSaveEntry}>
         {sheetType === 'income'
