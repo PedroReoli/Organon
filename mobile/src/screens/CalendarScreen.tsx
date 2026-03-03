@@ -395,15 +395,15 @@ export function CalendarScreen() {
   }
 
   function openDetailsFromEvents(event: CalendarEvent) {
-    setShowEventsSheet(false)
-    setTimeout(() => setDetailEvent(event), 220)
+    setDetailEvent(event)
   }
 
   function openEditFromDetails() {
     if (!detailEvent) return
     const event = detailEvent
     setDetailEvent(null)
-    setTimeout(() => openEdit(event), 150)
+    setShowEventsSheet(false)
+    setTimeout(() => openEdit(event), 220)
   }
 
   function handleSave() {
@@ -609,7 +609,10 @@ export function CalendarScreen() {
         <View style={[styles.footerSide, { alignItems: 'flex-end' }]}>
           <TouchableOpacity
             style={[styles.footerActionBtn, { backgroundColor: theme.text + '0a', borderColor: theme.text + '12' }]}
-            onPress={() => setShowEventsSheet(true)}
+            onPress={() => {
+              setDetailEvent(null)
+              setShowEventsSheet(true)
+            }}
           >
             <Feather name="list" size={15} color={theme.text + '85'} />
             <Text style={[styles.footerActionText, { color: theme.text + '85' }]}>Eventos</Text>
@@ -619,105 +622,24 @@ export function CalendarScreen() {
 
       <BottomSheet
         visible={showEventsSheet}
-        onClose={() => setShowEventsSheet(false)}
+        onClose={() => {
+          setDetailEvent(null)
+          setShowEventsSheet(false)
+        }}
         title="Eventos"
         maxHeight="94%"
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flexGrow: 0, maxHeight: 46 }}
-          contentContainerStyle={{ gap: 8, paddingBottom: 4, paddingRight: 4, alignItems: 'center' }}
-        >
-          {EVENT_RANGE_OPTIONS.map(option => {
-            const active = eventsFilter === option.key
-            return (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.rangeChip,
-                  active
-                    ? { backgroundColor: theme.primary, borderColor: theme.primary }
-                    : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
-                ]}
-                onPress={() => setEventsFilter(option.key)}
-              >
-                <Text style={[styles.rangeChipText, { color: active ? '#fff' : theme.text + '80' }]}>{option.label}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+        {detailEvent ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 6, paddingBottom: 10 }}
+          >
+            <TouchableOpacity style={styles.detailBackBtn} onPress={() => setDetailEvent(null)}>
+              <Feather name="chevron-left" size={16} color={theme.text + '72'} />
+              <Text style={[styles.detailBackText, { color: theme.text + '72' }]}>Voltar para lista</Text>
+            </TouchableOpacity>
 
-        <View style={[styles.eventsSheetHeader, { borderBottomColor: theme.text + '12' }]}>
-          <Text style={[styles.eventsSheetCount, { color: theme.text }]}>
-            {filteredEvents.length} evento{filteredEvents.length !== 1 ? 's' : ''}
-          </Text>
-          <Text style={[styles.eventsSheetRange, { color: theme.text + '65' }]}>
-            {activeRange ? activeRange.label : 'Periodo completo'}
-          </Text>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 10, paddingBottom: 10, gap: 10 }}
-        >
-          {groupedFilteredEvents.length === 0 && (
-            <View style={styles.eventsEmptyWrap}>
-              <Feather name="calendar" size={34} color={theme.text + '30'} />
-              <Text style={[styles.eventsEmptyText, { color: theme.text + '58' }]}>Sem eventos nesse filtro</Text>
-            </View>
-          )}
-
-          {groupedFilteredEvents.map(group => (
-            <View key={group.date} style={[styles.eventsGroup, { borderColor: theme.text + '12', backgroundColor: theme.background }]}> 
-              <Text style={[styles.eventsGroupTitle, { color: theme.text }]}>{formatSelectedDate(group.date)}</Text>
-              <Text style={[styles.eventsGroupSub, { color: theme.text + '60' }]}>{formatDateShort(group.date)}</Text>
-
-              {group.events.map(event => (
-                <TouchableOpacity
-                  key={event.id}
-                  style={[styles.eventsRow, { borderTopColor: theme.text + '10', borderColor: theme.text + '10', backgroundColor: theme.surface }]}
-                  onPress={() => openDetailsFromEvents(event)}
-                >
-                  <View style={[styles.eventsRowDate, { backgroundColor: event.color + '1a', borderColor: event.color + '33' }]}>
-                    <Text style={[styles.eventsRowDateDay, { color: event.color }]}>{event.date.slice(8, 10)}</Text>
-                    <Text style={[styles.eventsRowDateMonth, { color: event.color }]}>{event.date.slice(5, 7)}</Text>
-                  </View>
-
-                  <View style={styles.eventsRowMain}>
-                    <View style={styles.eventsRowTop}>
-                      <Text style={[styles.eventsRowTitle, { color: theme.text }]} numberOfLines={1}>
-                        {event.title}
-                      </Text>
-                      <Text style={[styles.eventsRowTime, { color: event.color }]}>{event.time ?? 'dia todo'}</Text>
-                    </View>
-                    <Text style={[styles.eventsRowDay, { color: theme.text + '78' }]} numberOfLines={1}>
-                      {formatSelectedDate(event.date)}
-                    </Text>
-                    {event.description ? (
-                      <Text style={[styles.eventsRowDesc, { color: theme.text + '5c' }]} numberOfLines={2}>
-                        {event.description}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <Feather name="chevron-right" size={15} color={theme.text + '42'} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
-      </BottomSheet>
-
-      <BottomSheet
-        visible={!!detailEvent}
-        onClose={() => setDetailEvent(null)}
-        title="Detalhes do evento"
-        maxHeight="92%"
-      >
-        {detailEvent && (
-          <>
             <View style={[styles.detailHero, { borderColor: theme.text + '16', backgroundColor: theme.background }]}>
               <View style={[styles.detailColorDot, { backgroundColor: detailEvent.color }]} />
               <View style={{ flex: 1 }}>
@@ -777,6 +699,94 @@ export function CalendarScreen() {
               <Text style={styles.detailPrimaryText}>Editar evento</Text>
             </TouchableOpacity>
             <View style={{ height: 8 }} />
+          </ScrollView>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, maxHeight: 46 }}
+              contentContainerStyle={{ gap: 8, paddingBottom: 4, paddingRight: 4, alignItems: 'center' }}
+            >
+              {EVENT_RANGE_OPTIONS.map(option => {
+                const active = eventsFilter === option.key
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.rangeChip,
+                      active
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
+                    ]}
+                    onPress={() => setEventsFilter(option.key)}
+                  >
+                    <Text style={[styles.rangeChipText, { color: active ? '#fff' : theme.text + '80' }]}>{option.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+
+            <View style={[styles.eventsSheetHeader, { borderBottomColor: theme.text + '12' }]}>
+              <Text style={[styles.eventsSheetCount, { color: theme.text }]}>
+                {filteredEvents.length} evento{filteredEvents.length !== 1 ? 's' : ''}
+              </Text>
+              <Text style={[styles.eventsSheetRange, { color: theme.text + '65' }]}>
+                {activeRange ? activeRange.label : 'Periodo completo'}
+              </Text>
+            </View>
+
+            <ScrollView
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingTop: 10, paddingBottom: 10, gap: 10 }}
+            >
+              {groupedFilteredEvents.length === 0 && (
+                <View style={styles.eventsEmptyWrap}>
+                  <Feather name="calendar" size={34} color={theme.text + '30'} />
+                  <Text style={[styles.eventsEmptyText, { color: theme.text + '58' }]}>Sem eventos nesse filtro</Text>
+                </View>
+              )}
+
+              {groupedFilteredEvents.map(group => (
+                <View key={group.date} style={[styles.eventsGroup, { borderColor: theme.text + '12', backgroundColor: theme.background }]}> 
+                  <Text style={[styles.eventsGroupTitle, { color: theme.text }]}>{formatSelectedDate(group.date)}</Text>
+                  <Text style={[styles.eventsGroupSub, { color: theme.text + '60' }]}>{formatDateShort(group.date)}</Text>
+
+                  {group.events.map(event => (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={[styles.eventsRow, { borderTopColor: theme.text + '10', borderColor: theme.text + '10', backgroundColor: theme.surface }]}
+                      onPress={() => openDetailsFromEvents(event)}
+                    >
+                      <View style={[styles.eventsRowDate, { backgroundColor: event.color + '1a', borderColor: event.color + '33' }]}>
+                        <Text style={[styles.eventsRowDateDay, { color: event.color }]}>{event.date.slice(8, 10)}</Text>
+                        <Text style={[styles.eventsRowDateMonth, { color: event.color }]}>{event.date.slice(5, 7)}</Text>
+                      </View>
+
+                      <View style={styles.eventsRowMain}>
+                        <View style={styles.eventsRowTop}>
+                          <Text style={[styles.eventsRowTitle, { color: theme.text }]} numberOfLines={1}>
+                            {event.title}
+                          </Text>
+                          <Text style={[styles.eventsRowTime, { color: event.color }]}>{event.time ?? 'dia todo'}</Text>
+                        </View>
+                        <Text style={[styles.eventsRowDay, { color: theme.text + '78' }]} numberOfLines={1}>
+                          {formatSelectedDate(event.date)}
+                        </Text>
+                        {event.description ? (
+                          <Text style={[styles.eventsRowDesc, { color: theme.text + '5c' }]} numberOfLines={2}>
+                            {event.description}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      <Feather name="chevron-right" size={15} color={theme.text + '42'} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
           </>
         )}
       </BottomSheet>
@@ -1087,6 +1097,16 @@ const styles = StyleSheet.create({
   eventsRowDay: { fontSize: 11.5, marginTop: 2, textTransform: 'capitalize' },
   eventsRowDesc: { fontSize: 12, marginTop: 3, lineHeight: 17 },
 
+  detailBackBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  detailBackText: { fontSize: 12.5, fontWeight: '600' },
   detailHero: {
     borderWidth: 1,
     borderRadius: 12,
