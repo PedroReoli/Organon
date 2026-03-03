@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   useWindowDimensions,
+  Alert,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { BottomSheet } from '../components/shared/BottomSheet'
@@ -16,12 +17,41 @@ import { FormInput } from '../components/shared/FormInput'
 import { Header } from '../components/shared/Header'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
-import { today, now } from '../utils/date'
-import type { CalendarEvent } from '../types'
+import { getWeekRange, now, today } from '../utils/date'
+import type { CalendarEvent, CalendarRecurrenceFrequency } from '../types'
+
+type EventRangeFilter = 'week' | 'month' | 'quarter' | 'semester' | 'year' | 'all'
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 const COLORS = ['#6366f1', '#3b82f6', '#22c55e', '#ef4444', '#f97316', '#eab308', '#8b5cf6', '#ec4899']
+const RECURRENCE_OPTIONS: Array<{ key: CalendarRecurrenceFrequency; label: string }> = [
+  { key: 'none', label: 'Nao repetir' },
+  { key: 'daily', label: 'Diario' },
+  { key: 'weekly', label: 'Semanal' },
+  { key: 'monthly', label: 'Mensal' },
+]
+const REMINDER_OFFSET_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '0', label: 'Na hora' },
+  { value: '60', label: '1h antes' },
+  { value: '120', label: '2h antes' },
+  { value: '1440', label: '1 dia antes' },
+]
+const RECURRENCE_TEXT: Record<CalendarRecurrenceFrequency, string> = {
+  none: 'Evento unico',
+  daily: 'Diario',
+  weekly: 'Semanal',
+  monthly: 'Mensal',
+}
+
+const EVENT_RANGE_OPTIONS: Array<{ key: EventRangeFilter; label: string }> = [
+  { key: 'week', label: 'Semana' },
+  { key: 'month', label: 'Mes' },
+  { key: 'quarter', label: 'Trimestre' },
+  { key: 'semester', label: 'Semestre' },
+  { key: 'year', label: 'Ano' },
+  { key: 'all', label: 'Todos' },
+]
 
 function formatSelectedDate(iso: string): string {
   try {
@@ -29,6 +59,30 @@ function formatSelectedDate(iso: string): string {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
+    })
+  } catch {
+    return iso
+  }
+}
+
+function formatDateShort(iso: string): string {
+  const parts = iso.split('-')
+  if (parts.length !== 3) return iso
+  return `${parts[2]}/${parts[1]}`
+}
+
+function toISODate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function formatDateTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
   } catch {
     return iso
@@ -52,7 +106,79 @@ function fitDateToMonth(sourceISO: string, target: { year: number; month: number
   const sourceDay = Number.isFinite(parts[2]) ? parts[2] : 1
   const maxDay = new Date(target.year, target.month, 0).getDate()
   const day = Math.min(Math.max(sourceDay, 1), maxDay)
-  return `${target.year}-${String(target.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return toISODate(target.year, target.month, day)
+}
+
+function rangeLabel(start: string, end: string): string {
+  return `${formatDateShort(start)} - ${formatDateShort(end)}`
+}
+
+function getEventRange(anchorISO: string, filter: EventRangeFilter): { start: string; end: string; label: string } | null {
+  if (filter === 'all') return null
+
+  const [year, month] = anchorISO.split('-').map(Number)
+
+  if (filter === 'week') {
+    const week = getWeekRange(anchorISO)
+    return { start: week.start, end: week.end, label: rangeLabel(week.start, week.end) }
+  }
+
+  if (filter === 'month') {
+    const start = toISODate(year, month, 1)
+    const end = toISODate(year, month, new Date(year, month, 0).getDate())
+    return { start, end, label: rangeLabel(start, end) }
+  }
+
+  if (filter === 'quarter') {
+    const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1
+    const quarterEndMonth = quarterStartMonth + 2
+    const start = toISODate(year, quarterStartMonth, 1)
+    const end = toISODate(year, quarterEndMonth, new Date(year, quarterEndMonth, 0).getDate())
+    return { start, end, label: rangeLabel(start, end) }
+  }
+
+  if (filter === 'semester') {
+    const semesterStartMonth = month <= 6 ? 1 : 7
+    const semesterEndMonth = semesterStartMonth + 5
+    const start = toISODate(year, semesterStartMonth, 1)
+    const end = toISODate(year, semesterEndMonth, new Date(year, semesterEndMonth, 0).getDate())
+    return { start, end, label: rangeLabel(start, end) }
+  }
+
+  const start = toISODate(year, 1, 1)
+  const end = toISODate(year, 12, 31)
+  return { start, end, label: rangeLabel(start, end) }
+}
+
+type EventFormState = {
+  title: string
+  date: string
+  time: string
+  description: string
+  color: string
+  recurrenceFrequency: CalendarRecurrenceFrequency
+  recurrenceInterval: string
+  recurrenceUntil: string
+  reminderEnabled: boolean
+  reminderOffset: string
+}
+
+function buildEventForm(selectedDate: string, event?: CalendarEvent): EventFormState {
+  const recurrence = event?.recurrence
+  const reminder = event?.reminder
+
+  return {
+    title: event?.title ?? '',
+    date: event?.date ?? selectedDate,
+    time: event?.time ?? '',
+    description: event?.description ?? '',
+    color: event?.color ?? '#6366f1',
+    recurrenceFrequency: recurrence?.frequency ?? 'none',
+    recurrenceInterval: String(Math.max(1, recurrence?.interval ?? 1)),
+    recurrenceUntil: recurrence?.until ?? '',
+    reminderEnabled: reminder?.enabled ?? false,
+    reminderOffset: String(reminder?.offsetMinutes ?? 0),
+  }
 }
 
 export function CalendarScreen() {
@@ -67,27 +193,33 @@ export function CalendarScreen() {
   })
   const [selectedDate, setSelectedDate] = useState(todayStr)
   const [showSheet, setShowSheet] = useState(false)
+  const [showEventsSheet, setShowEventsSheet] = useState(false)
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
+  const [eventsFilter, setEventsFilter] = useState<EventRangeFilter>('month')
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const dragX = useRef(new Animated.Value(0)).current
   const isAnimatingRef = useRef(false)
 
-  const [form, setForm] = useState({
-    title: '',
-    date: todayStr,
-    time: '',
-    description: '',
-    color: '#6366f1',
-  })
+  const [form, setForm] = useState<EventFormState>(() => buildEventForm(todayStr))
 
   const { year, month } = currentDate
   const monthKey = useMemo(() => monthKeyFromDate(currentDate), [currentDate])
   const daysInMonth = new Date(year, month, 0).getDate()
   const firstDay = new Date(year, month - 1, 1).getDay()
 
+  const cellHeight = useMemo(() => {
+    const usableWidth = viewportWidth - 30
+    return Math.max(42, Math.min(56, Math.floor(usableWidth / 7) + 6))
+  }, [viewportWidth])
+
+  const dayChipSize = useMemo(() => {
+    return Math.max(28, Math.min(38, cellHeight - 14))
+  }, [cellHeight])
+
   const calendarDays = useMemo(() => {
     const days: (string | null)[] = Array(firstDay).fill(null)
     for (let d = 1; d <= daysInMonth; d++) {
-      days.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+      days.push(toISODate(year, month, d))
     }
     while (days.length % 7 !== 0) days.push(null)
     return days
@@ -99,11 +231,14 @@ export function CalendarScreen() {
       if (!map[event.date]) map[event.date] = []
       map[event.date].push(event)
     })
+    Object.keys(map).forEach(date => {
+      map[date] = map[date].sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))
+    })
     return map
   }, [store.calendarEvents])
 
   const selectedEvents = useMemo(
-    () => (eventsByDate[selectedDate] ?? []).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
+    () => eventsByDate[selectedDate] ?? [],
     [eventsByDate, selectedDate],
   )
 
@@ -111,6 +246,31 @@ export function CalendarScreen() {
     () => store.calendarEvents.filter(event => event.date.startsWith(monthKey)).length,
     [store.calendarEvents, monthKey],
   )
+
+  const activeRange = useMemo(() => getEventRange(selectedDate, eventsFilter), [eventsFilter, selectedDate])
+
+  const filteredEvents = useMemo(() => {
+    const sorted = [...store.calendarEvents].sort((a, b) => {
+      if (a.date === b.date) return (a.time ?? '').localeCompare(b.time ?? '')
+      return a.date.localeCompare(b.date)
+    })
+
+    if (!activeRange) return sorted
+
+    return sorted.filter(event => event.date >= activeRange.start && event.date <= activeRange.end)
+  }, [activeRange, store.calendarEvents])
+
+  const groupedFilteredEvents = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {}
+    filteredEvents.forEach(event => {
+      if (!map[event.date]) map[event.date] = []
+      map[event.date].push(event)
+    })
+
+    return Object.keys(map)
+      .sort((a, b) => a.localeCompare(b))
+      .map(date => ({ date, events: map[date] }))
+  }, [filteredEvents])
 
   const travelDistance = Math.max(240, viewportWidth * 0.9)
   const swipeThreshold = Math.max(56, viewportWidth * 0.16)
@@ -224,31 +384,60 @@ export function CalendarScreen() {
 
   function openNew() {
     setEditingEvent(null)
-    setForm({ title: '', date: selectedDate, time: '', description: '', color: '#6366f1' })
+    setForm(buildEventForm(selectedDate))
     setShowSheet(true)
   }
 
   function openEdit(event: CalendarEvent) {
     setEditingEvent(event)
-    setForm({
-      title: event.title,
-      date: event.date,
-      time: event.time ?? '',
-      description: event.description,
-      color: event.color,
-    })
+    setForm(buildEventForm(event.date, event))
     setShowSheet(true)
+  }
+
+  function openDetailsFromEvents(event: CalendarEvent) {
+    setShowEventsSheet(false)
+    setTimeout(() => setDetailEvent(event), 220)
+  }
+
+  function openEditFromDetails() {
+    if (!detailEvent) return
+    const event = detailEvent
+    setDetailEvent(null)
+    setTimeout(() => openEdit(event), 150)
   }
 
   function handleSave() {
     if (!form.title.trim()) return
+    const normalizedTime = form.time.trim()
+    const recurrenceInterval = Math.max(1, Number(form.recurrenceInterval) || 1)
+    const recurrenceUntil = form.recurrenceUntil.trim()
+    const reminderOffset = Number(form.reminderOffset) || 0
+
+    if (form.reminderEnabled && !normalizedTime) {
+      Alert.alert('Hora obrigatoria', 'Defina uma hora para usar lembrete.')
+      return
+    }
+
+    const recurrence = form.recurrenceFrequency === 'none'
+      ? null
+      : {
+        frequency: form.recurrenceFrequency,
+        interval: recurrenceInterval,
+        until: recurrenceUntil || null,
+      }
+
+    const reminder = form.reminderEnabled
+      ? { enabled: true, offsetMinutes: reminderOffset }
+      : null
 
     const data = {
       title: form.title,
       date: form.date,
-      time: form.time || null,
+      time: normalizedTime || null,
       description: form.description,
       color: form.color,
+      recurrence,
+      reminder,
     }
 
     if (editingEvent) {
@@ -274,81 +463,80 @@ export function CalendarScreen() {
         ]}
         {...swipeResponder.panHandlers}
       >
-        <View style={[styles.monthNav, { backgroundColor: theme.surface, borderBottomColor: theme.text + '10' }]}>
-          <TouchableOpacity style={styles.navBtn} onPress={prevMonth}>
-            <Feather name="chevron-left" size={22} color={theme.text} />
-          </TouchableOpacity>
+        <View style={[styles.monthCard, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}> 
+          <View style={[styles.monthNav, { borderBottomColor: theme.text + '10' }]}>
+            <TouchableOpacity style={styles.navBtn} onPress={prevMonth}>
+              <Feather name="chevron-left" size={22} color={theme.text} />
+            </TouchableOpacity>
 
-          <View style={styles.monthCenter}>
-            <Text style={[styles.monthText, { color: theme.text }]}> 
-              {MONTHS[month - 1]} {year}
-            </Text>
-            {monthEventCount > 0 && (
-              <Text style={[styles.monthSub, { color: theme.text + '50' }]}> 
+            <View style={styles.monthCenter}>
+              <Text style={[styles.monthText, { color: theme.text }]}> 
+                {MONTHS[month - 1]} {year}
+              </Text>
+              <Text style={[styles.monthSub, { color: theme.text + '5f' }]}> 
                 {monthEventCount} evento{monthEventCount !== 1 ? 's' : ''}
               </Text>
-            )}
+            </View>
+
+            <TouchableOpacity style={styles.navBtn} onPress={nextMonth}>
+              <Feather name="chevron-right" size={22} color={theme.text} />
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.navBtn} onPress={nextMonth}>
-            <Feather name="chevron-right" size={22} color={theme.text} />
-          </TouchableOpacity>
-        </View>
+          <View style={styles.weekRow}>
+            {WEEKDAYS.map(day => (
+              <Text key={day} style={[styles.weekDayText, { color: theme.text + '58' }]}> 
+                {day}
+              </Text>
+            ))}
+          </View>
 
-        <View style={[styles.weekRow, { backgroundColor: theme.surface }]}>
-          {WEEKDAYS.map(day => (
-            <Text key={day} style={[styles.weekDayText, { color: theme.text + '55' }]}> 
-              {day}
-            </Text>
-          ))}
-        </View>
+          <View style={[styles.grid, { borderTopColor: theme.text + '08' }]}>
+            {calendarDays.map((dateStr, idx) => {
+              if (!dateStr) return <View key={`empty-${idx}`} style={[styles.dayCell, { height: cellHeight }]} />
 
-        <View style={[styles.grid, { backgroundColor: theme.surface, borderBottomColor: theme.text + '10' }]}>
-          {calendarDays.map((dateStr, idx) => {
-            if (!dateStr) return <View key={`empty-${idx}`} style={styles.dayCell} />
+              const isToday = dateStr === todayStr
+              const isSelected = dateStr === selectedDate
+              const events = eventsByDate[dateStr] ?? []
+              const dayNum = Number.parseInt(dateStr.split('-')[2], 10)
 
-            const isToday = dateStr === todayStr
-            const isSelected = dateStr === selectedDate
-            const events = eventsByDate[dateStr] ?? []
-            const dayNum = Number.parseInt(dateStr.split('-')[2], 10)
-
-            return (
-              <TouchableOpacity
-                key={dateStr}
-                style={[
-                  styles.dayCell,
-                  isSelected && { backgroundColor: theme.primary },
-                  !isSelected && isToday && { backgroundColor: theme.primary + '20' },
-                ]}
-                onPress={() => setSelectedDate(dateStr)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.dayNum,
-                    { color: isSelected ? '#fff' : isToday ? theme.primary : theme.text },
-                    (isToday || isSelected) && { fontWeight: '700' },
-                  ]}
+              return (
+                <TouchableOpacity
+                  key={dateStr}
+                  style={[styles.dayCell, { height: cellHeight }]}
+                  onPress={() => setSelectedDate(dateStr)}
+                  activeOpacity={0.7}
                 >
-                  {dayNum}
-                </Text>
-
-                {events.length > 0 && !isSelected && (
-                  <View style={styles.dotRow}>
-                    {events.slice(0, 3).map(event => (
-                      <View key={event.id} style={[styles.eventDot, { backgroundColor: event.color }]} />
-                    ))}
+                  <View
+                    style={[
+                      styles.dayChip,
+                      { width: dayChipSize, height: dayChipSize, borderColor: 'transparent' },
+                      isSelected && { backgroundColor: theme.primary },
+                      !isSelected && isToday && { borderColor: theme.primary, borderWidth: 1.4 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayNum,
+                        { color: isSelected ? '#fff' : isToday ? theme.primary : theme.text },
+                        (isToday || isSelected) && { fontWeight: '700' },
+                      ]}
+                    >
+                      {dayNum}
+                    </Text>
                   </View>
-                )}
 
-                {isSelected && events.length > 0 && (
-                  <View style={[styles.selBadge, { backgroundColor: '#ffffff30' }]}>
-                    <Text style={styles.selBadgeText}>{events.length}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )
-          })}
+                  {events.length > 0 && (
+                    <View style={styles.dotRow}>
+                      {events.slice(0, 3).map(event => (
+                        <View key={event.id} style={[styles.eventDot, { backgroundColor: event.color }]} />
+                      ))}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )
+            })}
+          </View>
         </View>
       </Animated.View>
 
@@ -363,7 +551,7 @@ export function CalendarScreen() {
           </Text>
           <Text style={[styles.evDateSub, { color: theme.text + '50' }]}> 
             {selectedEvents.length === 0
-              ? 'Nenhum evento'
+              ? 'Nenhum evento para este dia'
               : `${selectedEvents.length} evento${selectedEvents.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
@@ -379,7 +567,7 @@ export function CalendarScreen() {
               {event.time ? (
                 <Text style={[styles.evTime, { color: event.color }]}>{event.time}</Text>
               ) : (
-                <Text style={[styles.evTime, { color: theme.text + '40' }]}>todo o dia</Text>
+                <Text style={[styles.evTime, { color: theme.text + '40' }]}>dia todo</Text>
               )}
             </View>
 
@@ -402,11 +590,11 @@ export function CalendarScreen() {
       <View style={[styles.footer, { backgroundColor: theme.surface, borderTopColor: theme.text + '12' }]}>
         <View style={styles.footerSide}>
           <TouchableOpacity
-            style={[styles.todayBtn, { backgroundColor: theme.text + '0a', borderColor: theme.text + '12' }]}
+            style={[styles.footerActionBtn, { backgroundColor: theme.text + '0a', borderColor: theme.text + '12' }]}
             onPress={goToToday}
           >
-            <Feather name="calendar" size={14} color={theme.text + '85'} />
-            <Text style={[styles.todayBtnText, { color: theme.text + '85' }]}>Hoje</Text>
+            <Feather name="calendar" size={15} color={theme.text + '85'} />
+            <Text style={[styles.footerActionText, { color: theme.text + '85' }]}>Hoje</Text>
           </TouchableOpacity>
         </View>
 
@@ -415,11 +603,183 @@ export function CalendarScreen() {
           onPress={openNew}
           activeOpacity={0.9}
         >
-          <Feather name="plus" size={22} color="#fff" />
+          <Feather name="plus" size={21} color="#fff" />
         </TouchableOpacity>
 
-        <View style={styles.footerSide} />
+        <View style={[styles.footerSide, { alignItems: 'flex-end' }]}>
+          <TouchableOpacity
+            style={[styles.footerActionBtn, { backgroundColor: theme.text + '0a', borderColor: theme.text + '12' }]}
+            onPress={() => setShowEventsSheet(true)}
+          >
+            <Feather name="list" size={15} color={theme.text + '85'} />
+            <Text style={[styles.footerActionText, { color: theme.text + '85' }]}>Eventos</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <BottomSheet
+        visible={showEventsSheet}
+        onClose={() => setShowEventsSheet(false)}
+        title="Eventos"
+        maxHeight="94%"
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, maxHeight: 46 }}
+          contentContainerStyle={{ gap: 8, paddingBottom: 4, paddingRight: 4, alignItems: 'center' }}
+        >
+          {EVENT_RANGE_OPTIONS.map(option => {
+            const active = eventsFilter === option.key
+            return (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.rangeChip,
+                  active
+                    ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                    : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
+                ]}
+                onPress={() => setEventsFilter(option.key)}
+              >
+                <Text style={[styles.rangeChipText, { color: active ? '#fff' : theme.text + '80' }]}>{option.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+
+        <View style={[styles.eventsSheetHeader, { borderBottomColor: theme.text + '12' }]}>
+          <Text style={[styles.eventsSheetCount, { color: theme.text }]}>
+            {filteredEvents.length} evento{filteredEvents.length !== 1 ? 's' : ''}
+          </Text>
+          <Text style={[styles.eventsSheetRange, { color: theme.text + '65' }]}>
+            {activeRange ? activeRange.label : 'Periodo completo'}
+          </Text>
+        </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 10, paddingBottom: 10, gap: 10 }}
+        >
+          {groupedFilteredEvents.length === 0 && (
+            <View style={styles.eventsEmptyWrap}>
+              <Feather name="calendar" size={34} color={theme.text + '30'} />
+              <Text style={[styles.eventsEmptyText, { color: theme.text + '58' }]}>Sem eventos nesse filtro</Text>
+            </View>
+          )}
+
+          {groupedFilteredEvents.map(group => (
+            <View key={group.date} style={[styles.eventsGroup, { borderColor: theme.text + '12', backgroundColor: theme.background }]}> 
+              <Text style={[styles.eventsGroupTitle, { color: theme.text }]}>{formatSelectedDate(group.date)}</Text>
+              <Text style={[styles.eventsGroupSub, { color: theme.text + '60' }]}>{formatDateShort(group.date)}</Text>
+
+              {group.events.map(event => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={[styles.eventsRow, { borderTopColor: theme.text + '10', borderColor: theme.text + '10', backgroundColor: theme.surface }]}
+                  onPress={() => openDetailsFromEvents(event)}
+                >
+                  <View style={[styles.eventsRowDate, { backgroundColor: event.color + '1a', borderColor: event.color + '33' }]}>
+                    <Text style={[styles.eventsRowDateDay, { color: event.color }]}>{event.date.slice(8, 10)}</Text>
+                    <Text style={[styles.eventsRowDateMonth, { color: event.color }]}>{event.date.slice(5, 7)}</Text>
+                  </View>
+
+                  <View style={styles.eventsRowMain}>
+                    <View style={styles.eventsRowTop}>
+                      <Text style={[styles.eventsRowTitle, { color: theme.text }]} numberOfLines={1}>
+                        {event.title}
+                      </Text>
+                      <Text style={[styles.eventsRowTime, { color: event.color }]}>{event.time ?? 'dia todo'}</Text>
+                    </View>
+                    <Text style={[styles.eventsRowDay, { color: theme.text + '78' }]} numberOfLines={1}>
+                      {formatSelectedDate(event.date)}
+                    </Text>
+                    {event.description ? (
+                      <Text style={[styles.eventsRowDesc, { color: theme.text + '5c' }]} numberOfLines={2}>
+                        {event.description}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <Feather name="chevron-right" size={15} color={theme.text + '42'} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+      </BottomSheet>
+
+      <BottomSheet
+        visible={!!detailEvent}
+        onClose={() => setDetailEvent(null)}
+        title="Detalhes do evento"
+        maxHeight="92%"
+      >
+        {detailEvent && (
+          <>
+            <View style={[styles.detailHero, { borderColor: theme.text + '16', backgroundColor: theme.background }]}>
+              <View style={[styles.detailColorDot, { backgroundColor: detailEvent.color }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.detailTitle, { color: theme.text }]} numberOfLines={2}>
+                  {detailEvent.title}
+                </Text>
+                <Text style={[styles.detailSub, { color: theme.text + '6c' }]}>
+                  {formatSelectedDate(detailEvent.date)}
+                </Text>
+              </View>
+              <Text style={[styles.detailTimeTag, { color: detailEvent.color, borderColor: detailEvent.color + '50' }]}>
+                {detailEvent.time ?? 'dia todo'}
+              </Text>
+            </View>
+
+            <View style={[styles.detailPanel, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+              <Text style={[styles.detailLabel, { color: theme.text + '66' }]}>Data</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>{formatDateShort(detailEvent.date)}</Text>
+            </View>
+
+            <View style={[styles.detailPanel, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+              <Text style={[styles.detailLabel, { color: theme.text + '66' }]}>Recorrencia</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {detailEvent.recurrence
+                  ? `${RECURRENCE_TEXT[detailEvent.recurrence.frequency]} - a cada ${detailEvent.recurrence.interval}${detailEvent.recurrence.until ? ` ate ${formatDateShort(detailEvent.recurrence.until)}` : ''}`
+                  : RECURRENCE_TEXT.none}
+              </Text>
+            </View>
+
+            <View style={[styles.detailPanel, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+              <Text style={[styles.detailLabel, { color: theme.text + '66' }]}>Lembrete</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {detailEvent.reminder?.enabled
+                  ? `${REMINDER_OFFSET_OPTIONS.find(opt => Number(opt.value) === detailEvent.reminder?.offsetMinutes)?.label ?? `${detailEvent.reminder?.offsetMinutes ?? 0} min antes`}`
+                  : 'Desativado'}
+              </Text>
+            </View>
+
+            <View style={[styles.detailPanel, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+              <Text style={[styles.detailLabel, { color: theme.text + '66' }]}>Descricao</Text>
+              <Text style={[styles.detailDescription, { color: theme.text + 'c6' }]}>
+                {detailEvent.description?.trim() ? detailEvent.description : 'Sem descricao'}
+              </Text>
+            </View>
+
+            <View style={[styles.detailPanel, { borderColor: theme.text + '14', backgroundColor: theme.background }]}>
+              <Text style={[styles.detailLabel, { color: theme.text + '66' }]}>Registro</Text>
+              <Text style={[styles.detailMeta, { color: theme.text + '78' }]}>Criado: {formatDateTime(detailEvent.createdAt)}</Text>
+              <Text style={[styles.detailMeta, { color: theme.text + '78' }]}>Atualizado: {formatDateTime(detailEvent.updatedAt)}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.detailPrimaryBtn, { backgroundColor: theme.primary }]}
+              onPress={openEditFromDetails}
+            >
+              <Feather name="edit-2" size={14} color="#fff" />
+              <Text style={styles.detailPrimaryText}>Editar evento</Text>
+            </TouchableOpacity>
+            <View style={{ height: 8 }} />
+          </>
+        )}
+      </BottomSheet>
 
       <BottomSheet
         visible={showSheet}
@@ -447,13 +807,94 @@ export function CalendarScreen() {
           placeholder="14:00"
           keyboardType="numbers-and-punctuation"
         />
+
+        <Text style={[styles.sheetLabel, { color: theme.text + '70' }]}>RECORRENCIA</Text>
+        <View style={styles.sheetChipRow}>
+          {RECURRENCE_OPTIONS.map(option => {
+            const active = form.recurrenceFrequency === option.key
+            return (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.sheetChip,
+                  active
+                    ? { backgroundColor: theme.primary + '22', borderColor: theme.primary }
+                    : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
+                ]}
+                onPress={() => setForm(f => ({ ...f, recurrenceFrequency: option.key }))}
+              >
+                <Text style={[styles.sheetChipText, { color: active ? theme.primary : theme.text + '82' }]}>{option.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+
+        {form.recurrenceFrequency !== 'none' && (
+          <>
+            <FormInput
+              label="Intervalo"
+              value={form.recurrenceInterval}
+              onChangeText={t => setForm(f => ({ ...f, recurrenceInterval: t }))}
+              placeholder="1"
+              keyboardType="number-pad"
+            />
+            <FormInput
+              label="Ate (YYYY-MM-DD)"
+              value={form.recurrenceUntil}
+              onChangeText={t => setForm(f => ({ ...f, recurrenceUntil: t }))}
+              placeholder="Opcional"
+              keyboardType="numbers-and-punctuation"
+            />
+          </>
+        )}
+
+        <Text style={[styles.sheetLabel, { color: theme.text + '70' }]}>LEMBRETE</Text>
+        <View style={styles.sheetChipRow}>
+          <TouchableOpacity
+            style={[
+              styles.sheetChip,
+              form.reminderEnabled
+                ? { backgroundColor: theme.primary + '22', borderColor: theme.primary }
+                : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
+            ]}
+            onPress={() => setForm(f => ({ ...f, reminderEnabled: !f.reminderEnabled }))}
+          >
+            <Text style={[styles.sheetChipText, { color: form.reminderEnabled ? theme.primary : theme.text + '82' }]}>
+              {form.reminderEnabled ? 'Ativado' : 'Desativado'}
+            </Text>
+          </TouchableOpacity>
+
+          {form.reminderEnabled &&
+            REMINDER_OFFSET_OPTIONS.map(option => {
+              const active = form.reminderOffset === option.value
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.sheetChip,
+                    active
+                      ? { backgroundColor: theme.primary + '22', borderColor: theme.primary }
+                      : { backgroundColor: theme.text + '08', borderColor: theme.text + '16' },
+                  ]}
+                  onPress={() => setForm(f => ({ ...f, reminderOffset: option.value }))}
+                >
+                  <Text style={[styles.sheetChipText, { color: active ? theme.primary : theme.text + '82' }]}>{option.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+        </View>
+        {form.reminderEnabled && (
+          <Text style={[styles.sheetHint, { color: theme.text + '62' }]}>Lembrete exige hora definida.</Text>
+        )}
+
         <FormInput
           label="Descricao"
           value={form.description}
           onChangeText={t => setForm(f => ({ ...f, description: t }))}
-          placeholder="Detalhes..."
+          placeholder="Detalhes"
           multiline
-          numberOfLines={3}
+          numberOfLines={6}
+          style={styles.descriptionInput}
         />
 
         <Text style={[styles.sheetLabel, { color: theme.text + '70' }]}>COR</Text>
@@ -499,13 +940,18 @@ export function CalendarScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-  monthPanel: { marginBottom: 2 },
+  monthPanel: { marginBottom: 2, paddingHorizontal: 10, paddingTop: 8 },
+  monthCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
   navBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
@@ -513,27 +959,29 @@ const styles = StyleSheet.create({
   monthText: { fontSize: 16, fontWeight: '700' },
   monthSub: { fontSize: 11, marginTop: 1 },
 
-  weekRow: { flexDirection: 'row' },
+  weekRow: { flexDirection: 'row', paddingTop: 6 },
   weekDayText: { flex: 1, textAlign: 'center', paddingVertical: 6, fontSize: 11, fontWeight: '700' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, paddingBottom: 6 },
   dayCell: {
     width: '14.285714%',
-    aspectRatio: 0.85,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    padding: 2,
+    paddingTop: 1,
+  },
+  dayChip: {
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0,
   },
   dayNum: { fontSize: 13 },
-  dotRow: { flexDirection: 'row', gap: 2, marginTop: 2 },
+  dotRow: { flexDirection: 'row', gap: 3, marginTop: 3, minHeight: 8 },
   eventDot: { width: 4, height: 4, borderRadius: 2 },
-  selBadge: { borderRadius: 6, paddingHorizontal: 4, marginTop: 1 },
-  selBadgeText: { fontSize: 9, color: '#fff', fontWeight: '700' },
 
   evScroll: { flex: 1 },
-  evContent: { padding: 16, paddingBottom: 10 },
-  evHeader: { marginBottom: 14 },
+  evContent: { padding: 14, paddingBottom: 10 },
+  evHeader: { marginBottom: 12 },
   evDateTitle: { fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   evDateSub: { fontSize: 12, marginTop: 2 },
 
@@ -542,40 +990,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 10,
-    padding: 14,
+    marginBottom: 9,
+    padding: 13,
     borderLeftWidth: 4,
     gap: 12,
   },
-  evCardLeft: { minWidth: 48, alignItems: 'center' },
+  evCardLeft: { minWidth: 52, alignItems: 'center' },
   evTime: { fontSize: 13, fontWeight: '700' },
   evCardBody: { flex: 1 },
   evTitle: { fontSize: 14, fontWeight: '600' },
   evDesc: { fontSize: 12, marginTop: 4, lineHeight: 17 },
 
   footer: {
-    height: 74,
+    height: 66,
     borderTopWidth: 1,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  footerSide: { width: 90, alignItems: 'flex-start' },
-  todayBtn: {
-    height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 11,
+  footerSide: { width: 112, alignItems: 'flex-start' },
+  footerActionBtn: {
+    height: 42,
+    paddingHorizontal: 14,
+    borderRadius: 13,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
-  todayBtnText: { fontSize: 12.5, fontWeight: '600' },
+  footerActionText: { fontSize: 13, fontWeight: '600' },
   footerAddBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
@@ -585,7 +1033,115 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 
+  rangeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  rangeChipText: { fontSize: 12.5, fontWeight: '600' },
+  eventsSheetHeader: {
+    borderBottomWidth: 1,
+    paddingBottom: 8,
+    marginTop: 6,
+  },
+  eventsSheetCount: { fontSize: 14, fontWeight: '700' },
+  eventsSheetRange: { fontSize: 12, marginTop: 2 },
+
+  eventsEmptyWrap: { alignItems: 'center', paddingVertical: 34, gap: 8 },
+  eventsEmptyText: { fontSize: 13 },
+
+  eventsGroup: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  eventsGroupTitle: { fontSize: 13.5, fontWeight: '700', textTransform: 'capitalize' },
+  eventsGroupSub: { fontSize: 11.5, marginTop: 1 },
+  eventsRow: {
+    marginTop: 8,
+    padding: 10,
+    borderTopWidth: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  eventsRowDate: {
+    width: 46,
+    height: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventsRowDateDay: { fontSize: 16, fontWeight: '800', lineHeight: 18 },
+  eventsRowDateMonth: { fontSize: 10.5, fontWeight: '700', marginTop: 1 },
+  eventsRowMain: { flex: 1, minWidth: 0 },
+  eventsRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  eventsRowTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
+  eventsRowTime: { fontSize: 12.5, fontWeight: '700' },
+  eventsRowDay: { fontSize: 11.5, marginTop: 2, textTransform: 'capitalize' },
+  eventsRowDesc: { fontSize: 12, marginTop: 3, lineHeight: 17 },
+
+  detailHero: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  detailColorDot: { width: 12, height: 12, borderRadius: 6 },
+  detailTitle: { fontSize: 15.5, fontWeight: '700' },
+  detailSub: { fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
+  detailTimeTag: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
+  detailPanel: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  detailLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  detailValue: { fontSize: 13.5, fontWeight: '600', marginTop: 5, lineHeight: 18 },
+  detailDescription: { fontSize: 13, marginTop: 5, lineHeight: 20, minHeight: 72 },
+  detailMeta: { fontSize: 12, lineHeight: 18, marginTop: 2 },
+  detailPrimaryBtn: {
+    marginTop: 6,
+    borderRadius: 12,
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  detailPrimaryText: { color: '#fff', fontSize: 13.5, fontWeight: '700' },
+
   sheetLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8 },
+  sheetChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  sheetChip: {
+    paddingHorizontal: 11,
+    minHeight: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetChipText: { fontSize: 12, fontWeight: '600' },
+  sheetHint: { fontSize: 11.5, marginTop: -6, marginBottom: 10 },
+  descriptionInput: { minHeight: 120, textAlignVertical: 'top', paddingTop: 10 },
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   colorSwatch: { width: 34, height: 34, borderRadius: 17 },
   colorSwatchActive: {
