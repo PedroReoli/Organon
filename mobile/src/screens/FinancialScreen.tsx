@@ -1,9 +1,8 @@
 ﻿
 import React, { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, PanResponder } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
-import { FAB } from '../components/shared/FAB'
 import { BottomSheet } from '../components/shared/BottomSheet'
 import { FormInput } from '../components/shared/FormInput'
 import { EmptyState } from '../components/shared/EmptyState'
@@ -25,6 +24,7 @@ type Tab = 'overview' | 'expenses' | 'incomes' | 'bills' | 'goals' | 'config'
 type EntrySheetType = 'expense' | 'bill' | 'income'
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
+const TAB_ORDER: Tab[] = ['overview', 'expenses', 'incomes', 'bills', 'goals', 'config']
 
 function parseMoney(value: string): number {
   return Number.parseFloat(value.replace(',', '.'))
@@ -255,6 +255,34 @@ export function FinancialScreen() {
     { key: 'config', label: 'Configuracoes' },
   ]
 
+  const swipeThreshold = 72
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dx) > 14 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onPanResponderRelease: (_, gesture) => {
+          if (Math.abs(gesture.dx) < swipeThreshold) return
+          const currentIndex = TAB_ORDER.indexOf(tab)
+          if (currentIndex < 0) return
+          if (gesture.dx < 0 && currentIndex < TAB_ORDER.length - 1) {
+            setTab(TAB_ORDER[currentIndex + 1])
+          } else if (gesture.dx > 0 && currentIndex > 0) {
+            setTab(TAB_ORDER[currentIndex - 1])
+          }
+        },
+      }),
+    [tab],
+  )
+
+  function handleFooterAdd() {
+    if (tab === 'incomes') return openEntry('income')
+    if (tab === 'bills') return openEntry('bill')
+    if (tab === 'goals') return openGoal()
+    return openEntry('expense')
+  }
+
   const s = StyleSheet.create({
     screen: { flex: 1, backgroundColor: theme.background },
     tabScroll: { flexGrow: 0, maxHeight: 44, borderBottomWidth: 1, borderBottomColor: theme.text + '10', backgroundColor: theme.surface },
@@ -302,6 +330,37 @@ export function FinancialScreen() {
     configRow: { marginBottom: 9 },
     saveBtn: { borderRadius: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
     saveBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 13.5 },
+    footer: {
+      height: 66,
+      borderTopWidth: 1,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    footerSide: { width: 112, alignItems: 'flex-start' },
+    footerBtn: {
+      height: 42,
+      paddingHorizontal: 14,
+      borderRadius: 13,
+      borderWidth: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
+    footerBtnTxt: { fontSize: 13, fontWeight: '600' },
+    footerAddBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowOffset: { width: 0, height: 3 },
+      shadowRadius: 6,
+    },
   })
 
   const renderMonthSelector = (label: string, onPrev: () => void, onNext: () => void) => (
@@ -515,14 +574,6 @@ export function FinancialScreen() {
     </ScrollView>
   )
 
-  const fabAction = (() => {
-    if (tab === 'expenses') return () => openEntry('expense')
-    if (tab === 'incomes') return () => openEntry('income')
-    if (tab === 'bills') return () => openEntry('bill')
-    if (tab === 'goals') return () => openGoal()
-    return null
-  })()
-
   return (
     <SafeAreaView style={s.screen}>
       <Header title="Financeiro" />
@@ -536,15 +587,44 @@ export function FinancialScreen() {
           )
         })}
       </ScrollView>
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+        {tab === 'overview' && renderOverview()}
+        {tab === 'expenses' && renderExpenses()}
+        {tab === 'incomes' && renderIncomes()}
+        {tab === 'bills' && renderBills()}
+        {tab === 'goals' && renderGoals()}
+        {tab === 'config' && renderConfig()}
+      </View>
 
-      {tab === 'overview' && renderOverview()}
-      {tab === 'expenses' && renderExpenses()}
-      {tab === 'incomes' && renderIncomes()}
-      {tab === 'bills' && renderBills()}
-      {tab === 'goals' && renderGoals()}
-      {tab === 'config' && renderConfig()}
+      <View style={[s.footer, { backgroundColor: theme.surface, borderTopColor: theme.text + '12' }]}>
+        <View style={s.footerSide}>
+          <TouchableOpacity
+            style={[s.footerBtn, { backgroundColor: tab === 'overview' ? theme.primary + '18' : theme.text + '0a', borderColor: tab === 'overview' ? theme.primary + '42' : theme.text + '12' }]}
+            onPress={() => setTab('overview')}
+          >
+            <Feather name="bar-chart-2" size={15} color={tab === 'overview' ? theme.primary : theme.text + '85'} />
+            <Text style={[s.footerBtnTxt, { color: tab === 'overview' ? theme.primary : theme.text + '85' }]}>Resumo</Text>
+          </TouchableOpacity>
+        </View>
 
-      {fabAction && <FAB onPress={fabAction} />}
+        <TouchableOpacity
+          style={[s.footerAddBtn, { backgroundColor: theme.primary }]}
+          onPress={handleFooterAdd}
+          activeOpacity={0.9}
+        >
+          <Feather name="plus" size={21} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={[s.footerSide, { alignItems: 'flex-end' }]}>
+          <TouchableOpacity
+            style={[s.footerBtn, { backgroundColor: tab === 'config' ? theme.primary + '18' : theme.text + '0a', borderColor: tab === 'config' ? theme.primary + '42' : theme.text + '12' }]}
+            onPress={() => setTab('config')}
+          >
+            <Feather name="settings" size={15} color={tab === 'config' ? theme.primary : theme.text + '85'} />
+            <Text style={[s.footerBtnTxt, { color: tab === 'config' ? theme.primary : theme.text + '85' }]}>Config</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <BottomSheet visible={showEntrySheet} onClose={() => setShowEntrySheet(false)} title={{ expense: 'Nova despesa', bill: 'Nova conta', income: 'Nova receita' }[sheetType]} onSave={handleSaveEntry}>
         {sheetType === 'income'
