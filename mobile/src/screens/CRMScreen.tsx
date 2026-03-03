@@ -108,6 +108,7 @@ export function CRMScreen() {
   const [search, setSearch] = useState('')
   const [showSheet, setShowSheet] = useState(false)
   const [sheetTab, setSheetTab] = useState<SheetTab>('details')
+  const [pipelinePage, setPipelinePage] = useState(0)
   const [timelinePage, setTimelinePage] = useState(0)
   const [editingContact, setEditingContact] = useState<CRMContact | null>(null)
   const [tagDraft, setTagDraft] = useState('')
@@ -177,9 +178,15 @@ export function CRMScreen() {
     () => chunkInteractions(activeContactInteractions, 2),
     [activeContactInteractions],
   )
+  const pipelineStagePages = useMemo(
+    () => chunkInteractions(CRM_STAGES, 2),
+    [],
+  )
 
   const timelinePageWidth = Math.max(240, viewportWidth - 72)
+  const pipelinePageWidth = Math.max(240, viewportWidth - 24)
   const activeTimelinePage = Math.min(timelinePage, Math.max(0, timelinePages.length - 1))
+  const activePipelinePage = Math.min(pipelinePage, Math.max(0, pipelineStagePages.length - 1))
 
   const allTags = useMemo(() => [...store.crmTags].sort((a, b) => a.name.localeCompare(b.name)), [store.crmTags])
 
@@ -339,6 +346,17 @@ export function CRMScreen() {
     setTimelinePage(safeIndex)
   }
 
+  const handlePipelineMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (pipelineStagePages.length <= 1) {
+      setPipelinePage(0)
+      return
+    }
+    const offsetX = event.nativeEvent.contentOffset.x
+    const index = Math.round(offsetX / pipelinePageWidth)
+    const safeIndex = Math.max(0, Math.min(pipelineStagePages.length - 1, index))
+    setPipelinePage(safeIndex)
+  }
+
   const openWhatsApp = async (phone: string | null) => {
     const digits = (phone ?? '').replace(/\D/g, '')
     if (!digits) {
@@ -479,51 +497,84 @@ export function CRMScreen() {
   )
 
   const renderPipeline = () => (
-    <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-      {CRM_STAGES.map(stage => {
-        const contacts = contactsByStage[stage.id] ?? []
-        return (
-          <View key={stage.id} style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}> 
-            <View style={s.pipelineHeader}>
-              <Text style={[s.panelTitle, { color: theme.text }]}>{stage.label}</Text>
-              <View style={[s.badge, { borderColor: theme.text + '25', backgroundColor: theme.text + '08' }]}>
-                <Text style={[s.badgeTxt, { color: theme.text + '85' }]}>{contacts.length}</Text>
-              </View>
-            </View>
-            {contacts.length === 0 ? (
-              <Text style={[s.itemMeta, { color: theme.text + '65' }]}>Sem contatos neste estagio.</Text>
-            ) : (
-              contacts.map(contact => {
-                const priColor = CRM_PRIORITY_COLORS[contact.priority]
-                return (
-                  <TouchableOpacity
-                    key={contact.id}
-                    style={[s.pipelineCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}
-                    onPress={() => openEdit(contact)}
-                    activeOpacity={0.92}
-                  >
-                    <View style={s.itemTop}>
-                      <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{contact.name}</Text>
-                      <View style={[s.priDot, { backgroundColor: priColor }]} />
+    <View style={s.pipelineWrap}>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handlePipelineMomentumEnd}
+        style={s.pipelinePager}
+      >
+        {pipelineStagePages.map((stagePair, pageIndex) => (
+          <ScrollView
+            key={`pipeline-page-${pageIndex}`}
+            style={[s.pipelinePage, { width: pipelinePageWidth }]}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 96 }}
+          >
+            {stagePair.map(stage => {
+              const contacts = contactsByStage[stage.id] ?? []
+              return (
+                <View key={stage.id} style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+                  <View style={s.pipelineHeader}>
+                    <Text style={[s.panelTitle, { color: theme.text }]}>{stage.label}</Text>
+                    <View style={[s.badge, { borderColor: theme.text + '25', backgroundColor: theme.text + '08' }]}>
+                      <Text style={[s.badgeTxt, { color: theme.text + '85' }]}>{contacts.length}</Text>
                     </View>
-                    {!!contact.company && <Text style={[s.itemMeta, { color: theme.text + '75' }]} numberOfLines={1}>{contact.company}</Text>}
-                    <View style={s.actionRow}>
-                      <TouchableOpacity style={[s.iconBtn, { borderColor: '#22c55e66', backgroundColor: '#22c55e14' }]} onPress={() => void openWhatsApp(contact.phone)}>
-                        <Feather name="message-circle" size={13} color="#22c55e" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[s.iconBtn, { borderColor: '#60a5fa66', backgroundColor: '#60a5fa14' }]} onPress={() => void makeCall(contact.phone)}>
-                        <Feather name="phone" size={13} color="#60a5fa" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                )
-              })
-            )}
-          </View>
-        )
-      })}
-      <View style={{ height: 96 }} />
-    </ScrollView>
+                  </View>
+                  {contacts.length === 0 ? (
+                    <Text style={[s.itemMeta, { color: theme.text + '65' }]}>Sem contatos neste estagio.</Text>
+                  ) : (
+                    contacts.map(contact => {
+                      const priColor = CRM_PRIORITY_COLORS[contact.priority]
+                      return (
+                        <TouchableOpacity
+                          key={contact.id}
+                          style={[s.pipelineCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}
+                          onPress={() => openEdit(contact)}
+                          activeOpacity={0.92}
+                        >
+                          <View style={s.itemTop}>
+                            <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{contact.name}</Text>
+                            <View style={[s.priDot, { backgroundColor: priColor }]} />
+                          </View>
+                          {!!contact.company && <Text style={[s.itemMeta, { color: theme.text + '75' }]} numberOfLines={1}>{contact.company}</Text>}
+                          <View style={s.actionRow}>
+                            <TouchableOpacity style={[s.iconBtn, { borderColor: '#22c55e66', backgroundColor: '#22c55e14' }]} onPress={() => void openWhatsApp(contact.phone)}>
+                              <Feather name="message-circle" size={13} color="#22c55e" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[s.iconBtn, { borderColor: '#60a5fa66', backgroundColor: '#60a5fa14' }]} onPress={() => void makeCall(contact.phone)}>
+                              <Feather name="phone" size={13} color="#60a5fa" />
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    })
+                  )}
+                </View>
+              )
+            })}
+          </ScrollView>
+        ))}
+      </ScrollView>
+
+      {pipelineStagePages.length > 1 && (
+        <View style={s.pipelineDotsRow}>
+          {pipelineStagePages.map((_, index) => (
+            <View
+              key={`pipeline-dot-${index}`}
+              style={[
+                s.pipelineDot,
+                index === activePipelinePage
+                  ? { backgroundColor: theme.primary, width: 18 }
+                  : { backgroundColor: theme.text + '35', width: 7 },
+              ]}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   )
 
   const renderSheetDetails = () => (
@@ -756,8 +807,13 @@ export function CRMScreen() {
     actionBtn: { borderWidth: 1, borderRadius: 9, minHeight: 34, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
     actionBtnTxt: { fontSize: 12, fontWeight: '700' },
     iconBtn: { width: 32, height: 32, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    pipelineWrap: { flex: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 },
+    pipelinePager: { flex: 1 },
+    pipelinePage: { paddingRight: 10 },
     pipelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
     pipelineCard: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 7 },
+    pipelineDotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 },
+    pipelineDot: { height: 7, borderRadius: 99 },
     sheetTopActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
     sheetHint: { flex: 1, fontSize: 12.5, fontWeight: '600' },
     sheetCancelBtn: {
@@ -812,7 +868,10 @@ export function CRMScreen() {
             <TouchableOpacity
               key={item}
               style={[s.tabBtn, active ? { borderColor: theme.primary + '55', backgroundColor: theme.primary + '18' } : { borderColor: theme.text + '22', backgroundColor: theme.text + '08' }]}
-              onPress={() => setTab(item)}
+              onPress={() => {
+                setTab(item)
+                if (item === 'pipeline') setPipelinePage(0)
+              }}
             >
               <Text style={[s.tabTxt, { color: active ? theme.primary : theme.text + '85' }]}>{item === 'list' ? 'Lista' : 'Pipeline'}</Text>
             </TouchableOpacity>
