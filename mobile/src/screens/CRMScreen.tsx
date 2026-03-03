@@ -9,6 +9,9 @@ import {
   Alert,
   TextInput,
   Linking,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
@@ -81,8 +84,16 @@ function interactionSortStamp(date: string, time: string): number {
   return new Date(`${date}T${time || '00:00'}`).getTime()
 }
 
+function chunkInteractions<T>(items: T[], size: number): T[][] {
+  if (size <= 0) return [items]
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size))
+  return chunks
+}
+
 export function CRMScreen() {
   const theme = useTheme()
+  const { width: viewportWidth } = useWindowDimensions()
   const {
     store,
     addCRMContact,
@@ -97,6 +108,7 @@ export function CRMScreen() {
   const [search, setSearch] = useState('')
   const [showSheet, setShowSheet] = useState(false)
   const [sheetTab, setSheetTab] = useState<SheetTab>('details')
+  const [timelinePage, setTimelinePage] = useState(0)
   const [editingContact, setEditingContact] = useState<CRMContact | null>(null)
   const [tagDraft, setTagDraft] = useState('')
   const [interactionForm, setInteractionForm] = useState({
@@ -161,11 +173,20 @@ export function CRMScreen() {
     return interactionsByContact.get(editingContact.id) ?? []
   }, [editingContact, interactionsByContact])
 
+  const timelinePages = useMemo(
+    () => chunkInteractions(activeContactInteractions, 2),
+    [activeContactInteractions],
+  )
+
+  const timelinePageWidth = Math.max(240, viewportWidth - 72)
+  const activeTimelinePage = Math.min(timelinePage, Math.max(0, timelinePages.length - 1))
+
   const allTags = useMemo(() => [...store.crmTags].sort((a, b) => a.name.localeCompare(b.name)), [store.crmTags])
 
   const openNew = () => {
     setEditingContact(null)
     setSheetTab('details')
+    setTimelinePage(0)
     setTagDraft('')
     setInteractionForm({ type: 'nota', content: '', date: today(), time: hhmmNow() })
     setForm(createEmptyForm())
@@ -184,6 +205,7 @@ export function CRMScreen() {
   const openEdit = (contact: CRMContact, nextTab: SheetTab = 'details') => {
     setEditingContact(contact)
     setSheetTab(nextTab)
+    setTimelinePage(0)
     setTagDraft('')
     setInteractionForm({ type: 'nota', content: '', date: today(), time: hhmmNow() })
     setForm({
@@ -304,6 +326,17 @@ export function CRMScreen() {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Excluir', style: 'destructive', onPress: () => deleteCRMInteraction(interactionId) },
     ])
+  }
+
+  const handleTimelineMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (timelinePages.length <= 1) {
+      setTimelinePage(0)
+      return
+    }
+    const offsetX = event.nativeEvent.contentOffset.x
+    const index = Math.round(offsetX / timelinePageWidth)
+    const safeIndex = Math.max(0, Math.min(timelinePages.length - 1, index))
+    setTimelinePage(safeIndex)
   }
 
   const openWhatsApp = async (phone: string | null) => {
@@ -585,17 +618,49 @@ export function CRMScreen() {
 
         <Text style={[s.sectionLabel, { color: theme.text + '72', marginTop: 14 }]}>Historico</Text>
         {activeContactInteractions.length === 0 && <Text style={{ color: theme.text + '70' }}>Nenhuma interacao registrada.</Text>}
+        {timelinePages.length > 0 && (
+          <>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleTimelineMomentumEnd}
+              style={s.timelinePager}
+            >
+              {timelinePages.map((page, pageIndex) => (
+                <View key={`timeline-page-${pageIndex}`} style={[s.timelinePage, { width: timelinePageWidth }]}>
+                  {page.map(interaction => (
+                    <View key={interaction.id} style={[s.timelineCard, { borderColor: theme.text + '16', backgroundColor: theme.text + '08' }]}>
+                      <View style={s.itemTop}>
+                        <Text style={[s.itemTitle, { color: theme.text }]}>{CRM_INTERACTION_TYPES[interaction.type]}</Text>
+                        <TouchableOpacity onPress={() => removeInteraction(interaction.id)}><Feather name="trash-2" size={13} color="#ef4444" /></TouchableOpacity>
+                      </View>
+                      <Text style={[s.itemMeta, { color: theme.text + '75' }]}>{formatDate(interaction.date)} {interaction.time}</Text>
+                      <Text style={[s.itemMeta, { color: theme.text + 'c0', marginTop: 6 }]}>{interaction.content}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
 
-        {activeContactInteractions.map(interaction => (
-          <View key={interaction.id} style={[s.timelineCard, { borderColor: theme.text + '16', backgroundColor: theme.text + '08' }]}> 
-            <View style={s.itemTop}>
-              <Text style={[s.itemTitle, { color: theme.text }]}>{CRM_INTERACTION_TYPES[interaction.type]}</Text>
-              <TouchableOpacity onPress={() => removeInteraction(interaction.id)}><Feather name="trash-2" size={13} color="#ef4444" /></TouchableOpacity>
-            </View>
-            <Text style={[s.itemMeta, { color: theme.text + '75' }]}>{formatDate(interaction.date)} {interaction.time}</Text>
-            <Text style={[s.itemMeta, { color: theme.text + 'c0', marginTop: 6 }]}>{interaction.content}</Text>
-          </View>
-        ))}
+            {timelinePages.length > 1 && (
+              <View style={s.timelineDotsRow}>
+                {timelinePages.map((_, index) => (
+                  <View
+                    key={`timeline-dot-${index}`}
+                    style={[
+                      s.timelineDot,
+                      index === activeTimelinePage
+                        ? { backgroundColor: theme.primary, width: 18 }
+                        : { backgroundColor: theme.text + '35', width: 7 },
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+          </>
+        )}
         <View style={{ height: 20 }} />
       </>
     )
@@ -695,7 +760,7 @@ export function CRMScreen() {
     pipelineCard: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 7 },
     sheetTopActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
     sheetHint: { flex: 1, fontSize: 12.5, fontWeight: '600' },
-    sheetCloseBtn: {
+    sheetCancelBtn: {
       minHeight: 34,
       borderRadius: 9,
       borderWidth: 1,
@@ -705,7 +770,7 @@ export function CRMScreen() {
       justifyContent: 'center',
       gap: 6,
     },
-    sheetCloseBtnTxt: { fontSize: 12, fontWeight: '700' },
+    sheetCancelBtnTxt: { fontSize: 12, fontWeight: '700' },
     sheetTabs: { flexDirection: 'row', gap: 7, flexWrap: 'wrap', marginBottom: 12 },
     sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8, marginBottom: 10 },
@@ -717,7 +782,11 @@ export function CRMScreen() {
     inlineBtnTxt: { color: '#fff', fontSize: 12, fontWeight: '700' },
     addBtn: { minHeight: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 4 },
     addBtnTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
+    timelinePager: { marginTop: 8 },
+    timelinePage: { paddingRight: 10 },
     timelineCard: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 8 },
+    timelineDotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 },
+    timelineDot: { height: 7, borderRadius: 99 },
     linkSection: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
     sheetBottomActions: { flexDirection: 'row', gap: 8, marginTop: 6, marginBottom: 14 },
     sheetBottomBtn: {
@@ -755,17 +824,23 @@ export function CRMScreen() {
 
       <FAB onPress={openNew} />
 
-      <BottomSheet visible={showSheet} onClose={askCloseSheet} title={editingContact ? 'Contato CRM' : 'Novo contato'} onSave={saveContact}>
+      <BottomSheet
+        visible={showSheet}
+        onClose={askCloseSheet}
+        title={editingContact ? 'Contato CRM' : 'Novo contato'}
+        onSave={saveContact}
+        maxHeight={editingContact ? '90%' : '100%'}
+      >
         <View style={s.sheetTopActions}>
           <Text style={[s.sheetHint, { color: theme.text + '74' }]}>
             {editingContact ? 'Edite os dados nas abas abaixo.' : 'Preencha os dados e salve para criar o contato.'}
           </Text>
           <TouchableOpacity
-            style={[s.sheetCloseBtn, { borderColor: theme.text + '24', backgroundColor: theme.text + '08' }]}
+            style={[s.sheetCancelBtn, { borderColor: '#ef444466', backgroundColor: '#ef444416' }]}
             onPress={askCloseSheet}
           >
-            <Feather name="x" size={14} color={theme.text + 'c0'} />
-            <Text style={[s.sheetCloseBtnTxt, { color: theme.text + 'c0' }]}>Fechar</Text>
+            <Feather name="x-circle" size={14} color="#ef4444" />
+            <Text style={[s.sheetCancelBtnTxt, { color: '#ef4444' }]}>Cancelar</Text>
           </TouchableOpacity>
         </View>
 
@@ -786,10 +861,10 @@ export function CRMScreen() {
 
         <View style={s.sheetBottomActions}>
           <TouchableOpacity
-            style={[s.sheetBottomBtn, { borderColor: theme.text + '24', backgroundColor: theme.text + '08' }]}
+            style={[s.sheetBottomBtn, { borderColor: '#ef444466', backgroundColor: '#ef444416' }]}
             onPress={askCloseSheet}
           >
-            <Text style={[s.sheetBottomBtnTxt, { color: theme.text + 'c0' }]}>Descartar</Text>
+            <Text style={[s.sheetBottomBtnTxt, { color: '#ef4444' }]}>Cancelar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.sheetBottomBtn, { borderColor: theme.primary, backgroundColor: theme.primary }]}
