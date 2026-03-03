@@ -548,98 +548,96 @@ export function PlannerScreen() {
         })}
       </View>
 
-      {/* Selected day info bar */}
-      <View style={[styles.selectedDayBar, { backgroundColor: theme.surface, borderColor: theme.text + '12' }]}>
-        <TouchableOpacity
-          style={[styles.dayNavBtn, { backgroundColor: theme.text + '0a' }]}
-          onPress={() => shiftSelectedDay('prev')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="chevron-left" size={18} color={theme.text} />
-        </TouchableOpacity>
-
-        <View style={styles.selectedDayCenter}>
-          <Text style={[styles.selectedDayTitle, { color: theme.text }]}>
-            {DAY_LABELS_FULL[selectedDay]}
-          </Text>
-          <Text style={[styles.selectedDaySub, { color: theme.text + '60' }]}>
-            {selectedDateShort} · {selectedDayCount} tarefa{selectedDayCount === 1 ? '' : 's'}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.dayNavBtn, { backgroundColor: theme.text + '0a' }]}
-          onPress={() => shiftSelectedDay('next')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="chevron-right" size={18} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-
       <Animated.View
         style={[
-          styles.sectionsContainer,
+          styles.swipeArea,
           { opacity: contentOpacity, transform: [{ translateX: dragX }, { scale: contentScale }] },
         ]}
         {...swipeResponder.panHandlers}
       >
-        {PERIODS_ORDER.map((period, idx) => {
-          const cfg = PERIOD_CONFIG[period]
-          const cards = cardsByPeriod[period]
+        {/* Selected day info bar */}
+        <View style={[styles.selectedDayBar, { backgroundColor: theme.surface, borderColor: theme.text + '12' }]}>
+          <TouchableOpacity
+            style={[styles.dayNavBtn, { backgroundColor: theme.text + '0a' }]}
+            onPress={() => shiftSelectedDay('prev')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="chevron-left" size={17} color={theme.text} />
+          </TouchableOpacity>
 
-          return (
-            <View
-              key={period}
-              style={[
-                styles.periodSection,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: theme.text + '12',
-                  borderBottomWidth: idx === PERIODS_ORDER.length - 1 ? 1 : 0,
-                },
-              ]}
-            >
+          <View style={styles.selectedDayCenter}>
+            <Text style={[styles.selectedDayLine, { color: theme.text }]} numberOfLines={1}>
+              {DAY_LABELS_FULL[selectedDay]} {selectedDateShort} • {selectedDayCount} tarefa{selectedDayCount === 1 ? '' : 's'}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.dayNavBtn, { backgroundColor: theme.text + '0a' }]}
+            onPress={() => shiftSelectedDay('next')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="chevron-right" size={17} color={theme.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionsContainer}>
+          {PERIODS_ORDER.map((period, idx) => {
+            const cfg = PERIOD_CONFIG[period]
+            const cards = cardsByPeriod[period]
+
+            return (
               <View
+                key={period}
                 style={[
-                  styles.periodHeader,
-                  { backgroundColor: cfg.bg, borderBottomColor: cfg.color + '44' },
+                  styles.periodSection,
+                  {
+                    backgroundColor: theme.surface,
+                    borderColor: theme.text + '12',
+                    borderBottomWidth: idx === PERIODS_ORDER.length - 1 ? 1 : 0,
+                  },
                 ]}
               >
-                <View style={[styles.periodIconWrap, { backgroundColor: cfg.color + '20' }]}>
-                  <Feather name={cfg.icon as any} size={14} color={cfg.color} />
-                </View>
-                <Text style={[styles.periodLabel, { color: cfg.textColor }]}>
-                  {PERIOD_LABELS[period]}
-                </Text>
-                <Text style={[styles.periodCount, { color: cfg.color + 'c4' }]}>
-                  {cards.length}
-                </Text>
-              </View>
-
-              <ScrollView
-                style={styles.periodCardsScroll}
-                contentContainerStyle={styles.periodCardsContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {cards.map(renderCardRow)}
-                {cards.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Text style={[styles.emptyText, { color: theme.text + '42' }]}>Sem tarefas</Text>
+                <View
+                  style={[
+                    styles.periodHeader,
+                    { backgroundColor: cfg.bg, borderBottomColor: cfg.color + '44' },
+                  ]}
+                >
+                  <View style={[styles.periodIconWrap, { backgroundColor: cfg.color + '20' }]}>
+                    <Feather name={cfg.icon as any} size={14} color={cfg.color} />
                   </View>
-                )}
-              </ScrollView>
-            </View>
-          )
-        })}
-      </Animated.View>
+                  <Text style={[styles.periodLabel, { color: cfg.textColor }]}>
+                    {PERIOD_LABELS[period]}
+                  </Text>
+                  <Text style={[styles.periodCount, { color: cfg.color + 'c4' }]}>
+                    {cards.length}
+                  </Text>
+                </View>
 
+                <ScrollView
+                  style={styles.periodCardsScroll}
+                  contentContainerStyle={styles.periodCardsContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {cards.map(renderCardRow)}
+                  {cards.length === 0 && (
+                    <View style={styles.emptyState}>
+                      <Text style={[styles.emptyText, { color: theme.text + '42' }]}>Sem tarefas</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            )
+          })}
+        </View>
+      </Animated.View>
       <View style={[styles.footer, { backgroundColor: theme.surface, borderTopColor: theme.text + '12' }]}>
         <View style={styles.footerSide}>
           <TouchableOpacity
             style={[styles.todayBtn, { backgroundColor: theme.text + '0a', borderColor: theme.text + '12' }]}
             onPress={goToToday}
           >
-            <Feather name="calendar" size={14} color={theme.text + '85'} />
+            <Feather name="calendar" size={15} color={theme.text + '85'} />
             <Text style={[styles.todayBtnText, { color: theme.text + '85' }]}>Hoje</Text>
           </TouchableOpacity>
         </View>
@@ -649,7 +647,7 @@ export function PlannerScreen() {
           onPress={openAdd}
           activeOpacity={0.9}
         >
-          <Feather name="plus" size={22} color="#fff" />
+          <Feather name="plus" size={21} color="#fff" />
         </TouchableOpacity>
 
         <View style={[styles.footerSide, { alignItems: 'flex-end' }]}>
@@ -657,7 +655,7 @@ export function PlannerScreen() {
             style={[styles.todayBtn, { backgroundColor: backlogCards.length > 0 ? '#8b5cf615' : theme.text + '0a', borderColor: backlogCards.length > 0 ? '#8b5cf630' : theme.text + '12' }]}
             onPress={() => setBacklogOpen(true)}
           >
-            <Feather name="inbox" size={14} color={backlogCards.length > 0 ? '#8b5cf6' : theme.text + '85'} />
+            <Feather name="inbox" size={15} color={backlogCards.length > 0 ? '#8b5cf6' : theme.text + '85'} />
             <Text style={[styles.todayBtnText, { color: backlogCards.length > 0 ? '#8b5cf6' : theme.text + '85' }]}>
               {backlogCards.length > 0 ? String(backlogCards.length) : 'Backlog'}
             </Text>
@@ -1079,29 +1077,29 @@ const styles = StyleSheet.create({
   weekDayBadgeText: { fontSize: 10, fontWeight: '700' },
   weekDayDot:    { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
 
+  swipeArea: { flex: 1 },
   selectedDayBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 10,
-    borderRadius: 12,
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 7,
+    borderRadius: 10,
     borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
   },
   dayNavBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedDayCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  selectedDayTitle: { fontSize: 15, fontWeight: '700' },
-  selectedDaySub: { fontSize: 12, marginTop: 1 },
+  selectedDayLine: { fontSize: 13, fontWeight: '600' },
 
-  sectionsContainer: { flex: 1, paddingHorizontal: 12, paddingBottom: 12, gap: 10 },
+  sectionsContainer: { flex: 1, paddingHorizontal: 10, paddingBottom: 8, gap: 10 },
   periodSection: { flex: 1, borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   periodHeader: {
     flexDirection: 'row',
@@ -1137,28 +1135,28 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 12.5, fontWeight: '500' },
 
   footer: {
-    height: 74,
+    height: 66,
     borderTopWidth: 1,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  footerSide: { width: 90, alignItems: 'flex-start' },
+  footerSide: { width: 104, alignItems: 'flex-start' },
   todayBtn: {
-    height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 11,
+    height: 42,
+    paddingHorizontal: 14,
+    borderRadius: 13,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
-  todayBtnText: { fontSize: 12.5, fontWeight: '600' },
+  todayBtnText: { fontSize: 13, fontWeight: '600' },
   footerAddBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
@@ -1238,3 +1236,4 @@ const styles = StyleSheet.create({
   blScheduleBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   blAddBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, marginTop: 10 },
 })
+
