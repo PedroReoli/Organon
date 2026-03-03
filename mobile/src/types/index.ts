@@ -323,7 +323,23 @@ export interface StudyGoal {
   id: string
   title: string
   status: CardStatus
+  description?: string
+  priority?: CardPriority | null
+  checklist?: ChecklistItem[]
+  linkedPlanningCardId?: string | null
   createdAt: string
+  updatedAt?: string
+}
+
+export interface StudyMediaItem {
+  id: string
+  title: string
+  url: string
+  kind: 'youtube' | 'audio'
+  youtubeVideoId?: string | null
+  volume?: number
+  loop?: boolean
+  showDock?: boolean
 }
 
 export interface StudySessionLog {
@@ -332,11 +348,33 @@ export interface StudySessionLog {
   focusSeconds: number
 }
 
+export interface StudyFlashcard {
+  id: string
+  question: string
+  answer: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudyQuickNote {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface StudyState {
+  wallpaperUrl?: string
   focusMinutes: number
   breakMinutes: number
+  muteSound?: boolean
+  mediaItems?: StudyMediaItem[]
   goals: StudyGoal[]
   sessions: StudySessionLog[]
+  flashcards?: StudyFlashcard[]
+  notes?: StudyQuickNote[]
+  notificationsEnabled?: boolean
 }
 
 export type ThemeName =
@@ -395,10 +433,16 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const DEFAULT_STUDY_STATE: StudyState = {
+  wallpaperUrl: '',
   focusMinutes: 25,
   breakMinutes: 5,
+  muteSound: false,
+  mediaItems: [],
   goals: [],
   sessions: [],
+  flashcards: [],
+  notes: [],
+  notificationsEnabled: true,
 }
 
 export const DAY_LABELS: Record<Day, string> = {

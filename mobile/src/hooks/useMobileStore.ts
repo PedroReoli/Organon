@@ -7,9 +7,9 @@ import type {
   Habit, HabitEntry, Bill, Expense, BudgetCategory, IncomeEntry,
   FinancialConfig, SavingsGoal, Playbook, CRMContact, CRMInteraction,
   CRMTag, ShortcutFolder, ShortcutItem, ColorPalette, Settings,
-  StudyGoal, StudySessionLog,
+  StudyGoal, StudySessionLog, StudyState,
 } from '../types'
-import { DEFAULT_MOBILE_STORE } from '../types'
+import { DEFAULT_MOBILE_STORE, DEFAULT_STUDY_STATE } from '../types'
 
 const STORE_KEY = '@organon/store'
 
@@ -80,6 +80,7 @@ interface StoreContextValue {
   deleteStudyGoal: (id: string) => void
   addStudySession: (session: StudySessionLog) => void
   updateStudySettings: (focusMinutes: number, breakMinutes: number) => void
+  updateStudy: (updater: (prev: StudyState) => StudyState) => void
   // Settings
   updateSettings: (data: Partial<Settings>) => void
   loadStore: (data: MobileStore) => void
@@ -140,6 +141,7 @@ export const StoreContext = createContext<StoreContextValue>({
   deleteStudyGoal: () => {},
   addStudySession: () => {},
   updateStudySettings: () => {},
+  updateStudy: () => DEFAULT_STUDY_STATE,
   updateSettings: () => {},
   loadStore: () => {},
 })
@@ -163,7 +165,11 @@ export function StoreProvider({ children, onStoreChange }: {
           try {
             const parsed = JSON.parse(data) as MobileStore
             // Merge with defaults so new fields are populated on app updates
-            setStore({ ...DEFAULT_MOBILE_STORE, ...parsed })
+            setStore({
+              ...DEFAULT_MOBILE_STORE,
+              ...parsed,
+              study: { ...DEFAULT_STUDY_STATE, ...(parsed.study ?? {}) },
+            })
           } catch {
             console.warn('[Store] Failed to parse stored data, using defaults')
           }
@@ -518,7 +524,19 @@ export function StoreProvider({ children, onStoreChange }: {
 
   // ── Study ──────────────────────────────────────────────────────────────────
   const addStudyGoal = useCallback((data: Partial<StudyGoal>): StudyGoal => {
-    const goal: StudyGoal = { id: uid(), title: 'Nova meta', status: 'todo', createdAt: now(), ...data }
+    const stamp = now()
+    const goal: StudyGoal = {
+      id: uid(),
+      title: 'Nova meta',
+      status: 'todo',
+      description: '',
+      priority: null,
+      checklist: [],
+      linkedPlanningCardId: null,
+      createdAt: stamp,
+      updatedAt: stamp,
+      ...data,
+    }
     updateStore(s => ({ ...s, study: { ...s.study, goals: [...s.study.goals, goal] } }))
     return goal
   }, [updateStore])
@@ -526,7 +544,7 @@ export function StoreProvider({ children, onStoreChange }: {
   const updateStudyGoal = useCallback((id: string, data: Partial<StudyGoal>) => {
     updateStore(s => ({
       ...s,
-      study: { ...s.study, goals: s.study.goals.map(g => g.id === id ? { ...g, ...data } : g) },
+      study: { ...s.study, goals: s.study.goals.map(g => g.id === id ? { ...g, ...data, updatedAt: now() } : g) },
     }))
   }, [updateStore])
 
@@ -548,6 +566,10 @@ export function StoreProvider({ children, onStoreChange }: {
     updateStore(s => ({ ...s, study: { ...s.study, focusMinutes, breakMinutes } }))
   }, [updateStore])
 
+  const updateStudy = useCallback((updater: (prev: StudyState) => StudyState) => {
+    updateStore(s => ({ ...s, study: updater(s.study) }))
+  }, [updateStore])
+
   // ── Settings ───────────────────────────────────────────────────────────────
   const updateSettings = useCallback((data: Partial<Settings>) => {
     updateStore(s => ({ ...s, settings: { ...s.settings, ...data } }))
@@ -560,6 +582,7 @@ export function StoreProvider({ children, onStoreChange }: {
     const merged: MobileStore = {
       ...DEFAULT_MOBILE_STORE,
       ...data,
+      study: { ...DEFAULT_STUDY_STATE, ...(raw.study ?? {}) },
       // Notas do desktop não têm campo content (ficam em arquivos .md)
       // Garante que content sempre existe como string
       notes: (raw.notes ?? []).map((n: any) => ({
@@ -609,7 +632,7 @@ export function StoreProvider({ children, onStoreChange }: {
     addShortcut, updateShortcut, deleteShortcut,
     addColorPalette, updateColorPalette, deleteColorPalette,
     addStudyGoal, updateStudyGoal, deleteStudyGoal,
-    addStudySession, updateStudySettings,
+    addStudySession, updateStudySettings, updateStudy,
     updateSettings,
     loadStore,
   }
