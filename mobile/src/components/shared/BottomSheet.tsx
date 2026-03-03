@@ -1,8 +1,9 @@
 import React from 'react'
 import {
-  Modal, View, Text, TouchableOpacity, TouchableWithoutFeedback,
-  ScrollView, KeyboardAvoidingView, Platform, StyleSheet,
+  Modal, View, Text, TouchableOpacity,
+  ScrollView, KeyboardAvoidingView, Platform, StyleSheet, SafeAreaView,
 } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 import { useTheme } from '../../hooks/useTheme'
 
 interface BottomSheetProps {
@@ -28,90 +29,105 @@ export function BottomSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay} />
-      </TouchableWithoutFeedback>
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.sheetWrapper}
+        style={[styles.wrapper, { backgroundColor: theme.background }]}
       >
-        <View style={[styles.sheet, { backgroundColor: theme.surface, maxHeight }]}>
-          {/* Handle */}
-          <View style={[styles.handle, { backgroundColor: theme.text + '30' }]} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={[styles.cancelBtn, { color: theme.text + '80' }]}>Cancelar</Text>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.text + '14' }]}>
+            <TouchableOpacity
+              style={[styles.cancelBtn, { backgroundColor: '#ef444422', borderColor: '#ef444477' }]}
+              onPress={onClose}
+            >
+              <Feather name="x" size={16} color="#ef4444" />
+              <Text style={styles.cancelBtnText}>Cancelar</Text>
             </TouchableOpacity>
-            <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+
+            <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>{title}</Text>
+
             {onSave ? (
-              <TouchableOpacity onPress={onSave}>
-                <Text style={[styles.saveBtn, { color: theme.primary }]}>{saveLabel}</Text>
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: theme.primary }]}
+                onPress={onSave}
+              >
+                <Text style={styles.saveBtnText}>{saveLabel}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.spacer} />
             )}
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" style={styles.content}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.content}
+            contentContainerStyle={[styles.contentInner, { paddingBottom: 24 }]}
+          >
             {children}
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
   )
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  wrapper: {
     flex: 1,
-    backgroundColor: '#00000060',
   },
-  sheetWrapper: {
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 4,
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
   cancelBtn: {
+    minWidth: 110,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  cancelBtnText: {
+    color: '#ef4444',
     fontSize: 14,
-    minWidth: 60,
+    fontWeight: '700',
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
     textAlign: 'center',
+    paddingHorizontal: 10,
   },
   saveBtn: {
+    minWidth: 96,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnText: {
+    color: '#ffffff',
     fontSize: 14,
-    fontWeight: '600',
-    minWidth: 60,
-    textAlign: 'right',
+    fontWeight: '700',
   },
   spacer: {
-    minWidth: 60,
+    minWidth: 96,
+    height: 40,
   },
   content: {
-    paddingHorizontal: 20,
+    flex: 1,
+  },
+  contentInner: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
   },
 })

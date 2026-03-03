@@ -99,9 +99,55 @@ export function SettingsScreen() {
     rowLabel: { flex: 1, color: theme.text, fontSize: 15 },
     rowValue: { color: theme.text + '60', fontSize: 14 },
     // Theme grid
-    themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, backgroundColor: theme.surface, borderRadius: 12 },
-    themeChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 2, marginBottom: 4 },
-    themeChipTxt: { fontSize: 12, fontWeight: '600' },
+    themeGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      padding: 12,
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.text + '12',
+    },
+    themeCard: {
+      width: '48.5%',
+      borderRadius: 12,
+      borderWidth: 1,
+      padding: 10,
+      minHeight: 96,
+      justifyContent: 'space-between',
+    },
+    themeCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    themeCardName: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 16,
+    },
+    themeActiveBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themePreviewRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 10,
+    },
+    themeSwatch: {
+      width: 18,
+      height: 18,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
     // Auth
     authRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: theme.surface, borderRadius: 12 },
     authAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '30', alignItems: 'center', justifyContent: 'center' },
@@ -187,17 +233,24 @@ export function SettingsScreen() {
               return (
                 <TouchableOpacity
                   key={name}
-                  style={[s.themeChip, {
-                    borderColor: active ? t.primary : theme.text + '20',
-                    backgroundColor: active ? t.primary + '20' : 'transparent',
+                  style={[s.themeCard, {
+                    borderColor: active ? t.primary : theme.text + '22',
+                    backgroundColor: active ? t.primary + '16' : theme.background,
                   }]}
                   onPress={() => updateSettings({ themeName: name })}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: t.primary }} />
-                    <Text style={[s.themeChipTxt, { color: active ? t.primary : theme.text + '70' }]}>
+                  <View style={s.themeCardHeader}>
+                    <Text numberOfLines={2} style={[s.themeCardName, { color: active ? t.primary : theme.text + 'd0' }]}>
                       {THEME_LABELS[name]}
                     </Text>
+                    <View style={[s.themeActiveBadge, { backgroundColor: active ? t.primary : theme.text + '24' }]}>
+                      {active ? <Feather name="check" size={12} color="#fff" /> : null}
+                    </View>
+                  </View>
+                  <View style={s.themePreviewRow}>
+                    <View style={[s.themeSwatch, { backgroundColor: t.background, borderColor: theme.text + '30' }]} />
+                    <View style={[s.themeSwatch, { backgroundColor: t.surface, borderColor: theme.text + '30' }]} />
+                    <View style={[s.themeSwatch, { backgroundColor: t.primary, borderColor: t.primary }]} />
                   </View>
                 </TouchableOpacity>
               )

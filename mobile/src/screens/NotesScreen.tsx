@@ -9,6 +9,7 @@ import { FAB } from '../components/shared/FAB'
 import { EmptyState } from '../components/shared/EmptyState'
 import { BottomSheet } from '../components/shared/BottomSheet'
 import { FormInput } from '../components/shared/FormInput'
+import { WysiwygEditor } from '../components/shared/WysiwygEditor'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import { now, formatDate } from '../utils/date'
@@ -24,7 +25,7 @@ function toPlainPreview(markdown: string): string {
     .replace(/```[\s\S]*?```/g, ' [codigo] ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/^>\s?/gm, '')
-    .replace(/^[-*]\s+/gm, '• ')
+    .replace(/^[-*]\s+/gm, '- ')
     .replace(/^\d+\.\s+/gm, '')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/__(.*?)__/g, '$1')
@@ -132,7 +133,7 @@ function renderMarkdown(content: string, theme: { text: string; surface: string;
     if (/^[-*]\s+/.test(line)) {
       nodes.push(
         <View key={`ul-${idx}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 5 }}>
-          <Text style={{ color: theme.primary, marginTop: 1 }}>•</Text>
+          <Text style={{ color: theme.primary, marginTop: 1 }}>-</Text>
           <Text style={{ color: theme.text, flex: 1, fontSize: 15, lineHeight: 23 }}>{line.replace(/^[-*]\s+/, '')}</Text>
         </View>,
       )
@@ -143,7 +144,7 @@ function renderMarkdown(content: string, theme: { text: string; surface: string;
     if (ordered) {
       nodes.push(
         <View key={`ol-${idx}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 5 }}>
-          <Text style={{ color: theme.primary, marginTop: 1 }}>{ordered[1]}.</Text>
+          <Text style={{ color: theme.primary, marginTop: 1 }}>-</Text>
           <Text style={{ color: theme.text, flex: 1, fontSize: 15, lineHeight: 23 }}>{ordered[2]}</Text>
         </View>,
       )
@@ -299,15 +300,13 @@ export function NotesScreen() {
           </View>
 
           {editorMode === 'edit' ? (
-            <TextInput
-              style={s.content}
+            <WysiwygEditor
               value={noteContent}
               onChangeText={setNoteContent}
               placeholder="Comece a escrever em Markdown..."
-              placeholderTextColor={theme.text + '30'}
-              multiline
-              textAlignVertical="top"
+              minHeight={420}
               onBlur={saveNote}
+              showPreviewToggle={false}
             />
           ) : (
             <ScrollView style={s.previewScroll} contentContainerStyle={s.previewContent}>
@@ -330,7 +329,7 @@ export function NotesScreen() {
           </TouchableOpacity>
           {breadcrumb.map(folder => (
             <React.Fragment key={folder.id}>
-              <Text style={s.crumbSep}>›</Text>
+              <Text style={s.crumbSep}>{'>'}</Text>
               <TouchableOpacity onPress={() => setCurrentFolderId(folder.id)}>
                 <Text style={[s.crumbTxt, currentFolderId === folder.id && s.crumbActive]}>{folder.name}</Text>
               </TouchableOpacity>
