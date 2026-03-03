@@ -25,3 +25,12 @@
 
 4. **Definicao de pronto para backend**
 - Uma tarefa de backend so e considerada concluida quando o codigo e o `.md` correspondente estiverem atualizados.
+
+5. **Recomendacao de Conventional Commit no chat**
+- Ao final de cada tarefa que envolva alteracao no projeto, sempre incluir no chat uma sugestao de **Conventional Commit** em portugues.
+- A sugestao deve conter:
+  - linha de commit no padrao Conventional Commit (`tipo(escopo): resumo`)
+  - descricao curta do que foi feito
+- Exemplo:
+  - `feat(api): adiciona endpoint de sincronizacao de cards`
+  - `Descricao: cria rota de listagem com paginacao por cursor e validacao de parametros.`
