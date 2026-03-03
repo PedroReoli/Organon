@@ -1,6 +1,6 @@
 ﻿
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, PanResponder, Animated, Easing, useWindowDimensions } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, PanResponder, Animated, Easing, useWindowDimensions, Modal } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
 import { BottomSheet } from '../components/shared/BottomSheet'
@@ -461,16 +461,49 @@ export function FinancialScreen() {
       justifyContent: 'center',
     },
     monthPickerYearTxt: { fontSize: 16, fontWeight: '700' },
-    monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 12 },
+    monthGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      rowGap: 8,
+      paddingBottom: 8,
+    },
     monthCard: {
-      width: '31%',
-      minHeight: 44,
+      width: '32%',
+      minHeight: 54,
       borderRadius: 10,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
     },
     monthCardTxt: { fontSize: 13, fontWeight: '600' },
+    monthModalScreen: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' },
+    monthModalBackdrop: { flex: 1 },
+    monthModalSheet: {
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      borderTopWidth: 1,
+      overflow: 'hidden',
+    },
+    monthModalHeader: {
+      height: 56,
+      borderBottomWidth: 1,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    monthModalCloseBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    monthModalTitle: { fontSize: 15, fontWeight: '700' },
+    monthModalSpacer: { width: 36, height: 36 },
+    monthModalContent: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 14 },
     itemCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8 },
     itemTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     itemTitle: { flex: 1, fontSize: 14, fontWeight: '600' },
@@ -808,49 +841,68 @@ export function FinancialScreen() {
         </View>
       </View>
 
-      <BottomSheet
+      <Modal
         visible={monthPickerOpen}
-        onClose={() => setMonthPickerOpen(false)}
-        title={monthPickerTitle}
-        maxHeight="62%"
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMonthPickerOpen(false)}
       >
-        <View style={s.monthPickerYearRow}>
-          <TouchableOpacity
-            style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
-            onPress={() => setMonthPickerYear(prev => prev - 1)}
+        <View style={s.monthModalScreen}>
+          <TouchableOpacity style={s.monthModalBackdrop} activeOpacity={1} onPress={() => setMonthPickerOpen(false)} />
+          <SafeAreaView
+            style={[s.monthModalSheet, { backgroundColor: theme.surface, borderTopColor: theme.text + '12' }]}
           >
-            <Feather name="chevron-left" size={16} color={theme.text + '80'} />
-          </TouchableOpacity>
-          <Text style={[s.monthPickerYearTxt, { color: theme.text }]}>{monthPickerYear}</Text>
-          <TouchableOpacity
-            style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
-            onPress={() => setMonthPickerYear(prev => prev + 1)}
-          >
-            <Feather name="chevron-right" size={16} color={theme.text + '80'} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={s.monthGrid}>
-          {MONTH_SHORT_LABELS.map((label, idx) => {
-            const active = monthPickerYear === monthPickerSelected.year && idx === monthPickerSelected.monthIndex
-            return (
+            <View style={[s.monthModalHeader, { borderBottomColor: theme.text + '10' }]}>
               <TouchableOpacity
-                key={label}
-                style={[
-                  s.monthCard,
-                  active
-                    ? { borderColor: theme.primary, backgroundColor: theme.primary + '18' }
-                    : { borderColor: theme.text + '20', backgroundColor: theme.text + '08' },
-                ]}
-                onPress={() => selectMonth(idx)}
+                style={[s.monthModalCloseBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
+                onPress={() => setMonthPickerOpen(false)}
               >
-                <Text style={[s.monthCardTxt, { color: active ? theme.primary : theme.text + '90' }]}>{label}</Text>
+                <Feather name="x" size={16} color={theme.text + '80'} />
               </TouchableOpacity>
-            )
-          })}
-        </View>
-      </BottomSheet>
+              <Text style={[s.monthModalTitle, { color: theme.text }]}>{monthPickerTitle}</Text>
+              <View style={s.monthModalSpacer} />
+            </View>
 
+            <View style={s.monthModalContent}>
+              <View style={s.monthPickerYearRow}>
+                <TouchableOpacity
+                  style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
+                  onPress={() => setMonthPickerYear(prev => prev - 1)}
+                >
+                  <Feather name="chevron-left" size={16} color={theme.text + '80'} />
+                </TouchableOpacity>
+                <Text style={[s.monthPickerYearTxt, { color: theme.text }]}>{monthPickerYear}</Text>
+                <TouchableOpacity
+                  style={[s.monthPickerYearBtn, { borderColor: theme.text + '20', backgroundColor: theme.text + '08' }]}
+                  onPress={() => setMonthPickerYear(prev => prev + 1)}
+                >
+                  <Feather name="chevron-right" size={16} color={theme.text + '80'} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={s.monthGrid}>
+                {MONTH_SHORT_LABELS.map((label, idx) => {
+                  const active = monthPickerYear === monthPickerSelected.year && idx === monthPickerSelected.monthIndex
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      style={[
+                        s.monthCard,
+                        active
+                          ? { borderColor: theme.primary, backgroundColor: theme.primary + '18' }
+                          : { borderColor: theme.text + '20', backgroundColor: theme.text + '08' },
+                      ]}
+                      onPress={() => selectMonth(idx)}
+                    >
+                      <Text style={[s.monthCardTxt, { color: active ? theme.primary : theme.text + '90' }]}>{label}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
       <BottomSheet visible={showEntrySheet} onClose={() => setShowEntrySheet(false)} title={{ expense: 'Nova despesa', bill: 'Nova conta', income: 'Nova receita' }[sheetType]} onSave={handleSaveEntry}>
         {sheetType === 'income'
           ? <FormInput label="Fonte" value={entryForm.source} onChangeText={value => setEntryForm(prev => ({ ...prev, source: value }))} placeholder="Ex: Salario" autoFocus />
