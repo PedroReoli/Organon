@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -119,6 +119,7 @@ export function CRMScreen() {
     time: hhmmNow(),
   })
   const [form, setForm] = useState<ContactFormState>(createEmptyForm())
+  const pipelinePagerRef = useRef<ScrollView>(null)
 
   const normalizedSearch = search.trim().toLowerCase()
 
@@ -187,6 +188,17 @@ export function CRMScreen() {
   const pipelinePageWidth = Math.max(240, viewportWidth - 24)
   const activeTimelinePage = Math.min(timelinePage, Math.max(0, timelinePages.length - 1))
   const activePipelinePage = Math.min(pipelinePage, Math.max(0, pipelineStagePages.length - 1))
+  const activePipelineStages = pipelineStagePages[activePipelinePage] ?? []
+  const hasPipelinePrevPage = activePipelinePage > 0
+  const hasPipelineNextPage = activePipelinePage < Math.max(0, pipelineStagePages.length - 1)
+
+  const stagePageIndexMap = useMemo(() => {
+    const map = new Map<CRMStageId, number>()
+    pipelineStagePages.forEach((pair, pageIndex) => {
+      pair.forEach(stage => map.set(stage.id, pageIndex))
+    })
+    return map
+  }, [pipelineStagePages])
 
   const allTags = useMemo(() => [...store.crmTags].sort((a, b) => a.name.localeCompare(b.name)), [store.crmTags])
 
@@ -357,6 +369,24 @@ export function CRMScreen() {
     setPipelinePage(safeIndex)
   }
 
+  const goToPipelinePage = (nextPage: number) => {
+    if (pipelineStagePages.length === 0) return
+    const safePage = Math.max(0, Math.min(pipelineStagePages.length - 1, nextPage))
+    setPipelinePage(safePage)
+    pipelinePagerRef.current?.scrollTo({ x: safePage * pipelinePageWidth, animated: true })
+  }
+
+  const goToPipelineStage = (stageId: CRMStageId) => {
+    const pageIndex = stagePageIndexMap.get(stageId)
+    if (pageIndex === undefined) return
+    goToPipelinePage(pageIndex)
+  }
+
+  useEffect(() => {
+    if (tab !== 'pipeline') return
+    pipelinePagerRef.current?.scrollTo({ x: activePipelinePage * pipelinePageWidth, animated: false })
+  }, [tab, activePipelinePage, pipelinePageWidth])
+
   const openWhatsApp = async (phone: string | null) => {
     const digits = (phone ?? '').replace(/\D/g, '')
     if (!digits) {
@@ -499,24 +529,24 @@ export function CRMScreen() {
   const renderPipeline = () => (
     <View style={s.pipelineWrap}>
       <ScrollView
+        ref={pipelinePagerRef}
         horizontal
         pagingEnabled
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handlePipelineMomentumEnd}
         style={s.pipelinePager}
+        contentContainerStyle={s.pipelinePagerContent}
       >
         {pipelineStagePages.map((stagePair, pageIndex) => (
-          <ScrollView
+          <View
             key={`pipeline-page-${pageIndex}`}
             style={[s.pipelinePage, { width: pipelinePageWidth }]}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 96 }}
           >
             {stagePair.map(stage => {
               const contacts = contactsByStage[stage.id] ?? []
               return (
-                <View key={stage.id} style={[s.panel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
+                <View key={stage.id} style={[s.panel, s.pipelinePanel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
                   <View style={s.pipelineHeader}>
                     <Text style={[s.panelTitle, { color: theme.text }]}>{stage.label}</Text>
                     <View style={[s.badge, { borderColor: theme.text + '25', backgroundColor: theme.text + '08' }]}>
@@ -524,56 +554,103 @@ export function CRMScreen() {
                     </View>
                   </View>
                   {contacts.length === 0 ? (
-                    <Text style={[s.itemMeta, { color: theme.text + '65' }]}>Sem contatos neste estagio.</Text>
+                    <View style={s.pipelineEmptyWrap}>
+                      <Text style={[s.itemMeta, { color: theme.text + '65' }]}>Sem contatos neste estagio.</Text>
+                    </View>
                   ) : (
-                    contacts.map(contact => {
-                      const priColor = CRM_PRIORITY_COLORS[contact.priority]
-                      return (
-                        <TouchableOpacity
-                          key={contact.id}
-                          style={[s.pipelineCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}
-                          onPress={() => openEdit(contact)}
-                          activeOpacity={0.92}
-                        >
-                          <View style={s.itemTop}>
-                            <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{contact.name}</Text>
-                            <View style={[s.priDot, { backgroundColor: priColor }]} />
-                          </View>
-                          {!!contact.company && <Text style={[s.itemMeta, { color: theme.text + '75' }]} numberOfLines={1}>{contact.company}</Text>}
-                          <View style={s.actionRow}>
-                            <TouchableOpacity style={[s.iconBtn, { borderColor: '#22c55e66', backgroundColor: '#22c55e14' }]} onPress={() => void openWhatsApp(contact.phone)}>
-                              <Feather name="message-circle" size={13} color="#22c55e" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[s.iconBtn, { borderColor: '#60a5fa66', backgroundColor: '#60a5fa14' }]} onPress={() => void makeCall(contact.phone)}>
-                              <Feather name="phone" size={13} color="#60a5fa" />
-                            </TouchableOpacity>
-                          </View>
-                        </TouchableOpacity>
-                      )
-                    })
+                    <ScrollView style={s.pipelineContactsList} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                      {contacts.map(contact => {
+                        const priColor = CRM_PRIORITY_COLORS[contact.priority]
+                        return (
+                          <TouchableOpacity
+                            key={contact.id}
+                            style={[s.pipelineCard, { borderColor: theme.text + '14', backgroundColor: theme.background }]}
+                            onPress={() => openEdit(contact)}
+                            activeOpacity={0.92}
+                          >
+                            <View style={s.itemTop}>
+                              <Text style={[s.itemTitle, { color: theme.text }]} numberOfLines={1}>{contact.name}</Text>
+                              <View style={[s.priDot, { backgroundColor: priColor }]} />
+                            </View>
+                            {!!contact.company && <Text style={[s.itemMeta, { color: theme.text + '75' }]} numberOfLines={1}>{contact.company}</Text>}
+                            <View style={s.actionRow}>
+                              <TouchableOpacity style={[s.iconBtn, { borderColor: '#22c55e66', backgroundColor: '#22c55e14' }]} onPress={() => void openWhatsApp(contact.phone)}>
+                                <Feather name="message-circle" size={13} color="#22c55e" />
+                              </TouchableOpacity>
+                              <TouchableOpacity style={[s.iconBtn, { borderColor: '#60a5fa66', backgroundColor: '#60a5fa14' }]} onPress={() => void makeCall(contact.phone)}>
+                                <Feather name="phone" size={13} color="#60a5fa" />
+                              </TouchableOpacity>
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </ScrollView>
                   )}
                 </View>
               )
             })}
-          </ScrollView>
+          </View>
         ))}
       </ScrollView>
 
-      {pipelineStagePages.length > 1 && (
-        <View style={s.pipelineDotsRow}>
-          {pipelineStagePages.map((_, index) => (
-            <View
-              key={`pipeline-dot-${index}`}
-              style={[
-                s.pipelineDot,
-                index === activePipelinePage
-                  ? { backgroundColor: theme.primary, width: 18 }
-                  : { backgroundColor: theme.text + '35', width: 7 },
-              ]}
-            />
-          ))}
+      <View style={[s.pipelineFooter, { borderColor: theme.text + '12', backgroundColor: theme.surface }]}>
+        <View style={s.pipelineFooterTopRow}>
+          <TouchableOpacity
+            style={[
+              s.pipelineFooterNavBtn,
+              { borderColor: theme.text + '20', backgroundColor: hasPipelinePrevPage ? theme.text + '08' : theme.text + '05', opacity: hasPipelinePrevPage ? 1 : 0.45 },
+            ]}
+            onPress={() => goToPipelinePage(activePipelinePage - 1)}
+            disabled={!hasPipelinePrevPage}
+          >
+            <Feather name="chevron-left" size={14} color={theme.text + 'c0'} />
+            <Text style={[s.pipelineFooterNavTxt, { color: theme.text + 'c0' }]}>Anterior</Text>
+          </TouchableOpacity>
+
+          <View style={s.pipelineFooterCenter}>
+            <Text style={[s.pipelineFooterTitle, { color: theme.text }]}>
+              {activePipelineStages.map(stage => stage.label).join(' • ') || 'Pipeline'}
+            </Text>
+            <Text style={[s.pipelineFooterSubtitle, { color: theme.text + '70' }]}>
+              Pagina {activePipelinePage + 1} de {Math.max(1, pipelineStagePages.length)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              s.pipelineFooterNavBtn,
+              { borderColor: theme.primary + '44', backgroundColor: hasPipelineNextPage ? theme.primary + '18' : theme.primary + '0f', opacity: hasPipelineNextPage ? 1 : 0.45 },
+            ]}
+            onPress={() => goToPipelinePage(activePipelinePage + 1)}
+            disabled={!hasPipelineNextPage}
+          >
+            <Text style={[s.pipelineFooterNavTxt, { color: theme.primary }]}>Proximo</Text>
+            <Feather name="chevron-right" size={14} color={theme.primary} />
+          </TouchableOpacity>
         </View>
-      )}
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pipelineLevelChips}>
+          {CRM_STAGES.map(stage => {
+            const active = activePipelineStages.some(item => item.id === stage.id)
+            return (
+              <TouchableOpacity
+                key={`pipeline-level-${stage.id}`}
+                style={[
+                  s.pipelineLevelChip,
+                  active
+                    ? { borderColor: theme.primary, backgroundColor: theme.primary + '1a' }
+                    : { borderColor: theme.text + '24', backgroundColor: theme.text + '08' },
+                ]}
+                onPress={() => goToPipelineStage(stage.id)}
+              >
+                <Text style={[s.pipelineLevelChipTxt, { color: active ? theme.primary : theme.text + '86' }]}>
+                  {stage.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+      </View>
     </View>
   )
 
@@ -809,11 +886,23 @@ export function CRMScreen() {
     iconBtn: { width: 32, height: 32, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     pipelineWrap: { flex: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 },
     pipelinePager: { flex: 1 },
-    pipelinePage: { paddingRight: 10 },
+    pipelinePagerContent: { alignItems: 'stretch' },
+    pipelinePage: { paddingRight: 10, height: '100%', gap: 10 },
+    pipelinePanel: { flex: 1, marginBottom: 0 },
     pipelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+    pipelineEmptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+    pipelineContactsList: { flex: 1 },
     pipelineCard: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 7 },
-    pipelineDotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 },
-    pipelineDot: { height: 7, borderRadius: 99 },
+    pipelineFooter: { borderWidth: 1, borderRadius: 12, padding: 10, marginTop: 8 },
+    pipelineFooterTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    pipelineFooterCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    pipelineFooterTitle: { fontSize: 12.5, fontWeight: '700', textAlign: 'center' },
+    pipelineFooterSubtitle: { fontSize: 11.5, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+    pipelineFooterNavBtn: { minHeight: 34, borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
+    pipelineFooterNavTxt: { fontSize: 12, fontWeight: '700' },
+    pipelineLevelChips: { paddingTop: 9, gap: 7 },
+    pipelineLevelChip: { borderWidth: 1, borderRadius: 999, minHeight: 30, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
+    pipelineLevelChipTxt: { fontSize: 11.5, fontWeight: '700' },
     sheetTopActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
     sheetHint: { flex: 1, fontSize: 12.5, fontWeight: '600' },
     sheetCancelBtn: {
