@@ -182,7 +182,10 @@ export interface Note {
   title: string
   mdPath: string           // Caminho relativo do arquivo .md
   folderId: string | null
+  parentNoteId: string | null  // Para subpáginas (nota dentro de nota)
   projectId: string | null // vinculo com projeto
+  isPinned: boolean
+  isFavorite: boolean
   createdAt: string
   updatedAt: string
   order: number

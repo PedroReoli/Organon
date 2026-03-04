@@ -303,7 +303,13 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
       : base.calendarEvents,
     noteFolders: Array.isArray(input.noteFolders) ? input.noteFolders : base.noteFolders,
     notes: Array.isArray(input.notes)
-      ? input.notes.map(n => ({ ...n, projectId: (n as Note & { projectId?: string | null }).projectId ?? null }))
+      ? input.notes.map(n => ({
+        ...n,
+        projectId: (n as Note & { projectId?: string | null }).projectId ?? null,
+        parentNoteId: (n as Note & { parentNoteId?: string | null }).parentNoteId ?? null,
+        isPinned: Boolean((n as Note & { isPinned?: boolean }).isPinned),
+        isFavorite: Boolean((n as Note & { isFavorite?: boolean }).isFavorite),
+      }))
       : base.notes,
     colorPalettes: Array.isArray((input as Partial<Store> & { colorPalettes?: ColorPalette[] }).colorPalettes)
       ? (input as Partial<Store> & { colorPalettes?: ColorPalette[] }).colorPalettes as ColorPalette[]
@@ -1086,7 +1092,7 @@ export const useStore = () => {
     }))
   }, [updateStore])
 
-  const addNote = useCallback((title: string, folderId?: string | null, projectId?: string | null) => {
+  const addNote = useCallback((title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => {
     const now = new Date().toISOString()
     const id = generateId()
     const newNote: Note = {
@@ -1094,7 +1100,10 @@ export const useStore = () => {
       title: title.trim(),
       mdPath: `${id}.md`,
       folderId: folderId ?? null,
+      parentNoteId: parentNoteId ?? null,
       projectId: projectId ?? null,
+      isPinned: false,
+      isFavorite: false,
       createdAt: now,
       updatedAt: now,
       order: Date.now(),
@@ -1106,12 +1115,32 @@ export const useStore = () => {
     return newNote
   }, [updateStore])
 
-  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order'>>) => {
+  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => {
     updateStore(prev => ({
       ...prev,
       notes: prev.notes.map(note => {
         if (note.id !== noteId) return note
         return { ...note, ...updates, updatedAt: new Date().toISOString() }
+      }),
+    }))
+  }, [updateStore])
+
+  const toggleNoteFavorite = useCallback((noteId: string) => {
+    updateStore(prev => ({
+      ...prev,
+      notes: prev.notes.map(note => {
+        if (note.id !== noteId) return note
+        return { ...note, isFavorite: !note.isFavorite, updatedAt: new Date().toISOString() }
+      }),
+    }))
+  }, [updateStore])
+
+  const toggleNotePinned = useCallback((noteId: string) => {
+    updateStore(prev => ({
+      ...prev,
+      notes: prev.notes.map(note => {
+        if (note.id !== noteId) return note
+        return { ...note, isPinned: !note.isPinned, updatedAt: new Date().toISOString() }
       }),
     }))
   }, [updateStore])
@@ -1969,6 +1998,8 @@ export const useStore = () => {
     reorderNoteFolders,
     addNote,
     updateNote,
+    toggleNoteFavorite,
+    toggleNotePinned,
     reorderNotes,
     removeNote,
     addColorPalette,

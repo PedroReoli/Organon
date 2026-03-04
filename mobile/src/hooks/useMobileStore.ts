@@ -243,7 +243,8 @@ export function StoreProvider({ children, onStoreChange }: {
   const addNote = useCallback((data: Partial<Note>): Note => {
     const note: Note = {
       id: uid(), title: 'Nova nota', content: '',
-      folderId: null, projectId: null, order: 0,
+      folderId: null, parentNoteId: null, projectId: null,
+      isPinned: false, isFavorite: false, order: 0,
       createdAt: now(), updatedAt: now(), ...data,
     }
     updateStore(s => ({ ...s, notes: [...s.notes, note] }))
@@ -590,7 +591,10 @@ export function StoreProvider({ children, onStoreChange }: {
         title: n.title ?? '',
         content: n.content ?? '',
         folderId: n.folderId ?? null,
+        parentNoteId: n.parentNoteId ?? null,
         projectId: n.projectId ?? null,
+        isPinned: Boolean(n.isPinned),
+        isFavorite: Boolean(n.isFavorite),
         createdAt: n.createdAt ?? new Date().toISOString(),
         updatedAt: n.updatedAt ?? new Date().toISOString(),
         order: n.order ?? 0,

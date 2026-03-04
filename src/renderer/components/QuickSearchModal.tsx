@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CalendarEvent, Card, FileItem, Note, ShortcutItem } from '../types'
-import { formatDateFull, formatDateShort } from '../utils'
+import { formatDateFull, formatDateShort, isElectron } from '../utils'
 import type { AppView } from './InternalNav'
 
 type QuickResult =
@@ -8,7 +8,7 @@ type QuickResult =
   | { kind: 'event'; id: string; sourceId?: string; title: string; date: string; time: string | null }
   | { kind: 'shortcut'; id: string; title: string; url: string }
   | { kind: 'file'; id: string; name: string; meta: string }
-  | { kind: 'note'; id: string; title: string }
+  | { kind: 'note'; id: string; title: string; excerpt?: string }
 
 interface QuickSearchModalProps {
   cards: Card[]
@@ -42,8 +42,10 @@ export const QuickSearchModal = ({
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; result: QuickResult } | null>(null)
+  const [noteContentResults, setNoteContentResults] = useState<{ id: string; title: string; excerpt: string }[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -75,6 +77,44 @@ export const QuickSearchModal = ({
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [contextMenu])
+
+  // Async full-text note content search
+  useEffect(() => {
+    const q = query.trim().toLowerCase()
+    if (!q || !isElectron()) {
+      setNoteContentResults([])
+      return
+    }
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      const contentHits: { id: string; title: string; excerpt: string }[] = []
+      const titleMatchIds = new Set(notes.filter(n => n.title.toLowerCase().includes(q)).map(n => n.id))
+
+      for (const note of notes) {
+        if (titleMatchIds.has(note.id)) continue
+        try {
+          const content = await window.electronAPI.readNote(note.mdPath)
+          const plain = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+          const idx = plain.toLowerCase().indexOf(q)
+          if (idx === -1) continue
+          const start = Math.max(0, idx - 30)
+          const end = Math.min(plain.length, idx + q.length + 60)
+          const excerpt = (start > 0 ? '…' : '') + plain.slice(start, end) + (end < plain.length ? '…' : '')
+          contentHits.push({ id: note.id, title: note.title, excerpt })
+          if (contentHits.length >= 10) break
+        } catch {
+          // skip
+        }
+      }
+      setNoteContentResults(contentHits)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [query, notes])
 
   const results = useMemo<QuickResult[]>(() => {
     const q = query.trim().toLowerCase()
@@ -122,13 +162,20 @@ export const QuickSearchModal = ({
       })
     }
 
+    // Notes by title (exact match first)
     for (const n of notes) {
       if (!n.title.toLowerCase().includes(q)) continue
       res.push({ kind: 'note', id: n.id, title: n.title })
     }
 
+    // Notes by content (async results)
+    for (const hit of noteContentResults) {
+      if (res.some(r => r.kind === 'note' && r.id === hit.id)) continue
+      res.push({ kind: 'note', id: hit.id, title: hit.title, excerpt: hit.excerpt })
+    }
+
     return res.slice(0, 30)
-  }, [query, cards, events, shortcuts, files, notes])
+  }, [query, cards, events, shortcuts, files, notes, noteContentResults])
 
   useEffect(() => {
     setActiveIndex(0)
@@ -261,7 +308,7 @@ export const QuickSearchModal = ({
                 {r.kind === 'event' && `${formatDateFull(r.date)}${r.time ? ` • ${r.time}` : ''}`}
                 {r.kind === 'shortcut' && r.url}
                 {r.kind === 'file' && r.meta}
-                {r.kind === 'note' && 'Abrir em Notas'}
+                {r.kind === 'note' && (r.excerpt ? r.excerpt : 'Abrir em Notas')}
               </div>
             </button>
           ))}

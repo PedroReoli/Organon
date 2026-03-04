@@ -96,6 +96,8 @@ export const App = () => {
     reorderNoteFolders,
     addNote,
     updateNote,
+    toggleNoteFavorite,
+    toggleNotePinned,
     reorderNotes,
     removeNote,
     addColorPalette,
@@ -671,6 +673,8 @@ export const App = () => {
               folders={noteFolders}
               onAddNote={addNote}
               onUpdateNote={updateNote}
+              onToggleFavorite={toggleNoteFavorite}
+              onTogglePinned={toggleNotePinned}
               onReorderNotes={reorderNotes}
               onReorderFolders={reorderNoteFolders}
               onRemoveNote={removeNote}

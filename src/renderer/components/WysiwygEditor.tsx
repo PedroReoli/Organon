@@ -1,4 +1,4 @@
-import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
@@ -29,6 +29,7 @@ interface WysiwygEditorProps {
   onChange: (html: string) => void
   placeholder?: string
   mode?: 'compact' | 'full'
+  currentNoteId?: string
 }
 
 const PRESET_COLORS = [
@@ -356,6 +357,179 @@ const ResizableImage = Image.extend({
   },
 })
 
+// ---- ToggleBlock extension ----
+
+interface ToggleNodeViewProps extends NodeViewProps {
+  node: NodeViewProps['node'] & { attrs: { summary: string } }
+}
+
+const ToggleBlockView = ({ node, updateAttributes, getPos, editor }: ToggleNodeViewProps) => {
+  const [open, setOpen] = useState(true)
+  const summary = (node.attrs as { summary: string }).summary || 'Título do bloco'
+
+  return (
+    <NodeViewWrapper className="toggle-block">
+      <div className="toggle-block-summary" contentEditable={false}>
+        <button
+          className="toggle-block-arrow"
+          onClick={() => setOpen(o => !o)}
+          aria-label={open ? 'Recolher' : 'Expandir'}
+          style={{ transform: open ? 'rotate(90deg)' : 'none' }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+        <input
+          className="toggle-block-title"
+          value={summary}
+          placeholder="Título do bloco..."
+          onChange={e => updateAttributes({ summary: e.target.value })}
+          onClick={e => e.stopPropagation()}
+        />
+        <button
+          className="toggle-block-delete"
+          contentEditable={false}
+          onClick={() => {
+            const pos = typeof getPos === 'function' ? getPos() : null
+            if (pos != null) {
+              editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+            }
+          }}
+          title="Remover bloco"
+        >
+          &times;
+        </button>
+      </div>
+      {open && (
+        <div className="toggle-block-content">
+          <NodeViewContent />
+        </div>
+      )}
+    </NodeViewWrapper>
+  )
+}
+
+import { Node as TiptapNode } from '@tiptap/core'
+
+const ToggleBlock = TiptapNode.create({
+  name: 'toggleBlock',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  addAttributes() {
+    return {
+      summary: { default: 'Título do bloco' },
+    }
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="toggle-block"]' }]
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'toggle-block' }), 0]
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ToggleBlockView as unknown as React.ComponentType<any>)
+  },
+})
+
+// ---- PasswordBlock extension ----
+
+const PasswordBlockView = ({ node, getPos, editor }: NodeViewProps) => {
+  const [revealed, setRevealed] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState((node.attrs as { text: string }).text || '')
+
+  const saveText = () => {
+    const pos = typeof getPos === 'function' ? getPos() : null
+    if (pos != null) {
+      editor.chain().focus().command(({ tr }) => {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, text })
+        return true
+      }).run()
+    }
+    setEditing(false)
+  }
+
+  return (
+    <NodeViewWrapper className="password-block" contentEditable={false}>
+      <span className="password-block-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </span>
+      {editing ? (
+        <input
+          className="password-block-edit-input"
+          autoFocus
+          type="text"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onBlur={saveText}
+          onKeyDown={e => { if (e.key === 'Enter') saveText(); if (e.key === 'Escape') { setText((node.attrs as { text: string }).text || ''); setEditing(false) } }}
+        />
+      ) : (
+        <span
+          className="password-block-text"
+          onClick={() => revealed && setEditing(true)}
+          title={revealed ? 'Clique para editar' : 'Clique no olho para revelar'}
+        >
+          {revealed ? (text || '(vazio)') : '●'.repeat(Math.max(6, text.length || 8))}
+        </span>
+      )}
+      <button
+        className="password-block-toggle"
+        onClick={() => setRevealed(r => !r)}
+        title={revealed ? 'Ocultar' : 'Revelar'}
+      >
+        {revealed ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </button>
+      <button
+        className="toggle-block-delete"
+        onClick={() => {
+          const pos = typeof getPos === 'function' ? getPos() : null
+          if (pos != null) {
+            editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+          }
+        }}
+        title="Remover bloco"
+      >
+        &times;
+      </button>
+    </NodeViewWrapper>
+  )
+}
+
+const PasswordBlock = TiptapNode.create({
+  name: 'passwordBlock',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      text: { default: '' },
+    }
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="password-block"]' }]
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'password-block' })]
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(PasswordBlockView)
+  },
+})
+
 const getExtensions = (mode: 'compact' | 'full', placeholderText: string) => {
   const base = [
     StarterKit.configure({
@@ -387,6 +561,8 @@ const getExtensions = (mode: 'compact' | 'full', placeholderText: string) => {
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       ResizableImage.configure({ inline: false, allowBase64: true }),
       Color,
+      ToggleBlock,
+      PasswordBlock,
     ]
   }
 
@@ -580,6 +756,58 @@ const SLASH_COMMANDS: SlashCommand[] = [
     ),
     action: (_ed) => {
       document.dispatchEvent(new CustomEvent('slash-insert-link'))
+    },
+  },
+  {
+    id: 'toggle',
+    label: 'Bloco recolhível',
+    description: 'Bloco que expande e recolhe',
+    keywords: ['toggle', 'recolhivel', 'collapsible', 'detalhe', 'details'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <polyline points="6 4 10 8 6 12" />
+        <line x1="2" y1="8" x2="14" y2="8" strokeOpacity="0.3" />
+      </svg>
+    ),
+    action: ed => {
+      ed.chain().focus().insertContent({
+        type: 'toggleBlock',
+        attrs: { summary: 'Título do bloco' },
+        content: [{ type: 'paragraph' }],
+      }).run()
+    },
+  },
+  {
+    id: 'password',
+    label: 'Senha / Oculto',
+    description: 'Bloco mascarado com bolinhas',
+    keywords: ['password', 'senha', 'oculto', 'secret', 'secreto', 'masked'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <rect x="2" y="7" width="12" height="8" rx="1.5" />
+        <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+      </svg>
+    ),
+    action: ed => {
+      ed.chain().focus().insertContent({
+        type: 'passwordBlock',
+        attrs: { text: '' },
+      }).run()
+    },
+  },
+  {
+    id: 'page',
+    label: 'Subpágina',
+    description: 'Criar uma nota dentro desta nota',
+    keywords: ['page', 'pagina', 'subpage', 'subpagina', 'nested'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <path d="M3 14V4l3-3h7v13H3Z" /><path d="M6 1v3H3" />
+        <line x1="6" y1="8" x2="10" y2="8" /><line x1="8" y1="6" x2="8" y2="10" />
+      </svg>
+    ),
+    action: (_ed) => {
+      document.dispatchEvent(new CustomEvent('slash-create-subpage'))
     },
   },
 ]
@@ -1478,6 +1706,7 @@ export const WysiwygEditor = ({
   onChange,
   placeholder = 'Escreva uma descricao detalhada...',
   mode = 'compact',
+  currentNoteId,
 }: WysiwygEditorProps) => {
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -1691,6 +1920,15 @@ export const WysiwygEditor = ({
   useEffect(() => {
     return () => clearLinkCopiedTimeout()
   }, [clearLinkCopiedTimeout])
+
+  useEffect(() => {
+    if (!currentNoteId) return
+    const handler = () => {
+      document.dispatchEvent(new CustomEvent('notes-create-subpage', { detail: { parentNoteId: currentNoteId } }))
+    }
+    document.addEventListener('slash-create-subpage', handler)
+    return () => document.removeEventListener('slash-create-subpage', handler)
+  }, [currentNoteId])
 
   const handleOpenLink = () => {
     if (!linkQuickMenu) return

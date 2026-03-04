@@ -103,7 +103,10 @@ export interface Note {
   title: string
   content: string           // Mobile: conteúdo inline (não em arquivo .md)
   folderId: string | null
+  parentNoteId: string | null  // Para subpáginas (nota dentro de nota)
   projectId: string | null
+  isPinned: boolean
+  isFavorite: boolean
   createdAt: string
   updatedAt: string
   order: number

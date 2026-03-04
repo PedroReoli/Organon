@@ -62,6 +62,16 @@ const SHEET_TABS: Array<{ id: SheetTab; label: string }> = [
   { id: 'links', label: 'Vinculos' },
 ]
 const TAG_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899']
+const PIPELINE_STAGE_LABELS: Partial<Record<CRMStageId, string>> = {
+  prospeccao: 'Prospeccao',
+  qualificado: 'Qualificacao',
+  'primeiro-contato': 'Contato Inicial',
+  analise: 'Diagnostico',
+  'proposta-enviada': 'Proposta',
+  negociacao: 'Negociacao',
+  'cliente-ativo': 'Cliente Ativo',
+  perdeu: 'Encerrado',
+}
 
 function emptyLinks(): CRMContactLinks {
   return { noteIds: [], calendarEventIds: [], cardIds: [] }
@@ -201,6 +211,7 @@ export function CRMScreen() {
   }, [pipelineStagePages])
 
   const allTags = useMemo(() => [...store.crmTags].sort((a, b) => a.name.localeCompare(b.name)), [store.crmTags])
+  const getPipelineStageLabel = (stageId: CRMStageId, fallback: string) => PIPELINE_STAGE_LABELS[stageId] ?? fallback
 
   const openNew = () => {
     setEditingContact(null)
@@ -545,10 +556,11 @@ export function CRMScreen() {
           >
             {stagePair.map(stage => {
               const contacts = contactsByStage[stage.id] ?? []
+              const stageLabel = getPipelineStageLabel(stage.id, stage.label)
               return (
                 <View key={stage.id} style={[s.panel, s.pipelinePanel, { backgroundColor: theme.surface, borderColor: theme.text + '14' }]}>
                   <View style={s.pipelineHeader}>
-                    <Text style={[s.panelTitle, { color: theme.text }]}>{stage.label}</Text>
+                    <Text style={[s.panelTitle, { color: theme.text }]}>{stageLabel}</Text>
                     <View style={[s.badge, { borderColor: theme.text + '25', backgroundColor: theme.text + '08' }]}>
                       <Text style={[s.badgeTxt, { color: theme.text + '85' }]}>{contacts.length}</Text>
                     </View>
@@ -603,19 +615,11 @@ export function CRMScreen() {
             onPress={() => goToPipelinePage(activePipelinePage - 1)}
             disabled={!hasPipelinePrevPage}
           >
-            <Feather name="chevron-left" size={14} color={theme.text + 'c0'} />
-            <Text style={[s.pipelineFooterNavTxt, { color: theme.text + 'c0' }]}>Anterior</Text>
+            <Feather name="chevron-left" size={26} color={theme.text + 'c0'} />
           </TouchableOpacity>
-
-          <View style={s.pipelineFooterCenter}>
-            <Text style={[s.pipelineFooterTitle, { color: theme.text }]}>
-              {activePipelineStages.map(stage => stage.label).join(' • ') || 'Pipeline'}
-            </Text>
-            <Text style={[s.pipelineFooterSubtitle, { color: theme.text + '70' }]}>
-              Pagina {activePipelinePage + 1} de {Math.max(1, pipelineStagePages.length)}
-            </Text>
-          </View>
-
+          <TouchableOpacity style={[s.pipelineFooterCreateBtn, { backgroundColor: theme.primary }]} onPress={openNew}>
+            <Feather name="plus" size={24} color="#fff" />
+          </TouchableOpacity>
           <TouchableOpacity
             style={[
               s.pipelineFooterNavBtn,
@@ -624,14 +628,13 @@ export function CRMScreen() {
             onPress={() => goToPipelinePage(activePipelinePage + 1)}
             disabled={!hasPipelineNextPage}
           >
-            <Text style={[s.pipelineFooterNavTxt, { color: theme.primary }]}>Proximo</Text>
-            <Feather name="chevron-right" size={14} color={theme.primary} />
+            <Feather name="chevron-right" size={26} color={theme.primary} />
           </TouchableOpacity>
         </View>
-
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pipelineLevelChips}>
           {CRM_STAGES.map(stage => {
             const active = activePipelineStages.some(item => item.id === stage.id)
+            const stageLabel = getPipelineStageLabel(stage.id, stage.label)
             return (
               <TouchableOpacity
                 key={`pipeline-level-${stage.id}`}
@@ -644,7 +647,7 @@ export function CRMScreen() {
                 onPress={() => goToPipelineStage(stage.id)}
               >
                 <Text style={[s.pipelineLevelChipTxt, { color: active ? theme.primary : theme.text + '86' }]}>
-                  {stage.label}
+                  {stageLabel}
                 </Text>
               </TouchableOpacity>
             )
@@ -894,12 +897,9 @@ export function CRMScreen() {
     pipelineContactsList: { flex: 1 },
     pipelineCard: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 7 },
     pipelineFooter: { borderWidth: 1, borderRadius: 12, padding: 10, marginTop: 8 },
-    pipelineFooterTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    pipelineFooterCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    pipelineFooterTitle: { fontSize: 12.5, fontWeight: '700', textAlign: 'center' },
-    pipelineFooterSubtitle: { fontSize: 11.5, fontWeight: '600', marginTop: 2, textAlign: 'center' },
-    pipelineFooterNavBtn: { minHeight: 34, borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
-    pipelineFooterNavTxt: { fontSize: 12, fontWeight: '700' },
+    pipelineFooterTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+    pipelineFooterNavBtn: { width: 58, height: 58, borderWidth: 1, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+    pipelineFooterCreateBtn: { flex: 1, height: 58, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     pipelineLevelChips: { paddingTop: 9, gap: 7 },
     pipelineLevelChip: { borderWidth: 1, borderRadius: 999, minHeight: 30, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
     pipelineLevelChipTxt: { fontSize: 11.5, fontWeight: '700' },
@@ -959,7 +959,7 @@ export function CRMScreen() {
               style={[s.tabBtn, active ? { borderColor: theme.primary + '55', backgroundColor: theme.primary + '18' } : { borderColor: theme.text + '22', backgroundColor: theme.text + '08' }]}
               onPress={() => {
                 setTab(item)
-                if (item === 'pipeline') setPipelinePage(0)
+                if (item === 'pipeline') goToPipelinePage(0)
               }}
             >
               <Text style={[s.tabTxt, { color: active ? theme.primary : theme.text + '85' }]}>{item === 'list' ? 'Lista' : 'Pipeline'}</Text>
@@ -970,7 +970,7 @@ export function CRMScreen() {
 
       {tab === 'list' ? renderList() : renderPipeline()}
 
-      <FAB onPress={openNew} />
+      {tab === 'list' && <FAB onPress={openNew} />}
 
       <BottomSheet
         visible={showSheet}

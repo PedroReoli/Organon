@@ -1,21 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import type { Note, NoteFolder } from '../types'
 import { isElectron } from '../utils'
 import { WysiwygEditor } from './WysiwygEditor'
@@ -23,139 +6,43 @@ import { WysiwygEditor } from './WysiwygEditor'
 interface NotesViewProps {
   notes: Note[]
   folders: NoteFolder[]
-  onAddNote: (title: string, folderId?: string | null) => Note
-  onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order'>>) => void
+  onAddNote: (title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => Note
+  onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => void
   onRemoveNote: (noteId: string) => void
   onAddFolder: (name: string, parentId?: string | null) => string
   onRemoveFolder: (folderId: string) => void
   onReorderNotes: (orderedIds: string[]) => void
   onReorderFolders: (orderedIds: string[]) => void
+  onToggleFavorite: (noteId: string) => void
+  onTogglePinned: (noteId: string) => void
   reduceModeSignal?: number
 }
 
-type FolderRow = {
-  id: string
-  name: string
-  parentId: string | null
-  depth: number
-}
+// ---- Tree rendering helpers ----
 
-// ---- Sortable note item ----
+const PageIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" style={{ flexShrink: 0, opacity: 0.7 }}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+)
 
-interface SortableNoteItemProps {
-  note: Note
-  isSelected: boolean
-  onSelect: (id: string) => void
-  onContextMenu: (e: React.MouseEvent, noteId: string) => void
-}
+const FolderIcon = ({ open }: { open: boolean }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" style={{ flexShrink: 0, opacity: 0.7 }}>
+    {open
+      ? <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="2" y1="10" x2="22" y2="10" /></>
+      : <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />}
+  </svg>
+)
 
-const SortableNoteItem = ({ note, isSelected, onSelect, onContextMenu }: SortableNoteItemProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: note.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`notes-list-item ${isSelected ? 'active' : ''} ${isDragging ? 'is-dragging' : ''}`}
-      onClick={() => onSelect(note.id)}
-      onContextMenu={e => { e.preventDefault(); onContextMenu(e, note.id) }}
-    >
-      <button
-        className="notes-dnd-handle"
-        {...attributes}
-        {...listeners}
-        onClick={e => e.stopPropagation()}
-        tabIndex={-1}
-        aria-label="Arrastar nota"
-      >
-        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
-          <circle cx="5" cy="4" r="1.5" />
-          <circle cx="11" cy="4" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="12" r="1.5" />
-          <circle cx="11" cy="12" r="1.5" />
-        </svg>
-      </button>
-      <div className="notes-item-info">
-        <span className="notes-item-title">{note.title}</span>
-        <span className="notes-item-date">
-          {new Date(note.updatedAt).toLocaleDateString()}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ---- Sortable folder item ----
-
-interface SortableFolderItemProps {
-  folder: FolderRow
-  noteCount: number
-  isSelected: boolean
-  onSelect: (id: string) => void
-  onRemove: (id: string) => void
-}
-
-const SortableFolderItem = ({ folder, noteCount, isSelected, onSelect, onRemove }: SortableFolderItemProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: folder.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`notes-folder-row ${isDragging ? 'is-dragging' : ''}`}
-    >
-      <button
-        className="notes-dnd-handle notes-folder-dnd-handle"
-        {...attributes}
-        {...listeners}
-        onClick={e => e.stopPropagation()}
-        tabIndex={-1}
-        aria-label="Arrastar pasta"
-      >
-        <svg viewBox="0 0 16 16" fill="currentColor" width="10" height="10">
-          <circle cx="5" cy="4" r="1.5" />
-          <circle cx="11" cy="4" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="12" r="1.5" />
-          <circle cx="11" cy="12" r="1.5" />
-        </svg>
-      </button>
-      <button
-        className={`notes-folder-item ${isSelected ? 'active' : ''}`}
-        onClick={() => onSelect(folder.id)}
-        style={{ paddingLeft: `${10 + folder.depth * 14}px` }}
-      >
-        <span className="notes-folder-item-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-            <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
-          </svg>
-          {folder.name}
-        </span>
-        <span className="notes-count">{noteCount}</span>
-      </button>
-      <button
-        className="notes-folder-delete"
-        onClick={() => onRemove(folder.id)}
-        title="Excluir pasta"
-      >
-        &times;
-      </button>
-    </div>
-  )
-}
+const ChevronIcon = ({ open }: { open: boolean }) => (
+  <svg
+    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="10" height="10"
+    style={{ flexShrink: 0, transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}
+  >
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+)
 
 // ---- Main component ----
 
@@ -167,673 +54,662 @@ export const NotesView = ({
   onRemoveNote,
   onAddFolder,
   onRemoveFolder,
-  onReorderNotes,
-  onReorderFolders,
+  onToggleFavorite,
+  onTogglePinned,
   reduceModeSignal,
 }: NotesViewProps) => {
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
-  const [isFoldersSidebarOpen, setIsFoldersSidebarOpen] = useState(true)
-  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(true)
-  const [newFolderName, setNewFolderName] = useState('')
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [noteContent, setNoteContent] = useState('')
-  const [contentLoaded, setContentLoaded] = useState(false)
-  const [noteContextMenu, setNoteContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
-  const [renamingNote, setRenamingNote] = useState<{ noteId: string; value: string } | null>(null)
-  const [editingTitle, setEditingTitle] = useState('')
-  const [isTitleEditing, setIsTitleEditing] = useState(false)
+  const [noteTitle, setNoteTitle] = useState('')
+  const [, setIsTitleEditing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchVisible, setSearchVisible] = useState(false)
+  const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined) // undefined = hidden
+  const [newFolderName, setNewFolderName] = useState('')
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentNoteIdRef = useRef<string | null>(null)
-  const noteContextMenuRef = useRef<HTMLDivElement>(null)
-  const renameInputRef = useRef<HTMLInputElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const newFolderInputRef = useRef<HTMLInputElement>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
   const reduceModeHandledRef = useRef<number | undefined>(reduceModeSignal)
-  const sidebarStateRef = useRef({ foldersOpen: true, notesOpen: true })
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
+
+  // ---- Tree computed ----
+
+  const favorites = useMemo(() => notes.filter(n => n.isFavorite), [notes])
+  const pinned = useMemo(() => notes.filter(n => n.isPinned && !n.isFavorite), [notes])
+
+  const rootFolders = useMemo(
+    () => folders.filter(f => !f.parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [folders],
   )
 
-  const folderRows = useMemo<FolderRow[]>(() => {
-    const byParent = new Map<string | null, NoteFolder[]>()
-    for (const folder of folders) {
-      const parentId = folder.parentId ?? null
-      const existing = byParent.get(parentId) ?? []
-      existing.push(folder)
-      byParent.set(parentId, existing)
+  const childFolders = useCallback(
+    (parentId: string) => folders.filter(f => f.parentId === parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [folders],
+  )
+
+  const notesInFolder = useCallback(
+    (folderId: string) => notes.filter(n => n.folderId === folderId && !n.parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [notes],
+  )
+
+  const rootNotes = useMemo(
+    () => notes.filter(n => !n.folderId && !n.parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [notes],
+  )
+
+  const subNotes = useCallback(
+    (parentNoteId: string) => notes.filter(n => n.parentNoteId === parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [notes],
+  )
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return []
+    return notes.filter(n => n.title.toLowerCase().includes(q)).slice(0, 30)
+  }, [searchQuery, notes])
+
+  // ---- Breadcrumb ----
+
+  const breadcrumb = useMemo(() => {
+    if (!selectedNote) return []
+    const parts: { label: string; id: string; kind: 'folder' | 'note' }[] = []
+
+    let folderId: string | null = selectedNote.folderId
+    const folderParts: typeof parts = []
+    while (folderId) {
+      const folder = folders.find(f => f.id === folderId)
+      if (!folder) break
+      folderParts.unshift({ label: folder.name, id: folder.id, kind: 'folder' })
+      folderId = folder.parentId ?? null
     }
+    parts.push(...folderParts)
 
-    for (const [, list] of byParent) {
-      list.sort((a, b) => a.order - b.order)
+    let parentId: string | null = selectedNote.parentNoteId
+    const noteParts: typeof parts = []
+    while (parentId) {
+      const parent = notes.find(n => n.id === parentId)
+      if (!parent) break
+      noteParts.unshift({ label: parent.title || 'Sem título', id: parent.id, kind: 'note' })
+      parentId = parent.parentNoteId
     }
+    parts.push(...noteParts)
 
-    const rows: FolderRow[] = []
-    const walk = (parentId: string | null, depth: number) => {
-      const children = byParent.get(parentId) ?? []
-      for (const folder of children) {
-        rows.push({ id: folder.id, name: folder.name, parentId: folder.parentId ?? null, depth })
-        walk(folder.id, depth + 1)
-      }
-    }
-    walk(null, 0)
-    return rows
-  }, [folders])
+    return parts
+  }, [selectedNote, folders, notes])
 
-  const filteredNotes = useMemo(() => {
-    const base = selectedFolderId
-      ? notes.filter(n => n.folderId === selectedFolderId)
-      : notes
-    return [...base].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  }, [notes, selectedFolderId])
-
-  const selectedNote = notes.find(n => n.id === selectedNoteId)
-  const selectedNotePath = selectedNote?.mdPath ?? null
-
-  const handleAddFolder = () => {
-    if (!newFolderName.trim()) return
-    onAddFolder(newFolderName.trim(), selectedFolderId)
-    setNewFolderName('')
-  }
-
-  const handleAddNote = () => {
-    const note = onAddNote('Nova nota', selectedFolderId)
-    const initialContent = '<h1>Nova nota</h1>'
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-      saveTimeoutRef.current = null
-    }
-
-    currentNoteIdRef.current = note.id
-    setSelectedNoteId(note.id)
-    setNoteContent(initialContent)
-    setContentLoaded(true)
-    setEditingTitle('Nova nota')
-
-    if (isElectron()) {
-      window.electronAPI.writeNote(note.mdPath, initialContent).catch(() => {})
-    } else {
-      localStorage.setItem(`organizador-semanal-note:${note.id}`, initialContent)
-    }
-  }
+  // ---- Note content (IPC) ----
 
   useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-      saveTimeoutRef.current = null
-    }
-
-    currentNoteIdRef.current = selectedNoteId
-
-    if (!selectedNoteId) {
+    if (!selectedNote) {
       setNoteContent('')
-      setContentLoaded(false)
-      setEditingTitle('')
-      setIsTitleEditing(false)
+      setNoteTitle('')
       return
     }
-
-    const note = notes.find(n => n.id === selectedNoteId)
-    const notePath = note?.mdPath
-    if (!note || !notePath) {
-      setNoteContent('')
-      setContentLoaded(false)
-      return
-    }
-
-    setEditingTitle(note.title)
+    setNoteTitle(selectedNote.title || '')
     setIsTitleEditing(false)
-    setContentLoaded(false)
+    currentNoteIdRef.current = selectedNote.id
 
-    const load = async () => {
-      try {
-        let content = ''
-        if (isElectron()) {
-          content = await window.electronAPI.readNote(notePath)
-        } else {
-          content = localStorage.getItem(`organizador-semanal-note:${note.id}`) ?? ''
-        }
-        if (currentNoteIdRef.current === selectedNoteId) {
+    if (isElectron()) {
+      window.electronAPI.readNote(selectedNote.mdPath).then(content => {
+        if (currentNoteIdRef.current === selectedNote.id) {
           setNoteContent(content)
-          setContentLoaded(true)
         }
-      } catch {
-        if (currentNoteIdRef.current === selectedNoteId) {
-          setNoteContent('')
-          setContentLoaded(true)
-        }
-      }
+      }).catch(() => {
+        if (currentNoteIdRef.current === selectedNote.id) setNoteContent('')
+      })
+    } else {
+      setNoteContent('')
     }
+  }, [selectedNote?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNoteId])
-
-  // Sync editingTitle when note title changes externally (e.g., from H1 sync)
-  useEffect(() => {
-    if (selectedNote && !isTitleEditing) {
-      setEditingTitle(selectedNote.title)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNote?.title])
-
-  useEffect(() => {
-    if (!contentLoaded || !selectedNote || !selectedNotePath) return
-
-    const noteId = selectedNote.id
-    const notePath = selectedNotePath
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-    }
-
-    saveTimeoutRef.current = setTimeout(async () => {
-      if (currentNoteIdRef.current !== noteId) return
-
-      try {
-        if (isElectron()) {
-          await window.electronAPI.writeNote(notePath, noteContent)
-        } else {
-          localStorage.setItem(`organizador-semanal-note:${noteId}`, noteContent)
-        }
-        onUpdateNote(noteId, {})
-      } catch {
-        // ignore
-      }
-    }, 400)
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = null
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteContent])
-
-  const handleEditorChange = useCallback((html: string) => {
+  const handleContentChange = useCallback((html: string) => {
     setNoteContent(html)
-
-    if (selectedNote) {
-      const match = html.match(/<h1[^>]*>(.*?)<\/h1>/i)
-      if (match) {
-        const plainTitle = match[1].replace(/<[^>]+>/g, '').trim()
-        if (plainTitle && plainTitle !== selectedNote.title) {
-          onUpdateNote(selectedNote.id, { title: plainTitle })
-        }
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      const note = notes.find(n => n.id === currentNoteIdRef.current)
+      if (!note) return
+      if (isElectron()) {
+        window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
       }
-    }
-  }, [selectedNote, onUpdateNote])
+      onUpdateNote(note.id, { title: note.title })
+    }, 600)
+  }, [notes, onUpdateNote])
 
-  const handleTitleBlur = () => {
+  const handleTitleBlur = useCallback(() => {
     setIsTitleEditing(false)
-    if (!selectedNote) return
-    const nextTitle = editingTitle.trim()
-    if (!nextTitle || nextTitle === selectedNote.title) return
-    onUpdateNote(selectedNote.id, { title: nextTitle })
-  }
+    if (!selectedNote || !noteTitle.trim()) return
+    if (noteTitle.trim() === selectedNote.title) return
+    onUpdateNote(selectedNote.id, { title: noteTitle.trim() })
+  }, [selectedNote, noteTitle, onUpdateNote])
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    }
-    if (e.key === 'Escape') {
-      setEditingTitle(selectedNote?.title ?? '')
-      setIsTitleEditing(false)
-    }
-  }
+  // ---- Open note ----
 
-  const handleDeleteNote = () => {
-    if (!selectedNote) return
-    if (isElectron()) {
-      window.electronAPI.deleteNote(selectedNote.mdPath).catch(() => {})
-    } else {
-      localStorage.removeItem(`organizador-semanal-note:${selectedNote.id}`)
-    }
-    onRemoveNote(selectedNote.id)
-    setSelectedNoteId(null)
-    setNoteContent('')
-    setContentLoaded(false)
-  }
+  const openNote = useCallback((noteId: string) => {
+    setSelectedNoteId(noteId)
+    setSearchQuery('')
+    setSearchVisible(false)
+  }, [])
+
+  // ---- Add note ----
+
+  const handleAddNote = useCallback((folderId: string | null = null, parentNoteId: string | null = null) => {
+    const note = onAddNote('Nova nota', folderId, null, parentNoteId)
+    if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
+    if (parentNoteId) setExpandedNotes(prev => new Set([...prev, parentNoteId]))
+    setSelectedNoteId(note.id)
+    setTimeout(() => {
+      setIsTitleEditing(true)
+      titleInputRef.current?.focus()
+      titleInputRef.current?.select()
+    }, 80)
+  }, [onAddNote])
+
+  // ---- Add folder ----
+
+  const handleAddFolder = useCallback(() => {
+    const name = newFolderName.trim()
+    if (!name) return
+    onAddFolder(name, newFolderParentId ?? null)
+    setNewFolderName('')
+    setNewFolderParentId(undefined)
+  }, [newFolderName, newFolderParentId, onAddFolder])
+
+  // ---- Toggle expand ----
+
+  const toggleFolder = useCallback((folderId: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev)
+      if (next.has(folderId)) next.delete(folderId)
+      else next.add(folderId)
+      return next
+    })
+  }, [])
+
+  const toggleNote = useCallback((noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedNotes(prev => {
+      const next = new Set(prev)
+      if (next.has(noteId)) next.delete(noteId)
+      else next.add(noteId)
+      return next
+    })
+  }, [])
+
+  // ---- Context menu ----
 
   useEffect(() => {
-    if (!noteContextMenu) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        noteContextMenuRef.current &&
-        !noteContextMenuRef.current.contains(event.target as Node)
-      ) {
-        setNoteContextMenu(null)
+    if (!contextMenu) return
+    const handler = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null)
       }
     }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [contextMenu])
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [noteContextMenu])
+  // ---- Keyboard shortcuts ----
 
   useEffect(() => {
-    if (!renamingNote) return
-    const timer = setTimeout(() => {
-      renameInputRef.current?.focus()
-      renameInputRef.current?.select()
-    }, 0)
-    return () => clearTimeout(timer)
-  }, [renamingNote?.noteId])
-
-  const openRenameNote = (noteId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    if (!note) return
-    setRenamingNote({ noteId, value: note.title })
-  }
-
-  const closeRenameNote = () => {
-    setRenamingNote(null)
-  }
-
-  const confirmRenameNote = () => {
-    if (!renamingNote) return
-    const note = notes.find(n => n.id === renamingNote.noteId)
-    if (!note) {
-      setRenamingNote(null)
-      return
-    }
-    const nextTitle = renamingNote.value.trim()
-    if (!nextTitle || nextTitle === note.title) {
-      setRenamingNote(null)
-      return
-    }
-    onUpdateNote(note.id, { title: nextTitle })
-    setRenamingNote(null)
-  }
-
-  const readNoteContent = async (note: Note): Promise<string> => {
-    if (note.id === selectedNoteId) {
-      return noteContent
-    }
-    if (isElectron()) {
-      try {
-        return await window.electronAPI.readNote(note.mdPath)
-      } catch {
-        return ''
+    const handler = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey
+      if (ctrl && e.key === 'n' && !e.shiftKey) {
+        e.preventDefault()
+        handleAddNote()
+      }
+      if (ctrl && e.key === 'f') {
+        e.preventDefault()
+        setSearchVisible(true)
+        setTimeout(() => searchInputRef.current?.focus(), 50)
+      }
+      if (e.key === 'Escape') {
+        setSearchVisible(false)
+        setSearchQuery('')
+        setContextMenu(null)
       }
     }
-    return localStorage.getItem(`organizador-semanal-note:${note.id}`) ?? ''
-  }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [handleAddNote])
 
-  const handleDuplicateNote = async (noteId: string) => {
-    const sourceNote = notes.find(n => n.id === noteId)
-    if (!sourceNote) return
-
-    const clonedNote = onAddNote(`${sourceNote.title} (copia)`, sourceNote.folderId)
-    const sourceContent = await readNoteContent(sourceNote)
-
-    if (isElectron()) {
-      await window.electronAPI.writeNote(clonedNote.mdPath, sourceContent).catch(() => {})
-    } else {
-      localStorage.setItem(`organizador-semanal-note:${clonedNote.id}`, sourceContent)
-    }
-
-    setSelectedNoteId(clonedNote.id)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = filteredNotes.findIndex(n => n.id === active.id)
-    const newIndex = filteredNotes.findIndex(n => n.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = arrayMove(filteredNotes, oldIndex, newIndex)
-    onReorderNotes(reordered.map(n => n.id))
-  }
-
-  const handleFolderDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = folderRows.findIndex(f => f.id === active.id)
-    const newIndex = folderRows.findIndex(f => f.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = arrayMove(folderRows, oldIndex, newIndex)
-    onReorderFolders(reordered.map(f => f.id))
-  }
+  // ---- Reduce mode ----
 
   useEffect(() => {
-    sidebarStateRef.current = {
-      foldersOpen: isFoldersSidebarOpen,
-      notesOpen: isNotesSidebarOpen,
-    }
-  }, [isFoldersSidebarOpen, isNotesSidebarOpen])
-
-  useEffect(() => {
-    if (typeof reduceModeSignal !== 'number') return
-    if (reduceModeHandledRef.current === undefined) {
-      reduceModeHandledRef.current = reduceModeSignal
-      return
-    }
-    if (reduceModeSignal <= reduceModeHandledRef.current) return
+    if (reduceModeSignal === reduceModeHandledRef.current) return
     reduceModeHandledRef.current = reduceModeSignal
-
-    const { foldersOpen, notesOpen } = sidebarStateRef.current
-    if (!foldersOpen && !notesOpen) {
-      setIsFoldersSidebarOpen(true)
-      setIsNotesSidebarOpen(true)
-      return
-    }
-
-    if (foldersOpen) {
-      setIsFoldersSidebarOpen(false)
-      return
-    }
-
-    if (notesOpen) {
-      setIsNotesSidebarOpen(false)
-    }
+    setSidebarOpen(false)
   }, [reduceModeSignal])
 
-  return (
-    <div className="notes-layout">
-      {/* Folders sidebar */}
-      <aside className={`notes-sidebar ${isFoldersSidebarOpen ? '' : 'is-collapsed'}`}>
-        <div className="notes-sidebar-header">
-          <div className="notes-sidebar-header-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              <path d="M2.5 4.5h4l1.2 1.6h5.8v6.4a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />
-            </svg>
-            {isFoldersSidebarOpen ? <h3>Pastas</h3> : null}
-          </div>
+  // ---- Subpage creation from editor ----
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ parentNoteId: string }>).detail
+      handleAddNote(selectedNote?.folderId ?? null, detail.parentNoteId)
+    }
+    document.addEventListener('notes-create-subpage', handler)
+    return () => document.removeEventListener('notes-create-subpage', handler)
+  }, [handleAddNote, selectedNote])
+
+  // ---- Tree rendering ----
+
+  const renderNote = (note: Note, depth: number) => {
+    const children = subNotes(note.id)
+    const isExpanded = expandedNotes.has(note.id)
+    const isSelected = selectedNoteId === note.id
+    const hasChildren = children.length > 0
+
+    return (
+      <div key={note.id} className="notes-tree-group">
+        <div
+          className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}`}
+          style={{ paddingLeft: `${12 + depth * 16}px` }}
+          onClick={() => openNote(note.id)}
+          onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id }) }}
+        >
           <button
-            type="button"
-            className="notes-sidebar-toggle"
-            onClick={() => setIsFoldersSidebarOpen(prev => !prev)}
-            title={isFoldersSidebarOpen ? 'Ocultar pastas' : 'Mostrar pastas'}
+            className={`notes-tree-chevron${hasChildren ? ' visible' : ''}${isExpanded ? ' open' : ''}`}
+            onClick={e => hasChildren ? toggleNote(note.id, e) : undefined}
+            tabIndex={-1}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              {isFoldersSidebarOpen ? (
-                <polyline points="15 18 9 12 15 6" />
-              ) : (
-                <polyline points="9 18 15 12 9 6" />
-              )}
-            </svg>
+            <ChevronIcon open={isExpanded} />
           </button>
+          <PageIcon />
+          <span className="notes-tree-label">{note.title || 'Sem título'}</span>
+          <span className="notes-tree-row-actions">
+            <button
+              className="notes-tree-action-btn"
+              title="Nova subpágina"
+              onClick={e => { e.stopPropagation(); handleAddNote(note.folderId, note.id) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            <button
+              className="notes-tree-action-btn"
+              title="Excluir"
+              onClick={e => { e.stopPropagation(); onRemoveNote(note.id) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+            </button>
+          </span>
+          {note.isFavorite && <span className="notes-tree-star">★</span>}
+          {note.isPinned && <span className="notes-tree-pin">📌</span>}
+        </div>
+        {isExpanded && children.map(child => renderNote(child, depth + 1))}
+      </div>
+    )
+  }
+
+  const renderFolder = (folder: NoteFolder, depth: number): React.ReactElement => {
+    const isExpanded = expandedFolders.has(folder.id)
+    const childFlds = childFolders(folder.id)
+    const childNts = notesInFolder(folder.id)
+
+    return (
+      <div key={folder.id} className="notes-tree-group">
+        <div
+          className="notes-tree-row notes-tree-folder"
+          style={{ paddingLeft: `${12 + depth * 16}px` }}
+          onClick={() => toggleFolder(folder.id)}
+        >
+          <button
+            className="notes-tree-chevron visible"
+            onClick={e => { e.stopPropagation(); toggleFolder(folder.id) }}
+            tabIndex={-1}
+            style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}
+          >
+            <ChevronIcon open={isExpanded} />
+          </button>
+          <FolderIcon open={isExpanded} />
+          <span className="notes-tree-label">{folder.name}</span>
+          <span className="notes-tree-row-actions">
+            <button
+              className="notes-tree-action-btn"
+              title="Nova nota"
+              onClick={e => { e.stopPropagation(); handleAddNote(folder.id, null); setExpandedFolders(prev => new Set([...prev, folder.id])) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            <button
+              className="notes-tree-action-btn"
+              title="Nova subpasta"
+              onClick={e => { e.stopPropagation(); setNewFolderParentId(folder.id); setExpandedFolders(prev => new Set([...prev, folder.id])); setTimeout(() => newFolderInputRef.current?.focus(), 50) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+            </button>
+            <button
+              className="notes-tree-action-btn"
+              title="Excluir pasta"
+              onClick={e => { e.stopPropagation(); onRemoveFolder(folder.id) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
+            </button>
+          </span>
         </div>
 
-        {isFoldersSidebarOpen && (
-          <>
-            {/* All notes item */}
-            <div className="notes-folder-list">
-              <button
-                className={`notes-folder-item ${selectedFolderId === null ? 'active' : ''}`}
-                onClick={() => setSelectedFolderId(null)}
-              >
-                <span className="notes-folder-item-label">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <path d="M14 2v6h6" />
-                  </svg>
-                  Todas as notas
-                </span>
-                <span className="notes-count">{notes.length}</span>
-              </button>
-
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleFolderDragEnd}>
-                <SortableContext items={folderRows.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                  {folderRows.map(folder => (
-                    <SortableFolderItem
-                      key={folder.id}
-                      folder={folder}
-                      noteCount={notes.filter(n => n.folderId === folder.id).length}
-                      isSelected={selectedFolderId === folder.id}
-                      onSelect={setSelectedFolderId}
-                      onRemove={onRemoveFolder}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </div>
-
-            {/* Add folder input */}
-            <div className="notes-folder-add">
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={e => setNewFolderName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddFolder()}
-                placeholder="Nova pasta..."
-                className="form-input"
-              />
-              <button className="btn btn-primary" onClick={handleAddFolder} disabled={!newFolderName.trim()}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+        {isExpanded && (
+          <div className="notes-tree-folder-children">
+            {childFlds.map(f => renderFolder(f, depth + 1))}
+            {childNts.map(n => renderNote(n, depth + 1))}
+            {/* Inline new folder input */}
+            {newFolderParentId === folder.id && (
+              <div className="notes-tree-new-folder-input" style={{ paddingLeft: `${12 + (depth + 1) * 16}px` }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0, opacity: 0.5 }}>
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
-              </button>
-            </div>
-          </>
-        )}
-      </aside>
-
-      {/* Notes list */}
-      <div className={`notes-list ${isNotesSidebarOpen ? '' : 'is-collapsed'}`}>
-        <div className="notes-list-header">
-          <div className="notes-list-header-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-            </svg>
-            {isNotesSidebarOpen ? <h3>Notas</h3> : null}
+                <input
+                  ref={newFolderInputRef}
+                  className="notes-tree-new-folder-field"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleAddFolder()
+                    if (e.key === 'Escape') { setNewFolderParentId(undefined); setNewFolderName('') }
+                  }}
+                  onBlur={() => { if (newFolderName.trim()) handleAddFolder(); else { setNewFolderParentId(undefined); setNewFolderName('') } }}
+                  placeholder="Nome da pasta..."
+                />
+              </div>
+            )}
           </div>
-          <div className="notes-list-header-actions">
-            {isNotesSidebarOpen ? (
-              <button className="notes-add-btn" onClick={handleAddNote} title="Nova nota">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-            ) : null}
+        )}
+      </div>
+    )
+  }
+
+  const contextNote = contextMenu ? notes.find(n => n.id === contextMenu.noteId) ?? null : null
+
+  return (
+    <div className={`notes-layout${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
+
+      {/* ---- TREE SIDEBAR ---- */}
+      <aside className="notes-tree-sidebar">
+        <div className="notes-tree-header">
+          <span className="notes-tree-title">Notas</span>
+          <div className="notes-tree-header-actions">
             <button
-              type="button"
-              className="notes-sidebar-toggle"
-              onClick={() => setIsNotesSidebarOpen(prev => !prev)}
-              title={isNotesSidebarOpen ? 'Ocultar lista' : 'Mostrar lista'}
+              className="notes-tree-header-btn"
+              title="Nova nota (Ctrl+N)"
+              onClick={() => handleAddNote()}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                {isNotesSidebarOpen ? (
-                  <polyline points="15 18 9 12 15 6" />
-                ) : (
-                  <polyline points="9 18 15 12 9 6" />
-                )}
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            <button
+              className="notes-tree-header-btn"
+              title="Buscar (Ctrl+F)"
+              onClick={() => { setSearchVisible(v => !v); setTimeout(() => searchInputRef.current?.focus(), 50) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            </button>
+            <button
+              className="notes-tree-header-btn"
+              title="Recolher barra lateral"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
           </div>
         </div>
 
-        {isNotesSidebarOpen ? (
-          <div className="notes-list-items">
-            {filteredNotes.length === 0 ? (
-              <div className="notes-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32" style={{ opacity: 0.25 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                </svg>
-                <span>Nenhuma nota aqui.</span>
-                <button className="btn btn-primary btn-sm" onClick={handleAddNote}>Nova nota</button>
-              </div>
-            ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={filteredNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
-                  {filteredNotes.map(note => (
-                    <SortableNoteItem
-                      key={note.id}
-                      note={note}
-                      isSelected={selectedNoteId === note.id}
-                      onSelect={setSelectedNoteId}
-                      onContextMenu={(e, noteId) => setNoteContextMenu({ x: e.clientX, y: e.clientY, noteId })}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
+        {searchVisible && (
+          <div className="notes-tree-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13" style={{ flexShrink: 0, opacity: 0.5 }}>
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              ref={searchInputRef}
+              className="notes-tree-search-input"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar notas..."
+              onKeyDown={e => { if (e.key === 'Escape') { setSearchQuery(''); setSearchVisible(false) } }}
+            />
+            {searchQuery && (
+              <button className="notes-tree-search-clear" onClick={() => { setSearchQuery(''); searchInputRef.current?.focus() }}>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12"><path d="M12 4L4 12M4 4l8 8" /></svg>
+              </button>
             )}
           </div>
-        ) : null}
-      </div>
+        )}
 
-      {/* Editor */}
-      <div className="notes-editor">
-        {selectedNote && contentLoaded ? (
-          <>
-            <div className="notes-editor-header">
+        <div className="notes-tree-body">
+          {searchQuery.trim() ? (
+            searchResults.length > 0
+              ? searchResults.map(n => renderNote(n, 0))
+              : <div className="notes-tree-empty">Nenhum resultado</div>
+          ) : (
+            <>
+              {/* Favorites */}
+              {favorites.length > 0 && (
+                <div className="notes-tree-section">
+                  <div className="notes-tree-section-label">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                    Favoritos
+                  </div>
+                  {favorites.map(n => renderNote(n, 0))}
+                </div>
+              )}
+
+              {/* Pinned */}
+              {pinned.length > 0 && (
+                <div className="notes-tree-section">
+                  <div className="notes-tree-section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="10" height="10"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    Fixadas
+                  </div>
+                  {pinned.map(n => renderNote(n, 0))}
+                </div>
+              )}
+
+              {/* Main tree */}
+              <div className="notes-tree-section notes-tree-main">
+                {rootFolders.map(f => renderFolder(f, 0))}
+                {rootNotes.map(n => renderNote(n, 0))}
+              </div>
+
+              {/* Root new folder input */}
+              {newFolderParentId === null && (
+                <div className="notes-tree-new-folder-input" style={{ paddingLeft: '12px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0, opacity: 0.5 }}>
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <input
+                    ref={newFolderInputRef}
+                    className="notes-tree-new-folder-field"
+                    value={newFolderName}
+                    onChange={e => setNewFolderName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAddFolder()
+                      if (e.key === 'Escape') { setNewFolderParentId(undefined); setNewFolderName('') }
+                    }}
+                    onBlur={() => { if (newFolderName.trim()) handleAddFolder(); else { setNewFolderParentId(undefined); setNewFolderName('') } }}
+                    placeholder="Nome da pasta..."
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="notes-tree-footer">
+          <button
+            className="notes-tree-footer-btn"
+            onClick={() => handleAddNote()}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Nova nota
+          </button>
+          <button
+            className="notes-tree-footer-btn"
+            onClick={() => { setNewFolderParentId(null); setTimeout(() => newFolderInputRef.current?.focus(), 50) }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+            Nova pasta
+          </button>
+        </div>
+      </aside>
+
+      {/* Sidebar open button (when collapsed) */}
+      {!sidebarOpen && (
+        <button className="notes-sidebar-open-btn" onClick={() => setSidebarOpen(true)} title="Abrir barra lateral">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="9 18 15 12 9 6" /></svg>
+        </button>
+      )}
+
+      {/* ---- EDITOR PANE ---- */}
+      <div className="notes-editor-pane">
+        {selectedNote ? (
+          <div className="notes-editor-inner">
+            {/* Breadcrumb */}
+            {breadcrumb.length > 0 && (
+              <div className="notes-editor-breadcrumb">
+                {breadcrumb.map((part, i) => (
+                  <span key={part.id} className="notes-bc-item-wrap">
+                    {i > 0 && <span className="notes-bc-sep">›</span>}
+                    <button className="notes-bc-item" onClick={() => part.kind === 'note' ? openNote(part.id) : undefined}>
+                      {part.kind === 'folder' ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      )}
+                      {part.label}
+                    </button>
+                  </span>
+                ))}
+                <span className="notes-bc-sep">›</span>
+                <span className="notes-bc-current">{selectedNote.title || 'Sem título'}</span>
+              </div>
+            )}
+
+            {/* Title + actions */}
+            <div className="notes-editor-top-bar">
               <input
                 ref={titleInputRef}
-                className="notes-title-editable"
-                value={editingTitle}
-                onChange={e => setEditingTitle(e.target.value)}
-                onFocus={() => setIsTitleEditing(true)}
+                className="notes-editor-title-input"
+                value={noteTitle}
+                onChange={e => setNoteTitle(e.target.value)}
                 onBlur={handleTitleBlur}
-                onKeyDown={handleTitleKeyDown}
+                onFocus={() => setIsTitleEditing(true)}
                 placeholder="Sem título"
-                title="Clique para renomear"
               />
-              <button
-                className="notes-editor-delete-btn"
-                onClick={handleDeleteNote}
-                title="Excluir nota"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6l-2 14H7L5 6" />
-                  <path d="M10 11v6M14 11v6" />
-                </svg>
-              </button>
+              <div className="notes-editor-toolbar-actions">
+                <button
+                  className={`notes-editor-action${selectedNote.isFavorite ? ' active' : ''}`}
+                  onClick={() => onToggleFavorite(selectedNote.id)}
+                  title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                >
+                  <svg viewBox="0 0 24 24" fill={selectedNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </button>
+                <button
+                  className={`notes-editor-action${selectedNote.isPinned ? ' active' : ''}`}
+                  onClick={() => onTogglePinned(selectedNote.id)}
+                  title={selectedNote.isPinned ? 'Desafixar' : 'Fixar'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" />
+                  </svg>
+                </button>
+                <button
+                  className="notes-editor-action"
+                  onClick={() => handleAddNote(selectedNote.folderId, selectedNote.id)}
+                  title="Nova subpágina"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="12" x2="12" y2="18" /><line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </button>
+                <button
+                  className="notes-editor-action danger"
+                  onClick={() => { onRemoveNote(selectedNote.id); setSelectedNoteId(null) }}
+                  title="Excluir nota"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
+                  </svg>
+                </button>
+              </div>
             </div>
+
+            {/* Subpages chips */}
+            {subNotes(selectedNote.id).length > 0 && (
+              <div className="notes-subpages-row">
+                {subNotes(selectedNote.id).map(sub => (
+                  <button key={sub.id} className="notes-subpage-chip" onClick={() => openNote(sub.id)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    {sub.title || 'Sem título'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Editor */}
             <div className="notes-editor-content">
               <WysiwygEditor
-                key={selectedNote.id}
                 content={noteContent}
-                onChange={handleEditorChange}
-                placeholder="Escreva sua nota aqui..."
+                onChange={handleContentChange}
                 mode="full"
+                currentNoteId={selectedNote.id}
               />
             </div>
-          </>
+          </div>
         ) : (
           <div className="notes-editor-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ opacity: 0.12 }}>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-              <path d="M16 13H8M16 17H8M10 9H8" />
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ opacity: 0.2 }}>
+              <path d="M40 8H16a4 4 0 0 0-4 4v40a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4V20L40 8z" />
+              <polyline points="40 8 40 20 52 20" />
+              <line x1="24" y1="32" x2="40" y2="32" />
+              <line x1="24" y1="40" x2="34" y2="40" />
             </svg>
-            <p>Selecione ou crie uma nota para editar.</p>
-            <button className="btn btn-primary btn-sm" onClick={handleAddNote}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+            <p className="notes-editor-empty-text">Selecione uma nota ou crie uma nova</p>
+            <button className="btn btn-primary" onClick={() => handleAddNote()}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
               Nova nota
             </button>
           </div>
         )}
       </div>
 
-      {/* Context menu */}
-      {noteContextMenu && (
+      {/* ---- CONTEXT MENU ---- */}
+      {contextMenu && contextNote && (
         <div
-          ref={noteContextMenuRef}
-          className="quick-access-context-menu"
-          style={{ position: 'fixed', left: noteContextMenu.x, top: noteContextMenu.y }}
+          ref={contextMenuRef}
+          className="notes-context-menu"
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y }}
         >
-          <button
-            className="quick-access-context-item"
-            onClick={() => {
-              openRenameNote(noteContextMenu.noteId)
-              setNoteContextMenu(null)
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M3 11.5V13h1.5L12.8 4.7l-1.5-1.5L3 11.5Z" />
-              <path d="m10.5 3.5 1.5 1.5" />
-            </svg>
-            Renomear
+          <button className="notes-context-item" onClick={() => { onToggleFavorite(contextNote.id); setContextMenu(null) }}>
+            <svg viewBox="0 0 24 24" fill={contextNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            {contextNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           </button>
-          <button
-            className="quick-access-context-item"
-            onClick={() => {
-              handleDuplicateNote(noteContextMenu.noteId)
-              setNoteContextMenu(null)
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="5" y="5" width="8" height="8" rx="1.5" />
-              <path d="M3 10V4.5A1.5 1.5 0 0 1 4.5 3H10" />
-            </svg>
-            Duplicar
+          <button className="notes-context-item" onClick={() => { onTogglePinned(contextNote.id); setContextMenu(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
+            {contextNote.isPinned ? 'Desafixar' : 'Fixar'}
           </button>
-          <div className="quick-access-context-separator" />
-          <button
-            className="quick-access-context-item quick-access-context-item-danger"
-            onClick={() => {
-              const noteId = noteContextMenu.noteId
-              setNoteContextMenu(null)
-              const note = notes.find(n => n.id === noteId)
-              if (!note) return
-              if (isElectron()) {
-                window.electronAPI.deleteNote(note.mdPath).catch(() => {})
-              } else {
-                localStorage.removeItem(`organizador-semanal-note:${note.id}`)
-              }
-              onRemoveNote(note.id)
-              if (selectedNoteId === noteId) {
-                setSelectedNoteId(null)
-                setNoteContent('')
-                setContentLoaded(false)
-              }
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="2 4 3.5 4 14 4" />
-              <path d="M12.5 4l-1.25 9.5H4.75L3.5 4" />
-              <path d="M6.5 7v5M9.5 7v5" />
-            </svg>
+          <button className="notes-context-item" onClick={() => { handleAddNote(contextNote.folderId, contextNote.id); setContextMenu(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Nova subpágina
+          </button>
+          <div className="notes-context-divider" />
+          <button className="notes-context-item danger" onClick={() => { onRemoveNote(contextNote.id); if (selectedNoteId === contextNote.id) setSelectedNoteId(null); setContextMenu(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
             Excluir nota
           </button>
-        </div>
-      )}
-
-      {/* Rename modal */}
-      {renamingNote && (
-        <div className="notes-rename-overlay" onClick={closeRenameNote}>
-          <div className="notes-rename-modal" onClick={e => e.stopPropagation()}>
-            <h4>Renomear nota</h4>
-            <input
-              ref={renameInputRef}
-              type="text"
-              className="notes-rename-input"
-              value={renamingNote.value}
-              onChange={e => setRenamingNote(prev => (prev ? { ...prev, value: e.target.value } : prev))}
-              onKeyDown={e => {
-                if (e.key === 'Enter') confirmRenameNote()
-                if (e.key === 'Escape') closeRenameNote()
-              }}
-              placeholder="Digite o novo titulo"
-            />
-            <div className="notes-rename-actions">
-              <button className="btn btn-secondary" onClick={closeRenameNote}>
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={confirmRenameNote}
-                disabled={!renamingNote.value.trim()}
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

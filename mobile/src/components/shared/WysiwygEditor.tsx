@@ -14,7 +14,7 @@ interface WysiwygEditorProps {
   value: string
   onChangeText: (value: string) => void
   placeholder?: string
-  minHeight?: number
+  minHeight?: number  // kept for backwards compat, ignored
   onBlur?: () => void
 }
 
@@ -28,8 +28,11 @@ type SlashCommandId =
   | 'quote'
   | 'list'
   | 'order'
+  | 'todo'
   | 'code'
   | 'divider'
+  | 'toggle'
+  | 'password'
   | 'link'
 
 interface SlashCommand {
@@ -56,12 +59,15 @@ const SLASH_COMMANDS: SlashCommand[] = [
   { id: 'quote', icon: 'message-square', label: 'Citacao', description: 'Bloco de citacao', keywords: ['quote', 'citacao', 'blockquote'] },
   { id: 'list', icon: 'list', label: 'Lista', description: 'Lista com marcadores', keywords: ['list', 'lista', 'bullet', 'ul'] },
   { id: 'order', icon: 'list', label: 'Lista numerada', description: 'Lista ordenada', keywords: ['order', 'lista', 'numerada', 'ol'] },
+  { id: 'todo', icon: 'check-square', label: 'Lista de tarefas', description: 'Checkboxes interativos', keywords: ['todo', 'task', 'check', 'checkbox', 'tarefa'] },
   { id: 'code', icon: 'code', label: 'Codigo', description: 'Bloco de codigo', keywords: ['code', 'codigo', 'pre'] },
   { id: 'divider', icon: 'minus', label: 'Divisor', description: 'Linha horizontal', keywords: ['divider', 'divisor', 'hr', 'separador'] },
+  { id: 'toggle', icon: 'chevron-right', label: 'Bloco recolhivel', description: 'Bloco que expande e recolhe', keywords: ['toggle', 'recolhivel', 'collapsible', 'detalhe'] },
+  { id: 'password', icon: 'lock', label: 'Senha / Oculto', description: 'Bloco mascarado', keywords: ['password', 'senha', 'oculto', 'secret', 'secreto'] },
   { id: 'link', icon: 'link', label: 'Link', description: 'Inserir link', keywords: ['link', 'url', 'href'] },
 ]
 
-const TOOLBAR_COMMAND_IDS: SlashCommandId[] = ['h1', 'bold', 'italic', 'quote', 'list', 'order', 'code', 'link']
+const TOOLBAR_COMMAND_IDS: SlashCommandId[] = ['bold', 'italic', 'h1', 'h2', 'quote', 'list', 'order', 'todo', 'code']
 
 const normalizeSearchTerm = (value: string): string =>
   value
@@ -208,7 +214,6 @@ const createEditorHtmlDocument = (params: {
   codeBackground: string
   borderColor: string
   placeholder: string
-  minHeight: number
 }): string => {
   const {
     textColor,
@@ -217,7 +222,6 @@ const createEditorHtmlDocument = (params: {
     codeBackground,
     borderColor,
     placeholder,
-    minHeight,
   } = params
 
   const escapedPlaceholder = escapeHtml(placeholder)
@@ -228,22 +232,20 @@ const createEditorHtmlDocument = (params: {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
+  * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
     background: transparent;
     color: ${textColor};
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-  body {
-    min-height: ${Math.max(80, minHeight)}px;
+    height: 100%;
   }
   #editor {
-    min-height: ${Math.max(80, minHeight)}px;
-    padding: 12px;
-    box-sizing: border-box;
-    line-height: 1.5;
-    font-size: 15px;
+    min-height: 100%;
+    padding: 16px;
+    line-height: 1.6;
+    font-size: 16px;
     outline: none;
     word-break: break-word;
     caret-color: ${selectionColor};
@@ -252,6 +254,7 @@ const createEditorHtmlDocument = (params: {
     content: "${escapedPlaceholder}";
     color: ${placeholderColor};
     pointer-events: none;
+    position: absolute;
   }
   #editor p,
   #editor h1,
@@ -261,29 +264,92 @@ const createEditorHtmlDocument = (params: {
   #editor pre,
   #editor ul,
   #editor ol {
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
   }
-  #editor h1 { font-size: 1.55em; }
-  #editor h2 { font-size: 1.3em; }
-  #editor h3 { font-size: 1.15em; }
+  #editor h1 { font-size: 1.7em; font-weight: 700; }
+  #editor h2 { font-size: 1.35em; font-weight: 600; }
+  #editor h3 { font-size: 1.15em; font-weight: 600; }
   #editor blockquote {
-    border-left: 3px solid ${borderColor};
-    padding-left: 10px;
-    opacity: 0.92;
+    border-left: 3px solid ${selectionColor};
+    padding-left: 12px;
+    opacity: 0.85;
+    margin-left: 0;
   }
   #editor pre {
     background: ${codeBackground};
-    padding: 10px;
+    padding: 12px;
     border-radius: 8px;
     overflow-x: auto;
   }
   #editor code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+  }
+  #editor p code {
+    background: ${codeBackground};
+    padding: 1px 5px;
+    border-radius: 4px;
   }
   #editor hr {
     border: none;
     border-top: 1px solid ${borderColor};
-    margin: 12px 0;
+    margin: 14px 0;
+  }
+  #editor ul, #editor ol { padding-left: 22px; }
+  #editor li { margin-bottom: 4px; }
+  #editor a { color: ${selectionColor}; }
+  .todo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 4px 0;
+  }
+  .todo-item input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: ${selectionColor};
+  }
+  .todo-item span {
+    flex: 1;
+    outline: none;
+  }
+  .toggle-block {
+    border: 1px solid ${borderColor};
+    border-radius: 8px;
+    margin: 6px 0;
+    overflow: hidden;
+  }
+  .toggle-summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    background: ${codeBackground};
+    list-style: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .toggle-summary::marker { display: none; }
+  .toggle-block[open] .toggle-summary {
+    border-bottom: 1px solid ${borderColor};
+  }
+  .toggle-block > p, .toggle-block > div {
+    padding: 10px 14px;
+    margin: 0;
+  }
+  [data-type="password-block"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: ${codeBackground};
+    margin: 6px 0;
+    border: 1px solid ${borderColor};
   }
 </style>
 </head>
@@ -311,9 +377,9 @@ const createEditorHtmlDocument = (params: {
 
       const isBlankHtml = (html) => {
         const plain = html
-          .replace(/<br\s*\/?\s*>/gi, '')
+          .replace(/<br\\s*\\/?>\\s*/gi, '')
           .replace(/&nbsp;/gi, '')
-          .replace(/\s+/g, '')
+          .replace(/\\s+/g, '')
           .replace(/<[^>]+>/g, '')
           .trim()
         return plain.length === 0
@@ -332,7 +398,7 @@ const createEditorHtmlDocument = (params: {
         const block = closestBlock(range.endContainer)
         const probe = range.cloneRange()
         probe.setStart(block, 0)
-        const text = probe.toString().replace(/\u00A0/g, ' ')
+        const text = probe.toString().replace(/\\u00A0/g, ' ')
 
         if (!text.startsWith('/')) return null
         return { range: probe, query: text.slice(1) }
@@ -368,6 +434,112 @@ const createEditorHtmlDocument = (params: {
         suppress = false
       }
 
+      const insertTodoItem = () => {
+        const sel = window.getSelection()
+        if (!sel || !sel.rangeCount) return
+        const range = sel.getRangeAt(0)
+        const div = document.createElement('div')
+        div.className = 'todo-item'
+        div.setAttribute('contenteditable', 'false')
+        const cb = document.createElement('input')
+        cb.type = 'checkbox'
+        cb.addEventListener('change', postChange)
+        const span = document.createElement('span')
+        span.setAttribute('contenteditable', 'true')
+        span.textContent = '\\u200b'
+        div.appendChild(cb)
+        div.appendChild(span)
+        range.deleteContents()
+        range.insertNode(div)
+        const p = document.createElement('p')
+        p.innerHTML = '<br>'
+        if (div.parentNode) div.parentNode.insertBefore(p, div.nextSibling)
+        const r2 = document.createRange()
+        r2.setStart(span, 0)
+        r2.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(r2)
+      }
+
+      const insertToggleBlock = () => {
+        const sel = window.getSelection()
+        if (!sel || !sel.rangeCount) return
+        const details = document.createElement('details')
+        details.className = 'toggle-block'
+        details.setAttribute('open', '')
+        const summary = document.createElement('summary')
+        summary.className = 'toggle-summary'
+        summary.setAttribute('contenteditable', 'true')
+        summary.textContent = 'Titulo do bloco'
+        const p = document.createElement('p')
+        p.innerHTML = '<br>'
+        details.appendChild(summary)
+        details.appendChild(p)
+        const range = sel.getRangeAt(0)
+        range.deleteContents()
+        range.insertNode(details)
+        const after = document.createElement('p')
+        after.innerHTML = '<br>'
+        if (details.parentNode) details.parentNode.insertBefore(after, details.nextSibling)
+        const r2 = document.createRange()
+        r2.setStart(p, 0)
+        r2.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(r2)
+      }
+
+      const insertPasswordBlock = () => {
+        const wrapper = document.createElement('div')
+        wrapper.setAttribute('contenteditable', 'false')
+        wrapper.setAttribute('data-type', 'password-block')
+        const lock = document.createElement('span')
+        lock.textContent = '\\uD83D\\uDD12'
+        lock.style.fontSize = '14px'
+        const masked = document.createElement('span')
+        masked.setAttribute('data-masked', 'true')
+        masked.setAttribute('data-value', '')
+        masked.style.cssText = 'flex:1;letter-spacing:3px;font-size:16px;opacity:0.7;'
+        masked.textContent = '\\u25CF\\u25CF\\u25CF\\u25CF\\u25CF\\u25CF\\u25CF\\u25CF'
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px;opacity:0.6;font-size:12px;'
+        btn.textContent = '\\uD83D\\uDC41'
+        btn.onclick = function() {
+          const isRevealed = masked.getAttribute('data-masked') === 'false'
+          if (isRevealed) {
+            masked.setAttribute('data-masked', 'true')
+            const val = masked.getAttribute('data-value') || ''
+            masked.textContent = '\\u25CF'.repeat(Math.max(6, val.length || 8))
+            masked.setAttribute('contenteditable', 'false')
+            masked.style.letterSpacing = '3px'
+          } else {
+            masked.setAttribute('data-masked', 'false')
+            masked.setAttribute('contenteditable', 'true')
+            masked.textContent = masked.getAttribute('data-value') || ''
+            masked.style.letterSpacing = 'normal'
+          }
+        }
+        masked.addEventListener('input', function() {
+          masked.setAttribute('data-value', masked.textContent || '')
+          postChange()
+        })
+        wrapper.appendChild(lock)
+        wrapper.appendChild(masked)
+        wrapper.appendChild(btn)
+
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount) {
+          const range = sel.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(wrapper)
+          const p = document.createElement('p')
+          p.innerHTML = '<br>'
+          if (wrapper.parentNode) wrapper.parentNode.insertBefore(p, wrapper.nextSibling)
+        } else {
+          editor.appendChild(wrapper)
+        }
+      }
+
       const exec = (command, payload) => {
         editor.focus()
         switch (command) {
@@ -380,8 +552,11 @@ const createEditorHtmlDocument = (params: {
           case 'quote': document.execCommand('formatBlock', false, 'BLOCKQUOTE'); break
           case 'list': document.execCommand('insertUnorderedList', false); break
           case 'order': document.execCommand('insertOrderedList', false); break
+          case 'todo': insertTodoItem(); break
           case 'code': document.execCommand('formatBlock', false, 'PRE'); break
           case 'divider': document.execCommand('insertHorizontalRule', false); break
+          case 'toggle': insertToggleBlock(); break
+          case 'password': insertPasswordBlock(); break
           case 'link': {
             const url = payload && payload.url ? payload.url : 'https://'
             document.execCommand('createLink', false, url)
@@ -438,7 +613,6 @@ export function WysiwygEditor({
   value,
   onChangeText,
   placeholder = 'Digite aqui...',
-  minHeight = 220,
   onBlur,
 }: WysiwygEditorProps) {
   const theme = useTheme()
@@ -544,168 +718,141 @@ export function WysiwygEditor({
     codeBackground: `${theme.text}10`,
     borderColor: `${theme.text}2b`,
     placeholder,
-    minHeight,
-  }), [minHeight, placeholder, theme.primary, theme.text])
+  }), [placeholder, theme.primary, theme.text])
 
-  const s = StyleSheet.create({
-    root: {
-      borderWidth: 1,
-      borderColor: `${theme.text}22`,
-      borderRadius: 12,
-      backgroundColor: theme.surface,
-      overflow: 'hidden',
-      marginTop: 6,
-    },
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: `${theme.text}14`,
-      backgroundColor: theme.background,
-    },
-    topTitle: {
-      color: `${theme.text}88`,
-      fontSize: 12,
-      fontWeight: '700',
-    },
+  const s = useMemo(() => StyleSheet.create({
     toolbar: {
-      borderBottomWidth: 1,
-      borderBottomColor: `${theme.text}14`,
+      flexShrink: 0,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: `${theme.text}20`,
       backgroundColor: theme.background,
     },
     toolbarInner: {
-      paddingHorizontal: 8,
+      paddingHorizontal: 10,
       paddingVertical: 8,
-      gap: 8,
+      gap: 6,
       alignItems: 'center',
     },
     toolBtn: {
-      width: 34,
-      height: 34,
+      width: 36,
+      height: 36,
       borderRadius: 9,
-      borderWidth: 1,
-      borderColor: `${theme.text}2c`,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.surface,
+      backgroundColor: `${theme.text}08`,
     },
-    slashMenu: {
-      borderBottomWidth: 1,
-      borderBottomColor: `${theme.text}14`,
+    slashPanel: {
+      flexShrink: 0,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: `${theme.text}20`,
       backgroundColor: theme.surface,
-      maxHeight: 220,
+      maxHeight: 240,
     },
-    slashMenuHint: {
-      color: `${theme.text}66`,
-      fontSize: 11,
-      fontWeight: '600',
-      paddingHorizontal: 12,
-      paddingTop: 8,
+    slashHint: {
+      color: `${theme.text}55`,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      paddingHorizontal: 14,
+      paddingTop: 10,
       paddingBottom: 4,
-    },
-    slashMenuList: {
-      paddingHorizontal: 8,
-      paddingBottom: 8,
     },
     slashItem: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 8,
-      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
     },
-    slashItemIconWrap: {
-      width: 26,
-      height: 26,
+    slashIconWrap: {
+      width: 28,
+      height: 28,
       borderRadius: 7,
-      borderWidth: 1,
-      borderColor: `${theme.text}1e`,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.background,
+      backgroundColor: `${theme.text}0c`,
     },
-    slashItemText: {
-      flex: 1,
-      minWidth: 0,
-    },
-    slashItemLabel: {
+    slashLabel: {
       color: theme.text,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '600',
     },
-    slashItemDesc: {
-      color: `${theme.text}70`,
-      fontSize: 11,
+    slashDesc: {
+      color: `${theme.text}66`,
+      fontSize: 12,
       marginTop: 1,
     },
-    editorSurface: {
-      minHeight,
-      backgroundColor: theme.surface,
-    },
-  })
+  }), [theme])
 
   return (
-    <View style={s.root}>
-      <View style={s.topBar}>
-        <Text style={s.topTitle}>Editor</Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: theme.surface }}>
+      {/* Editor WebView — fills all available space */}
+      <WebView
+        ref={webViewRef}
+        source={{ html: htmlDocument }}
+        onMessage={onMessage}
+        originWhitelist={['*']}
+        javaScriptEnabled
+        domStorageEnabled
+        hideKeyboardAccessoryView
+        keyboardDisplayRequiresUserAction={false}
+        scrollEnabled
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+      />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.toolbar} contentContainerStyle={s.toolbarInner}>
+      {/* Slash command panel — appears above toolbar when user types / */}
+      {slashQuery !== null && filteredSlashCommands.length > 0 && (
+        <View style={s.slashPanel}>
+          <Text style={s.slashHint}>Comandos</Text>
+          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {filteredSlashCommands.map(command => (
+              <TouchableOpacity
+                key={command.id}
+                style={s.slashItem}
+                onPress={() => runCommand(command, true)}
+                activeOpacity={0.6}
+              >
+                <View style={s.slashIconWrap}>
+                  <Feather name={command.icon} size={14} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.slashLabel}>{command.label}</Text>
+                  <Text style={s.slashDesc}>{command.description}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Formatting toolbar — anchored at bottom, stays above keyboard */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={s.toolbar}
+        contentContainerStyle={s.toolbarInner}
+        keyboardShouldPersistTaps="handled"
+      >
         {toolbarCommands.map(command => (
           <TouchableOpacity
             key={command.id}
             style={s.toolBtn}
             onPress={() => runCommand(command, false)}
             accessibilityLabel={command.label}
+            activeOpacity={0.6}
           >
-            <Feather name={command.icon} size={15} color={`${theme.text}d0`} />
+            <Feather name={command.icon} size={16} color={theme.text} />
           </TouchableOpacity>
         ))}
-      </ScrollView>
-
-      {slashQuery !== null && filteredSlashCommands.length > 0 ? (
-        <View style={s.slashMenu}>
-          <Text style={s.slashMenuHint}>Comandos com /</Text>
-          <ScrollView style={s.slashMenuList} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            {filteredSlashCommands.map(command => (
-              <TouchableOpacity
-                key={command.id}
-                style={s.slashItem}
-                onPress={() => runCommand(command, true)}
-                accessibilityLabel={`Inserir ${command.label}`}
-              >
-                <View style={s.slashItemIconWrap}>
-                  <Feather name={command.icon} size={14} color={`${theme.text}d0`} />
-                </View>
-                <View style={s.slashItemText}>
-                  <Text style={s.slashItemLabel}>{command.label}</Text>
-                  <Text style={s.slashItemDesc}>{command.description}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        {/* Separator + slash hint */}
+        <View style={{ width: StyleSheet.hairlineWidth, height: 20, backgroundColor: `${theme.text}30`, marginHorizontal: 4 }} />
+        <View style={{ paddingHorizontal: 6, justifyContent: 'center' }}>
+          <Text style={{ color: `${theme.text}55`, fontSize: 13, fontFamily: 'monospace' }}>/</Text>
         </View>
-      ) : null}
-
-      <View style={s.editorSurface}>
-        <WebView
-          ref={webViewRef}
-          source={{ html: htmlDocument }}
-          onMessage={onMessage}
-          originWhitelist={['*']}
-          javaScriptEnabled
-          domStorageEnabled
-          hideKeyboardAccessoryView
-          keyboardDisplayRequiresUserAction={false}
-          scrollEnabled={false}
-          nestedScrollEnabled
-          showsVerticalScrollIndicator={false}
-          style={{ backgroundColor: 'transparent' }}
-        />
-      </View>
+      </ScrollView>
     </View>
   )
 }
