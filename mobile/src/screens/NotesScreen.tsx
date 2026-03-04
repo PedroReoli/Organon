@@ -17,11 +17,16 @@ import { truncate } from '../utils/format'
 import type { Note, NoteFolder } from '../types'
 
 type View_ = 'list' | 'editor'
-type EditorMode = 'edit' | 'preview'
 
 function toPlainPreview(markdown: string): string {
   if (!markdown) return ''
   return markdown
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<li>/gi, '- ')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
     .replace(/```[\s\S]*?```/g, ' [codigo] ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/^>\s?/gm, '')
@@ -37,132 +42,6 @@ function toPlainPreview(markdown: string): string {
     .trim()
 }
 
-function renderMarkdown(content: string, theme: { text: string; surface: string; primary: string }) {
-  if (!content.trim()) {
-    return <Text style={{ color: theme.text + '45', fontSize: 14 }}>Nota vazia</Text>
-  }
-
-  const lines = content.replace(/\r\n/g, '\n').split('\n')
-  const nodes: React.ReactNode[] = []
-  let inCode = false
-  let codeLines: string[] = []
-
-  const flushCode = (key: string) => {
-    if (codeLines.length === 0) return
-    nodes.push(
-      <View
-        key={key}
-        style={{
-          backgroundColor: theme.surface,
-          borderWidth: 1,
-          borderColor: theme.text + '18',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          marginBottom: 8,
-        }}
-      >
-        <Text style={{ color: theme.text + 'd0', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }), fontSize: 13, lineHeight: 19 }}>
-          {codeLines.join('\n')}
-        </Text>
-      </View>,
-    )
-    codeLines = []
-  }
-
-  lines.forEach((rawLine, idx) => {
-    const line = rawLine ?? ''
-
-    if (line.trim().startsWith('```')) {
-      if (inCode) {
-        flushCode(`code-${idx}`)
-        inCode = false
-      } else {
-        inCode = true
-        codeLines = []
-      }
-      return
-    }
-
-    if (inCode) {
-      codeLines.push(line)
-      return
-    }
-
-    if (!line.trim()) {
-      nodes.push(<View key={`sp-${idx}`} style={{ height: 8 }} />)
-      return
-    }
-
-    if (/^###\s+/.test(line)) {
-      nodes.push(
-        <Text key={`h3-${idx}`} style={{ color: theme.text, fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
-          {line.replace(/^###\s+/, '')}
-        </Text>,
-      )
-      return
-    }
-
-    if (/^##\s+/.test(line)) {
-      nodes.push(
-        <Text key={`h2-${idx}`} style={{ color: theme.text, fontSize: 19, fontWeight: '700', marginBottom: 7 }}>
-          {line.replace(/^##\s+/, '')}
-        </Text>,
-      )
-      return
-    }
-
-    if (/^#\s+/.test(line)) {
-      nodes.push(
-        <Text key={`h1-${idx}`} style={{ color: theme.text, fontSize: 22, fontWeight: '800', marginBottom: 8 }}>
-          {line.replace(/^#\s+/, '')}
-        </Text>,
-      )
-      return
-    }
-
-    if (/^>\s+/.test(line)) {
-      nodes.push(
-        <View key={`q-${idx}`} style={{ borderLeftWidth: 3, borderLeftColor: theme.primary, paddingLeft: 10, marginBottom: 7 }}>
-          <Text style={{ color: theme.text + 'b5', fontSize: 15, lineHeight: 23 }}>{line.replace(/^>\s+/, '')}</Text>
-        </View>,
-      )
-      return
-    }
-
-    if (/^[-*]\s+/.test(line)) {
-      nodes.push(
-        <View key={`ul-${idx}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 5 }}>
-          <Text style={{ color: theme.primary, marginTop: 1 }}>-</Text>
-          <Text style={{ color: theme.text, flex: 1, fontSize: 15, lineHeight: 23 }}>{line.replace(/^[-*]\s+/, '')}</Text>
-        </View>,
-      )
-      return
-    }
-
-    const ordered = line.match(/^(\d+)\.\s+(.*)$/)
-    if (ordered) {
-      nodes.push(
-        <View key={`ol-${idx}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 5 }}>
-          <Text style={{ color: theme.primary, marginTop: 1 }}>-</Text>
-          <Text style={{ color: theme.text, flex: 1, fontSize: 15, lineHeight: 23 }}>{ordered[2]}</Text>
-        </View>,
-      )
-      return
-    }
-
-    nodes.push(
-      <Text key={`p-${idx}`} style={{ color: theme.text, fontSize: 15, lineHeight: 24, marginBottom: 6 }}>
-        {line}
-      </Text>,
-    )
-  })
-
-  if (inCode) flushCode('code-final')
-
-  return <>{nodes}</>
-}
-
 export function NotesScreen() {
   const theme = useTheme()
   const { store, addNote, updateNote, deleteNote, addNoteFolder, deleteNoteFolder } = useStore()
@@ -172,7 +51,6 @@ export function NotesScreen() {
   const [noteContent, setNoteContent] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
   const [view, setView] = useState<View_>('list')
-  const [editorMode, setEditorMode] = useState<EditorMode>('preview')
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
 
@@ -204,7 +82,6 @@ export function NotesScreen() {
     setOpenNote(note)
     setNoteContent(note.content)
     setNoteTitle(note.title)
-    setEditorMode('preview')
     setView('editor')
   }
 
@@ -217,14 +94,11 @@ export function NotesScreen() {
     saveNote()
     setView('list')
     setOpenNote(null)
-    setEditorMode('preview')
   }
 
   const createNote = () => {
     const note = addNote({ folderId: currentFolderId, order: notes.length, createdAt: now(), updatedAt: now() })
-    setEditorMode('edit')
     openEditor(note)
-    setEditorMode('edit')
   }
 
   const createFolder = () => {
@@ -267,10 +141,6 @@ export function NotesScreen() {
     backBtn: { padding: 4 },
     titleInput: { flex: 1, color: theme.text, fontSize: 18, fontWeight: '600', paddingVertical: 2 },
     editorActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    modeBtn: { padding: 4 },
-    content: { flex: 1, padding: 16, color: theme.text, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
-    previewScroll: { flex: 1 },
-    previewContent: { padding: 16, paddingBottom: 40 },
   })
 
   if (view === 'editor' && openNote) {
@@ -290,29 +160,19 @@ export function NotesScreen() {
               onBlur={saveNote}
             />
             <View style={s.editorActions}>
-              <TouchableOpacity style={s.modeBtn} onPress={() => setEditorMode(prev => (prev === 'edit' ? 'preview' : 'edit'))}>
-                <Feather name={editorMode === 'edit' ? 'eye' : 'edit-3'} size={20} color={theme.primary} />
-              </TouchableOpacity>
               <TouchableOpacity onPress={saveNote}>
                 <Feather name="save" size={20} color={theme.primary} />
               </TouchableOpacity>
             </View>
           </View>
 
-          {editorMode === 'edit' ? (
-            <WysiwygEditor
-              value={noteContent}
-              onChangeText={setNoteContent}
-              placeholder="Comece a escrever em Markdown..."
-              minHeight={420}
-              onBlur={saveNote}
-              showPreviewToggle={false}
-            />
-          ) : (
-            <ScrollView style={s.previewScroll} contentContainerStyle={s.previewContent}>
-              {renderMarkdown(noteContent, { text: theme.text, surface: theme.surface, primary: theme.primary })}
-            </ScrollView>
-          )}
+          <WysiwygEditor
+            value={noteContent}
+            onChangeText={setNoteContent}
+            placeholder="Comece a escrever..."
+            minHeight={420}
+            onBlur={saveNote}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
     )
