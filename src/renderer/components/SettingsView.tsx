@@ -310,6 +310,18 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
     }
   }
 
+  const handleOpenBackupsFolder = async () => {
+    if (!isElectron()) return
+    try {
+      const opened = await window.electronAPI.openBackupsFolder()
+      if (!opened) {
+        alert('Nao foi possivel abrir a pasta de backups.')
+      }
+    } catch (error) {
+      alert(`Erro ao abrir pasta de backups: ${error}`)
+    }
+  }
+
   const handleRestoreBackup = async (backupPath: string) => {
     if (!isElectron()) return
     if (!confirm('Tem certeza que deseja restaurar este backup? O estado atual serÃ¡ substituÃ­do.')) {
@@ -906,6 +918,12 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                   disabled={backupLoading}
                 >
                   {backupLoading ? 'Salvando...' : 'Salvar Localmente'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleOpenBackupsFolder}
+                >
+                  Abrir Pasta de Backups
                 </button>
                 <button
                   className="btn btn-secondary"

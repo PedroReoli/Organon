@@ -1781,6 +1781,34 @@ export const WysiwygEditor = ({
     )
   }
 
+  const insertImageFromFile = useCallback((file: File, editorInstance: Editor) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      const img = new window.Image()
+      img.onload = () => {
+        const MAX_W = 1200
+        const MAX_H = 1200
+        let { width, height } = img
+        if (width > MAX_W || height > MAX_H) {
+          const ratio = Math.min(MAX_W / width, MAX_H / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0, width, height)
+        const compressed = canvas.toDataURL('image/jpeg', 0.88)
+        editorInstance.chain().focus().setImage({ src: compressed }).run()
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+  }, [])
+
   const editor = useEditor({
     extensions: getExtensions(mode, placeholder),
     content,
@@ -1825,6 +1853,28 @@ export const WysiwygEditor = ({
     editorProps: {
       attributes: {
         class: 'prose prose-invert max-w-none focus:outline-none',
+      },
+      handlePaste: (_view, event) => {
+        const items = Array.from(event.clipboardData?.items ?? [])
+        const imageItem = items.find(item => item.type.startsWith('image/'))
+        if (!imageItem) return false
+        event.preventDefault()
+        const file = imageItem.getAsFile()
+        if (!file) return false
+        const editorInstance = editorRef.current
+        if (!editorInstance) return true
+        insertImageFromFile(file, editorInstance)
+        return true
+      },
+      handleDrop: (_view, event) => {
+        const files = Array.from(event.dataTransfer?.files ?? [])
+        const imageFile = files.find(f => f.type.startsWith('image/'))
+        if (!imageFile) return false
+        event.preventDefault()
+        const editorInstance = editorRef.current
+        if (!editorInstance) return true
+        insertImageFromFile(imageFile, editorInstance)
+        return true
       },
       handleKeyDown: (_view, event) => {
         const menu = slashMenuRef.current

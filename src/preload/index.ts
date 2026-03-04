@@ -280,6 +280,10 @@ const electronAPI = {
     return ipcRenderer.invoke('backup:list')
   },
 
+  openBackupsFolder: (): Promise<boolean> => {
+    return ipcRenderer.invoke('backup:openDir')
+  },
+
   restoreBackup: (backupPath: string): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('backup:restore', backupPath)
   },

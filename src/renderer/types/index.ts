@@ -983,6 +983,7 @@ declare global {
       // Backup
       createBackup: () => Promise<{ success: boolean; backupPath?: string; error?: string }>
       listBackups: () => Promise<Array<{ name: string; path: string; date: string; size: number }>>
+      openBackupsFolder: () => Promise<boolean>
       restoreBackup: (backupPath: string) => Promise<{ success: boolean; error?: string }>
       mergeDataFromOldPath: (oldDataPath: string) => Promise<{ success: boolean; merged: number; error?: string }>
       selectOldDataPath: () => Promise<string | null>

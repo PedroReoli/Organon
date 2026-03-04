@@ -2131,6 +2131,13 @@ const registerIpcHandlers = (): void => {
     return listBackups(getDataPath())
   })
 
+  ipcMain.handle('backup:openDir', () => {
+    const dataPath = getDataPath()
+    ensureBackupDir(dataPath)
+    const backupDir = getBackupDir(dataPath)
+    return shell.openPath(backupDir).then((result) => result === '')
+  })
+
   ipcMain.handle('backup:restore', (_event, backupPath: string) => {
     return restoreBackup(backupPath, getDataPath())
   })

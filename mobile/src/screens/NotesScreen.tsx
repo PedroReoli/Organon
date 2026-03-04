@@ -173,20 +173,20 @@ export function NotesScreen() {
     treeBody: { flex: 1 },
     // Sections
     sectionLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 5 },
-    sectionLabelText: { fontSize: 10, fontWeight: '700', color: theme.text + '55', textTransform: 'uppercase', letterSpacing: 0.8 },
+    sectionLabelText: { fontSize: 11, fontWeight: '700', color: theme.text + '55', textTransform: 'uppercase', letterSpacing: 0.8 },
     // Row
-    treeRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12, minHeight: 38, borderRadius: 6, marginHorizontal: 6 },
+    treeRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 14, minHeight: 52, borderRadius: 8, marginHorizontal: 6 },
     treeRowActive: { backgroundColor: theme.primary + '20' },
-    chevronBtn: { width: 28, height: 38, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-    chevronPlaceholder: { width: 28, height: 38 },
-    rowIcon: { marginRight: 4, flexShrink: 0 },
-    rowLabel: { flex: 1, fontSize: 14, color: theme.text, lineHeight: 20 },
+    chevronBtn: { width: 36, height: 52, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    chevronPlaceholder: { width: 36, height: 52 },
+    rowIcon: { marginRight: 6, flexShrink: 0 },
+    rowLabel: { flex: 1, fontSize: 16, color: theme.text, lineHeight: 22 },
     rowLabelActive: { color: theme.primary, fontWeight: '600' },
-    rowMeta: { fontSize: 10, color: theme.text + '50', marginTop: 1 },
+    rowMeta: { fontSize: 12, color: theme.text + '50', marginTop: 2 },
     rowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     starBadge: { fontSize: 10, color: '#eab308' },
     // Editor
-    editorSafeArea: { flex: 1, backgroundColor: theme.background },
+    editorSafeArea: { flex: 1, backgroundColor: theme.surface },
     editorHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, backgroundColor: theme.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.text + '18' },
     backBtn: { padding: 4 },
     titleInput: { flex: 1, color: theme.text, fontSize: 20, fontWeight: '700', paddingVertical: 0 },
@@ -226,14 +226,14 @@ export function NotesScreen() {
             <TouchableOpacity style={s.chevronBtn} onPress={() => toggleNote(note.id)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
               <Feather
                 name={isExpanded ? 'chevron-down' : 'chevron-right'}
-                size={13}
+                size={16}
                 color={theme.text + '60'}
               />
             </TouchableOpacity>
           ) : (
             <View style={s.chevronPlaceholder} />
           )}
-          <Feather name="file-text" size={14} color={isActive ? theme.primary : theme.text + '70'} style={s.rowIcon} />
+          <Feather name="file-text" size={17} color={isActive ? theme.primary : theme.text + '70'} style={s.rowIcon} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[s.rowLabel, isActive && s.rowLabelActive]} numberOfLines={1}>
               {note.title || 'Sem título'}
@@ -279,19 +279,19 @@ export function NotesScreen() {
           <TouchableOpacity style={s.chevronBtn} onPress={() => toggleFolder(folder.id)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
             <Feather
               name={isExpanded ? 'chevron-down' : 'chevron-right'}
-              size={13}
+              size={16}
               color={theme.text + '60'}
             />
           </TouchableOpacity>
           <Feather
             name="folder"
-            size={14}
+            size={17}
             color={isExpanded ? theme.primary : theme.text + '70'}
             style={s.rowIcon}
           />
-          <Text style={[s.rowLabel, { fontWeight: '500' }]} numberOfLines={1}>{folder.name}</Text>
+          <Text style={[s.rowLabel, { fontWeight: '600' }]} numberOfLines={1}>{folder.name}</Text>
           {total > 0 && (
-            <Text style={{ fontSize: 11, color: theme.text + '40', marginLeft: 4 }}>{total}</Text>
+            <Text style={{ fontSize: 13, color: theme.text + '45', marginLeft: 4 }}>{total}</Text>
           )}
         </TouchableOpacity>
         {isExpanded && (
@@ -310,7 +310,7 @@ export function NotesScreen() {
     const subs = subNotes(openNote.id)
     return (
       <SafeAreaView style={s.editorSafeArea}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={s.editorHeader}>
             <TouchableOpacity style={s.backBtn} onPress={closeEditor}>
               <Feather name="arrow-left" size={22} color={theme.primary} />

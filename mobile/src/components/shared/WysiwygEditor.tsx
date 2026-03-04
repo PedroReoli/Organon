@@ -725,7 +725,7 @@ export function WysiwygEditor({
       flexShrink: 0,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: `${theme.text}20`,
-      backgroundColor: theme.background,
+      backgroundColor: theme.surface,
     },
     toolbarInner: {
       paddingHorizontal: 10,
