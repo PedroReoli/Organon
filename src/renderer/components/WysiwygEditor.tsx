@@ -1716,6 +1716,8 @@ export const WysiwygEditor = ({
   const linkCopiedTimeoutRef = useRef<number | null>(null)
   const slashMenuRef = useRef<SlashMenuState | null>(null)
   const editorRef = useRef<Editor | null>(null)
+  const isApplyingExternalContentRef = useRef(false)
+  const lastEmittedHtmlRef = useRef(content ?? '')
 
   // Keep slashMenuRef in sync with state
   slashMenuRef.current = slashMenu
@@ -1813,42 +1815,43 @@ export const WysiwygEditor = ({
     extensions: getExtensions(mode, placeholder),
     content,
     onUpdate: ({ editor: ed }) => {
-      requestAnimationFrame(() => {
-        const html = ed.getHTML()
-        onChange(html)
+      if (isApplyingExternalContentRef.current) return
 
-        if (mode !== 'full') return
+      const html = ed.getHTML()
+      lastEmittedHtmlRef.current = html
+      onChange(html)
 
-        const { state } = ed
-        const { selection } = state
-        const { $from } = selection
+      if (mode !== 'full') return
 
-        if ($from.parent.type.name !== 'paragraph') {
+      const { state } = ed
+      const { selection } = state
+      const { $from } = selection
+
+      if ($from.parent.type.name !== 'paragraph') {
+        setSlashMenu(null)
+        return
+      }
+
+      const lineText = $from.parent.textContent
+      if (lineText.startsWith('/') && $from.parentOffset >= 1) {
+        const query = lineText.slice(1)
+        const items = getFilteredSlashItems(query.toLowerCase())
+        if (items.length === 0) {
           setSlashMenu(null)
           return
         }
 
-        const lineText = $from.parent.textContent
-        if (lineText.startsWith('/') && $from.parentOffset >= 1) {
-          const query = lineText.slice(1)
-          const items = getFilteredSlashItems(query.toLowerCase())
-          if (items.length === 0) {
-            setSlashMenu(null)
-            return
-          }
-
-          const coords = ed.view.coordsAtPos(selection.from)
-          setSlashMenu(prev => ({
-            open: true,
-            query,
-            top: coords.bottom + 8,
-            left: Math.max(8, Math.min(coords.left, window.innerWidth - 248)),
-            selectedIndex: prev?.query === query ? (prev?.selectedIndex ?? 0) : 0,
-          }))
-        } else {
-          setSlashMenu(null)
-        }
-      })
+        const coords = ed.view.coordsAtPos(selection.from)
+        setSlashMenu(prev => ({
+          open: true,
+          query,
+          top: coords.bottom + 8,
+          left: Math.max(8, Math.min(coords.left, window.innerWidth - 248)),
+          selectedIndex: prev?.query === query ? (prev?.selectedIndex ?? 0) : 0,
+        }))
+      } else {
+        setSlashMenu(null)
+      }
     },
     editorProps: {
       attributes: {
@@ -1913,6 +1916,25 @@ export const WysiwygEditor = ({
   editorRef.current = editor ?? null
 
   useEffect(() => {
+    if (!editor) return
+    const nextContent = content ?? ''
+
+    // If content came from this editor's own onChange loop, don't reset the document.
+    if (lastEmittedHtmlRef.current === nextContent) return
+
+    const currentHtml = editor.getHTML()
+    if (currentHtml === nextContent) {
+      lastEmittedHtmlRef.current = nextContent
+      return
+    }
+
+    isApplyingExternalContentRef.current = true
+    editor.commands.setContent(nextContent, false)
+    lastEmittedHtmlRef.current = nextContent
+    isApplyingExternalContentRef.current = false
+  }, [editor, content])
+
+  useEffect(() => {
     if (!editor || mode !== 'full') return
 
     const editorRoot = editor.view.dom as HTMLElement
@@ -1966,6 +1988,11 @@ export const WysiwygEditor = ({
       setSlashMenu(null)
     }
   }, [mode])
+
+  useEffect(() => {
+    setLinkQuickMenu(null)
+    setSlashMenu(null)
+  }, [currentNoteId])
 
   useEffect(() => {
     return () => clearLinkCopiedTimeout()

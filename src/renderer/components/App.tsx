@@ -92,6 +92,7 @@ export const App = () => {
     addFileItem,
     removeFileItem,
     addNoteFolder,
+    updateNoteFolder,
     removeNoteFolder,
     reorderNoteFolders,
     addNote,
@@ -679,6 +680,7 @@ export const App = () => {
               onReorderFolders={reorderNoteFolders}
               onRemoveNote={removeNote}
               onAddFolder={addNoteFolder}
+              onUpdateFolder={updateNoteFolder}
               onRemoveFolder={removeNoteFolder}
               reduceModeSignal={reduceModeSignal}
             />

@@ -8,6 +8,7 @@ interface NotesViewProps {
   folders: NoteFolder[]
   onAddNote: (title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => Note
   onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => void
+  onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId'>>) => void
   onRemoveNote: (noteId: string) => void
   onAddFolder: (name: string, parentId?: string | null) => string
   onRemoveFolder: (folderId: string) => void
@@ -51,6 +52,7 @@ export const NotesView = ({
   folders,
   onAddNote,
   onUpdateNote,
+  onUpdateFolder,
   onRemoveNote,
   onAddFolder,
   onRemoveFolder,
@@ -70,6 +72,7 @@ export const NotesView = ({
   const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined) // undefined = hidden
   const [newFolderName, setNewFolderName] = useState('')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
+  const [isNoteLoading, setIsNoteLoading] = useState(false)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentNoteIdRef = useRef<string | null>(null)
@@ -78,6 +81,12 @@ export const NotesView = ({
   const newFolderInputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const reduceModeHandledRef = useRef<number | undefined>(reduceModeSignal)
+  const markdownImportRef = useRef<HTMLInputElement>(null)
+
+  // Drag-and-drop state
+  const [dragNote, setDragNote] = useState<Note | null>(null)
+  const [dragFolder, setDragFolder] = useState<NoteFolder | null>(null)
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
 
@@ -138,7 +147,7 @@ export const NotesView = ({
     while (parentId) {
       const parent = notes.find(n => n.id === parentId)
       if (!parent) break
-      noteParts.unshift({ label: parent.title || 'Sem título', id: parent.id, kind: 'note' })
+      noteParts.unshift({ label: parent.title || 'Sem titulo', id: parent.id, kind: 'note' })
       parentId = parent.parentNoteId
     }
     parts.push(...noteParts)
@@ -150,10 +159,19 @@ export const NotesView = ({
 
   useEffect(() => {
     if (!selectedNote) {
+      setIsNoteLoading(false)
       setNoteContent('')
       setNoteTitle('')
       return
     }
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    // Clear immediately so the editor remounts with empty content,
+    // not the previous note's content (which would trigger onUpdate -> write wrong file)
+    setIsNoteLoading(true)
+    setNoteContent('')
     setNoteTitle(selectedNote.title || '')
     setIsTitleEditing(false)
     currentNoteIdRef.current = selectedNote.id
@@ -162,27 +180,34 @@ export const NotesView = ({
       window.electronAPI.readNote(selectedNote.mdPath).then(content => {
         if (currentNoteIdRef.current === selectedNote.id) {
           setNoteContent(content)
+          setIsNoteLoading(false)
         }
       }).catch(() => {
-        if (currentNoteIdRef.current === selectedNote.id) setNoteContent('')
+        if (currentNoteIdRef.current === selectedNote.id) {
+          setNoteContent('')
+          setIsNoteLoading(false)
+        }
       })
     } else {
       setNoteContent('')
+      setIsNoteLoading(false)
     }
   }, [selectedNote?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleContentChange = useCallback((html: string) => {
-    setNoteContent(html)
+  const handleContentChange = useCallback((noteId: string, html: string) => {
+    if (isNoteLoading) return
+    if (currentNoteIdRef.current !== noteId) return
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
-      const note = notes.find(n => n.id === currentNoteIdRef.current)
+      if (currentNoteIdRef.current !== noteId) return
+      const note = notes.find(n => n.id === noteId)
       if (!note) return
       if (isElectron()) {
         window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
       }
       onUpdateNote(note.id, { title: note.title })
     }, 600)
-  }, [notes, onUpdateNote])
+  }, [isNoteLoading, notes, onUpdateNote])
 
   const handleTitleBlur = useCallback(() => {
     setIsTitleEditing(false)
@@ -191,13 +216,34 @@ export const NotesView = ({
     onUpdateNote(selectedNote.id, { title: noteTitle.trim() })
   }, [selectedNote, noteTitle, onUpdateNote])
 
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+    }
+  }, [])
+
   // ---- Open note ----
 
   const openNote = useCallback((noteId: string) => {
+    if (selectedNoteId === noteId) {
+      setSearchQuery('')
+      setSearchVisible(false)
+      return
+    }
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    currentNoteIdRef.current = noteId
+    setIsNoteLoading(true)
+    setNoteContent('')
     setSelectedNoteId(noteId)
     setSearchQuery('')
     setSearchVisible(false)
-  }, [])
+  }, [selectedNoteId])
 
   // ---- Add note ----
 
@@ -205,6 +251,9 @@ export const NotesView = ({
     const note = onAddNote('Nova nota', folderId, null, parentNoteId)
     if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
     if (parentNoteId) setExpandedNotes(prev => new Set([...prev, parentNoteId]))
+    currentNoteIdRef.current = note.id
+    setIsNoteLoading(true)
+    setNoteContent('')
     setSelectedNoteId(note.id)
     setTimeout(() => {
       setIsTitleEditing(true)
@@ -300,6 +349,118 @@ export const NotesView = ({
     return () => document.removeEventListener('notes-create-subpage', handler)
   }, [handleAddNote, selectedNote])
 
+  // ---- Drag-and-drop ----
+
+  const isFolderDescendant = useCallback((candidateId: string, ancestorId: string) => {
+    let current = folders.find(folder => folder.id === candidateId)?.parentId ?? null
+    while (current) {
+      if (current === ancestorId) return true
+      current = folders.find(folder => folder.id === current)?.parentId ?? null
+    }
+    return false
+  }, [folders])
+
+  const isNoteDescendant = useCallback((candidateId: string, ancestorId: string) => {
+    let current = notes.find(note => note.id === candidateId)?.parentNoteId ?? null
+    while (current) {
+      if (current === ancestorId) return true
+      current = notes.find(note => note.id === current)?.parentNoteId ?? null
+    }
+    return false
+  }, [notes])
+
+  const handleDragEnd = useCallback(() => {
+    setDragNote(null)
+    setDragFolder(null)
+    setDropTargetId(null)
+  }, [])
+
+  const handleDropOnFolder = useCallback((folderId: string) => {
+    if (dragNote) {
+      onUpdateNote(dragNote.id, { folderId, parentNoteId: null })
+      if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
+    } else if (dragFolder && dragFolder.id !== folderId) {
+      if (!isFolderDescendant(folderId, dragFolder.id)) {
+        onUpdateFolder(dragFolder.id, { parentId: folderId })
+        setExpandedFolders(prev => new Set([...prev, folderId]))
+      }
+    }
+    handleDragEnd()
+  }, [dragNote, dragFolder, isFolderDescendant, onUpdateFolder, onUpdateNote, handleDragEnd])
+
+  const handleDropOnNote = useCallback((targetNote: Note) => {
+    if (!dragNote || dragNote.id === targetNote.id) { handleDragEnd(); return }
+    if (isNoteDescendant(targetNote.id, dragNote.id)) { handleDragEnd(); return }
+    onUpdateNote(dragNote.id, { folderId: targetNote.folderId, parentNoteId: targetNote.id })
+    setExpandedNotes(prev => new Set([...prev, targetNote.id]))
+    handleDragEnd()
+  }, [dragNote, isNoteDescendant, onUpdateNote, handleDragEnd])
+
+  const handleDropOnRoot = useCallback(() => {
+    if (dragNote) {
+      onUpdateNote(dragNote.id, { folderId: null, parentNoteId: null })
+    } else if (dragFolder) {
+      onUpdateFolder(dragFolder.id, { parentId: null })
+    }
+    handleDragEnd()
+  }, [dragNote, dragFolder, onUpdateFolder, onUpdateNote, handleDragEnd])
+
+  // ---- Markdown import ----
+
+  const markdownToHtml = (md: string): string => {
+    const lines = md.replace(/\r\n/g, '\n').split('\n')
+    const out: string[] = []
+    let inCode = false, codeBuf: string[] = [], listMode: 'ul' | 'ol' | null = null
+    const flushList = () => { if (!listMode) return; out.push(listMode === 'ul' ? '</ul>' : '</ol>'); listMode = null }
+    const flushCode = () => {
+      out.push(`<pre><code>${codeBuf.join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`)
+      inCode = false; codeBuf = []
+    }
+    const inline = (s: string) => s
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
+    for (const line of lines) {
+      if (line.trim().startsWith('```')) { flushList(); if (inCode) flushCode(); else { inCode = true; codeBuf = [] }; continue }
+      if (inCode) { codeBuf.push(line); continue }
+      if (!line.trim()) { flushList(); out.push('<p><br></p>'); continue }
+      if (/^###\s+/.test(line)) { flushList(); out.push(`<h3>${inline(line.replace(/^###\s+/, ''))}</h3>`); continue }
+      if (/^##\s+/.test(line)) { flushList(); out.push(`<h2>${inline(line.replace(/^##\s+/, ''))}</h2>`); continue }
+      if (/^#\s+/.test(line)) { flushList(); out.push(`<h1>${inline(line.replace(/^#\s+/, ''))}</h1>`); continue }
+      if (/^>\s+/.test(line)) { flushList(); out.push(`<blockquote><p>${inline(line.slice(2))}</p></blockquote>`); continue }
+      const ol = line.match(/^(\d+)\.\s+(.*)$/)
+      if (ol) { if (listMode !== 'ol') { flushList(); out.push('<ol>'); listMode = 'ol' }; out.push(`<li>${inline(ol[2] ?? '')}</li>`); continue }
+      if (/^[-*]\s+/.test(line)) { if (listMode !== 'ul') { flushList(); out.push('<ul>'); listMode = 'ul' }; out.push(`<li>${inline(line.replace(/^[-*]\s+/, ''))}</li>`); continue }
+      if (/^---+$/.test(line.trim())) { flushList(); out.push('<hr/>'); continue }
+      flushList(); out.push(`<p>${inline(line)}</p>`)
+    }
+    if (inCode) flushCode(); flushList()
+    return out.join('') || '<p><br></p>'
+  }
+
+  const handleMarkdownImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length) return
+    for (const file of files) {
+      const title = file.name.replace(/\.(md|markdown)$/i, '')
+      const reader = new FileReader()
+      reader.onload = () => {
+        const html = markdownToHtml(reader.result as string)
+        const folderId = selectedNote?.folderId ?? null
+        const note = onAddNote(title, folderId, null, null)
+        if (isElectron()) {
+          window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
+        }
+        setSelectedNoteId(note.id)
+        setNoteContent(html)
+      }
+      reader.readAsText(file)
+    }
+  }, [selectedNote, onAddNote]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- Tree rendering ----
 
   const renderNote = (note: Note, depth: number) => {
@@ -308,11 +469,18 @@ export const NotesView = ({
     const isSelected = selectedNoteId === note.id
     const hasChildren = children.length > 0
 
+    const isDropTarget = dropTargetId === note.id
     return (
       <div key={note.id} className="notes-tree-group">
         <div
-          className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}`}
+          className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
+          draggable
+          onDragStart={e => { e.stopPropagation(); setDragNote(note); setDragFolder(null) }}
+          onDragEnd={handleDragEnd}
+          onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId(note.id) }}
+          onDragLeave={e => { e.stopPropagation(); setDropTargetId(null) }}
+          onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnNote(note) }}
           onClick={() => openNote(note.id)}
           onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id }) }}
         >
@@ -324,11 +492,11 @@ export const NotesView = ({
             <ChevronIcon open={isExpanded} />
           </button>
           <PageIcon />
-          <span className="notes-tree-label">{note.title || 'Sem título'}</span>
+          <span className="notes-tree-label">{note.title || 'Sem titulo'}</span>
           <span className="notes-tree-row-actions">
             <button
               className="notes-tree-action-btn"
-              title="Nova subpágina"
+              title="Nova subpagina"
               onClick={e => { e.stopPropagation(); handleAddNote(note.folderId, note.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -341,24 +509,31 @@ export const NotesView = ({
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
             </button>
           </span>
-          {note.isFavorite && <span className="notes-tree-star">★</span>}
-          {note.isPinned && <span className="notes-tree-pin">📌</span>}
+          {note.isFavorite && <span className="notes-tree-star">*</span>}
+          {note.isPinned && <span className="notes-tree-pin">PIN</span>}
         </div>
         {isExpanded && children.map(child => renderNote(child, depth + 1))}
       </div>
     )
   }
 
-  const renderFolder = (folder: NoteFolder, depth: number): React.ReactElement => {
+  const renderFolder = (folder: NoteFolder, depth: number): JSX.Element => {
     const isExpanded = expandedFolders.has(folder.id)
     const childFlds = childFolders(folder.id)
     const childNts = notesInFolder(folder.id)
 
+    const isFolderDropTarget = dropTargetId === folder.id
     return (
       <div key={folder.id} className="notes-tree-group">
         <div
-          className="notes-tree-row notes-tree-folder"
+          className={`notes-tree-row notes-tree-folder${isFolderDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
+          draggable
+          onDragStart={e => { e.stopPropagation(); setDragFolder(folder); setDragNote(null) }}
+          onDragEnd={handleDragEnd}
+          onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId(folder.id) }}
+          onDragLeave={e => { e.stopPropagation(); setDropTargetId(null) }}
+          onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnFolder(folder.id) }}
           onClick={() => toggleFolder(folder.id)}
         >
           <button
@@ -452,6 +627,13 @@ export const NotesView = ({
             </button>
             <button
               className="notes-tree-header-btn"
+              title="Importar markdown"
+              onClick={() => markdownImportRef.current?.click()}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+            </button>
+            <button
+              className="notes-tree-header-btn"
               title="Recolher barra lateral"
               onClick={() => setSidebarOpen(false)}
             >
@@ -511,7 +693,12 @@ export const NotesView = ({
               )}
 
               {/* Main tree */}
-              <div className="notes-tree-section notes-tree-main">
+              <div
+                className="notes-tree-section notes-tree-main"
+                onDragOver={e => { e.preventDefault(); setDropTargetId('root') }}
+                onDragLeave={() => setDropTargetId(null)}
+                onDrop={e => { e.preventDefault(); handleDropOnRoot() }}
+              >
                 {rootFolders.map(f => renderFolder(f, 0))}
                 {rootNotes.map(n => renderNote(n, 0))}
               </div>
@@ -555,6 +742,14 @@ export const NotesView = ({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
             Nova pasta
           </button>
+          <input
+            ref={markdownImportRef}
+            type="file"
+            accept=".md,.markdown"
+            style={{ display: 'none' }}
+            multiple
+            onChange={handleMarkdownImport}
+          />
         </div>
       </aside>
 
@@ -574,7 +769,7 @@ export const NotesView = ({
               <div className="notes-editor-breadcrumb">
                 {breadcrumb.map((part, i) => (
                   <span key={part.id} className="notes-bc-item-wrap">
-                    {i > 0 && <span className="notes-bc-sep">›</span>}
+                    {i > 0 && <span className="notes-bc-sep">&gt;</span>}
                     <button className="notes-bc-item" onClick={() => part.kind === 'note' ? openNote(part.id) : undefined}>
                       {part.kind === 'folder' ? (
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
@@ -589,8 +784,8 @@ export const NotesView = ({
                     </button>
                   </span>
                 ))}
-                <span className="notes-bc-sep">›</span>
-                <span className="notes-bc-current">{selectedNote.title || 'Sem título'}</span>
+                <span className="notes-bc-sep">&gt;</span>
+                <span className="notes-bc-current">{selectedNote.title || 'Sem titulo'}</span>
               </div>
             )}
 
@@ -603,7 +798,7 @@ export const NotesView = ({
                 onChange={e => setNoteTitle(e.target.value)}
                 onBlur={handleTitleBlur}
                 onFocus={() => setIsTitleEditing(true)}
-                placeholder="Sem título"
+                placeholder="Sem titulo"
               />
               <div className="notes-editor-toolbar-actions">
                 <button
@@ -627,7 +822,7 @@ export const NotesView = ({
                 <button
                   className="notes-editor-action"
                   onClick={() => handleAddNote(selectedNote.folderId, selectedNote.id)}
-                  title="Nova subpágina"
+                  title="Nova subpagina"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="12" x2="12" y2="18" /><line x1="9" y1="15" x2="15" y2="15" />
@@ -653,7 +848,7 @@ export const NotesView = ({
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                     </svg>
-                    {sub.title || 'Sem título'}
+                    {sub.title || 'Sem titulo'}
                   </button>
                 ))}
               </div>
@@ -662,8 +857,9 @@ export const NotesView = ({
             {/* Editor */}
             <div className="notes-editor-content">
               <WysiwygEditor
+                key={selectedNote.id}
                 content={noteContent}
-                onChange={handleContentChange}
+                onChange={(html) => handleContentChange(selectedNote.id, html)}
                 mode="full"
                 currentNoteId={selectedNote.id}
               />
@@ -703,7 +899,7 @@ export const NotesView = ({
           </button>
           <button className="notes-context-item" onClick={() => { handleAddNote(contextNote.folderId, contextNote.id); setContextMenu(null) }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Nova subpágina
+            Nova subpagina
           </button>
           <div className="notes-context-divider" />
           <button className="notes-context-item danger" onClick={() => { onRemoveNote(contextNote.id); if (selectedNoteId === contextNote.id) setSelectedNoteId(null); setContextMenu(null) }}>
