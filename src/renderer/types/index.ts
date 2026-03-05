@@ -877,6 +877,18 @@ export const DEFAULT_SETTINGS: Settings = {
       description: 'Reduz paineis da view atual por niveis (pressione novamente para o proximo nivel)',
       keys: { ctrl: true, shift: true, key: 'm' },
     },
+    {
+      id: 'notes-new',
+      action: 'Nova nota',
+      description: 'Cria uma nova nota (disponível na view Notas)',
+      keys: { ctrl: true, key: 'n' },
+    },
+    {
+      id: 'notes-search',
+      action: 'Buscar notas',
+      description: 'Abre a busca de notas (disponível na view Notas)',
+      keys: { ctrl: true, key: 'f' },
+    },
   ],
   backupEnabled: true,
   backupIntervalMinutes: 15,

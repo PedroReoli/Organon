@@ -266,6 +266,7 @@ export const App = () => {
   const [reduceModeSignal, setReduceModeSignal] = useState(0)
   const [pendingOpenCardId, setPendingOpenCardId] = useState<string | null>(null)
   const [pendingCalendarDate, setPendingCalendarDate] = useState<string | null>(null)
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null)
   const reminderFiredRef = useState(() => new Set<string>())[0]
 
   const keyboardShortcuts = useMemo(() => {
@@ -683,6 +684,9 @@ export const App = () => {
               onUpdateFolder={updateNoteFolder}
               onRemoveFolder={removeNoteFolder}
               reduceModeSignal={reduceModeSignal}
+              initialNoteId={pendingNoteId}
+              onInitialNoteConsumed={() => setPendingNoteId(null)}
+              keyboardShortcuts={keyboardShortcuts}
             />
           )}
 
@@ -876,9 +880,15 @@ export const App = () => {
       {showShortcutSearch && (
         <ShortcutSearchModal
           shortcuts={shortcuts}
+          notes={notes}
           onClose={() => setShowShortcutSearch(false)}
           onOpenShortcut={(url) => {
             handleOpenShortcut(url)
+            setShowShortcutSearch(false)
+          }}
+          onOpenNote={(noteId) => {
+            setPendingNoteId(noteId)
+            setActiveView('notes')
             setShowShortcutSearch(false)
           }}
         />

@@ -2294,6 +2294,20 @@ const registerIpcHandlers = (): void => {
   })
 }
 
+// Single instance lock — impede abrir múltiplas janelas ao clicar no ícone
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    // Traz a janela existente para frente
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+}
+
 // Inicializacao do app
 app.whenReady().then(() => {
   registerIpcHandlers()

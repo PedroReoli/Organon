@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Note, NoteFolder } from '../types'
+import type { KeyboardShortcut, Note, NoteFolder } from '../types'
 import { isElectron } from '../utils'
 import { WysiwygEditor } from './WysiwygEditor'
 
@@ -17,6 +17,9 @@ interface NotesViewProps {
   onToggleFavorite: (noteId: string) => void
   onTogglePinned: (noteId: string) => void
   reduceModeSignal?: number
+  initialNoteId?: string | null
+  onInitialNoteConsumed?: () => void
+  keyboardShortcuts?: KeyboardShortcut[]
 }
 
 // ---- Tree rendering helpers ----
@@ -59,6 +62,9 @@ export const NotesView = ({
   onToggleFavorite,
   onTogglePinned,
   reduceModeSignal,
+  initialNoteId,
+  onInitialNoteConsumed,
+  keyboardShortcuts = [],
 }: NotesViewProps) => {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
@@ -72,6 +78,7 @@ export const NotesView = ({
   const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined) // undefined = hidden
   const [newFolderName, setNewFolderName] = useState('')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ noteId: string; title: string } | null>(null)
   const [isNoteLoading, setIsNoteLoading] = useState(false)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -87,6 +94,9 @@ export const NotesView = ({
   const [dragNote, setDragNote] = useState<Note | null>(null)
   const [dragFolder, setDragFolder] = useState<NoteFolder | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
+  // Refs for instant access inside drag event handlers (state is stale in closures)
+  const dragNoteRef = useRef<Note | null>(null)
+  const dragFolderRef = useRef<NoteFolder | null>(null)
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
 
@@ -245,6 +255,21 @@ export const NotesView = ({
     setSearchVisible(false)
   }, [selectedNoteId])
 
+  // ---- Delete note (with confirmation) ----
+
+  const requestDeleteNote = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setDeleteConfirm({ noteId, title: note?.title || 'Sem título' })
+  }, [notes])
+
+  const confirmDeleteNote = useCallback(() => {
+    if (!deleteConfirm) return
+    onRemoveNote(deleteConfirm.noteId)
+    if (selectedNoteId === deleteConfirm.noteId) setSelectedNoteId(null)
+    setDeleteConfirm(null)
+    setContextMenu(null)
+  }, [deleteConfirm, onRemoveNote, selectedNoteId])
+
   // ---- Add note ----
 
   const handleAddNote = useCallback((folderId: string | null = null, parentNoteId: string | null = null) => {
@@ -308,14 +333,20 @@ export const NotesView = ({
 
   // ---- Keyboard shortcuts ----
 
+  const matchesShortcut = useCallback((e: KeyboardEvent, id: string, fallback: { ctrl?: boolean; shift?: boolean; key: string }) => {
+    const sc = keyboardShortcuts.find(s => s.id === id)
+    const keys = sc?.keys ?? fallback
+    const ctrl = e.ctrlKey || e.metaKey
+    return ctrl === !!keys.ctrl && e.shiftKey === !!keys.shift && e.key.toLowerCase() === keys.key.toLowerCase()
+  }, [keyboardShortcuts])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey
-      if (ctrl && e.key === 'n' && !e.shiftKey) {
+      if (matchesShortcut(e, 'notes-new', { ctrl: true, key: 'n' }) && !e.shiftKey) {
         e.preventDefault()
         handleAddNote()
       }
-      if (ctrl && e.key === 'f') {
+      if (matchesShortcut(e, 'notes-search', { ctrl: true, key: 'f' })) {
         e.preventDefault()
         setSearchVisible(true)
         setTimeout(() => searchInputRef.current?.focus(), 50)
@@ -328,7 +359,7 @@ export const NotesView = ({
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [handleAddNote])
+  }, [handleAddNote, matchesShortcut])
 
   // ---- Reduce mode ----
 
@@ -338,16 +369,37 @@ export const NotesView = ({
     setSidebarOpen(false)
   }, [reduceModeSignal])
 
+  // ---- Open note via external navigation (e.g. from search modal) ----
+
+  useEffect(() => {
+    if (!initialNoteId) return
+    openNote(initialNoteId)
+    onInitialNoteConsumed?.()
+  }, [initialNoteId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- Subpage creation from editor ----
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ parentNoteId: string }>).detail
-      handleAddNote(selectedNote?.folderId ?? null, detail.parentNoteId)
+      const newNote = onAddNote('Nova nota', selectedNote?.folderId ?? null, null, detail.parentNoteId)
+      if (detail.parentNoteId) setExpandedNotes(prev => new Set([...prev, detail.parentNoteId]))
+      // Notify the editor so it can insert the inline subpage block
+      document.dispatchEvent(new CustomEvent('notes-subpage-ready', {
+        detail: { noteId: newNote.id, noteTitle: newNote.title || 'Nova nota' },
+      }))
+    }
+    const openHandler = (e: Event) => {
+      const { noteId } = (e as CustomEvent<{ noteId: string }>).detail
+      openNote(noteId)
     }
     document.addEventListener('notes-create-subpage', handler)
-    return () => document.removeEventListener('notes-create-subpage', handler)
-  }, [handleAddNote, selectedNote])
+    document.addEventListener('notes-open-note', openHandler)
+    return () => {
+      document.removeEventListener('notes-create-subpage', handler)
+      document.removeEventListener('notes-open-note', openHandler)
+    }
+  }, [onAddNote, openNote, selectedNote])
 
   // ---- Drag-and-drop ----
 
@@ -370,40 +422,47 @@ export const NotesView = ({
   }, [notes])
 
   const handleDragEnd = useCallback(() => {
+    dragNoteRef.current = null
+    dragFolderRef.current = null
     setDragNote(null)
     setDragFolder(null)
     setDropTargetId(null)
   }, [])
 
   const handleDropOnFolder = useCallback((folderId: string) => {
-    if (dragNote) {
-      onUpdateNote(dragNote.id, { folderId, parentNoteId: null })
+    const dn = dragNoteRef.current
+    const df = dragFolderRef.current
+    if (dn) {
+      onUpdateNote(dn.id, { folderId, parentNoteId: null })
       if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
-    } else if (dragFolder && dragFolder.id !== folderId) {
-      if (!isFolderDescendant(folderId, dragFolder.id)) {
-        onUpdateFolder(dragFolder.id, { parentId: folderId })
+    } else if (df && df.id !== folderId) {
+      if (!isFolderDescendant(folderId, df.id)) {
+        onUpdateFolder(df.id, { parentId: folderId })
         setExpandedFolders(prev => new Set([...prev, folderId]))
       }
     }
     handleDragEnd()
-  }, [dragNote, dragFolder, isFolderDescendant, onUpdateFolder, onUpdateNote, handleDragEnd])
+  }, [isFolderDescendant, onUpdateFolder, onUpdateNote, handleDragEnd])
 
   const handleDropOnNote = useCallback((targetNote: Note) => {
-    if (!dragNote || dragNote.id === targetNote.id) { handleDragEnd(); return }
-    if (isNoteDescendant(targetNote.id, dragNote.id)) { handleDragEnd(); return }
-    onUpdateNote(dragNote.id, { folderId: targetNote.folderId, parentNoteId: targetNote.id })
+    const dn = dragNoteRef.current
+    if (!dn || dn.id === targetNote.id) { handleDragEnd(); return }
+    if (isNoteDescendant(targetNote.id, dn.id)) { handleDragEnd(); return }
+    onUpdateNote(dn.id, { folderId: targetNote.folderId, parentNoteId: targetNote.id })
     setExpandedNotes(prev => new Set([...prev, targetNote.id]))
     handleDragEnd()
-  }, [dragNote, isNoteDescendant, onUpdateNote, handleDragEnd])
+  }, [isNoteDescendant, onUpdateNote, handleDragEnd])
 
   const handleDropOnRoot = useCallback(() => {
-    if (dragNote) {
-      onUpdateNote(dragNote.id, { folderId: null, parentNoteId: null })
-    } else if (dragFolder) {
-      onUpdateFolder(dragFolder.id, { parentId: null })
+    const dn = dragNoteRef.current
+    const df = dragFolderRef.current
+    if (dn) {
+      onUpdateNote(dn.id, { folderId: null, parentNoteId: null })
+    } else if (df) {
+      onUpdateFolder(df.id, { parentId: null })
     }
     handleDragEnd()
-  }, [dragNote, dragFolder, onUpdateFolder, onUpdateNote, handleDragEnd])
+  }, [onUpdateFolder, onUpdateNote, handleDragEnd])
 
   // ---- Markdown import ----
 
@@ -476,10 +535,21 @@ export const NotesView = ({
           className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           draggable
-          onDragStart={e => { e.stopPropagation(); setDragNote(note); setDragFolder(null) }}
+          onDragStart={e => { e.stopPropagation(); dragNoteRef.current = note; dragFolderRef.current = null; setDragNote(note); setDragFolder(null) }}
           onDragEnd={handleDragEnd}
-          onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId(note.id) }}
-          onDragLeave={e => { e.stopPropagation(); setDropTargetId(null) }}
+          onDragOver={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            // Only notes can be dropped onto notes (to create subpages)
+            if (dragNoteRef.current && dragNoteRef.current.id !== note.id) setDropTargetId(note.id)
+          }}
+          onDragLeave={e => {
+            e.stopPropagation()
+            // Only clear if truly leaving this element (not entering a child)
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setDropTargetId(null)
+            }
+          }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnNote(note) }}
           onClick={() => openNote(note.id)}
           onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id }) }}
@@ -504,7 +574,7 @@ export const NotesView = ({
             <button
               className="notes-tree-action-btn"
               title="Excluir"
-              onClick={e => { e.stopPropagation(); onRemoveNote(note.id) }}
+              onClick={e => { e.stopPropagation(); requestDeleteNote(note.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
             </button>
@@ -529,10 +599,21 @@ export const NotesView = ({
           className={`notes-tree-row notes-tree-folder${isFolderDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           draggable
-          onDragStart={e => { e.stopPropagation(); setDragFolder(folder); setDragNote(null) }}
+          onDragStart={e => { e.stopPropagation(); dragFolderRef.current = folder; dragNoteRef.current = null; setDragFolder(folder); setDragNote(null) }}
           onDragEnd={handleDragEnd}
-          onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId(folder.id) }}
-          onDragLeave={e => { e.stopPropagation(); setDropTargetId(null) }}
+          onDragOver={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            // Prevent a folder from dropping into itself
+            if (dragFolderRef.current?.id === folder.id) return
+            setDropTargetId(folder.id)
+          }}
+          onDragLeave={e => {
+            e.stopPropagation()
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setDropTargetId(null)
+            }
+          }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnFolder(folder.id) }}
           onClick={() => toggleFolder(folder.id)}
         >
@@ -692,11 +773,28 @@ export const NotesView = ({
                 </div>
               )}
 
+              {/* Drop zone para mover para a raiz (visível durante drag) */}
+              {(dragFolder || dragNote) && (
+                <div
+                  className={`notes-tree-root-drop-zone${dropTargetId === 'root-zone' ? ' is-drop-target' : ''}`}
+                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId('root-zone') }}
+                  onDragLeave={e => {
+                    e.stopPropagation()
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetId(null)
+                  }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnRoot() }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+                    <polyline points="17 11 12 6 7 11" /><line x1="12" y1="18" x2="12" y2="6" />
+                  </svg>
+                  Mover para raiz
+                </div>
+              )}
+
               {/* Main tree */}
               <div
                 className="notes-tree-section notes-tree-main"
-                onDragOver={e => { e.preventDefault(); setDropTargetId('root') }}
-                onDragLeave={() => setDropTargetId(null)}
+                onDragOver={e => { e.preventDefault() }}
                 onDrop={e => { e.preventDefault(); handleDropOnRoot() }}
               >
                 {rootFolders.map(f => renderFolder(f, 0))}
@@ -830,7 +928,7 @@ export const NotesView = ({
                 </button>
                 <button
                   className="notes-editor-action danger"
-                  onClick={() => { onRemoveNote(selectedNote.id); setSelectedNoteId(null) }}
+                  onClick={() => requestDeleteNote(selectedNote.id)}
                   title="Excluir nota"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
@@ -883,6 +981,32 @@ export const NotesView = ({
       </div>
 
       {/* ---- CONTEXT MENU ---- */}
+      {/* ---- DELETE CONFIRMATION MODAL ---- */}
+      {deleteConfirm && (
+        <div className="notes-delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="notes-delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="notes-delete-modal-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="28" height="28">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+              </svg>
+            </div>
+            <h3 className="notes-delete-modal-title">Excluir nota</h3>
+            <p className="notes-delete-modal-desc">
+              Tem certeza que deseja excluir <strong>"{deleteConfirm.title}"</strong>?<br />
+              Esta ação não pode ser desfeita.
+            </p>
+            <div className="notes-delete-modal-actions">
+              <button className="notes-delete-modal-btn cancel" onClick={() => setDeleteConfirm(null)}>
+                Cancelar
+              </button>
+              <button className="notes-delete-modal-btn confirm" onClick={confirmDeleteNote}>
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {contextMenu && contextNote && (
         <div
           ref={contextMenuRef}
@@ -902,7 +1026,7 @@ export const NotesView = ({
             Nova subpagina
           </button>
           <div className="notes-context-divider" />
-          <button className="notes-context-item danger" onClick={() => { onRemoveNote(contextNote.id); if (selectedNoteId === contextNote.id) setSelectedNoteId(null); setContextMenu(null) }}>
+          <button className="notes-context-item danger" onClick={() => requestDeleteNote(contextNote.id)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
             Excluir nota
           </button>

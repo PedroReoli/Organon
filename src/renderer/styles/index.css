@@ -5712,6 +5712,16 @@ input:focus, textarea:focus, select:focus {
   gap: 8px;
 }
 
+.shortcut-search-modal-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 8px 16px 4px;
+  opacity: 0.6;
+}
+
 .shortcut-search-modal-empty {
   display: flex;
   flex-direction: column;
@@ -7486,6 +7496,25 @@ input:focus, textarea:focus, select:focus {
   opacity: 0.7;
 }
 .notes-tree-main { margin-top: 4px; }
+
+.notes-tree-root-drop-zone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1.5px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  cursor: default;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.notes-tree-root-drop-zone.is-drop-target {
+  background: var(--color-primary-alpha, rgba(99,102,241,0.12));
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
 .notes-tree-empty {
   padding: 12px 16px;
   font-size: 12px;
@@ -7839,6 +7868,58 @@ input:focus, textarea:focus, select:focus {
 .notes-context-item.danger { color: var(--color-danger); }
 .notes-context-item.danger:hover { background: rgba(239,68,68,0.1); }
 .notes-context-divider { height: 1px; background: var(--color-border); margin: 3px 0; }
+
+/* ---- Delete confirmation modal ---- */
+.notes-delete-modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.notes-delete-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+.notes-delete-modal-icon {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: rgba(239,68,68,0.1);
+  color: var(--color-danger);
+  display: flex; align-items: center; justify-content: center;
+}
+.notes-delete-modal-title {
+  margin: 0; font-size: 16px; font-weight: 600;
+  color: var(--color-text);
+}
+.notes-delete-modal-desc {
+  margin: 0; font-size: 13px; color: var(--color-text-muted);
+  text-align: center; line-height: 1.5;
+}
+.notes-delete-modal-actions {
+  display: flex; gap: 10px; margin-top: 4px; width: 100%;
+}
+.notes-delete-modal-btn {
+  flex: 1; padding: 8px 0; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--color-border);
+  transition: background 0.12s;
+}
+.notes-delete-modal-btn.cancel {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+.notes-delete-modal-btn.cancel:hover { background: var(--color-border); }
+.notes-delete-modal-btn.confirm {
+  background: var(--color-danger);
+  color: #fff; border-color: var(--color-danger);
+}
+.notes-delete-modal-btn.confirm:hover { opacity: 0.88; }
+
 /* ========================================
  * TIPTAP: TOGGLE BLOCK
  * ======================================== */
@@ -7945,6 +8026,51 @@ input:focus, textarea:focus, select:focus {
   border-radius: 4px;
 }
 .password-block-toggle:hover { color: var(--color-text); background: var(--color-border); }
+
+/* ---- Subpage Block ---- */
+.subpage-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+.subpage-block-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.subpage-block-btn:hover {
+  background: var(--color-border);
+  border-color: var(--color-text-muted);
+}
+.subpage-block-btn svg:first-child { color: var(--color-primary); }
+.subpage-block-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+.subpage-block:hover .subpage-block-delete { opacity: 1; }
+.subpage-block-delete:hover { background: rgba(239,68,68,0.12); color: var(--color-danger); }
 
 /* ========================================
  * SLASH COMMAND MENU
