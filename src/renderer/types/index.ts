@@ -770,6 +770,8 @@ export interface Settings {
   navbarConfig?: NavbarConfig
   backupEnabled?: boolean
   backupIntervalMinutes?: number
+  apiToken?: string
+  apiBaseUrl?: string
 }
 
 // Acesso Rápido (atalhos para views da aplicação)
@@ -824,6 +826,7 @@ export interface StudyState {
 export interface Store {
   version: number
   storeUpdatedAt?: string
+  lastSyncAt?: string
   cards: Card[]
   shortcutFolders: ShortcutFolder[]
   shortcuts: ShortcutItem[]
