@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler'
 import './global.css'
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { StatusBar, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -9,22 +9,51 @@ import { StoreProvider, useStore } from './src/hooks/useMobileStore'
 import { AppwriteProvider, useAppwriteContext } from './src/hooks/useAppwriteContext'
 import { AppNavigator } from './src/navigation/AppNavigator'
 import type { MobileStore } from './src/types'
+import type { PartialSyncedStore } from './src/api/sync'
 
 // ── Inner app: has access to StoreContext + SafeAreaProvider ───────────────────
 
 function InnerApp() {
-  const { isLoaded, loadStore } = useStore()
+  const { isLoaded, store, loadStore } = useStore()
   const insets = useSafeAreaInsets()
+  const storeRef = useRef<MobileStore>(store)
+  storeRef.current = store
 
-  const handleCloudStore = useCallback((cloudStore: MobileStore) => {
-    loadStore(cloudStore)
+  const handlePullComplete = useCallback((partial: PartialSyncedStore, serverTime: string) => {
+    const cur = storeRef.current
+    loadStore({
+      ...cur,
+      cards: partial.cards,
+      notes: partial.notes,
+      noteFolders: partial.noteFolders,
+      calendarEvents: partial.calendarEvents,
+      habits: partial.habits,
+      habitEntries: partial.habitEntries,
+      crmContacts: partial.crmContacts,
+      bills: partial.bills,
+      expenses: partial.expenses,
+      incomes: partial.incomes,
+      savingsGoals: partial.savingsGoals,
+      playbooks: partial.playbooks,
+      study: {
+        ...cur.study,
+        goals: partial.studyGoals,
+        mediaItems: partial.studyMediaItems,
+      },
+      lastSyncAt: serverTime,
+    })
   }, [loadStore])
 
   if (!isLoaded) return null
 
   return (
     <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <AppwriteProvider onCloudStoreDownloaded={handleCloudStore}>
+      <AppwriteProvider
+        token={store.settings.apiToken}
+        baseUrl={store.settings.apiBaseUrl}
+        lastSyncAt={store.lastSyncAt}
+        onPullComplete={handlePullComplete}
+      >
         <StoreSyncBridge />
         <NavigationContainer>
           <AppNavigator />

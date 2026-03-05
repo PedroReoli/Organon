@@ -13,7 +13,7 @@
     "build:electron": "npm run build && electron-builder",
     "exec": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win --publish never",
     "preview": "vite preview",
-    "setup:appwrite": "node scripts/setup-appwrite.js"
+    "setup:api": "echo 'Configura token via Settings > API e Sincronização'"
   },
   "keywords": [
     "electron",

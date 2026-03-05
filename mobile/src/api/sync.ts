@@ -1,292 +1,556 @@
-import { account, storage, databases, BUCKET_ID, DATABASE_ID, PROJECT_ID, Query } from './appwrite'
-import type { MobileStore } from '../types'
+// Sync com a Organon API (mobile)
+// Push: batch upsert de todas as entidades locais
+// Pull: GET /sync/changes paginado → retorna PartialSyncedStore
 
-const missingCollections = new Set<string>()
+import { organonApi, SyncOperation, SyncChange } from './organon'
+import type {
+  MobileStore, Card, Note, NoteFolder, CalendarEvent,
+  Habit, HabitEntry, CRMContact, Bill, Expense, IncomeEntry,
+  SavingsGoal, Playbook, StudyGoal, StudyMediaItem,
+  ChecklistItem, CardPriority, CardStatus, CRMPriority, CRMStageId,
+  CalendarRecurrence, CalendarReminder, CRMContactLinks,
+} from '../types'
 
-function getFileId(userId: string): string {
-  return userId.replace(/[^a-zA-Z0-9_.-]/g, '_').substring(0, 36)
+const BATCH_SIZE = 100
+const PULL_SINCE_FALLBACK = '2020-01-01T00:00:00.000Z'
+
+// ── Tipos exportados ──────────────────────────────────────────────────────────
+
+export interface PartialSyncedStore {
+  cards: Card[]
+  notes: Note[]
+  noteFolders: NoteFolder[]
+  calendarEvents: CalendarEvent[]
+  habits: Habit[]
+  habitEntries: HabitEntry[]
+  crmContacts: CRMContact[]
+  bills: Bill[]
+  expenses: Expense[]
+  incomes: IncomeEntry[]
+  savingsGoals: SavingsGoal[]
+  playbooks: Playbook[]
+  studyGoals: StudyGoal[]
+  studyMediaItems: StudyMediaItem[]
 }
 
-function str(v: unknown, max = 255): string | null {
-  if (v == null) return null
-  return String(v).substring(0, max)
+export interface PullResult {
+  store: PartialSyncedStore
+  serverTime: string
 }
 
-/** Codifica conteúdo escrito em base64 (UTF-8 safe via encodeURIComponent). Retorna null se vazio. */
-function b64(v: unknown): string | null {
-  if (v == null) return null
-  const s = String(v)
-  if (!s) return null
-  try {
-    return btoa(unescape(encodeURIComponent(s)))
-  } catch {
-    return null
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+type Payload = Record<string, unknown>
+
+const now = () => new Date().toISOString()
+function s(v: unknown, fallback = ''): string { return v != null ? String(v) : fallback }
+function n(v: unknown, def = 0): number { return typeof v === 'number' ? v : def }
+function b(v: unknown, def = false): boolean { return typeof v === 'boolean' ? v : def }
+function arr<T>(v: unknown): T[] { return Array.isArray(v) ? (v as T[]) : [] }
+
+// ── toApi: local → payload ────────────────────────────────────────────────────
+
+function cardToApi(c: Card): Payload {
+  return {
+    title: c.title,
+    description_html: c.descriptionHtml ?? '',
+    location_day: c.location?.day ?? null,
+    location_period: c.location?.period ?? null,
+    sort_order: c.order ?? 0,
+    date: c.date ?? null,
+    time: c.time ?? null,
+    has_date: c.hasDate ?? false,
+    priority: c.priority ?? null,
+    status: c.status ?? 'todo',
+    checklist: c.checklist ?? [],
+    project_id: c.projectId ?? null,
+    created_at: c.createdAt,
+    updated_at: c.updatedAt,
   }
 }
 
-function json(v: unknown, max = 3000): string | null {
-  if (v == null) return null
-  try { return JSON.stringify(v).substring(0, max) } catch { return null }
-}
-
-async function clearCollection(collectionId: string, userId: string): Promise<void> {
-  let hasMore = true
-  while (hasMore) {
-    const result = await databases.listDocuments(DATABASE_ID, collectionId, [
-      Query.equal('userId', userId),
-      Query.limit(100),
-    ])
-    if (result.documents.length === 0) { hasMore = false; break }
-    await Promise.all(
-      result.documents.map(doc =>
-        databases.deleteDocument(DATABASE_ID, collectionId, doc.$id).catch(() => null)
-      )
-    )
-    hasMore = result.documents.length === 100
+function noteToApi(note: Note): Payload {
+  // Mobile: content é inline (não há arquivo .md)
+  return {
+    title: note.title,
+    content_markdown: note.content ?? '',
+    folder_id: note.folderId ?? null,
+    parent_note_id: note.parentNoteId ?? null,
+    project_id: note.projectId ?? null,
+    is_pinned: note.isPinned ?? false,
+    is_favorite: note.isFavorite ?? false,
+    sort_order: note.order ?? 0,
+    created_at: note.createdAt,
+    updated_at: note.updatedAt,
   }
 }
 
-function extractUnknownAttribute(err: unknown): string | null {
-  const message = (err as { message?: string })?.message ?? ''
-  const match = message.match(/Unknown attribute:\s*"([^"]+)"/i)
-  return match?.[1] ?? null
-}
-
-function isCollectionMissing(err: unknown): boolean {
-  const message = (err as { message?: string })?.message ?? ''
-  return /Collection with the requested ID .* could not be found/i.test(message)
-}
-
-async function createDoc(collectionId: string, id: string, data: Record<string, unknown>): Promise<boolean> {
-  const payload: Record<string, unknown> = { ...data }
-  let retry = 0
-
-  while (retry < 20) {
-    try {
-      await databases.createDocument(DATABASE_ID, collectionId, id, payload)
-      return true
-    } catch (err: unknown) {
-      const code = (err as { code?: number }).code
-      if (code === 409) return true
-
-      const unknownAttr = extractUnknownAttribute(err)
-      if (unknownAttr && Object.prototype.hasOwnProperty.call(payload, unknownAttr)) {
-        delete payload[unknownAttr]
-        retry += 1
-        continue
-      }
-
-      console.warn(`[sync] Falha ao criar ${collectionId}/${id}:`, err)
-      return false
-    }
-  }
-
-  console.warn(`[sync] Falha ao criar ${collectionId}/${id}: limite de tentativas atingido`)
-  return false
-}
-
-// ── Storage: backup completo ──────────────────────────────────────────────────
-
-export async function uploadStore(store: MobileStore, userId: string): Promise<void> {
-  const fileId = getFileId(userId)
-  const jsonStr = JSON.stringify(store)
-  const file = new File([jsonStr], 'store.json', { type: 'application/json' })
-  try { await storage.deleteFile(BUCKET_ID, fileId) } catch { /* ainda não existe */ }
-  await storage.createFile(BUCKET_ID, fileId, file)
-}
-
-export async function downloadStore(userId: string): Promise<MobileStore | null> {
-  const fileId = getFileId(userId)
-  try {
-    // Cria JWT para autenticar o fetch (o fetch puro não inclui sessão do SDK)
-    const jwt = await account.createJWT()
-    const url = storage.getFileDownload(BUCKET_ID, fileId)
-    const response = await fetch(url.toString(), {
-      headers: {
-        'X-Appwrite-JWT': jwt.jwt,
-        'X-Appwrite-Project': PROJECT_ID,
-      },
-    })
-    if (!response.ok) return null
-    return await response.json() as MobileStore
-  } catch {
-    return null
+function noteFolderToApi(f: NoteFolder): Payload {
+  return {
+    name: f.name,
+    parent_id: f.parentId ?? null,
+    sort_order: f.order ?? 0,
   }
 }
 
-// ── Database: sync por collection ─────────────────────────────────────────────
-
-export interface SyncReport {
-  collections: Record<string, { sent: number; errors: number }>
-  totalSent: number
-  totalErrors: number
+function calendarEventToApi(e: CalendarEvent): Payload {
+  return {
+    title: e.title,
+    date: e.date,
+    time: e.time ?? null,
+    recurrence: e.recurrence ?? null,
+    reminder: e.reminder ?? null,
+    description: e.description ?? '',
+    color: e.color ?? '',
+    created_at: e.createdAt,
+    updated_at: e.updatedAt,
+  }
 }
 
-export async function syncCollectionsToCloud(store: MobileStore, userId: string): Promise<SyncReport> {
-  const report: SyncReport = { collections: {}, totalSent: 0, totalErrors: 0 }
-
-  async function syncItems<T extends { id: string }>(
-    collectionId: string,
-    items: T[] | undefined | null,
-    toDoc: (item: T) => Record<string, unknown>
-  ) {
-    const safeItems = items ?? []
-    const col = { sent: 0, errors: 0 }
-    if (missingCollections.has(collectionId)) {
-      report.collections[collectionId] = col
-      return
-    }
-    try {
-      await clearCollection(collectionId, userId)
-      for (const item of safeItems) {
-        const ok = await createDoc(collectionId, item.id, { userId, ...toDoc(item) })
-        if (ok) col.sent++
-        else col.errors++
-      }
-    } catch (err) {
-      if (isCollectionMissing(err)) {
-        missingCollections.add(collectionId)
-        console.warn(`[sync] Collection "${collectionId}" nao existe no Appwrite. Pulando.`)
-        report.collections[collectionId] = col
-        return
-      }
-      console.warn(`[sync] Falha em "${collectionId}":`, err)
-      col.errors += safeItems.length
-    }
-    report.collections[collectionId] = col
-    report.totalSent   += col.sent
-    report.totalErrors += col.errors
+function habitToApi(h: Habit): Payload {
+  return {
+    name: h.name,
+    type: h.type,
+    target: h.target ?? 1,
+    frequency: h.frequency,
+    weekly_target: h.weeklyTarget ?? 1,
+    week_days: h.weekDays ?? [],
+    trigger: h.trigger ?? '',
+    reason: h.reason ?? '',
+    minimum_target: h.minimumTarget ?? 0,
+    color: h.color ?? '',
+    sort_order: h.order ?? 0,
+    created_at: h.createdAt,
   }
+}
 
-  await syncItems('cards', store.cards, (c) => ({
-    title:          str(c.title, 500),
-    description:    str(c.descriptionHtml, 2000),
-    priority:       str(c.priority, 10),
-    status:         str(c.status, 20),
-    date:           str(c.date, 20),
-    time:           str(c.time, 10),
-    locationDay:    str(c.location?.day, 15),
-    locationPeriod: str(c.location?.period, 20),
-    projectId:      str(c.projectId, 255),
-    order:          c.order ?? 0,
-    checklist:      json(c.checklist, 3000),
-    createdAt:      str(c.createdAt, 30),
-    updatedAt:      str(c.updatedAt, 30),
-  }))
+function habitEntryToApi(e: HabitEntry): Payload {
+  return {
+    habit_id: e.habitId,
+    date: e.date,
+    value: e.value ?? 0,
+    skipped: e.skipped ?? false,
+    skip_reason: e.skipReason ?? '',
+  }
+}
 
-  await syncItems('calendarEvents', store.calendarEvents, (e) => ({
-    title:       str(e.title, 500),
-    date:        str(e.date, 20),
-    time:        str(e.time, 10),
-    description: str(e.description, 5000),
-    color:       str(e.color, 30),
-    recurrence:  json(e.recurrence, 1000),
-    reminder:    json(e.reminder, 500),
-    createdAt:   str(e.createdAt, 30),
-    updatedAt:   str(e.updatedAt, 30),
-  }))
+function crmContactToApi(c: CRMContact): Payload {
+  return {
+    name: c.name,
+    company: c.company ?? null,
+    role: c.role ?? null,
+    phone: c.phone ?? null,
+    email: c.email ?? null,
+    social_media: c.socialMedia ?? null,
+    context: c.context ?? null,
+    interests: c.interests ?? null,
+    priority: c.priority ?? 'media',
+    stage_id: c.stageId ?? 'prospeccao',
+    description: c.description ?? '',
+    follow_up_date: c.followUpDate ?? null,
+    sort_order: c.order ?? 0,
+    created_at: c.createdAt,
+    updated_at: c.updatedAt,
+  }
+}
 
-  await syncItems('notes', store.notes, (n) => ({
-    title:     str(n.title, 500),
-    folderId:  str(n.folderId, 255),
-    projectId: str(n.projectId, 255),
-    content:   b64(n.content),
-    order:     n.order ?? 0,
-    createdAt: str(n.createdAt, 30),
-    updatedAt: str(n.updatedAt, 30),
-  }))
+function billToApi(bill: Bill): Payload {
+  return {
+    name: bill.name,
+    amount: bill.amount ?? 0,
+    due_day: bill.dueDay ?? 1,
+    category: bill.category ?? 'outro',
+    recurrence: bill.recurrence ?? 'monthly',
+    is_paid: bill.isPaid ?? false,
+    paid_date: bill.paidDate ?? null,
+    created_at: bill.createdAt,
+  }
+}
 
-  await syncItems('noteFolders', store.noteFolders, (f) => ({
-    name:      str(f.name, 500),
-    parentId:  str(f.parentId, 255),
-    order:     f.order ?? 0,
-  }))
-
-  await syncItems('habits', store.habits, (h) => ({
-    name:      str(h.name, 500),
-    type:      str(h.type, 20),
-    frequency: str(h.frequency, 20),
-    color:     str(h.color, 30),
-    goal:      h.target ?? 0,
-    order:     h.order ?? 0,
-    createdAt: str(h.createdAt, 30),
-  }))
-
-  await syncItems('habitEntries', store.habitEntries, (e) => ({
-    habitId:    str(e.habitId, 255),
-    date:       str(e.date, 20),
-    value:      e.value ?? 0,
-    skipped:    e.skipped ?? false,
-    skipReason: str(e.skipReason, 500),
-  }))
-
-  await syncItems('crmContacts', store.crmContacts, (c) => ({
-    name:         str(c.name, 500),
-    company:      str(c.company, 500),
-    email:        str(c.email, 500),
-    phone:        str(c.phone, 100),
-    stage:        str(c.stageId, 50),
-    priority:     str(c.priority, 10),
-    tags:         json(c.tags, 1000),
-    notes:        b64(c.description),
-    followUpDate: str(c.followUpDate, 20),
-    order:        c.order ?? 0,
-    createdAt:    str(c.createdAt, 30),
-    updatedAt:    str(c.updatedAt, 30),
-  }))
-
-  await syncItems('bills', store.bills, (b) => ({
-    name:      str(b.name, 500),
-    amount:    b.amount ?? 0,
-    dueDay:    b.dueDay ?? 1,
-    category:  str(b.category, 100),
-    createdAt: str(b.createdAt, 30),
-  }))
-
-  await syncItems('expenses', store.expenses, (e) => ({
-    description:  str(e.description, 500),
-    amount:       e.amount ?? 0,
-    date:         str(e.date, 20),
-    category:     str(e.category, 100),
+function expenseToApi(e: Expense): Payload {
+  return {
+    description: e.description,
+    amount: e.amount ?? 0,
+    category: e.category ?? 'outro',
+    date: e.date,
     installments: e.installments ?? 1,
-    createdAt:    str(e.createdAt, 30),
-  }))
+    current_installment: e.currentInstallment ?? 1,
+    parent_id: e.parentId ?? null,
+    note: e.note ?? '',
+    created_at: e.createdAt,
+  }
+}
 
-  await syncItems('shortcuts', store.shortcuts, (s) => ({
-    title:    str(s.title, 500),
-    url:      str(s.value, 2000),
-    folderId: str(s.folderId, 255),
-    order:    s.order ?? 0,
-  }))
+function incomeToApi(i: IncomeEntry): Payload {
+  return {
+    source: i.source,
+    amount: i.amount ?? 0,
+    date: i.date,
+    kind: i.kind ?? 'fixed',
+    recurrence_months: i.recurrenceMonths ?? 1,
+    recurrence_index: i.recurrenceIndex ?? 1,
+    recurrence_group_id: i.recurrenceGroupId ?? null,
+    note: i.note ?? '',
+    created_at: i.createdAt,
+  }
+}
 
-  await syncItems('playbooks', store.playbooks, (p) => ({
-    title:     str(p.title, 500),
-    sector:    str(p.sector, 255),
-    category:  str(p.category, 255),
-    summary:   b64(p.summary),
-    content:   b64(p.content),
-    dialogs:   b64(JSON.stringify(p.dialogs ?? [])),
-    order:     p.order ?? 0,
-    createdAt: str(p.createdAt, 30),
-    updatedAt: str(p.updatedAt, 30),
-  }))
+function savingsGoalToApi(g: SavingsGoal): Payload {
+  return {
+    name: g.name,
+    target_amount: g.targetAmount ?? 0,
+    current_amount: g.currentAmount ?? 0,
+    deadline: g.deadline ?? null,
+    created_at: g.createdAt,
+  }
+}
 
-  // Settings (único doc por usuário)
-  try {
-    await clearCollection('settings', userId)
-    const ok = await createDoc('settings', userId, {
-      userId,
-      themeName: str(store.settings.themeName, 50),
-      updatedAt: new Date().toISOString(),
-    })
-    report.collections['settings'] = ok ? { sent: 1, errors: 0 } : { sent: 0, errors: 1 }
-    if (ok) report.totalSent++
-    else report.totalErrors++
-  } catch (err) {
-    console.warn('[sync] Falha ao sincronizar settings:', err)
-    report.collections['settings'] = { sent: 0, errors: 1 }
-    report.totalErrors++
+function playbookToApi(p: Playbook): Payload {
+  return {
+    name: p.title,
+    description: p.sector ?? '',
+    content: p.content ?? '',
+    summary: p.summary ?? '',
+    sort_order: p.order ?? 0,
+    created_at: p.createdAt,
+    updated_at: p.updatedAt,
+  }
+}
+
+function studyGoalToApi(g: StudyGoal): Payload {
+  return {
+    title: g.title,
+    description: g.description ?? '',
+    priority: g.priority ?? null,
+    status: g.status ?? 'todo',
+    checklist: g.checklist ?? [],
+    linked_planning_card_id: g.linkedPlanningCardId ?? null,
+    created_at: g.createdAt,
+    updated_at: g.updatedAt ?? g.createdAt,
+  }
+}
+
+function studyMediaItemToApi(m: StudyMediaItem): Payload {
+  return {
+    title: m.title,
+    url: m.url ?? '',
+    type: m.kind,
+    youtube_video_id: m.youtubeVideoId ?? null,
+    volume: m.volume ?? 1,
+    loop: m.loop ?? false,
+  }
+}
+
+// ── fromApi: payload → local ──────────────────────────────────────────────────
+
+function cardFromApi(id: string, p: Payload): Card {
+  return {
+    id,
+    title: s(p.title),
+    descriptionHtml: s(p.description_html),
+    location: {
+      day: (p.location_day as Card['location']['day']) ?? null,
+      period: (p.location_period as Card['location']['period']) ?? null,
+    },
+    order: n(p.sort_order),
+    date: p.date ? s(p.date) : null,
+    time: p.time ? s(p.time) : null,
+    hasDate: b(p.has_date),
+    priority: (p.priority as CardPriority) ?? null,
+    status: (p.status as CardStatus) ?? 'todo',
+    checklist: arr<ChecklistItem>(p.checklist),
+    projectId: p.project_id ? s(p.project_id) : null,
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function noteFromApi(id: string, p: Payload): Note {
+  return {
+    id,
+    title: s(p.title),
+    content: s(p.content_markdown),
+    folderId: p.folder_id ? s(p.folder_id) : null,
+    parentNoteId: p.parent_note_id ? s(p.parent_note_id) : null,
+    projectId: p.project_id ? s(p.project_id) : null,
+    isPinned: b(p.is_pinned),
+    isFavorite: b(p.is_favorite),
+    order: n(p.sort_order),
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function noteFolderFromApi(id: string, p: Payload): NoteFolder {
+  return {
+    id,
+    name: s(p.name),
+    parentId: p.parent_id ? s(p.parent_id) : null,
+    order: n(p.sort_order),
+  }
+}
+
+function calendarEventFromApi(id: string, p: Payload): CalendarEvent {
+  return {
+    id,
+    title: s(p.title),
+    date: s(p.date),
+    time: p.time ? s(p.time) : null,
+    recurrence: (p.recurrence as CalendarRecurrence) ?? null,
+    reminder: (p.reminder as CalendarReminder) ?? null,
+    description: s(p.description),
+    color: s(p.color),
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function habitFromApi(id: string, p: Payload): Habit {
+  return {
+    id,
+    name: s(p.name),
+    type: (p.type as Habit['type']) ?? 'boolean',
+    target: n(p.target, 1),
+    frequency: (p.frequency as Habit['frequency']) ?? 'daily',
+    weeklyTarget: n(p.weekly_target, 1),
+    weekDays: arr<number>(p.week_days),
+    trigger: s(p.trigger),
+    reason: s(p.reason),
+    minimumTarget: n(p.minimum_target),
+    color: s(p.color),
+    order: n(p.sort_order),
+    createdAt: s(p.created_at) || now(),
+  }
+}
+
+function habitEntryFromApi(id: string, p: Payload): HabitEntry {
+  return {
+    id,
+    habitId: s(p.habit_id),
+    date: s(p.date),
+    value: n(p.value),
+    skipped: b(p.skipped),
+    skipReason: s(p.skip_reason),
+  }
+}
+
+function crmContactFromApi(id: string, p: Payload): CRMContact {
+  return {
+    id,
+    name: s(p.name),
+    company: p.company ? s(p.company) : null,
+    role: p.role ? s(p.role) : null,
+    phone: p.phone ? s(p.phone) : null,
+    email: p.email ? s(p.email) : null,
+    socialMedia: p.social_media ? s(p.social_media) : null,
+    context: p.context ? s(p.context) : null,
+    interests: p.interests ? s(p.interests) : null,
+    priority: (p.priority as CRMPriority) ?? 'media',
+    tags: [],
+    stageId: (p.stage_id as CRMStageId) ?? 'prospeccao',
+    description: s(p.description),
+    followUpDate: p.follow_up_date ? s(p.follow_up_date) : null,
+    links: { noteIds: [], calendarEventIds: [], cardIds: [] } as CRMContactLinks,
+    order: n(p.sort_order),
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function billFromApi(id: string, p: Payload): Bill {
+  return {
+    id,
+    name: s(p.name),
+    amount: n(p.amount),
+    dueDay: n(p.due_day, 1),
+    category: (p.category as Bill['category']) ?? 'outro',
+    recurrence: (p.recurrence as Bill['recurrence']) ?? 'monthly',
+    isPaid: b(p.is_paid),
+    paidDate: p.paid_date ? s(p.paid_date) : null,
+    createdAt: s(p.created_at) || now(),
+  }
+}
+
+function expenseFromApi(id: string, p: Payload): Expense {
+  return {
+    id,
+    description: s(p.description),
+    amount: n(p.amount),
+    category: (p.category as Expense['category']) ?? 'outro',
+    date: s(p.date),
+    installments: n(p.installments, 1),
+    currentInstallment: n(p.current_installment, 1),
+    parentId: p.parent_id ? s(p.parent_id) : null,
+    note: s(p.note),
+    createdAt: s(p.created_at) || now(),
+  }
+}
+
+function incomeFromApi(id: string, p: Payload): IncomeEntry {
+  return {
+    id,
+    source: s(p.source),
+    amount: n(p.amount),
+    date: s(p.date),
+    kind: (p.kind as IncomeEntry['kind']) ?? 'fixed',
+    recurrenceMonths: n(p.recurrence_months, 1),
+    recurrenceIndex: n(p.recurrence_index, 1),
+    recurrenceGroupId: p.recurrence_group_id ? s(p.recurrence_group_id) : null,
+    note: s(p.note),
+    createdAt: s(p.created_at) || now(),
+  }
+}
+
+function savingsGoalFromApi(id: string, p: Payload): SavingsGoal {
+  return {
+    id,
+    name: s(p.name),
+    targetAmount: n(p.target_amount),
+    currentAmount: n(p.current_amount),
+    deadline: p.deadline ? s(p.deadline) : null,
+    createdAt: s(p.created_at) || now(),
+  }
+}
+
+function playbookFromApi(id: string, p: Payload): Playbook {
+  return {
+    id,
+    title: s(p.name),
+    sector: s(p.description),
+    category: '',
+    summary: s(p.summary),
+    content: s(p.content),
+    dialogs: [],
+    order: n(p.sort_order),
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function studyGoalFromApi(id: string, p: Payload): StudyGoal {
+  return {
+    id,
+    title: s(p.title),
+    description: s(p.description),
+    priority: (p.priority as CardPriority) ?? null,
+    status: (p.status as CardStatus) ?? 'todo',
+    checklist: arr<ChecklistItem>(p.checklist),
+    linkedPlanningCardId: p.linked_planning_card_id ? s(p.linked_planning_card_id) : null,
+    createdAt: s(p.created_at) || now(),
+    updatedAt: s(p.updated_at) || now(),
+  }
+}
+
+function studyMediaItemFromApi(id: string, p: Payload): StudyMediaItem {
+  return {
+    id,
+    title: s(p.title),
+    url: s(p.url),
+    kind: (p.type as StudyMediaItem['kind']) ?? 'youtube',
+    youtubeVideoId: p.youtube_video_id ? s(p.youtube_video_id) : null,
+    volume: n(p.volume, 1),
+    loop: b(p.loop),
+    showDock: false,
+  }
+}
+
+// ── Dispatcher fromApi ────────────────────────────────────────────────────────
+
+function applyChange(result: PartialSyncedStore, change: SyncChange): void {
+  if (change.operation === 'delete') return
+  const { id, resource, payload: p } = change
+  if (!p) return
+
+  switch (resource) {
+    case 'cards':                 result.cards.push(cardFromApi(id, p)); break
+    case 'notes':                 result.notes.push(noteFromApi(id, p)); break
+    case 'note_folders':          result.noteFolders.push(noteFolderFromApi(id, p)); break
+    case 'calendar_events':       result.calendarEvents.push(calendarEventFromApi(id, p)); break
+    case 'habits':                result.habits.push(habitFromApi(id, p)); break
+    case 'habit_entries':         result.habitEntries.push(habitEntryFromApi(id, p)); break
+    case 'crm_contacts':          result.crmContacts.push(crmContactFromApi(id, p)); break
+    case 'finance_bills':         result.bills.push(billFromApi(id, p)); break
+    case 'finance_expenses':      result.expenses.push(expenseFromApi(id, p)); break
+    case 'finance_incomes':       result.incomes.push(incomeFromApi(id, p)); break
+    case 'finance_savings_goals': result.savingsGoals.push(savingsGoalFromApi(id, p)); break
+    case 'playbooks':             result.playbooks.push(playbookFromApi(id, p)); break
+    case 'study_goals':           result.studyGoals.push(studyGoalFromApi(id, p)); break
+    case 'study_media_items':     result.studyMediaItems.push(studyMediaItemFromApi(id, p)); break
+  }
+}
+
+// ── Push ──────────────────────────────────────────────────────────────────────
+
+/** Envia todo o store para a API via /sync/batch (upsert de todas as entidades). */
+export async function pushAllToApi(store: MobileStore): Promise<void> {
+  const clientTime = now()
+  const ops: SyncOperation[] = []
+
+  function upsert(resource: string, id: string, payload: Payload) {
+    ops.push({ resource, operation: 'upsert', id, payload, client_updated_at: clientTime })
   }
 
-  return report
+  for (const c of store.cards)          upsert('cards', c.id, cardToApi(c))
+  for (const note of store.notes)       upsert('notes', note.id, noteToApi(note))
+  for (const f of store.noteFolders)    upsert('note_folders', f.id, noteFolderToApi(f))
+  for (const e of store.calendarEvents) upsert('calendar_events', e.id, calendarEventToApi(e))
+  for (const h of store.habits)         upsert('habits', h.id, habitToApi(h))
+  for (const e of store.habitEntries)   upsert('habit_entries', e.id, habitEntryToApi(e))
+  for (const c of store.crmContacts)    upsert('crm_contacts', c.id, crmContactToApi(c))
+  for (const b of store.bills)          upsert('finance_bills', b.id, billToApi(b))
+  for (const e of store.expenses)       upsert('finance_expenses', e.id, expenseToApi(e))
+  for (const i of store.incomes)        upsert('finance_incomes', i.id, incomeToApi(i))
+  for (const g of store.savingsGoals)   upsert('finance_savings_goals', g.id, savingsGoalToApi(g))
+  for (const p of store.playbooks)      upsert('playbooks', p.id, playbookToApi(p))
+  for (const g of (store.study.goals ?? []))      upsert('study_goals', g.id, studyGoalToApi(g))
+  for (const m of (store.study.mediaItems ?? [])) upsert('study_media_items', m.id, studyMediaItemToApi(m))
+
+  for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+    await organonApi.sync.batch(ops.slice(i, i + BATCH_SIZE))
+  }
+}
+
+// ── Pull ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Baixa todas as mudanças desde `since` (ou desde 2020 se null).
+ * Retorna store parcial com as entidades sincronizadas.
+ */
+export async function pullFromApi(since?: string): Promise<PullResult> {
+  const sinceDate = since ?? PULL_SINCE_FALLBACK
+
+  const store: PartialSyncedStore = {
+    cards: [], notes: [], noteFolders: [], calendarEvents: [],
+    habits: [], habitEntries: [], crmContacts: [],
+    bills: [], expenses: [], incomes: [], savingsGoals: [],
+    playbooks: [], studyGoals: [], studyMediaItems: [],
+  }
+  let serverTime = now()
+  let cursor: string | undefined
+
+  do {
+    const res = await organonApi.sync.changes(sinceDate, cursor)
+    serverTime = res.data.serverTime
+    cursor = res.data.nextCursor ?? undefined
+
+    for (const change of res.data.changes) {
+      applyChange(store, change)
+    }
+  } while (cursor)
+
+  return { store, serverTime }
+}
+
+/**
+ * Verifica se há mudanças no servidor desde `lastSyncAt`.
+ * Retorna true se houver ao menos 1 mudança.
+ */
+export async function hasRemoteChanges(lastSyncAt?: string): Promise<boolean> {
+  if (!lastSyncAt) return true
+  try {
+    const res = await organonApi.sync.changes(lastSyncAt, undefined, 1)
+    return res.data.changes.length > 0
+  } catch {
+    return false
+  }
 }

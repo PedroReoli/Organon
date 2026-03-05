@@ -1,43 +1,37 @@
 import React, { createContext, useContext } from 'react'
-import { useAppwrite, type SyncStatus } from './useAppwrite'
+import { useOrganonSync, type SyncStatus } from './useOrganonSync'
 import type { MobileStore } from '../types'
-import type { Models } from 'appwrite'
+import type { PartialSyncedStore } from '../api/sync'
 
-interface AppwriteContextValue {
-  user: Models.User<Models.Preferences> | null
-  isLoadingAuth: boolean
-  authError: string | null
+interface SyncContextValue {
+  isConfigured: boolean
   syncStatus: SyncStatus
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, name: string) => Promise<void>
-  logout: () => Promise<void>
-  clearAuthError: () => void
   triggerSync: (store: MobileStore) => void
 }
 
-const AppwriteContext = createContext<AppwriteContextValue>({
-  user: null,
-  isLoadingAuth: false,
-  authError: null,
+const SyncContext = createContext<SyncContextValue>({
+  isConfigured: false,
   syncStatus: 'idle',
-  login: async () => {},
-  register: async () => {},
-  logout: async () => {},
-  clearAuthError: () => {},
   triggerSync: () => {},
 })
 
 export function AppwriteProvider({
   children,
-  onCloudStoreDownloaded,
+  token,
+  baseUrl,
+  lastSyncAt,
+  onPullComplete,
 }: {
   children: React.ReactNode
-  onCloudStoreDownloaded?: (store: MobileStore) => void
+  token?: string
+  baseUrl?: string
+  lastSyncAt?: string
+  onPullComplete?: (store: PartialSyncedStore, serverTime: string) => void
 }) {
-  const value = useAppwrite(onCloudStoreDownloaded)
-  return <AppwriteContext.Provider value={value}>{children}</AppwriteContext.Provider>
+  const value = useOrganonSync(token, baseUrl, lastSyncAt, onPullComplete ?? (() => {}))
+  return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>
 }
 
 export function useAppwriteContext() {
-  return useContext(AppwriteContext)
+  return useContext(SyncContext)
 }

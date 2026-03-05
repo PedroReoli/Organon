@@ -428,6 +428,8 @@ export const THEME_LABELS: Record<ThemeName, string> = {
 export interface Settings {
   themeName: ThemeName
   weekStart: 'sun' | 'mon'
+  apiToken?: string
+  apiBaseUrl?: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -493,6 +495,7 @@ export interface MobileStore {
   study: StudyState
   settings: Settings
   storeUpdatedAt: string
+  lastSyncAt?: string
 }
 
 export const DEFAULT_MOBILE_STORE: MobileStore = {
