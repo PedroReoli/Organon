@@ -1105,7 +1105,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             <div className="settings-backup-actions">
               <button
                 className="btn btn-primary"
-                disabled={apiTokenSaving}
+                disabled={apiTokenSaving || isSyncing}
                 onClick={async () => {
                   if (!apiTokenInput.trim()) { setApiTokenError('Token não pode ser vazio.'); return }
                   setApiTokenSaving(true)

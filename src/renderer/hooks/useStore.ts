@@ -148,6 +148,7 @@ const normalizeStudyState = (input: Partial<StudyState> | null | undefined): Stu
 const getDefaultStore = (): Store => ({
   version: 12,
   storeUpdatedAt: new Date().toISOString(),
+  lastSyncAt: undefined,
   cards: [],
   shortcutFolders: [],
   shortcuts: [],
@@ -275,6 +276,7 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
     ...input,
     version: 12,
     storeUpdatedAt: input.storeUpdatedAt ?? base.storeUpdatedAt,
+    lastSyncAt: (input as Partial<Store> & { lastSyncAt?: string }).lastSyncAt ?? base.lastSyncAt,
     cards: normalizedCards.map(c => ({ ...c, projectId: (c as Card & { projectId?: string | null }).projectId ?? null })),
     shortcutFolders: normalizedFolders,
     shortcuts: normalizedShortcuts,
@@ -358,6 +360,8 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
       navbarConfig: (settings as Settings & { navbarConfig?: NavbarConfig }).navbarConfig ?? base.settings.navbarConfig,
       backupEnabled: (settings as Settings)?.backupEnabled ?? base.settings.backupEnabled,
       backupIntervalMinutes: (settings as Settings)?.backupIntervalMinutes ?? base.settings.backupIntervalMinutes,
+      apiToken: (settings as Settings)?.apiToken ?? base.settings.apiToken,
+      apiBaseUrl: (settings as Settings)?.apiBaseUrl ?? base.settings.apiBaseUrl,
     },
   }
 }

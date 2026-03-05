@@ -38,3 +38,8 @@ npm-debug.log*
 /data
 /te
 /database--config-outro
+
+# Environment variables (sensitive)
+.env
+.env.*
+!.env.example
