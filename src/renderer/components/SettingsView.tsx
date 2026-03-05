@@ -4,12 +4,6 @@ import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'
 
-interface AppwriteUser {
-  $id: string
-  email: string
-  name: string
-}
-
 interface SettingsViewProps {
   settings: Settings
   onUpdateSettings: (updates: Partial<Settings>) => void
@@ -22,10 +16,7 @@ interface SettingsViewProps {
   onAddNote?: (title: string, folderId?: string | null) => any
   onAddCard?: (title: string, date?: string | null) => any
   onAddCalendarEvent?: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => any
-  user?: AppwriteUser | null
-  onOpenAuthModal?: () => void
   isSyncing?: boolean
-  onSignOut?: () => Promise<void>
   syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 }
 
@@ -72,9 +63,16 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, user, onOpenAuthModal, isSyncing, onSignOut, syncStatus }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, isSyncing, syncStatus }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
+
+  // API token state
+  const [apiTokenInput, setApiTokenInput] = useState(settings.apiToken ?? '')
+  const [apiBaseUrlInput, setApiBaseUrlInput] = useState(settings.apiBaseUrl ?? '')
+  const [apiTokenSaving, setApiTokenSaving] = useState(false)
+  const [apiTokenStatus, setApiTokenStatus] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [apiTokenError, setApiTokenError] = useState<string | null>(null)
 
   // IDE form state
   const [showIdeForm, setShowIdeForm] = useState(false)
@@ -1058,79 +1056,95 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
         </section>
       )}
 
-      {/* Conta & Sincronização */}
+      {/* API & Sincronização */}
       <section className={`settings-section ${activeSection !== 'account' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
-          <h3>Conta &amp; Sincronizacao</h3>
+          <h3>API &amp; Sincronizacao</h3>
         </div>
 
-        {user ? (
-          <div className="settings-data-grid">
-            <div className="settings-data-card">
-              <h4>Logado como</h4>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--color-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    flexShrink: 0,
-                  }}
-                >
-                  {(user.name || user.email).charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  {user.name && <div style={{ fontSize: 14, fontWeight: 500 }}>{user.name}</div>}
-                  <div style={{ fontSize: 12, opacity: 0.6 }}>{user.email}</div>
-                </div>
-              </div>
-              {syncStatus && syncStatus !== 'idle' && (
-                <p className="settings-help-text" style={{ marginBottom: 10 }}>
-                  {syncStatus === 'pending' && 'Aguardando para sincronizar...'}
-                  {syncStatus === 'syncing' && 'Sincronizando com a nuvem...'}
-                  {syncStatus === 'synced' && 'Sincronizado com a nuvem.'}
-                  {syncStatus === 'error' && 'Erro ao sincronizar. Tentará novamente na próxima alteração.'}
-                </p>
-              )}
-              <p className="settings-help-text" style={{ marginBottom: 10 }}>
-                Sincronização automática ativada. Alterações são enviadas para a nuvem automaticamente. Ao entrar em outro dispositivo, a versão mais recente é baixada.
+        <div className="settings-data-grid">
+          <div className="settings-data-card">
+            <h4>Token de acesso</h4>
+            <p className="settings-help-text" style={{ marginBottom: 12 }}>
+              Configure o token da Organon API para sincronizar seus dados automaticamente.
+            </p>
+
+            <div className="settings-field" style={{ marginBottom: 10 }}>
+              <label className="settings-label">URL da API</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="https://reolicodeapi.com"
+                value={apiBaseUrlInput}
+                onChange={e => { setApiBaseUrlInput(e.target.value); setApiTokenStatus('idle') }}
+              />
+            </div>
+
+            <div className="settings-field" style={{ marginBottom: 14 }}>
+              <label className="settings-label">Token</label>
+              <input
+                className="form-input"
+                type="password"
+                placeholder="Cole o token aqui"
+                value={apiTokenInput}
+                onChange={e => { setApiTokenInput(e.target.value); setApiTokenStatus('idle') }}
+              />
+            </div>
+
+            {apiTokenError && (
+              <p className="settings-help-text" style={{ color: 'var(--color-danger, #ef4444)', marginBottom: 10 }}>
+                {apiTokenError}
               </p>
-              <div className="settings-backup-actions">
-                <button
-                  className="btn btn-secondary settings-reset-trigger"
-                  onClick={onSignOut}
-                  disabled={isSyncing}
-                >
-                  Sair da conta
-                </button>
-              </div>
+            )}
+            {apiTokenStatus === 'ok' && (
+              <p className="settings-help-text" style={{ color: '#22c55e', marginBottom: 10 }}>
+                Token válido. Sincronização ativada.
+              </p>
+            )}
+
+            <div className="settings-backup-actions">
+              <button
+                className="btn btn-primary"
+                disabled={apiTokenSaving}
+                onClick={async () => {
+                  if (!apiTokenInput.trim()) { setApiTokenError('Token não pode ser vazio.'); return }
+                  setApiTokenSaving(true)
+                  setApiTokenError(null)
+                  try {
+                    const base = apiBaseUrlInput.trim() || 'https://reolicodeapi.com'
+                    const res = await fetch(`${base}/api/v1/organon/${apiTokenInput.trim()}/health/db-ping`)
+                    if (!res.ok) throw new Error('invalid')
+                    onUpdateSettings({ apiToken: apiTokenInput.trim(), apiBaseUrl: base })
+                    setApiTokenStatus('ok')
+                  } catch {
+                    setApiTokenError('Token inválido ou API inacessível.')
+                    setApiTokenStatus('error')
+                  } finally {
+                    setApiTokenSaving(false)
+                  }
+                }}
+              >
+                {apiTokenSaving ? 'Validando...' : 'Salvar & Testar'}
+              </button>
             </div>
           </div>
-        ) : (
-          <div className="settings-data-grid">
-            <div className="settings-data-card">
-              <h4>Nuvem desativada</h4>
+
+          <div className="settings-data-card">
+            <h4>Status da sincronização</h4>
+            {syncStatus && syncStatus !== 'idle' ? (
               <p className="settings-help-text">
-                Entre com sua conta para sincronizar seus dados entre dispositivos.
+                {syncStatus === 'pending' && 'Aguardando para sincronizar...'}
+                {syncStatus === 'syncing' && 'Sincronizando com a API...'}
+                {syncStatus === 'synced' && 'Sincronizado com a API.'}
+                {syncStatus === 'error' && 'Erro ao sincronizar. Tentará novamente na próxima alteração.'}
               </p>
-              <div className="settings-backup-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={onOpenAuthModal}
-                >
-                  Entrar / Criar conta
-                </button>
-              </div>
-            </div>
+            ) : (
+              <p className="settings-help-text">
+                {settings.apiToken ? 'Sincronização automática ativa. Alterações são enviadas após 10s sem atividade.' : 'Configure o token para ativar a sincronização.'}
+              </p>
+            )}
           </div>
-        )}
+        </div>
       </section>
       </div>
     </div>

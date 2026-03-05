@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { useAuth } from '../hooks/useAuth'
-import { uploadStore, downloadStore, syncCollectionsToCloud } from '../../api/sync'
+import { useApiToken } from '../hooks/useApiToken'
+import { pushAllToApi, hasRemoteChanges, pullFromApi } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
 import { Titlebar } from './Titlebar'
 import { InternalNav } from './InternalNav'
-import { AuthModal } from './AuthModal'
 import { TodayView } from './TodayView'
 import { PlannerView } from './PlannerView'
 import { CalendarView } from './CalendarView'
@@ -176,55 +175,70 @@ export const App = () => {
     storeVersion,
   } = useStore()
 
-  const { user, isLoadingAuth, authError, login, register, logout, clearAuthError } = useAuth()
-  const [showAuthModal, setShowAuthModal] = useState(false)
+  const { isConfigured } = useApiToken(settings.apiBaseUrl ?? '', settings.apiToken ?? '')
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const userRef = useRef(user)
-  const lastCheckedUserRef = useRef<string | null>(null)
-  useEffect(() => { userRef.current = user }, [user])
+  const startupCheckedRef = useRef(false)
 
-  // Reset status when user logs out
+  // Startup sync: se API configurada, verifica se há mudanças no servidor
   useEffect(() => {
-    if (!user) {
-      setSyncStatus('idle')
-      lastCheckedUserRef.current = null
-    }
-  }, [user])
+    if (!isConfigured || !isElectron() || isLoading) return
+    if (startupCheckedRef.current) return
+    startupCheckedRef.current = true
 
-  // Startup sync: when user logs in (and store is loaded), check if cloud has newer version
-  useEffect(() => {
-    if (!user || !isElectron() || isLoading) return
-    const userId = user.$id
-    if (lastCheckedUserRef.current === userId) return
-    lastCheckedUserRef.current = userId
-
-    const checkCloudVersion = async () => {
+    const checkAndPull = async () => {
       try {
-        const [cloudStore, localStore] = await Promise.all([
-          downloadStore(userId),
-          window.electronAPI.loadStore(),
-        ])
-        if (!cloudStore?.storeUpdatedAt || !localStore?.storeUpdatedAt) return
-        if (cloudStore.storeUpdatedAt > localStore.storeUpdatedAt) {
-          await window.electronAPI.saveStore(cloudStore)
-          window.location.reload()
+        const rawStore = await window.electronAPI.loadStore()
+        const needsPull = await hasRemoteChanges(rawStore.lastSyncAt)
+        if (!needsPull) return
+
+        const { store: pulled, noteContents, serverTime } = await pullFromApi(rawStore.lastSyncAt)
+
+        // Escreve conteúdo das notas em disco
+        await Promise.all(
+          pulled.notes.map(async (note) => {
+            const content = noteContents.get(note.id) ?? ''
+            if (content) await window.electronAPI.writeNote(note.mdPath, content).catch(() => {})
+          })
+        )
+
+        // Merge: substitui coleções sincronizadas, mantém dados locais
+        const merged = {
+          ...rawStore,
+          cards: pulled.cards,
+          notes: pulled.notes,
+          noteFolders: pulled.noteFolders,
+          calendarEvents: pulled.calendarEvents,
+          projects: pulled.projects,
+          habits: pulled.habits,
+          habitEntries: pulled.habitEntries,
+          crmContacts: pulled.crmContacts,
+          bills: pulled.bills,
+          expenses: pulled.expenses,
+          incomes: pulled.incomes,
+          savingsGoals: pulled.savingsGoals,
+          playbooks: pulled.playbooks,
+          study: { ...rawStore.study, goals: pulled.studyGoals, mediaItems: pulled.studyMediaItems },
+          lastSyncAt: serverTime,
         }
+
+        await window.electronAPI.saveStore(merged)
+        window.location.reload()
       } catch {
-        // Ignore startup sync errors silently
+        // Ignora erros de startup silenciosamente
       }
     }
 
-    void checkCloudVersion()
+    void checkAndPull()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.$id, isLoading])
+  }, [isConfigured, isLoading])
 
-  // Auto-sync: any store change triggers a debounced cloud sync (10s)
+  // Auto-sync: qualquer mudança no store dispara push debounced (10s)
   useEffect(() => {
-    if (!userRef.current || !isElectron()) return
+    if (!isConfigured || !isElectron()) return
     setSyncStatus('pending')
     if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current)
     autoSyncTimerRef.current = setTimeout(async () => {
@@ -232,7 +246,7 @@ export const App = () => {
       try {
         const rawStore = await window.electronAPI.loadStore()
 
-        // Lê conteúdo das notas (.md) para incluir no upload (mobile precisa do content inline)
+        // Lê conteúdo das notas (.md) para enviar inline à API
         const noteContents = new Map<string, string>()
         await Promise.all(rawStore.notes.map(async (note) => {
           try {
@@ -241,22 +255,18 @@ export const App = () => {
           } catch { /* ignora erros individuais */ }
         }))
 
-        // Cria uma versão do store com content embutido em cada nota
-        const storeWithNoteContent = {
-          ...rawStore,
-          notes: rawStore.notes.map(n => ({ ...n, content: noteContents.get(n.id) ?? '' })),
-        }
+        await pushAllToApi(rawStore, noteContents)
 
-        await uploadStore(storeWithNoteContent as unknown as typeof rawStore, userRef.current!.$id)
-        await syncCollectionsToCloud(rawStore, userRef.current!.$id, noteContents)
+        // Salva lastSyncAt no store
+        const syncedAt = new Date().toISOString()
+        await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
+
         setSyncStatus('synced')
       } catch {
         setSyncStatus('error')
       }
     }, 10000)
-  }, [storeVersion])
-
-  void isLoadingAuth // usado internamente pelo useAuth
+  }, [storeVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [activeView, setActiveView] = useState<AppView>('today')
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
@@ -508,7 +518,7 @@ export const App = () => {
           navbarConfig={settings.navbarConfig}
           onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
           syncStatus={syncStatus}
-          userLoggedIn={!!user}
+          userLoggedIn={isConfigured}
         />
 
         <div className="app-view">
@@ -823,11 +833,8 @@ export const App = () => {
               onAddNote={addNote}
               onAddCard={addCard}
               onAddCalendarEvent={addCalendarEvent}
-              user={user}
-              onOpenAuthModal={() => setShowAuthModal(true)}
               isSyncing={isSyncing}
               syncStatus={syncStatus}
-              onSignOut={logout}
             />
           )}
 
@@ -901,15 +908,6 @@ export const App = () => {
         onUpdateSettings={updateSettings}
       />
 
-      {showAuthModal && (
-        <AuthModal
-          onLogin={login}
-          onRegister={register}
-          authError={authError}
-          onClearError={clearAuthError}
-          onClose={() => setShowAuthModal(false)}
-        />
-      )}
     </div>
   )
 }
