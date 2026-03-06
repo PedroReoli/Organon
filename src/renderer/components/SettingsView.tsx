@@ -18,6 +18,7 @@ interface SettingsViewProps {
   onAddCalendarEvent?: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => any
   isSyncing?: boolean
   syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+  syncError?: string | null
   isConfigured?: boolean
   userLoggedIn?: boolean
   // Auth
@@ -73,7 +74,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured, userLoggedIn, onLogin, onRegister, onLogout, authError, onClearAuthError, authUser, authLoading }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, syncError, isConfigured, userLoggedIn, onLogin, onRegister, onLogout, authError, onClearAuthError, authUser, authLoading }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -1108,9 +1109,9 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
               }} />
               <span className="settings-help-text" style={{ margin: 0 }}>
                 {!isConfigured
-                  ? 'API não configurada (verifique o .env)'
+                  ? 'API não configurada (defina uma URL válida da API)'
                   : !userLoggedIn
-                    ? 'Usuário não logado: sincronização desativada (modo local)'
+                    ? 'API configurada. Faça login para habilitar sincronização na nuvem.'
                   : pingStatus === 'ok' ? 'Conectado à API Organon'
                   : pingStatus === 'error' ? 'Sem conexão com a API'
                   : pingStatus === 'testing' ? 'Testando...'
@@ -1120,7 +1121,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             <p className="settings-help-text" style={{ marginBottom: 12 }}>
               API: {settings.apiBaseUrl || 'https://reolicodeapi.com'}
             </p>
-            <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured || !userLoggedIn}>
+            <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured}>
               {pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}
             </button>
           </div>
@@ -1143,6 +1144,11 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             <p className="settings-help-text">
               {!userLoggedIn ? 'Sem login: os dados ficam apenas no dispositivo local.' : 'Dados são enviados automaticamente 10 segundos após cada alteração.'}
             </p>
+            {syncStatus === 'error' && syncError && (
+              <p className="settings-help-text" style={{ color: 'var(--color-danger)', marginTop: 6 }}>
+                Detalhe: {syncError}
+              </p>
+            )}
           </div>
         </div>
       </section>

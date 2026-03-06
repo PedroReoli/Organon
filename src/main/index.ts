@@ -9,6 +9,14 @@ if (!app.isPackaged) {
   try { require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') }) } catch {}
 }
 
+const isDevMode = !app.isPackaged
+if (isDevMode) {
+  // Separa userData e lock entre dev/producao para permitir rodar ambas simultaneamente.
+  const devName = `${app.getName()} Dev`
+  app.setName(devName)
+  app.setPath('userData', path.join(app.getPath('appData'), devName))
+}
+
 // Tipos para o store
 interface CardLocation {
   day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' | null
@@ -2302,7 +2310,7 @@ const registerIpcHandlers = (): void => {
 }
 
 // Single instance lock — impede abrir múltiplas janelas ao clicar no ícone
-app.setAppUserModelId('com.organizador.semanal')
+app.setAppUserModelId(isDevMode ? 'com.organizador.semanal.dev' : 'com.organizador.semanal')
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()

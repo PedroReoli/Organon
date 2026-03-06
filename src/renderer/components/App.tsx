@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useAuth } from '../hooks/useAuth'
 import { pushAllToApi, hasRemoteChanges, pullFromApi } from '../../api/sync'
@@ -181,14 +181,18 @@ export const App = () => {
     settings.apiRefreshToken ?? '',
     (refreshToken, email) => updateSettings({ apiRefreshToken: refreshToken, apiEmail: email }),
   )
-  const isConfigured = auth.isAuthenticated || auth.isRestoring
+  const apiBaseUrl = (settings.apiBaseUrl ?? '').trim() || 'https://reolicodeapi.com'
+  const isConfigured = /^https?:\/\/.+/i.test(apiBaseUrl)
   const userLoggedIn = auth.isAuthenticated
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
+  const [syncError, setSyncError] = useState<string | null>(null)
   const isSyncing = syncStatus === 'syncing'
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startupCheckedRef = useRef(false)
+  const syncInFlightRef = useRef(false)
+  const syncQueuedRef = useRef(false)
 
   // Startup sync: se API configurada, verifica se há mudanças no servidor
   useEffect(() => {
@@ -248,38 +252,74 @@ export const App = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConfigured, userLoggedIn, isLoading])
 
-  // Auto-sync: qualquer mudança no store dispara push debounced (10s)
-  useEffect(() => {
+  const runSyncNow = useCallback(async () => {
     if (!isConfigured || !userLoggedIn || !isElectron()) return
-    setSyncStatus('pending')
-    if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current)
-    autoSyncTimerRef.current = setTimeout(async () => {
-      setSyncStatus('syncing')
-      try {
-        const rawStore = await window.electronAPI.loadStore()
+    if (syncInFlightRef.current) {
+      syncQueuedRef.current = true
+      return
+    }
+    if (autoSyncTimerRef.current) {
+      clearTimeout(autoSyncTimerRef.current)
+      autoSyncTimerRef.current = null
+    }
 
-        const noteContents = new Map<string, string>()
-        await Promise.all(rawStore.notes.map(async (note) => {
-          try {
-            const content = await window.electronAPI.readNote(note.mdPath)
-            noteContents.set(note.id, content ?? '')
-          } catch { /* ignora erros individuais de leitura */ }
-        }))
+    syncInFlightRef.current = true
+    setSyncStatus('syncing')
+    setSyncError(null)
+    try {
+      const rawStore = await window.electronAPI.loadStore()
 
-        console.log('[Sync] Enviando para API — ops:', rawStore.cards.length + rawStore.notes.length + rawStore.habits.length, '+ entidades')
-        await pushAllToApi(rawStore, noteContents)
+      const noteContents = new Map<string, string>()
+      await Promise.all(rawStore.notes.map(async (note) => {
+        try {
+          const content = await window.electronAPI.readNote(note.mdPath)
+          noteContents.set(note.id, content ?? '')
+        } catch { /* ignora erros individuais de leitura */ }
+      }))
 
-        const syncedAt = new Date().toISOString()
-        await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
+      console.log('[Sync] Enviando para API — ops:', rawStore.cards.length + rawStore.notes.length + rawStore.habits.length, '+ entidades')
+      await pushAllToApi(rawStore, noteContents)
 
-        console.log('[Sync] Push OK —', syncedAt)
-        setSyncStatus('synced')
-      } catch (err) {
-        console.error('[Sync] Erro no push:', err)
-        setSyncStatus('error')
+      const syncedAt = new Date().toISOString()
+      await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
+
+      console.log('[Sync] Push OK —', syncedAt)
+      setSyncStatus('synced')
+    } catch (err) {
+      console.error('[Sync] Erro no push:', err)
+      setSyncStatus('error')
+      setSyncError(err instanceof Error ? err.message : 'Erro desconhecido na sincronização.')
+    } finally {
+      syncInFlightRef.current = false
+      if (syncQueuedRef.current) {
+        syncQueuedRef.current = false
+        setSyncStatus('pending')
+        autoSyncTimerRef.current = setTimeout(() => {
+          autoSyncTimerRef.current = null
+          void runSyncNow()
+        }, 1000)
       }
+    }
+  }, [isConfigured, userLoggedIn])
+
+  const scheduleAutoSync = useCallback(() => {
+    if (!isConfigured || !userLoggedIn || !isElectron()) return
+    if (syncInFlightRef.current) {
+      syncQueuedRef.current = true
+      return
+    }
+    if (autoSyncTimerRef.current) return
+    setSyncStatus('pending')
+    autoSyncTimerRef.current = setTimeout(() => {
+      autoSyncTimerRef.current = null
+      void runSyncNow()
     }, 10000)
-  }, [storeVersion, isConfigured, userLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isConfigured, runSyncNow, userLoggedIn])
+
+  // Auto-sync: qualquer mudança agenda sync (sem reset infinito do timer)
+  useEffect(() => {
+    scheduleAutoSync()
+  }, [storeVersion, scheduleAutoSync])
 
   useEffect(() => {
     if (isConfigured && userLoggedIn) return
@@ -287,7 +327,10 @@ export const App = () => {
       clearTimeout(autoSyncTimerRef.current)
       autoSyncTimerRef.current = null
     }
+    syncInFlightRef.current = false
+    syncQueuedRef.current = false
     setSyncStatus('idle')
+    setSyncError(null)
     startupCheckedRef.current = false
   }, [isConfigured, userLoggedIn])
 
@@ -542,6 +585,7 @@ export const App = () => {
           onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
           syncStatus={syncStatus}
           userLoggedIn={userLoggedIn}
+          onSync={() => { void runSyncNow() }}
         />
 
         <div className="app-view">
@@ -859,6 +903,7 @@ export const App = () => {
               onAddCalendarEvent={addCalendarEvent}
               isSyncing={isSyncing}
               syncStatus={syncStatus}
+              syncError={syncError}
               isConfigured={isConfigured}
               userLoggedIn={userLoggedIn}
               onLogin={auth.login}

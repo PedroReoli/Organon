@@ -195,12 +195,26 @@ export const organonApi = {
 
   // HEALTH
   ping: async (): Promise<boolean> => {
-    try {
-      await doFetch('/health/db-ping', undefined, false)
-      return true
-    } catch {
-      return false
+    const attempts: Array<{ path: string; withAuth: boolean }> = [
+      { path: '/health/db-ping', withAuth: false },
+      { path: '/health', withAuth: false },
+      { path: '/auth/me', withAuth: true },
+    ]
+
+    for (const attempt of attempts) {
+      if (attempt.withAuth && !_accessToken) continue
+      try {
+        const headers: Record<string, string> = {}
+        if (attempt.withAuth && _accessToken) {
+          headers.Authorization = `Bearer ${_accessToken}`
+        }
+        const res = await fetch(buildUrl(attempt.path), { method: 'GET', headers })
+        if (res.ok) return true
+      } catch {
+        // tenta próximo endpoint
+      }
     }
+    return false
   },
 
   // AUTH
