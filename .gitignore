@@ -10,7 +10,7 @@ data/*.json
 !data/.gitkeep
 
 # IDE
-.vscode/
+# .vscode/
 .idea/
 
 # OS
