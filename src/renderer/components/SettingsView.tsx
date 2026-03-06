@@ -18,6 +18,7 @@ interface SettingsViewProps {
   onAddCalendarEvent?: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => any
   isSyncing?: boolean
   syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+  isConfigured?: boolean
 }
 
 interface ThemeCardProps {
@@ -63,16 +64,23 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, isSyncing, syncStatus }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
-  // API token state
-  const [apiTokenInput, setApiTokenInput] = useState(settings.apiToken ?? '')
-  const [apiBaseUrlInput, setApiBaseUrlInput] = useState(settings.apiBaseUrl ?? '')
-  const [apiTokenSaving, setApiTokenSaving] = useState(false)
-  const [apiTokenStatus, setApiTokenStatus] = useState<'idle' | 'ok' | 'error'>('idle')
-  const [apiTokenError, setApiTokenError] = useState<string | null>(null)
+  // Cloud ping state
+  const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+
+  const handlePing = async () => {
+    setPingStatus('testing')
+    try {
+      const { organonApi } = await import('../../api/organon')
+      const ok = await organonApi.ping()
+      setPingStatus(ok ? 'ok' : 'error')
+    } catch {
+      setPingStatus('error')
+    }
+  }
 
   // IDE form state
   const [showIdeForm, setShowIdeForm] = useState(false)
@@ -621,6 +629,15 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
       hidden: !isElectron(),
     },
     {
+      id: 'cloud',
+      label: 'Nuvem',
+      icon: (
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+          <path d="M13 10a5 5 0 1 0-9.9-1H2.5A2.5 2.5 0 0 0 5 13.5h8a2 2 0 0 0 0-4H13z" />
+        </svg>
+      ),
+    },
+    {
       id: 'account',
       label: 'Conta',
       icon: (
@@ -1056,93 +1073,100 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
         </section>
       )}
 
-      {/* API & Sincronização */}
-      <section className={`settings-section ${activeSection !== 'account' ? 'settings-section-hidden' : ''}`}>
+      {/* Nuvem */}
+      <section className={`settings-section ${activeSection !== 'cloud' ? 'settings-section-hidden' : ''}`}>
         <div className="settings-section-header">
-          <h3>API &amp; Sincronizacao</h3>
+          <h3>Nuvem</h3>
         </div>
 
         <div className="settings-data-grid">
           <div className="settings-data-card">
-            <h4>Token de acesso</h4>
+            <h4>Conectividade</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{
+                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                background: !isConfigured ? '#6b7280' : pingStatus === 'ok' ? '#22c55e' : pingStatus === 'error' ? '#ef4444' : '#6b7280',
+              }} />
+              <span className="settings-help-text" style={{ margin: 0 }}>
+                {!isConfigured
+                  ? 'API não configurada (verifique o .env)'
+                  : pingStatus === 'ok' ? 'Conectado à API Organon'
+                  : pingStatus === 'error' ? 'Sem conexão com a API'
+                  : pingStatus === 'testing' ? 'Testando...'
+                  : 'Clique em "Testar" para verificar'}
+              </span>
+            </div>
             <p className="settings-help-text" style={{ marginBottom: 12 }}>
-              Configure o token da Organon API para sincronizar seus dados automaticamente.
+              API: {settings.apiBaseUrl || 'https://reolicodeapi.com'}
             </p>
-
-            <div className="settings-field" style={{ marginBottom: 10 }}>
-              <label className="settings-label">URL da API</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="https://reolicodeapi.com"
-                value={apiBaseUrlInput}
-                onChange={e => { setApiBaseUrlInput(e.target.value); setApiTokenStatus('idle') }}
-              />
-            </div>
-
-            <div className="settings-field" style={{ marginBottom: 14 }}>
-              <label className="settings-label">Token</label>
-              <input
-                className="form-input"
-                type="password"
-                placeholder="Cole o token aqui"
-                value={apiTokenInput}
-                onChange={e => { setApiTokenInput(e.target.value); setApiTokenStatus('idle') }}
-              />
-            </div>
-
-            {apiTokenError && (
-              <p className="settings-help-text" style={{ color: 'var(--color-danger, #ef4444)', marginBottom: 10 }}>
-                {apiTokenError}
-              </p>
-            )}
-            {apiTokenStatus === 'ok' && (
-              <p className="settings-help-text" style={{ color: '#22c55e', marginBottom: 10 }}>
-                Token válido. Sincronização ativada.
-              </p>
-            )}
-
-            <div className="settings-backup-actions">
-              <button
-                className="btn btn-primary"
-                disabled={apiTokenSaving || isSyncing}
-                onClick={async () => {
-                  if (!apiTokenInput.trim()) { setApiTokenError('Token não pode ser vazio.'); return }
-                  setApiTokenSaving(true)
-                  setApiTokenError(null)
-                  try {
-                    const base = apiBaseUrlInput.trim() || 'https://reolicodeapi.com'
-                    const res = await fetch(`${base}/api/v1/organon/${apiTokenInput.trim()}/health/db-ping`)
-                    if (!res.ok) throw new Error('invalid')
-                    onUpdateSettings({ apiToken: apiTokenInput.trim(), apiBaseUrl: base })
-                    setApiTokenStatus('ok')
-                  } catch {
-                    setApiTokenError('Token inválido ou API inacessível.')
-                    setApiTokenStatus('error')
-                  } finally {
-                    setApiTokenSaving(false)
-                  }
-                }}
-              >
-                {apiTokenSaving ? 'Validando...' : 'Salvar & Testar'}
-              </button>
-            </div>
+            <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured}>
+              {pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}
+            </button>
           </div>
 
           <div className="settings-data-card">
-            <h4>Status da sincronização</h4>
-            {syncStatus && syncStatus !== 'idle' ? (
-              <p className="settings-help-text">
-                {syncStatus === 'pending' && 'Aguardando para sincronizar...'}
-                {syncStatus === 'syncing' && 'Sincronizando com a API...'}
-                {syncStatus === 'synced' && 'Sincronizado com a API.'}
-                {syncStatus === 'error' && 'Erro ao sincronizar. Tentará novamente na próxima alteração.'}
-              </p>
-            ) : (
-              <p className="settings-help-text">
-                {settings.apiToken ? 'Sincronização automática ativa. Alterações são enviadas após 10s sem atividade.' : 'Configure o token para ativar a sincronização.'}
-              </p>
-            )}
+            <h4>Sincronização automática</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{
+                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                background: syncStatus === 'synced' ? '#22c55e' : syncStatus === 'error' ? '#ef4444' : syncStatus === 'syncing' || syncStatus === 'pending' ? '#f97316' : '#6b7280',
+              }} />
+              <span className="settings-help-text" style={{ margin: 0 }}>
+                {syncStatus === 'idle' || !syncStatus ? (isConfigured ? 'Aguardando alterações' : 'Inativo') : ''}
+                {syncStatus === 'pending' && 'Aguardando 10s para sincronizar...'}
+                {syncStatus === 'syncing' && 'Sincronizando...'}
+                {syncStatus === 'synced' && 'Sincronizado com sucesso'}
+                {syncStatus === 'error' && 'Erro na última sincronização'}
+              </span>
+            </div>
+            <p className="settings-help-text">
+              Dados são enviados automaticamente 10 segundos após cada alteração.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Conta */}
+      <section className={`settings-section ${activeSection !== 'account' ? 'settings-section-hidden' : ''}`}>
+        <div className="settings-section-header">
+          <h3>Conta</h3>
+        </div>
+
+        <div className="settings-data-grid">
+          <div className="settings-data-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: 'var(--color-primary, #6366f1)', opacity: 0.15,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22, flexShrink: 0,
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="24" height="24" style={{ opacity: 0.6 }}>
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>Organon Personal</div>
+                <div className="settings-help-text" style={{ margin: 0 }}>Modo local + sincronização via API</div>
+              </div>
+            </div>
+
+            <p className="settings-help-text" style={{ marginBottom: 14 }}>
+              Login com conta Google e criação de perfil pessoal chegam em breve.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button className="btn btn-secondary" disabled style={{ opacity: 0.45, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M19.6 10.2c0-.7-.1-1.4-.2-2H10v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4"/><path d="M10 20c2.7 0 5-0.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H1.1v2.6A10 10 0 0 0 10 20z" fill="#34A853"/><path d="M4.4 12c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V5.4H1.1A10 10 0 0 0 0 10c0 1.6.4 3.2 1.1 4.6L4.4 12z" fill="#FBBC05"/><path d="M10 3.9c1.5 0 2.8.5 3.8 1.5L16.7 3C15 1.4 12.7.5 10 .5A10 10 0 0 0 1.1 5.5l3.3 2.5C5.2 5.6 7.4 3.9 10 3.9z" fill="#EA4335"/></svg>
+                Entrar com Google
+                <span style={{ fontSize: 10, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
+              </button>
+              <button className="btn btn-secondary" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>
+                Criar conta
+                <span style={{ fontSize: 10, marginLeft: 6, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>

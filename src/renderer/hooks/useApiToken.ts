@@ -2,7 +2,7 @@
 // Substitui useAuth.ts — sem login/logout, só configuração de token
 
 import { useState, useEffect, useCallback } from 'react'
-import { configureOrganon, organonApi } from '../../api/organon'
+import { configureOrganon, organonApi, hasOrganonToken } from '../../api/organon'
 
 const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
@@ -16,11 +16,12 @@ export interface UseApiTokenReturn {
 }
 
 export function useApiToken(initialBaseUrl: string, initialToken: string): UseApiTokenReturn {
-  const [isConfigured, setIsConfigured] = useState(false)
+  // hasOrganonToken() é true se o token veio do .env (já configurado no módulo)
+  const [isConfigured, setIsConfigured] = useState(() => hasOrganonToken())
   const [isValidating, setIsValidating] = useState(false)
   const [tokenError, setTokenError] = useState<string | null>(null)
 
-  // Configura o client no mount se já tiver token salvo
+  // Configura o client no mount se tiver token salvo nas settings (sobrescreve .env)
   useEffect(() => {
     if (initialToken) {
       configureOrganon({ baseUrl: initialBaseUrl || DEFAULT_BASE_URL, token: initialToken })

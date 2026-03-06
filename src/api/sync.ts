@@ -552,8 +552,17 @@ export async function pushAllToApi(
   for (const m of store.study.mediaItems)  upsert('study_media_items', m.id, studyMediaItemToApi(m))
 
   // Envia em lotes de BATCH_SIZE
+  const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
+  console.log(`[Sync] push — ${ops.length} operações em ${totalBatches} lote(s)`)
   for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-    await organonApi.sync.batch(ops.slice(i, i + BATCH_SIZE))
+    const batch = ops.slice(i, i + BATCH_SIZE)
+    try {
+      await organonApi.sync.batch(batch)
+      console.log(`[Sync] lote ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches} OK`)
+    } catch (err) {
+      console.error(`[Sync] lote ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches} ERRO:`, err)
+      throw err
+    }
   }
 }
 
@@ -598,7 +607,8 @@ export async function hasRemoteChanges(lastSyncAt?: string): Promise<boolean> {
   try {
     const res = await organonApi.sync.changes(lastSyncAt, undefined, 1)
     return res.data.changes.length > 0
-  } catch {
+  } catch (err) {
+    console.warn('[Sync] hasRemoteChanges falhou:', err)
     return false
   }
 }

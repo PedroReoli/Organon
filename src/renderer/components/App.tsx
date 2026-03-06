@@ -192,20 +192,21 @@ export const App = () => {
     const checkAndPull = async () => {
       try {
         const rawStore = await window.electronAPI.loadStore()
+        console.log('[Sync] Verificando mudanças remotas desde:', rawStore.lastSyncAt ?? 'início')
         const needsPull = await hasRemoteChanges(rawStore.lastSyncAt)
-        if (!needsPull) return
+        if (!needsPull) { console.log('[Sync] Nenhuma mudança remota.'); return }
 
+        console.log('[Sync] Baixando dados da API...')
         const { store: pulled, noteContents, serverTime } = await pullFromApi(rawStore.lastSyncAt)
+        console.log('[Sync] Pull OK — cards:', pulled.cards.length, 'notes:', pulled.notes.length)
 
-        // Escreve conteúdo das notas em disco
         await Promise.all(
           pulled.notes.map(async (note) => {
             const content = noteContents.get(note.id) ?? ''
-            if (content) await window.electronAPI.writeNote(note.mdPath, content).catch(() => {})
+            if (content) await window.electronAPI.writeNote(note.mdPath, content).catch((e: unknown) => console.warn('[Sync] writeNote falhou:', e))
           })
         )
 
-        // Merge: substitui coleções sincronizadas, mantém dados locais
         const merged = {
           ...rawStore,
           cards: pulled.cards,
@@ -226,9 +227,10 @@ export const App = () => {
         }
 
         await window.electronAPI.saveStore(merged)
+        console.log('[Sync] Store atualizado, recarregando...')
         window.location.reload()
-      } catch {
-        // Ignora erros de startup silenciosamente
+      } catch (err) {
+        console.error('[Sync] Erro no pull de startup:', err)
       }
     }
 
@@ -246,23 +248,24 @@ export const App = () => {
       try {
         const rawStore = await window.electronAPI.loadStore()
 
-        // Lê conteúdo das notas (.md) para enviar inline à API
         const noteContents = new Map<string, string>()
         await Promise.all(rawStore.notes.map(async (note) => {
           try {
             const content = await window.electronAPI.readNote(note.mdPath)
             noteContents.set(note.id, content ?? '')
-          } catch { /* ignora erros individuais */ }
+          } catch { /* ignora erros individuais de leitura */ }
         }))
 
+        console.log('[Sync] Enviando para API — ops:', rawStore.cards.length + rawStore.notes.length + rawStore.habits.length, '+ entidades')
         await pushAllToApi(rawStore, noteContents)
 
-        // Salva lastSyncAt no store
         const syncedAt = new Date().toISOString()
         await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
 
+        console.log('[Sync] Push OK —', syncedAt)
         setSyncStatus('synced')
-      } catch {
+      } catch (err) {
+        console.error('[Sync] Erro no push:', err)
         setSyncStatus('error')
       }
     }, 10000)
@@ -835,6 +838,7 @@ export const App = () => {
               onAddCalendarEvent={addCalendarEvent}
               isSyncing={isSyncing}
               syncStatus={syncStatus}
+              isConfigured={isConfigured}
             />
           )}
 

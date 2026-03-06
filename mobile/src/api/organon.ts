@@ -8,13 +8,22 @@ export interface OrganonConfig {
   token: string
 }
 
-let _config: OrganonConfig = { baseUrl: DEFAULT_BASE_URL, token: '' }
+// Inicializa a partir de variáveis de ambiente (Expo expõe EXPO_PUBLIC_* em process.env)
+let _config: OrganonConfig = {
+  baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || DEFAULT_BASE_URL,
+  token: process.env.EXPO_PUBLIC_API_TOKEN || '',
+}
+
+if (_config.token) {
+  console.log('[Organon] Token carregado do .env — API:', _config.baseUrl)
+}
 
 export function configureOrganon(config: OrganonConfig): void {
   _config = {
     baseUrl: config.baseUrl || DEFAULT_BASE_URL,
     token: config.token,
   }
+  console.log('[Organon] Configurado — API:', _config.baseUrl)
 }
 
 export function getOrganonConfig(): OrganonConfig {
@@ -94,8 +103,10 @@ export const organonApi = {
   ping: async (): Promise<boolean> => {
     try {
       await apiFetch('/health/db-ping')
+      console.log('[Organon] Ping OK —', _config.baseUrl)
       return true
-    } catch {
+    } catch (err) {
+      console.warn('[Organon] Ping falhou:', err)
       return false
     }
   },

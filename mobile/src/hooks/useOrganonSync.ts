@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { configureOrganon, hasOrganonToken } from '../api/organon'
+import { configureOrganon, hasOrganonToken, getOrganonConfig } from '../api/organon'
 import { pushAllToApi, pullFromApi, hasRemoteChanges } from '../api/sync'
 import type { PartialSyncedStore } from '../api/sync'
 import type { MobileStore } from '../types'
@@ -18,7 +18,8 @@ export function useOrganonSync(
   syncStatus: SyncStatus
   triggerSync: (store: MobileStore) => void
 } {
-  const [isConfigured, setIsConfigured] = useState(false)
+  // hasOrganonToken() já é true quando EXPO_PUBLIC_API_TOKEN está no .env
+  const [isConfigured, setIsConfigured] = useState(() => hasOrganonToken())
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestStoreRef = useRef<MobileStore | null>(null)
@@ -26,10 +27,14 @@ export function useOrganonSync(
   const onPullCompleteRef = useRef(onPullComplete)
   onPullCompleteRef.current = onPullComplete
 
-  // On mount: configure client and do startup pull if token exists
+  // On mount: configure client and do startup pull se tiver token
   useEffect(() => {
-    if (!token) return
-    configureOrganon({ baseUrl: baseUrl || DEFAULT_BASE_URL, token })
+    // Token das settings sobrescreve o .env; se não tem nenhum, sai
+    const activeToken = token?.trim() || getOrganonConfig().token
+    if (!activeToken) return
+    if (token?.trim()) {
+      configureOrganon({ baseUrl: baseUrl || DEFAULT_BASE_URL, token: token.trim() })
+    }
     setIsConfigured(true)
 
     isPullingRef.current = true

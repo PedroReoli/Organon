@@ -8,13 +8,22 @@ export interface OrganonConfig {
   token: string
 }
 
-let _config: OrganonConfig = { baseUrl: DEFAULT_BASE_URL, token: '' }
+// Inicializa a partir de variáveis de ambiente (Vite expõe VITE_* no renderer)
+let _config: OrganonConfig = {
+  baseUrl: (import.meta.env.VITE_API_BASE_URL as string) || DEFAULT_BASE_URL,
+  token: (import.meta.env.VITE_API_TOKEN as string) || '',
+}
+
+if (_config.token) {
+  console.log('[Organon] Token carregado do .env — API:', _config.baseUrl)
+}
 
 export function configureOrganon(config: OrganonConfig): void {
   _config = {
     baseUrl: config.baseUrl || DEFAULT_BASE_URL,
     token: config.token,
   }
+  console.log('[Organon] Configurado — API:', _config.baseUrl)
 }
 
 export function getOrganonConfig(): OrganonConfig {
@@ -45,6 +54,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const message = (body as { error?: { message?: string } })?.error?.message ?? `HTTP ${res.status}`
     const code = (body as { error?: { code?: string } })?.error?.code
     const err = Object.assign(new Error(message), { status: res.status, code })
+    console.error(`[Organon] ${init?.method ?? 'GET'} ${path} → ${res.status}:`, message, body)
     throw err
   }
 
@@ -94,8 +104,10 @@ export const organonApi = {
   ping: async (): Promise<boolean> => {
     try {
       await apiFetch('/health/db-ping')
+      console.log('[Organon] Ping OK —', _config.baseUrl)
       return true
-    } catch {
+    } catch (err) {
+      console.warn('[Organon] Ping falhou:', err)
       return false
     }
   },

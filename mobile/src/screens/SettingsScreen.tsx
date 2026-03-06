@@ -1,76 +1,56 @@
-import React, { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
-import { BottomSheet } from '../components/shared/BottomSheet'
-import { FormInput } from '../components/shared/FormInput'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAppwriteContext } from '../hooks/useAppwriteContext'
-import { configureOrganon, organonApi } from '../api/organon'
+import { organonApi, getOrganonConfig } from '../api/organon'
 import { THEMES, THEME_LABELS, type ThemeName } from '../types'
 
 const THEME_NAMES = Object.keys(THEMES) as ThemeName[]
 
+const SYNC_STATUS_COLORS = {
+  idle: '#6b7280', pending: '#f97316', syncing: '#3b82f6', synced: '#22c55e', error: '#ef4444',
+} as const
+
 const SYNC_STATUS_LABELS = {
   idle: 'Aguardando alterações',
-  pending: 'Aguardando...',
+  pending: 'Aguardando 10s...',
   syncing: 'Sincronizando...',
   synced: 'Sincronizado',
   error: 'Erro na sincronização',
 } as const
-
-const SYNC_STATUS_COLORS = {
-  idle: '#6b7280',
-  pending: '#f97316',
-  syncing: '#3b82f6',
-  synced: '#22c55e',
-  error: '#ef4444',
-} as const
-
-const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
 export function SettingsScreen() {
   const theme = useTheme()
   const { store, updateSettings } = useStore()
   const { isConfigured, syncStatus } = useAppwriteContext()
 
-  const [showTokenSheet, setShowTokenSheet] = useState(false)
-  const [tokenInput, setTokenInput] = useState('')
-  const [baseUrlInput, setBaseUrlInput] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [tokenError, setTokenError] = useState<string | null>(null)
+  const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
 
-  const handleOpenTokenSheet = () => {
-    setTokenInput(store.settings.apiToken ?? '')
-    setBaseUrlInput(store.settings.apiBaseUrl ?? '')
-    setTokenError(null)
-    setShowTokenSheet(true)
+  useEffect(() => {
+    if (isConfigured) {
+      organonApi.ping().then(ok => setPingStatus(ok ? 'ok' : 'error'))
+    }
+  }, [isConfigured])
+
+  const handlePing = async () => {
+    setPingStatus('testing')
+    const ok = await organonApi.ping()
+    setPingStatus(ok ? 'ok' : 'error')
   }
 
-  const handleSaveToken = async () => {
-    if (!tokenInput.trim()) {
-      setTokenError('O token não pode ser vazio.')
-      return
-    }
-    setIsSaving(true)
-    setTokenError(null)
-    try {
-      configureOrganon({ baseUrl: baseUrlInput.trim() || DEFAULT_BASE_URL, token: tokenInput.trim() })
-      const ok = await organonApi.ping()
-      if (!ok) {
-        setTokenError('Token inválido ou API inacessível.')
-        return
-      }
-      updateSettings({ apiToken: tokenInput.trim(), apiBaseUrl: baseUrlInput.trim() || DEFAULT_BASE_URL })
-      setShowTokenSheet(false)
-      Alert.alert('Conectado!', 'Token salvo. A sincronização será ativada na próxima vez que o app abrir.')
-    } catch {
-      setTokenError('Erro de conexão. Verifique a URL e o token.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  const connectivityColor = !isConfigured ? '#6b7280'
+    : pingStatus === 'ok' ? '#22c55e'
+    : pingStatus === 'error' ? '#ef4444'
+    : '#6b7280'
+
+  const connectivityLabel = !isConfigured ? 'API não configurada'
+    : pingStatus === 'ok' ? 'Conectado à API Organon'
+    : pingStatus === 'error' ? 'Sem conexão com a API'
+    : pingStatus === 'testing' ? 'Testando...'
+    : 'Verificando...'
 
   const s = StyleSheet.create({
     screen: { flex: 1, backgroundColor: theme.background },
@@ -82,60 +62,28 @@ export function SettingsScreen() {
     rowLast: { borderBottomWidth: 0 },
     rowLabel: { flex: 1, color: theme.text, fontSize: 15 },
     rowValue: { color: theme.text + '60', fontSize: 14 },
-    themeGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      padding: 12,
-      backgroundColor: theme.surface,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.text + '12',
-    },
-    themeCard: {
-      width: '48.5%',
-      borderRadius: 12,
-      borderWidth: 1,
-      padding: 10,
-      minHeight: 96,
-      justifyContent: 'space-between',
-    },
-    themeCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 8,
-    },
-    themeCardName: {
-      flex: 1,
-      fontSize: 12,
-      fontWeight: '700',
-      lineHeight: 16,
-    },
-    themeActiveBadge: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    themePreviewRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 10,
-    },
-    themeSwatch: {
-      width: 18,
-      height: 18,
-      borderRadius: 6,
-      borderWidth: 1,
-    },
-    syncRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: theme.surface, borderRadius: 12 },
-    actionBtn: { padding: 14, backgroundColor: theme.primary + '20', borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
-    actionBtnTxt: { color: theme.primary, fontSize: 15, fontWeight: '600' },
-    syncBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-    syncBadgeTxt: { fontSize: 12, fontWeight: '600' },
+    themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 12, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.text + '12' },
+    themeCard: { width: '48.5%', borderRadius: 12, borderWidth: 1, padding: 10, minHeight: 96, justifyContent: 'space-between' },
+    themeCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+    themeCardName: { flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 16 },
+    themeActiveBadge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    themePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+    themeSwatch: { width: 18, height: 18, borderRadius: 6, borderWidth: 1 },
+    cloudCard: { backgroundColor: theme.surface, borderRadius: 12, padding: 14, marginBottom: 8 },
+    cloudRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    cloudTitle: { color: theme.text + '50', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 },
+    cloudValue: { color: theme.text, fontSize: 14 },
+    cloudSub: { color: theme.text + '40', fontSize: 12, marginTop: 6 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    pingBtn: { marginTop: 12, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 8, backgroundColor: theme.primary + '18', alignItems: 'center' },
+    pingBtnTxt: { color: theme.primary, fontSize: 14, fontWeight: '600' },
+    accountCard: { backgroundColor: theme.surface, borderRadius: 12, padding: 16 },
+    avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: theme.primary + '22', alignItems: 'center', justifyContent: 'center' },
+    accountName: { color: theme.text, fontSize: 16, fontWeight: '700' },
+    accountSub: { color: theme.text + '50', fontSize: 12, marginTop: 2 },
+    comingSoon: { fontSize: 10, color: theme.text + '40', marginLeft: 6, backgroundColor: theme.text + '14', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
+    disabledBtn: { marginTop: 10, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.text + '18', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', opacity: 0.5 },
+    disabledBtnTxt: { color: theme.text + '80', fontSize: 14 },
   })
 
   return (
@@ -144,44 +92,61 @@ export function SettingsScreen() {
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* API e Sincronização */}
+        {/* Conta */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>API e sincronização</Text>
-
-          {isConfigured ? (
-            <>
-              <View style={[s.syncRow, { justifyContent: 'space-between' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Feather name="cloud" size={16} color={SYNC_STATUS_COLORS[syncStatus]} />
-                  <Text style={{ color: theme.text, fontSize: 14 }}>Status</Text>
-                </View>
-                <View style={[s.syncBadge, { backgroundColor: SYNC_STATUS_COLORS[syncStatus] + '20' }]}>
-                  <Text style={[s.syncBadgeTxt, { color: SYNC_STATUS_COLORS[syncStatus] }]}>
-                    {SYNC_STATUS_LABELS[syncStatus]}
-                  </Text>
-                </View>
+          <Text style={s.sectionTitle}>Conta</Text>
+          <View style={s.accountCard}>
+            <View style={[s.cloudRow, { marginBottom: 14 }]}>
+              <View style={s.avatar}>
+                <Feather name="user" size={24} color={theme.primary} />
               </View>
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={s.accountName}>Organon Personal</Text>
+                <Text style={s.accountSub}>Local + sincronização via API</Text>
+              </View>
+            </View>
+            <Text style={{ color: theme.text + '40', fontSize: 12, marginBottom: 12, lineHeight: 17 }}>
+              Login com Google e criação de conta chegam em breve.
+            </Text>
+            <View style={[s.disabledBtn, { marginTop: 0 }]}>
+              <Text style={s.disabledBtnTxt}>Entrar com Google</Text>
+              <Text style={s.comingSoon}>Em breve</Text>
+            </View>
+            <View style={s.disabledBtn}>
+              <Text style={s.disabledBtnTxt}>Criar conta</Text>
+              <Text style={s.comingSoon}>Em breve</Text>
+            </View>
+          </View>
+        </View>
 
-              <TouchableOpacity style={[s.actionBtn, { marginTop: 8 }]} onPress={handleOpenTokenSheet}>
-                <Feather name="key" size={16} color={theme.primary} />
-                <Text style={s.actionBtnTxt}>Alterar token</Text>
-              </TouchableOpacity>
+        {/* Nuvem */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Nuvem</Text>
 
-              <Text style={{ color: theme.text + '40', fontSize: 12, marginTop: 8, lineHeight: 17 }}>
-                Sincronização automática a cada 10 segundos após uma alteração.
-              </Text>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity style={s.actionBtn} onPress={handleOpenTokenSheet}>
-                <Feather name="key" size={18} color={theme.primary} />
-                <Text style={s.actionBtnTxt}>Configurar token da API</Text>
-              </TouchableOpacity>
-              <Text style={{ color: theme.text + '40', fontSize: 12, marginTop: 8, lineHeight: 17 }}>
-                O app funciona 100% offline. Configure o token para sincronizar entre dispositivos.
-              </Text>
-            </>
-          )}
+          <View style={s.cloudCard}>
+            <Text style={s.cloudTitle}>CONECTIVIDADE</Text>
+            <View style={s.cloudRow}>
+              <View style={[s.dot, { backgroundColor: connectivityColor }]} />
+              <Text style={s.cloudValue}>{connectivityLabel}</Text>
+            </View>
+            <Text style={s.cloudSub}>{getOrganonConfig().baseUrl}</Text>
+            <TouchableOpacity
+              style={[s.pingBtn, (!isConfigured || pingStatus === 'testing') && { opacity: 0.4 }]}
+              onPress={handlePing}
+              disabled={!isConfigured || pingStatus === 'testing'}
+            >
+              <Text style={s.pingBtnTxt}>{pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.cloudCard}>
+            <Text style={s.cloudTitle}>SINCRONIZAÇÃO</Text>
+            <View style={s.cloudRow}>
+              <View style={[s.dot, { backgroundColor: SYNC_STATUS_COLORS[syncStatus] }]} />
+              <Text style={s.cloudValue}>{SYNC_STATUS_LABELS[syncStatus]}</Text>
+            </View>
+            <Text style={s.cloudSub}>Dados enviados 10s após cada alteração</Text>
+          </View>
         </View>
 
         {/* Aparência */}
@@ -254,45 +219,6 @@ export function SettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Token Bottom Sheet */}
-      <BottomSheet
-        visible={showTokenSheet}
-        onClose={() => setShowTokenSheet(false)}
-        title="Token da API"
-        onSave={handleSaveToken}
-      >
-        <FormInput
-          label="URL da API (opcional)"
-          value={baseUrlInput}
-          onChangeText={setBaseUrlInput}
-          placeholder="https://reolicodeapi.com"
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <FormInput
-          label="Token"
-          value={tokenInput}
-          onChangeText={setTokenInput}
-          placeholder="Cole seu token aqui"
-          secureTextEntry={true}
-          autoFocus={true}
-        />
-
-        {tokenError ? (
-          <View style={{ backgroundColor: '#ef444420', borderRadius: 8, padding: 10, marginTop: 4 }}>
-            <Text style={{ color: '#ef4444', fontSize: 13 }}>{tokenError}</Text>
-          </View>
-        ) : null}
-
-        {isSaving && (
-          <Text style={{ color: theme.text + '60', fontSize: 13, textAlign: 'center', marginTop: 8 }}>
-            Validando token...
-          </Text>
-        )}
-
-        <View style={{ height: 20 }} />
-      </BottomSheet>
     </SafeAreaView>
   )
 }

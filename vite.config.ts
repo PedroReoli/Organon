@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
       __APP_VERSION__: JSON.stringify(pkg.version),
     },
     root: 'src/renderer',
+    envDir: path.resolve(__dirname), // lê .env da raiz do projeto, não de src/renderer
     base: './',
     build: {
       outDir: '../../dist/renderer',
