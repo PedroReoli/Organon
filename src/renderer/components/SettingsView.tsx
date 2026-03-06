@@ -84,6 +84,9 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
+  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('')
+  const [showAuthPassword, setShowAuthPassword] = useState(false)
+  const [authLocalError, setAuthLocalError] = useState<string | null>(null)
   const [authName, setAuthName] = useState('')
   const [authSubmitting, setAuthSubmitting] = useState(false)
 
@@ -1205,7 +1208,13 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                     {(['login', 'register'] as const).map(tab => (
                       <button
                         key={tab}
-                        onClick={() => { setAuthTab(tab); onClearAuthError?.() }}
+                        onClick={() => {
+                          setAuthTab(tab)
+                          if (tab === 'login') setAuthPasswordConfirm('')
+                          setShowAuthPassword(false)
+                          setAuthLocalError(null)
+                          onClearAuthError?.()
+                        }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
                           padding: '6px 14px', fontSize: 13, fontWeight: 600,
@@ -1223,6 +1232,14 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                     style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
                     onSubmit={async (e) => {
                       e.preventDefault()
+                      setAuthLocalError(null)
+                      onClearAuthError?.()
+
+                      if (authTab === 'register' && authPassword !== authPasswordConfirm) {
+                        setAuthLocalError('As senhas não coincidem.')
+                        return
+                      }
+
                       setAuthSubmitting(true)
                       try {
                         if (authTab === 'login') {
@@ -1241,7 +1258,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                         type="text"
                         placeholder="Nome (opcional)"
                         value={authName}
-                        onChange={e => setAuthName(e.target.value)}
+                        onChange={e => { setAuthName(e.target.value); setAuthLocalError(null); onClearAuthError?.() }}
                         disabled={authSubmitting}
                       />
                     )}
@@ -1250,29 +1267,92 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                       type="email"
                       placeholder="E-mail"
                       value={authEmail}
-                      onChange={e => setAuthEmail(e.target.value)}
+                      onChange={e => { setAuthEmail(e.target.value); setAuthLocalError(null); onClearAuthError?.() }}
                       required
                       disabled={authSubmitting}
                     />
-                    <input
-                      className="form-input"
-                      type="password"
-                      placeholder="Senha (mínimo 8 caracteres)"
-                      value={authPassword}
-                      onChange={e => setAuthPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      disabled={authSubmitting}
-                    />
+                    <div className="settings-auth-password-field">
+                      <input
+                        className="form-input settings-auth-password-input"
+                        type={showAuthPassword ? 'text' : 'password'}
+                        placeholder="Senha (mínimo 8 caracteres)"
+                        value={authPassword}
+                        onChange={e => { setAuthPassword(e.target.value); setAuthLocalError(null); onClearAuthError?.() }}
+                        required
+                        minLength={8}
+                        disabled={authSubmitting}
+                      />
+                      <button
+                        type="button"
+                        className="settings-auth-password-toggle"
+                        onClick={() => setShowAuthPassword(v => !v)}
+                        disabled={authSubmitting}
+                        title={showAuthPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        aria-label={showAuthPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showAuthPassword ? (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.89 1 12c.73-2.06 2-3.86 3.6-5.26M9.9 4.24A11.1 11.1 0 0 1 12 4c5 0 9.27 3.11 11 8a11.8 11.8 0 0 1-4.06 5.94" />
+                            <path d="M1 1l22 22" />
+                            <path d="M9.53 9.53A3.5 3.5 0 0 0 14.47 14.47" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {authTab === 'register' && (
+                      <div className="settings-auth-password-field">
+                        <input
+                          className="form-input settings-auth-password-input"
+                          type={showAuthPassword ? 'text' : 'password'}
+                          placeholder="Confirmar senha"
+                          value={authPasswordConfirm}
+                          onChange={e => { setAuthPasswordConfirm(e.target.value); setAuthLocalError(null); onClearAuthError?.() }}
+                          required
+                          minLength={8}
+                          disabled={authSubmitting}
+                        />
+                        <button
+                          type="button"
+                          className="settings-auth-password-toggle"
+                          onClick={() => setShowAuthPassword(v => !v)}
+                          disabled={authSubmitting}
+                          title={showAuthPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                          aria-label={showAuthPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        >
+                          {showAuthPassword ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.89 1 12c.73-2.06 2-3.86 3.6-5.26M9.9 4.24A11.1 11.1 0 0 1 12 4c5 0 9.27 3.11 11 8a11.8 11.8 0 0 1-4.06 5.94" />
+                              <path d="M1 1l22 22" />
+                              <path d="M9.53 9.53A3.5 3.5 0 0 0 14.47 14.47" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
-                    {authError && (
-                      <p style={{ color: 'var(--color-danger)', fontSize: 12, margin: 0 }}>{authError}</p>
+                    {(authLocalError || authError) && (
+                      <p style={{ color: 'var(--color-danger)', fontSize: 12, margin: 0 }}>{authLocalError ?? authError}</p>
                     )}
 
                     <button
                       className="btn btn-primary"
                       type="submit"
-                      disabled={authSubmitting || !authEmail || !authPassword}
+                      disabled={
+                        authSubmitting
+                        || !authEmail
+                        || !authPassword
+                        || (authTab === 'register' && (!authPasswordConfirm || authPassword !== authPasswordConfirm))
+                      }
                     >
                       {authSubmitting
                         ? (authTab === 'login' ? 'Entrando...' : 'Criando conta...')

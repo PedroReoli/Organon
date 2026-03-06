@@ -4762,6 +4762,40 @@ input:focus, textarea:focus, select:focus {
   font-size: 10px;
 }
 
+.settings-auth-password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-auth-password-input {
+  padding-right: 42px;
+}
+
+.settings-auth-password-toggle {
+  position: absolute;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  background: transparent;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.settings-auth-password-toggle:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.settings-auth-password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .settings-backup-actions {
   display: flex;
   gap: 8px;
@@ -12683,11 +12717,13 @@ input:focus, textarea:focus, select:focus {
  * NOTES EDITOR - COPY ACTIONS / LINK MENU
  * ======================================== */
 
-.notes-editor .tiptap-editor {
+.notes-editor .tiptap-editor,
+.notes-editor-content .tiptap-editor {
   position: relative;
 }
 
-.notes-editor .editor-toolbar {
+.notes-editor .editor-toolbar,
+.notes-editor-content .editor-toolbar {
   z-index: 120;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
@@ -12697,35 +12733,46 @@ input:focus, textarea:focus, select:focus {
 .notes-editor .editor-link-popover,
 .notes-editor .editor-toolbar-dropdown-menu,
 .notes-editor .editor-color-picker,
-.notes-editor .editor-table-picker {
+.notes-editor .editor-table-picker,
+.notes-editor-content .editor-link-popover,
+.notes-editor-content .editor-toolbar-dropdown-menu,
+.notes-editor-content .editor-color-picker,
+.notes-editor-content .editor-table-picker {
   z-index: 1300;
 }
 
-.notes-editor .editor-toolbar-dropdown {
+.notes-editor .editor-toolbar-dropdown,
+.notes-editor-content .editor-toolbar-dropdown {
   position: relative;
 }
 
-.notes-editor .editor-toolbar-dropdown .editor-link-popover {
+.notes-editor .editor-toolbar-dropdown .editor-link-popover,
+.notes-editor-content .editor-toolbar-dropdown .editor-link-popover {
   left: 0;
   right: auto;
   max-width: min(360px, calc(100vw - 140px));
 }
 
-.notes-editor .editor-toolbar-dropdown .editor-link-popover .form-input {
+.notes-editor .editor-toolbar-dropdown .editor-link-popover .form-input,
+.notes-editor-content .editor-toolbar-dropdown .editor-link-popover .form-input {
   width: min(240px, calc(100vw - 260px));
   min-width: 130px;
 }
 
 .notes-editor .tiptap-editor .ProseMirror pre,
-.notes-editor .tiptap-editor .ProseMirror blockquote {
+.notes-editor .tiptap-editor .ProseMirror blockquote,
+.notes-editor-content .tiptap-editor .ProseMirror pre,
+.notes-editor-content .tiptap-editor .ProseMirror blockquote {
   position: relative;
 }
 
-.notes-editor .tiptap-editor .ProseMirror pre {
+.notes-editor .tiptap-editor .ProseMirror pre,
+.notes-editor-content .tiptap-editor .ProseMirror pre {
   padding-top: 34px;
 }
 
-.notes-editor .tiptap-editor .ProseMirror blockquote {
+.notes-editor .tiptap-editor .ProseMirror blockquote,
+.notes-editor-content .tiptap-editor .ProseMirror blockquote {
   padding-right: 72px;
 }
 
