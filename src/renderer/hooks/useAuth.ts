@@ -12,6 +12,22 @@ import type { OrganonUser } from '../../api/organon'
 
 const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
+type TokenPair = { accessToken: string; refreshToken: string }
+
+const asRecord = (value: unknown): Record<string, unknown> => (
+  value && typeof value === 'object' ? value as Record<string, unknown> : {}
+)
+
+const getString = (value: unknown): string => (typeof value === 'string' ? value : '')
+
+const readTokenPair = (payload: unknown): TokenPair | null => {
+  const root = asRecord(payload)
+  const accessToken = getString(root.accessToken ?? root.access_token)
+  const refreshToken = getString(root.refreshToken ?? root.refresh_token)
+  if (!accessToken || !refreshToken) return null
+  return { accessToken, refreshToken }
+}
+
 export interface UseAuthReturn {
   isAuthenticated: boolean
   /** true enquanto tenta restaurar sessão do refreshToken salvo */
@@ -68,14 +84,16 @@ export function useAuth(
       setIsRestoring(true)
       try {
         const res = await organonApi.auth.refresh(refreshToken)
+        const tokens = readTokenPair(res.data)
+        if (!tokens) throw new Error('Resposta de autenticação inválida.')
         configureOrganon({
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
         })
         const me = await organonApi.auth.me()
         setUser(me.data)
         setIsAuthenticated(true)
-        onSessionChange(res.data.refreshToken, me.data.email)
+        onSessionChange(tokens.refreshToken, me.data.email)
       } catch {
         // RefreshToken inválido ou expirado — limpa sessão
         configureOrganon({ accessToken: '', refreshToken: '' })
@@ -93,13 +111,15 @@ export function useAuth(
       setAuthError(null)
       try {
         const res = await organonApi.auth.login(email, password)
+        const tokens = readTokenPair(res.data)
+        if (!tokens) throw new Error('Resposta de autenticação inválida. Faça login novamente.')
         configureOrganon({
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
         })
         setUser(res.data.user)
         setIsAuthenticated(true)
-        onSessionChange(res.data.refreshToken, email)
+        onSessionChange(tokens.refreshToken, email)
         return true
       } catch (err) {
         setAuthError((err as Error).message || 'Erro ao fazer login.')
@@ -114,13 +134,15 @@ export function useAuth(
       setAuthError(null)
       try {
         const res = await organonApi.auth.register(email, password, name)
+        const tokens = readTokenPair(res.data)
+        if (!tokens) throw new Error('Resposta de autenticação inválida. Tente novamente.')
         configureOrganon({
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
         })
         setUser(res.data.user)
         setIsAuthenticated(true)
-        onSessionChange(res.data.refreshToken, res.data.user.email)
+        onSessionChange(tokens.refreshToken, res.data.user.email)
         return true
       } catch (err) {
         setAuthError((err as Error).message || 'Erro ao criar conta.')

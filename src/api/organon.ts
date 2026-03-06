@@ -11,6 +11,20 @@ let _refreshToken = ''
 let _refreshPromise: Promise<void> | null = null
 let _onTokensUpdated: ((accessToken: string, refreshToken: string) => void) | null = null
 
+const asRecord = (value: unknown): Record<string, unknown> => (
+  value && typeof value === 'object' ? value as Record<string, unknown> : {}
+)
+
+const getString = (value: unknown): string => (typeof value === 'string' ? value : '')
+
+const readTokenPair = (payload: unknown): { accessToken: string; refreshToken: string } | null => {
+  const root = asRecord(payload)
+  const accessToken = getString(root.accessToken ?? root.access_token)
+  const refreshToken = getString(root.refreshToken ?? root.refresh_token)
+  if (!accessToken || !refreshToken) return null
+  return { accessToken, refreshToken }
+}
+
 export function configureOrganon(config: {
   baseUrl?: string
   accessToken?: string
@@ -97,20 +111,30 @@ async function doRefresh(): Promise<void> {
 
   _refreshPromise = (async () => {
     if (!_refreshToken) throw new Error('No refresh token')
-    const res = await fetch(buildUrl('/auth/refresh'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: _refreshToken }),
-    })
-    if (!res.ok) {
+
+    const tryRefresh = async (body: Record<string, string>) => {
+      const res = await fetch(buildUrl('/auth/refresh'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) return null
+      const json = await res.json().catch(() => ({}))
+      return readTokenPair(asRecord(json).data ?? json)
+    }
+
+    const tokenPair =
+      await tryRefresh({ refreshToken: _refreshToken })
+      ?? await tryRefresh({ refresh_token: _refreshToken })
+
+    if (!tokenPair) {
       _accessToken = ''
       _refreshToken = ''
       _onTokensUpdated?.('', '')
       throw new Error('Token refresh failed')
     }
-    const data = (await res.json()) as { data: { accessToken: string; refreshToken: string } }
-    _accessToken = data.data.accessToken
-    _refreshToken = data.data.refreshToken
+    _accessToken = tokenPair.accessToken
+    _refreshToken = tokenPair.refreshToken
     _onTokensUpdated?.(_accessToken, _refreshToken)
   })().finally(() => {
     _refreshPromise = null

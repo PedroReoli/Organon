@@ -142,6 +142,10 @@ interface Settings {
   dataDir: string | null
   installerCompleted: boolean
   weekStart: string | null
+  apiToken?: string
+  apiBaseUrl?: string
+  apiEmail?: string
+  apiRefreshToken?: string
   keyboardShortcuts?: Array<{
     id: string
     action: string
@@ -953,6 +957,10 @@ const normalizeStore = (input: Partial<Store> | null): Store => {
     dataDir?: string | null
     installerCompleted?: boolean
     weekStart?: string | null
+    apiToken?: string
+    apiBaseUrl?: string
+    apiEmail?: string
+    apiRefreshToken?: string
     keyboardShortcuts?: Array<{
       id: string
       action: string
@@ -1016,6 +1024,10 @@ const normalizeStore = (input: Partial<Store> | null): Store => {
       dataDir: oldSettings?.dataDir ?? base.settings.dataDir,
       installerCompleted: oldSettings?.installerCompleted ?? base.settings.installerCompleted,
       weekStart: oldSettings?.weekStart ?? base.settings.weekStart,
+      apiToken: oldSettings?.apiToken ?? base.settings.apiToken,
+      apiBaseUrl: oldSettings?.apiBaseUrl ?? base.settings.apiBaseUrl,
+      apiEmail: oldSettings?.apiEmail ?? base.settings.apiEmail,
+      apiRefreshToken: oldSettings?.apiRefreshToken ?? base.settings.apiRefreshToken,
       keyboardShortcuts: oldSettings?.keyboardShortcuts ?? base.settings.keyboardShortcuts,
       backupEnabled: oldSettings?.backupEnabled ?? true,
       backupIntervalMinutes: oldSettings?.backupIntervalMinutes ?? base.settings.backupIntervalMinutes,
