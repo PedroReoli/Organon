@@ -531,26 +531,44 @@ export async function pushAllToApi(
 ): Promise<void> {
   const clientTime = now()
   const ops: SyncOperation[] = []
+  const safeStore = store as Partial<Store>
+  const safeStudy = (safeStore.study ?? {}) as Partial<Store['study']>
+
+  const cards = arr<Card>(safeStore.cards)
+  const notes = arr<Note>(safeStore.notes)
+  const noteFolders = arr<NoteFolder>(safeStore.noteFolders)
+  const calendarEvents = arr<CalendarEvent>(safeStore.calendarEvents)
+  const projects = arr<Project>(safeStore.projects)
+  const habits = arr<Habit>(safeStore.habits)
+  const habitEntries = arr<HabitEntry>(safeStore.habitEntries)
+  const crmContacts = arr<CRMContact>(safeStore.crmContacts)
+  const bills = arr<Bill>(safeStore.bills)
+  const expenses = arr<Expense>(safeStore.expenses)
+  const incomes = arr<IncomeEntry>(safeStore.incomes)
+  const savingsGoals = arr<SavingsGoal>(safeStore.savingsGoals)
+  const playbooks = arr<Playbook>(safeStore.playbooks)
+  const studyGoals = arr<StudyGoal>(safeStudy.goals)
+  const studyMediaItems = arr<StudyMediaItem>(safeStudy.mediaItems)
 
   function upsert(resource: string, id: string, payload: Payload) {
     ops.push({ resource, operation: 'upsert', id, payload, client_updated_at: clientTime })
   }
 
-  for (const c of store.cards)         upsert('cards', c.id, cardToApi(c))
-  for (const n of store.notes)         upsert('notes', n.id, noteToApi(n, noteContents?.get(n.id) ?? ''))
-  for (const f of store.noteFolders)   upsert('note_folders', f.id, noteFolderToApi(f))
-  for (const e of store.calendarEvents) upsert('calendar_events', e.id, calendarEventToApi(e))
-  for (const p of store.projects)      upsert('projects', p.id, projectToApi(p))
-  for (const h of store.habits)        upsert('habits', h.id, habitToApi(h))
-  for (const e of store.habitEntries)  upsert('habit_entries', e.id, habitEntryToApi(e))
-  for (const c of store.crmContacts)   upsert('crm_contacts', c.id, crmContactToApi(c))
-  for (const b of store.bills)         upsert('finance_bills', b.id, billToApi(b))
-  for (const e of store.expenses)      upsert('finance_expenses', e.id, expenseToApi(e))
-  for (const i of store.incomes)       upsert('finance_incomes', i.id, incomeToApi(i))
-  for (const g of store.savingsGoals)  upsert('finance_savings_goals', g.id, savingsGoalToApi(g))
-  for (const p of store.playbooks)     upsert('playbooks', p.id, playbookToApi(p))
-  for (const g of store.study.goals)       upsert('study_goals', g.id, studyGoalToApi(g))
-  for (const m of store.study.mediaItems)  upsert('study_media_items', m.id, studyMediaItemToApi(m))
+  for (const c of cards)            upsert('cards', c.id, cardToApi(c))
+  for (const n of notes)            upsert('notes', n.id, noteToApi(n, noteContents?.get(n.id) ?? ''))
+  for (const f of noteFolders)      upsert('note_folders', f.id, noteFolderToApi(f))
+  for (const e of calendarEvents)   upsert('calendar_events', e.id, calendarEventToApi(e))
+  for (const p of projects)         upsert('projects', p.id, projectToApi(p))
+  for (const h of habits)           upsert('habits', h.id, habitToApi(h))
+  for (const e of habitEntries)     upsert('habit_entries', e.id, habitEntryToApi(e))
+  for (const c of crmContacts)      upsert('crm_contacts', c.id, crmContactToApi(c))
+  for (const b of bills)            upsert('finance_bills', b.id, billToApi(b))
+  for (const e of expenses)         upsert('finance_expenses', e.id, expenseToApi(e))
+  for (const i of incomes)          upsert('finance_incomes', i.id, incomeToApi(i))
+  for (const g of savingsGoals)     upsert('finance_savings_goals', g.id, savingsGoalToApi(g))
+  for (const p of playbooks)        upsert('playbooks', p.id, playbookToApi(p))
+  for (const g of studyGoals)       upsert('study_goals', g.id, studyGoalToApi(g))
+  for (const m of studyMediaItems)  upsert('study_media_items', m.id, studyMediaItemToApi(m))
 
   // Envia em lotes de BATCH_SIZE
   const totalBatches = Math.ceil(ops.length / BATCH_SIZE)

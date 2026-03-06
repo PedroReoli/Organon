@@ -51,9 +51,11 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
 
 type TreeItemKind = 'note' | 'folder'
 type TreeItemKey = string
+type BreadcrumbPart = { label: string; id: string; kind: 'folder' | 'note' }
 
 const noteTreeKey = (id: string): TreeItemKey => `note:${id}`
 const folderTreeKey = (id: string): TreeItemKey => `folder:${id}`
+const folderContentPath = (folderId: string): string => `folders/${folderId}.md`
 
 const parseTreeKey = (key: TreeItemKey): { kind: TreeItemKind; id: string } | null => {
   if (key.startsWith('note:')) return { kind: 'note', id: key.slice(5) }
@@ -81,12 +83,15 @@ export const NotesView = ({
   keyboardShortcuts = [],
 }: NotesViewProps) => {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [reduceLevel, setReduceLevel] = useState<0 | 1 | 2>(0)
   const [noteContent, setNoteContent] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
+  const [folderContent, setFolderContent] = useState('')
+  const [folderTitle, setFolderTitle] = useState('')
   const [, setIsTitleEditing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchVisible, setSearchVisible] = useState(false)
@@ -96,12 +101,16 @@ export const NotesView = ({
   const [deleteConfirm, setDeleteConfirm] = useState<{ noteId: string; title: string } | null>(null)
   const [folderDeleteConfirm, setFolderDeleteConfirm] = useState<{ folderId: string; name: string } | null>(null)
   const [isNoteLoading, setIsNoteLoading] = useState(false)
+  const [isFolderLoading, setIsFolderLoading] = useState(false)
   const [selectedTreeItems, setSelectedTreeItems] = useState<Set<TreeItemKey>>(new Set())
   const [selectionAnchor, setSelectionAnchor] = useState<TreeItemKey | null>(null)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const folderSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentNoteIdRef = useRef<string | null>(null)
+  const currentFolderIdRef = useRef<string | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const folderTitleInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const newFolderInputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -114,9 +123,38 @@ export const NotesView = ({
   const dragPayloadRef = useRef<{ noteIds: string[]; folderIds: string[] }>({ noteIds: [], folderIds: [] })
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
+  const selectedFolder = useMemo(() => folders.find(f => f.id === selectedFolderId) ?? null, [folders, selectedFolderId])
   const selectedNoteLocked = selectedNote?.isLocked === true
   const noteMap = useMemo(() => new Map(notes.map(note => [note.id, note])), [notes])
   const folderMap = useMemo(() => new Map(folders.map(folder => [folder.id, folder])), [folders])
+
+  const buildFolderTrailParts = useCallback((folderId: string | null): BreadcrumbPart[] => {
+    const trail: BreadcrumbPart[] = []
+    const seen = new Set<string>()
+    let currentId = folderId
+    while (currentId && !seen.has(currentId)) {
+      seen.add(currentId)
+      const folder = folderMap.get(currentId)
+      if (!folder) break
+      trail.unshift({ label: folder.name || 'Sem nome', id: folder.id, kind: 'folder' })
+      currentId = folder.parentId ?? null
+    }
+    return trail
+  }, [folderMap])
+
+  const buildParentNoteTrailParts = useCallback((parentNoteId: string | null): BreadcrumbPart[] => {
+    const trail: BreadcrumbPart[] = []
+    const seen = new Set<string>()
+    let currentId = parentNoteId
+    while (currentId && !seen.has(currentId)) {
+      seen.add(currentId)
+      const note = noteMap.get(currentId)
+      if (!note) break
+      trail.unshift({ label: note.title || 'Sem titulo', id: note.id, kind: 'note' })
+      currentId = note.parentNoteId
+    }
+    return trail
+  }, [noteMap])
 
   // ---- Tree computed ----
 
@@ -202,32 +240,58 @@ export const NotesView = ({
 
   // ---- Breadcrumb ----
 
-  const breadcrumb = useMemo(() => {
+  const noteBreadcrumb = useMemo(() => {
     if (!selectedNote) return []
-    const parts: { label: string; id: string; kind: 'folder' | 'note' }[] = []
+    return [
+      ...buildFolderTrailParts(selectedNote.folderId),
+      ...buildParentNoteTrailParts(selectedNote.parentNoteId),
+    ]
+  }, [buildFolderTrailParts, buildParentNoteTrailParts, selectedNote])
 
-    let folderId: string | null = selectedNote.folderId
-    const folderParts: typeof parts = []
-    while (folderId) {
-      const folder = folders.find(f => f.id === folderId)
-      if (!folder) break
-      folderParts.unshift({ label: folder.name, id: folder.id, kind: 'folder' })
-      folderId = folder.parentId ?? null
+  const folderBreadcrumb = useMemo(() => {
+    if (!selectedFolder) return []
+    return buildFolderTrailParts(selectedFolder.id)
+  }, [buildFolderTrailParts, selectedFolder])
+
+  const folderDescendantIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (!selectedFolder) return ids
+    const stack = [selectedFolder.id]
+    while (stack.length > 0) {
+      const currentId = stack.pop()
+      if (!currentId || ids.has(currentId)) continue
+      ids.add(currentId)
+      folders.forEach(folder => {
+        if (folder.parentId === currentId) stack.push(folder.id)
+      })
     }
-    parts.push(...folderParts)
+    return ids
+  }, [folders, selectedFolder])
 
-    let parentId: string | null = selectedNote.parentNoteId
-    const noteParts: typeof parts = []
-    while (parentId) {
-      const parent = notes.find(n => n.id === parentId)
-      if (!parent) break
-      noteParts.unshift({ label: parent.title || 'Sem titulo', id: parent.id, kind: 'note' })
-      parentId = parent.parentNoteId
-    }
-    parts.push(...noteParts)
+  const folderNotesWithPath = useMemo(() => {
+    if (!selectedFolder) return []
+    return notes
+      .filter(note => note.folderId && folderDescendantIds.has(note.folderId))
+      .map(note => {
+        const folderTrail = buildFolderTrailParts(note.folderId)
+        const parentTrail = buildParentNoteTrailParts(note.parentNoteId)
+        const locationTrail = [...folderTrail.map(part => part.label), ...parentTrail.map(part => part.label)]
+        return {
+          note,
+          location: locationTrail.length > 0 ? locationTrail.join(' > ') : 'Raiz',
+        }
+      })
+      .sort((a, b) => {
+        const locationCmp = a.location.localeCompare(b.location, 'pt-BR', { sensitivity: 'base' })
+        if (locationCmp !== 0) return locationCmp
+        return (a.note.title || '').localeCompare(b.note.title || '', 'pt-BR', { sensitivity: 'base' })
+      })
+  }, [buildFolderTrailParts, buildParentNoteTrailParts, folderDescendantIds, notes, selectedFolder])
 
-    return parts
-  }, [selectedNote, folders, notes])
+  const selectedFolderChildren = useMemo(() => {
+    if (!selectedFolder) return []
+    return childFolders(selectedFolder.id)
+  }, [childFolders, selectedFolder])
 
   // ---- Note content (IPC) ----
 
@@ -268,6 +332,46 @@ export const NotesView = ({
     }
   }, [selectedNote?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!selectedFolder) {
+      setIsFolderLoading(false)
+      setFolderContent('')
+      setFolderTitle('')
+      currentFolderIdRef.current = null
+      return
+    }
+    if (folderSaveTimeoutRef.current) {
+      clearTimeout(folderSaveTimeoutRef.current)
+      folderSaveTimeoutRef.current = null
+    }
+    setIsFolderLoading(true)
+    setFolderContent('')
+    setFolderTitle(selectedFolder.name || '')
+    currentFolderIdRef.current = selectedFolder.id
+
+    if (isElectron()) {
+      window.electronAPI.readNote(folderContentPath(selectedFolder.id)).then(content => {
+        if (currentFolderIdRef.current === selectedFolder.id) {
+          setFolderContent(content)
+          setIsFolderLoading(false)
+        }
+      }).catch(() => {
+        if (currentFolderIdRef.current === selectedFolder.id) {
+          setFolderContent('')
+          setIsFolderLoading(false)
+        }
+      })
+    } else {
+      setFolderContent('')
+      setIsFolderLoading(false)
+    }
+  }, [selectedFolder?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!selectedFolder) return
+    setFolderTitle(selectedFolder.name || '')
+  }, [selectedFolder?.id, selectedFolder?.name]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleContentChange = useCallback((noteId: string, html: string) => {
     if (isNoteLoading) return
     if (currentNoteIdRef.current !== noteId) return
@@ -292,11 +396,38 @@ export const NotesView = ({
     onUpdateNote(selectedNote.id, { title: noteTitle.trim() })
   }, [selectedNote, noteTitle, onUpdateNote])
 
+  const handleFolderContentChange = useCallback((folderId: string, html: string) => {
+    if (isFolderLoading) return
+    if (currentFolderIdRef.current !== folderId) return
+    if (folderSaveTimeoutRef.current) clearTimeout(folderSaveTimeoutRef.current)
+    folderSaveTimeoutRef.current = setTimeout(() => {
+      if (currentFolderIdRef.current !== folderId) return
+      if (isElectron()) {
+        window.electronAPI.writeNote(folderContentPath(folderId), html).catch(() => {})
+      }
+    }, 600)
+  }, [isFolderLoading])
+
+  const handleFolderTitleBlur = useCallback(() => {
+    if (!selectedFolder) return
+    const nextName = folderTitle.trim()
+    if (!nextName) {
+      setFolderTitle(selectedFolder.name || '')
+      return
+    }
+    if (nextName === selectedFolder.name) return
+    onUpdateFolder(selectedFolder.id, { name: nextName })
+  }, [folderTitle, onUpdateFolder, selectedFolder])
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
         saveTimeoutRef.current = null
+      }
+      if (folderSaveTimeoutRef.current) {
+        clearTimeout(folderSaveTimeoutRef.current)
+        folderSaveTimeoutRef.current = null
       }
     }
   }, [])
@@ -323,7 +454,48 @@ export const NotesView = ({
     setSelectionAnchor(prev => (prev && validKeys.has(prev)) ? prev : null)
   }, [folders, notes])
 
+  useEffect(() => {
+    if (!selectedNoteId) return
+    if (!noteMap.has(selectedNoteId)) {
+      setSelectedNoteId(null)
+      currentNoteIdRef.current = null
+    }
+  }, [noteMap, selectedNoteId])
+
+  useEffect(() => {
+    if (!selectedFolderId) return
+    if (!folderMap.has(selectedFolderId)) {
+      setSelectedFolderId(null)
+      setIsFolderLoading(false)
+      setFolderTitle('')
+      setFolderContent('')
+      currentFolderIdRef.current = null
+    }
+  }, [folderMap, selectedFolderId])
+
   // ---- Open note ----
+
+  const openFolder = useCallback((folderId: string) => {
+    const folder = folderMap.get(folderId)
+    if (!folder) return
+    const key = folderTreeKey(folderId)
+    setSelectedTreeItems(new Set([key]))
+    setSelectionAnchor(key)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    currentNoteIdRef.current = null
+    setSelectedNoteId(null)
+    setIsNoteLoading(false)
+    setNoteContent('')
+    setNoteTitle('')
+    currentFolderIdRef.current = folderId
+    setSelectedFolderId(folderId)
+    setFolderTitle(folder.name || '')
+    setSearchQuery('')
+    setSearchVisible(false)
+  }, [folderMap])
 
   const openNote = useCallback((noteId: string) => {
     const key = noteTreeKey(noteId)
@@ -342,6 +514,8 @@ export const NotesView = ({
     setIsNoteLoading(true)
     setNoteContent('')
     setSelectedNoteId(noteId)
+    setSelectedFolderId(null)
+    currentFolderIdRef.current = null
     setSearchQuery('')
     setSearchVisible(false)
   }, [selectedNoteId])
@@ -384,8 +558,15 @@ export const NotesView = ({
       next.delete(removedFolderKey)
       return next
     })
+    if (selectedFolderId === folderDeleteConfirm.folderId) {
+      setSelectedFolderId(null)
+      setIsFolderLoading(false)
+      setFolderTitle('')
+      setFolderContent('')
+      currentFolderIdRef.current = null
+    }
     setFolderDeleteConfirm(null)
-  }, [folderDeleteConfirm, onRemoveFolder])
+  }, [folderDeleteConfirm, onRemoveFolder, selectedFolderId])
 
   const selectTreeItemRange = useCallback((targetKey: TreeItemKey) => {
     const anchor = selectionAnchor ?? targetKey
@@ -428,7 +609,7 @@ export const NotesView = ({
 
   // ---- Add note ----
 
-  const handleAddNote = useCallback((folderId: string | null = null, parentNoteId: string | null = null) => {
+  const handleAddNote = useCallback((folderId: string | null = (selectedFolderId ?? null), parentNoteId: string | null = null) => {
     if (parentNoteId) {
       const parentNote = notes.find(note => note.id === parentNoteId)
       if (parentNote?.isLocked) return
@@ -440,6 +621,8 @@ export const NotesView = ({
     setIsNoteLoading(true)
     setNoteContent('')
     setSelectedNoteId(note.id)
+    setSelectedFolderId(null)
+    currentFolderIdRef.current = null
     const key = noteTreeKey(note.id)
     setSelectedTreeItems(new Set([key]))
     setSelectionAnchor(key)
@@ -448,7 +631,7 @@ export const NotesView = ({
       titleInputRef.current?.focus()
       titleInputRef.current?.select()
     }, 80)
-  }, [onAddNote, notes])
+  }, [onAddNote, notes, selectedFolderId])
 
   // ---- Add folder ----
 
@@ -757,12 +940,14 @@ export const NotesView = ({
       const reader = new FileReader()
       reader.onload = () => {
         const html = markdownToHtml(reader.result as string)
-        const folderId = selectedNote?.folderId ?? null
+        const folderId = selectedNote?.folderId ?? selectedFolderId ?? null
         const note = onAddNote(title, folderId, null, null)
         if (isElectron()) {
           window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
         }
         setSelectedNoteId(note.id)
+        setSelectedFolderId(null)
+        currentFolderIdRef.current = null
         const key = noteTreeKey(note.id)
         setSelectedTreeItems(new Set([key]))
         setSelectionAnchor(key)
@@ -770,7 +955,7 @@ export const NotesView = ({
       }
       reader.readAsText(file)
     }
-  }, [selectedNote, onAddNote]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedNote, selectedFolderId, onAddNote]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Tree rendering ----
 
@@ -869,12 +1054,13 @@ export const NotesView = ({
     const childNts = notesInFolder(folder.id)
     const treeKey = folderTreeKey(folder.id)
     const isTreeSelected = selectedTreeItems.has(treeKey)
+    const isOpenFolder = selectedFolderId === folder.id
 
     const isFolderDropTarget = dropTargetId === folder.id
     return (
       <div key={folder.id} className="notes-tree-group">
         <div
-          className={`notes-tree-row notes-tree-folder${isTreeSelected ? ' is-selected' : ''}${isFolderDropTarget ? ' is-drop-target' : ''}`}
+          className={`notes-tree-row notes-tree-folder${isOpenFolder ? ' is-active' : ''}${isTreeSelected ? ' is-selected' : ''}${isFolderDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           draggable
           onDragStart={e => startTreeDrag(e, 'folder', folder.id)}
@@ -899,6 +1085,10 @@ export const NotesView = ({
             if (handleTreeRowSelection(treeKey, e)) return
             selectSingleTreeItem(treeKey)
             toggleFolder(folder.id)
+          }}
+          onDoubleClick={e => {
+            e.stopPropagation()
+            openFolder(folder.id)
           }}
         >
           <button
@@ -1148,12 +1338,12 @@ export const NotesView = ({
         {selectedNote ? (
           <div className="notes-editor-inner">
             {/* Breadcrumb */}
-            {breadcrumb.length > 0 && (
+            {noteBreadcrumb.length > 0 && (
               <div className="notes-editor-breadcrumb">
-                {breadcrumb.map((part, i) => (
+                {noteBreadcrumb.map((part, i) => (
                   <span key={part.id} className="notes-bc-item-wrap">
                     {i > 0 && <span className="notes-bc-sep">&gt;</span>}
-                    <button className="notes-bc-item" onClick={() => part.kind === 'note' ? openNote(part.id) : undefined}>
+                    <button className="notes-bc-item" onClick={() => part.kind === 'note' ? openNote(part.id) : openFolder(part.id)}>
                       {part.kind === 'folder' ? (
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
                           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -1278,6 +1468,128 @@ export const NotesView = ({
                 currentNoteId={selectedNote.id}
                 readOnly={selectedNoteLocked}
               />
+            </div>
+          </div>
+        ) : selectedFolder ? (
+          <div className="notes-editor-inner">
+            {folderBreadcrumb.length > 0 && (
+              <div className="notes-editor-breadcrumb">
+                {folderBreadcrumb.slice(0, -1).map((part, i) => (
+                  <span key={part.id} className="notes-bc-item-wrap">
+                    {i > 0 && <span className="notes-bc-sep">&gt;</span>}
+                    <button className="notes-bc-item" onClick={() => openFolder(part.id)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                      {part.label}
+                    </button>
+                  </span>
+                ))}
+                {folderBreadcrumb.length > 1 && <span className="notes-bc-sep">&gt;</span>}
+                <span className="notes-bc-current">{folderBreadcrumb[folderBreadcrumb.length - 1]?.label || selectedFolder.name}</span>
+              </div>
+            )}
+
+            <div className="notes-editor-top-bar">
+              <div className="notes-editor-title-wrap">
+                <input
+                  ref={folderTitleInputRef}
+                  className="notes-editor-title-input notes-folder-title-input"
+                  value={folderTitle}
+                  onChange={e => setFolderTitle(e.target.value)}
+                  onBlur={handleFolderTitleBlur}
+                  placeholder="Sem nome"
+                />
+              </div>
+              <div className="notes-editor-toolbar-actions">
+                <button
+                  className="notes-editor-action"
+                  onClick={() => handleAddNote(selectedFolder.id, null)}
+                  title="Nova nota nesta pasta"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="12" x2="12" y2="18" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </button>
+                <button
+                  className="notes-editor-action"
+                  onClick={() => {
+                    setNewFolderParentId(selectedFolder.id)
+                    setExpandedFolders(prev => new Set([...prev, selectedFolder.id]))
+                    setTimeout(() => newFolderInputRef.current?.focus(), 50)
+                  }}
+                  title="Nova subpasta"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="notes-folder-overview">
+              <section className="notes-folder-section">
+                <div className="notes-folder-section-head">
+                  <span>Subpastas internas</span>
+                  <span className="notes-folder-section-count">{selectedFolderChildren.length}</span>
+                </div>
+                <div className="notes-folder-section-body">
+                  {selectedFolderChildren.length > 0 ? (
+                    selectedFolderChildren.map(folder => (
+                      <button key={folder.id} className="notes-folder-item" onClick={() => openFolder(folder.id)}>
+                        <span className="notes-folder-item-main">
+                          <FolderIcon open={expandedFolders.has(folder.id)} />
+                          <span>{folder.name || 'Sem nome'}</span>
+                        </span>
+                        <span className="notes-folder-item-path">
+                          {[...buildFolderTrailParts(folder.parentId).map(item => item.label), folder.name || 'Sem nome'].join(' > ')}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="notes-folder-empty">Nenhuma subpasta nesta pasta.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="notes-folder-section">
+                <div className="notes-folder-section-head">
+                  <span>Notas e caminhos</span>
+                  <span className="notes-folder-section-count">{folderNotesWithPath.length}</span>
+                </div>
+                <div className="notes-folder-section-body">
+                  {folderNotesWithPath.length > 0 ? (
+                    folderNotesWithPath.map(item => (
+                      <button key={item.note.id} className="notes-folder-item" onClick={() => openNote(item.note.id)}>
+                        <span className="notes-folder-item-main">
+                          <PageIcon />
+                          <span>{item.note.title || 'Sem titulo'}</span>
+                        </span>
+                        <span className="notes-folder-item-path">{item.location}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="notes-folder-empty">Nenhuma nota encontrada dentro desta pasta.</p>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <div className="notes-editor-content notes-folder-editor-content">
+              {isFolderLoading ? (
+                <div className="notes-folder-loading">Carregando conteudo da pasta...</div>
+              ) : (
+                <WysiwygEditor
+                  key={`folder-${selectedFolder.id}`}
+                  content={folderContent}
+                  onChange={(html) => handleFolderContentChange(selectedFolder.id, html)}
+                  mode="full"
+                  placeholder="Escreva aqui o conteudo desta pasta"
+                />
+              )}
             </div>
           </div>
         ) : (

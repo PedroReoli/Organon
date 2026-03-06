@@ -7878,6 +7878,112 @@ input:focus, textarea:focus, select:focus {
 }
 .notes-subpage-chip:hover { background: var(--color-primary-20, rgba(99,102,241,0.2)); }
 
+.notes-folder-title-input {
+  font-size: 34px;
+}
+
+.notes-folder-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 0 48px 14px;
+  flex-shrink: 0;
+}
+
+.notes-folder-section {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notes-folder-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.notes-folder-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-background);
+}
+
+.notes-folder-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.notes-folder-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-background);
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.notes-folder-item:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.notes-folder-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.notes-folder-item-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-folder-item-path {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-folder-empty {
+  margin: 8px 2px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 /* Editor content area */
 .notes-editor-content {
   flex: 1;
@@ -7890,12 +7996,29 @@ input:focus, textarea:focus, select:focus {
 
 .notes-layout.reduce-level-2 .notes-editor-breadcrumb,
 .notes-layout.reduce-level-2 .notes-editor-top-bar,
-.notes-layout.reduce-level-2 .notes-subpages-row {
+.notes-layout.reduce-level-2 .notes-subpages-row,
+.notes-layout.reduce-level-2 .notes-folder-overview {
   display: none;
 }
 
 .notes-layout.reduce-level-2 .notes-editor-content {
   padding-top: 16px;
+}
+
+.notes-folder-editor-content {
+  padding-top: 6px;
+}
+
+.notes-folder-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
 }
 
 /* Override Tiptap for notes full editor */
