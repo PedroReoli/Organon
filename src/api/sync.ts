@@ -295,6 +295,7 @@ function noteFromApi(id: string, p: Payload): Note {
     projectId: p.project_id ? s(p.project_id) : null,
     isPinned: b(p.is_pinned),
     isFavorite: b(p.is_favorite),
+    isLocked: b((p as Payload).is_locked),
     order: n(p.sort_order),
     createdAt: s(p.created_at) || now(),
     updatedAt: s(p.updated_at) || now(),

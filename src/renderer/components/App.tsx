@@ -98,6 +98,7 @@ export const App = () => {
     updateNote,
     toggleNoteFavorite,
     toggleNotePinned,
+    toggleNoteLock,
     reorderNotes,
     removeNote,
     addColorPalette,
@@ -176,6 +177,7 @@ export const App = () => {
   } = useStore()
 
   const { isConfigured } = useApiToken(settings.apiBaseUrl ?? '', settings.apiToken ?? '')
+  const userLoggedIn = useMemo(() => Boolean(settings.apiToken?.trim()), [settings.apiToken])
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
@@ -185,7 +187,7 @@ export const App = () => {
 
   // Startup sync: se API configurada, verifica se há mudanças no servidor
   useEffect(() => {
-    if (!isConfigured || !isElectron() || isLoading) return
+    if (!isConfigured || !userLoggedIn || !isElectron() || isLoading) return
     if (startupCheckedRef.current) return
     startupCheckedRef.current = true
 
@@ -210,7 +212,10 @@ export const App = () => {
         const merged = {
           ...rawStore,
           cards: pulled.cards,
-          notes: pulled.notes,
+          notes: pulled.notes.map(note => ({
+            ...note,
+            isLocked: rawStore.notes.find((localNote: { id: string; isLocked?: boolean }) => localNote.id === note.id)?.isLocked ?? note.isLocked ?? false,
+          })),
           noteFolders: pulled.noteFolders,
           calendarEvents: pulled.calendarEvents,
           projects: pulled.projects,
@@ -236,11 +241,11 @@ export const App = () => {
 
     void checkAndPull()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConfigured, isLoading])
+  }, [isConfigured, userLoggedIn, isLoading])
 
   // Auto-sync: qualquer mudança no store dispara push debounced (10s)
   useEffect(() => {
-    if (!isConfigured || !isElectron()) return
+    if (!isConfigured || !userLoggedIn || !isElectron()) return
     setSyncStatus('pending')
     if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current)
     autoSyncTimerRef.current = setTimeout(async () => {
@@ -269,7 +274,17 @@ export const App = () => {
         setSyncStatus('error')
       }
     }, 10000)
-  }, [storeVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storeVersion, isConfigured, userLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isConfigured && userLoggedIn) return
+    if (autoSyncTimerRef.current) {
+      clearTimeout(autoSyncTimerRef.current)
+      autoSyncTimerRef.current = null
+    }
+    setSyncStatus('idle')
+    startupCheckedRef.current = false
+  }, [isConfigured, userLoggedIn])
 
   const [activeView, setActiveView] = useState<AppView>('today')
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
@@ -521,7 +536,7 @@ export const App = () => {
           navbarConfig={settings.navbarConfig}
           onOpenNavbarCustomize={() => setShowNavbarCustomizeModal(true)}
           syncStatus={syncStatus}
-          userLoggedIn={isConfigured}
+          userLoggedIn={userLoggedIn}
         />
 
         <div className="app-view">
@@ -690,6 +705,7 @@ export const App = () => {
               onUpdateNote={updateNote}
               onToggleFavorite={toggleNoteFavorite}
               onTogglePinned={toggleNotePinned}
+              onToggleLock={toggleNoteLock}
               onReorderNotes={reorderNotes}
               onReorderFolders={reorderNoteFolders}
               onRemoveNote={removeNote}
@@ -839,6 +855,7 @@ export const App = () => {
               isSyncing={isSyncing}
               syncStatus={syncStatus}
               isConfigured={isConfigured}
+              userLoggedIn={userLoggedIn}
             />
           )}
 

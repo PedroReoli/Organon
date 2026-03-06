@@ -79,6 +79,7 @@ interface Note {
   title: string
   mdPath: string
   folderId: string | null
+  isLocked: boolean
   createdAt: string
   updatedAt: string
   order: number
@@ -1570,6 +1571,12 @@ const stopBackupTimer = (): void => {
 let mainWindow: BrowserWindow | null = null
 
 const createWindow = (): void => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    return
+  }
   // Caminho do ícone - em dev usa src, em produção usa dist
   let iconPath: string | undefined
   if (app.isPackaged) {
@@ -2295,16 +2302,20 @@ const registerIpcHandlers = (): void => {
 }
 
 // Single instance lock — impede abrir múltiplas janelas ao clicar no ícone
+app.setAppUserModelId('com.organizador.semanal')
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', () => {
     // Traz a janela existente para frente
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow()
+      return
     }
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
   })
 }
 

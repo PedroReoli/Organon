@@ -16,6 +16,7 @@ interface NotesViewProps {
   onReorderFolders: (orderedIds: string[]) => void
   onToggleFavorite: (noteId: string) => void
   onTogglePinned: (noteId: string) => void
+  onToggleLock: (noteId: string) => void
   reduceModeSignal?: number
   initialNoteId?: string | null
   onInitialNoteConsumed?: () => void
@@ -61,6 +62,7 @@ export const NotesView = ({
   onRemoveFolder,
   onToggleFavorite,
   onTogglePinned,
+  onToggleLock,
   reduceModeSignal,
   initialNoteId,
   onInitialNoteConsumed,
@@ -70,6 +72,7 @@ export const NotesView = ({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [reduceLevel, setReduceLevel] = useState<0 | 1 | 2>(0)
   const [noteContent, setNoteContent] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
   const [, setIsTitleEditing] = useState(false)
@@ -99,6 +102,7 @@ export const NotesView = ({
   const dragFolderRef = useRef<NoteFolder | null>(null)
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
+  const selectedNoteLocked = selectedNote?.isLocked === true
 
   // ---- Tree computed ----
 
@@ -212,6 +216,7 @@ export const NotesView = ({
       if (currentNoteIdRef.current !== noteId) return
       const note = notes.find(n => n.id === noteId)
       if (!note) return
+      if (note.isLocked) return
       if (isElectron()) {
         window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
       }
@@ -222,6 +227,7 @@ export const NotesView = ({
   const handleTitleBlur = useCallback(() => {
     setIsTitleEditing(false)
     if (!selectedNote || !noteTitle.trim()) return
+    if (selectedNote.isLocked) return
     if (noteTitle.trim() === selectedNote.title) return
     onUpdateNote(selectedNote.id, { title: noteTitle.trim() })
   }, [selectedNote, noteTitle, onUpdateNote])
@@ -259,6 +265,7 @@ export const NotesView = ({
 
   const requestDeleteNote = useCallback((noteId: string) => {
     const note = notes.find(n => n.id === noteId)
+    if (note?.isLocked) return
     setDeleteConfirm({ noteId, title: note?.title || 'Sem título' })
   }, [notes])
 
@@ -273,6 +280,10 @@ export const NotesView = ({
   // ---- Add note ----
 
   const handleAddNote = useCallback((folderId: string | null = null, parentNoteId: string | null = null) => {
+    if (parentNoteId) {
+      const parentNote = notes.find(note => note.id === parentNoteId)
+      if (parentNote?.isLocked) return
+    }
     const note = onAddNote('Nova nota', folderId, null, parentNoteId)
     if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
     if (parentNoteId) setExpandedNotes(prev => new Set([...prev, parentNoteId]))
@@ -285,7 +296,7 @@ export const NotesView = ({
       titleInputRef.current?.focus()
       titleInputRef.current?.select()
     }, 80)
-  }, [onAddNote])
+  }, [onAddNote, notes])
 
   // ---- Add folder ----
 
@@ -364,10 +375,21 @@ export const NotesView = ({
   // ---- Reduce mode ----
 
   useEffect(() => {
-    if (reduceModeSignal === reduceModeHandledRef.current) return
+    if (typeof reduceModeSignal !== 'number') return
+    if (reduceModeHandledRef.current === undefined) {
+      reduceModeHandledRef.current = reduceModeSignal
+      return
+    }
+    if (reduceModeSignal <= reduceModeHandledRef.current) return
     reduceModeHandledRef.current = reduceModeSignal
-    setSidebarOpen(false)
+    setReduceLevel(prev => (prev === 2 ? 0 : ((prev + 1) as 0 | 1 | 2)))
   }, [reduceModeSignal])
+
+  useEffect(() => {
+    if (reduceLevel === 0) {
+      setSidebarOpen(true)
+    }
+  }, [reduceLevel])
 
   // ---- Open note via external navigation (e.g. from search modal) ----
 
@@ -382,6 +404,8 @@ export const NotesView = ({
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ parentNoteId: string }>).detail
+      const parentNote = notes.find(note => note.id === detail.parentNoteId)
+      if (parentNote?.isLocked) return
       const newNote = onAddNote('Nova nota', selectedNote?.folderId ?? null, null, detail.parentNoteId)
       if (detail.parentNoteId) setExpandedNotes(prev => new Set([...prev, detail.parentNoteId]))
       // Notify the editor so it can insert the inline subpage block
@@ -399,7 +423,7 @@ export const NotesView = ({
       document.removeEventListener('notes-create-subpage', handler)
       document.removeEventListener('notes-open-note', openHandler)
     }
-  }, [onAddNote, openNote, selectedNote])
+  }, [onAddNote, openNote, selectedNote, notes])
 
   // ---- Drag-and-drop ----
 
@@ -447,6 +471,7 @@ export const NotesView = ({
   const handleDropOnNote = useCallback((targetNote: Note) => {
     const dn = dragNoteRef.current
     if (!dn || dn.id === targetNote.id) { handleDragEnd(); return }
+    if (targetNote.isLocked) { handleDragEnd(); return }
     if (isNoteDescendant(targetNote.id, dn.id)) { handleDragEnd(); return }
     onUpdateNote(dn.id, { folderId: targetNote.folderId, parentNoteId: targetNote.id })
     setExpandedNotes(prev => new Set([...prev, targetNote.id]))
@@ -534,14 +559,14 @@ export const NotesView = ({
         <div
           className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
-          draggable
+          draggable={!note.isLocked}
           onDragStart={e => { e.stopPropagation(); dragNoteRef.current = note; dragFolderRef.current = null; setDragNote(note); setDragFolder(null) }}
           onDragEnd={handleDragEnd}
           onDragOver={e => {
             e.preventDefault()
             e.stopPropagation()
             // Only notes can be dropped onto notes (to create subpages)
-            if (dragNoteRef.current && dragNoteRef.current.id !== note.id) setDropTargetId(note.id)
+            if (dragNoteRef.current && dragNoteRef.current.id !== note.id && !note.isLocked) setDropTargetId(note.id)
           }}
           onDragLeave={e => {
             e.stopPropagation()
@@ -567,6 +592,7 @@ export const NotesView = ({
             <button
               className="notes-tree-action-btn"
               title="Nova subpagina"
+              disabled={note.isLocked}
               onClick={e => { e.stopPropagation(); handleAddNote(note.folderId, note.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -574,6 +600,7 @@ export const NotesView = ({
             <button
               className="notes-tree-action-btn"
               title="Excluir"
+              disabled={note.isLocked}
               onClick={e => { e.stopPropagation(); requestDeleteNote(note.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
@@ -581,6 +608,14 @@ export const NotesView = ({
           </span>
           {note.isFavorite && <span className="notes-tree-star">*</span>}
           {note.isPinned && <span className="notes-tree-pin">PIN</span>}
+          {note.isLocked && (
+            <span className="notes-tree-lock" title="Nota trancada" aria-label="Nota trancada">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="10" height="10">
+                <rect x="4" y="11" width="16" height="9" rx="2" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              </svg>
+            </span>
+          )}
         </div>
         {isExpanded && children.map(child => renderNote(child, depth + 1))}
       </div>
@@ -683,9 +718,10 @@ export const NotesView = ({
   }
 
   const contextNote = contextMenu ? notes.find(n => n.id === contextMenu.noteId) ?? null : null
+  const isSidebarCollapsed = !sidebarOpen || reduceLevel >= 1
 
   return (
-    <div className={`notes-layout${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
+    <div className={`notes-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}${reduceLevel >= 2 ? ' reduce-level-2' : ''}`}>
 
       {/* ---- TREE SIDEBAR ---- */}
       <aside className="notes-tree-sidebar">
@@ -852,8 +888,8 @@ export const NotesView = ({
       </aside>
 
       {/* Sidebar open button (when collapsed) */}
-      {!sidebarOpen && (
-        <button className="notes-sidebar-open-btn" onClick={() => setSidebarOpen(true)} title="Abrir barra lateral">
+      {isSidebarCollapsed && (
+        <button className="notes-sidebar-open-btn" onClick={() => { setReduceLevel(0); setSidebarOpen(true) }} title="Abrir barra lateral">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
       )}
@@ -889,20 +925,49 @@ export const NotesView = ({
 
             {/* Title + actions */}
             <div className="notes-editor-top-bar">
-              <input
-                ref={titleInputRef}
-                className="notes-editor-title-input"
-                value={noteTitle}
-                onChange={e => setNoteTitle(e.target.value)}
-                onBlur={handleTitleBlur}
-                onFocus={() => setIsTitleEditing(true)}
-                placeholder="Sem titulo"
-              />
+              <div className="notes-editor-title-wrap">
+                <input
+                  ref={titleInputRef}
+                  className={`notes-editor-title-input${selectedNoteLocked ? ' is-locked' : ''}`}
+                  value={noteTitle}
+                  onChange={e => setNoteTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onFocus={() => setIsTitleEditing(true)}
+                  placeholder="Sem titulo"
+                  readOnly={selectedNoteLocked}
+                />
+                {selectedNoteLocked && (
+                  <span className="notes-editor-locked-icon" title="Nota trancada" aria-label="Nota trancada">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                      <rect x="3" y="11" width="18" height="10" rx="2" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v1" />
+                    </svg>
+                  </span>
+                )}
+              </div>
               <div className="notes-editor-toolbar-actions">
+                <button
+                  className={`notes-editor-action${selectedNoteLocked ? ' active' : ''}`}
+                  onClick={() => onToggleLock(selectedNote.id)}
+                  title={selectedNoteLocked ? 'Destrancar nota' : 'Trancar nota'}
+                >
+                  {selectedNoteLocked ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <rect x="3" y="11" width="18" height="10" rx="2" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v1" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <rect x="3" y="11" width="18" height="10" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  )}
+                </button>
                 <button
                   className={`notes-editor-action${selectedNote.isFavorite ? ' active' : ''}`}
                   onClick={() => onToggleFavorite(selectedNote.id)}
                   title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  disabled={selectedNoteLocked}
                 >
                   <svg viewBox="0 0 24 24" fill={selectedNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="15" height="15">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -912,6 +977,7 @@ export const NotesView = ({
                   className={`notes-editor-action${selectedNote.isPinned ? ' active' : ''}`}
                   onClick={() => onTogglePinned(selectedNote.id)}
                   title={selectedNote.isPinned ? 'Desafixar' : 'Fixar'}
+                  disabled={selectedNoteLocked}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                     <line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" />
@@ -921,6 +987,7 @@ export const NotesView = ({
                   className="notes-editor-action"
                   onClick={() => handleAddNote(selectedNote.folderId, selectedNote.id)}
                   title="Nova subpagina"
+                  disabled={selectedNoteLocked}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="12" x2="12" y2="18" /><line x1="9" y1="15" x2="15" y2="15" />
@@ -930,6 +997,7 @@ export const NotesView = ({
                   className="notes-editor-action danger"
                   onClick={() => requestDeleteNote(selectedNote.id)}
                   title="Excluir nota"
+                  disabled={selectedNoteLocked}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                     <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
@@ -937,7 +1005,6 @@ export const NotesView = ({
                 </button>
               </div>
             </div>
-
             {/* Subpages chips */}
             {subNotes(selectedNote.id).length > 0 && (
               <div className="notes-subpages-row">
@@ -960,6 +1027,7 @@ export const NotesView = ({
                 onChange={(html) => handleContentChange(selectedNote.id, html)}
                 mode="full"
                 currentNoteId={selectedNote.id}
+                readOnly={selectedNoteLocked}
               />
             </div>
           </div>
@@ -1013,20 +1081,24 @@ export const NotesView = ({
           className="notes-context-menu"
           style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y }}
         >
-          <button className="notes-context-item" onClick={() => { onToggleFavorite(contextNote.id); setContextMenu(null) }}>
+          <button className="notes-context-item" onClick={() => { onToggleLock(contextNote.id); setContextMenu(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2" /><path d={contextNote.isLocked ? 'M8 11V7a4 4 0 0 1 8 0v1' : 'M7 11V7a5 5 0 0 1 10 0v4'} /></svg>
+            {contextNote.isLocked ? 'Destrancar nota' : 'Trancar nota'}
+          </button>
+          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { onToggleFavorite(contextNote.id); setContextMenu(null) }}>
             <svg viewBox="0 0 24 24" fill={contextNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
             {contextNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           </button>
-          <button className="notes-context-item" onClick={() => { onTogglePinned(contextNote.id); setContextMenu(null) }}>
+          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { onTogglePinned(contextNote.id); setContextMenu(null) }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
             {contextNote.isPinned ? 'Desafixar' : 'Fixar'}
           </button>
-          <button className="notes-context-item" onClick={() => { handleAddNote(contextNote.folderId, contextNote.id); setContextMenu(null) }}>
+          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { handleAddNote(contextNote.folderId, contextNote.id); setContextMenu(null) }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             Nova subpagina
           </button>
           <div className="notes-context-divider" />
-          <button className="notes-context-item danger" onClick={() => requestDeleteNote(contextNote.id)}>
+          <button className="notes-context-item danger" disabled={contextNote.isLocked} onClick={() => requestDeleteNote(contextNote.id)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
             Excluir nota
           </button>
@@ -1035,3 +1107,4 @@ export const NotesView = ({
     </div>
   )
 }
+

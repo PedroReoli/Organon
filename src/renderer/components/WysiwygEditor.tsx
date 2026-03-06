@@ -30,6 +30,7 @@ interface WysiwygEditorProps {
   placeholder?: string
   mode?: 'compact' | 'full'
   currentNoteId?: string
+  readOnly?: boolean
 }
 
 const PRESET_COLORS = [
@@ -1764,6 +1765,7 @@ export const WysiwygEditor = ({
   placeholder = 'Escreva uma descricao detalhada...',
   mode = 'compact',
   currentNoteId,
+  readOnly = false,
 }: WysiwygEditorProps) => {
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -1871,6 +1873,7 @@ export const WysiwygEditor = ({
   const editor = useEditor({
     extensions: getExtensions(mode, placeholder),
     content,
+    editable: !readOnly,
     onUpdate: ({ editor: ed }) => {
       if (isApplyingExternalContentRef.current) return
 
@@ -1915,6 +1918,7 @@ export const WysiwygEditor = ({
         class: 'prose prose-invert max-w-none focus:outline-none',
       },
       handlePaste: (_view, event) => {
+        if (!(editorRef.current?.isEditable ?? true)) return true
         const items = Array.from(event.clipboardData?.items ?? [])
         const imageItem = items.find(item => item.type.startsWith('image/'))
         if (!imageItem) return false
@@ -1927,6 +1931,7 @@ export const WysiwygEditor = ({
         return true
       },
       handleDrop: (_view, event) => {
+        if (!(editorRef.current?.isEditable ?? true)) return true
         const files = Array.from(event.dataTransfer?.files ?? [])
         const imageFile = files.find(f => f.type.startsWith('image/'))
         if (!imageFile) return false
@@ -1937,6 +1942,7 @@ export const WysiwygEditor = ({
         return true
       },
       handleKeyDown: (_view, event) => {
+        if (!(editorRef.current?.isEditable ?? true)) return false
         const menu = slashMenuRef.current
         if (!menu?.open) return false
 
@@ -1971,6 +1977,11 @@ export const WysiwygEditor = ({
 
   // Keep editorRef in sync
   editorRef.current = editor ?? null
+
+  useEffect(() => {
+    if (!editor) return
+    editor.setEditable(!readOnly)
+  }, [editor, readOnly])
 
   useEffect(() => {
     if (!editor) return
@@ -2111,12 +2122,12 @@ export const WysiwygEditor = ({
   }
 
   return (
-    <div className="editor-container">
-      {mode === 'full' ? (
+    <div className={`editor-container${readOnly ? ' is-readonly' : ''}`}>
+      {!readOnly && (mode === 'full' ? (
         <FullToolbar editor={editor} />
       ) : (
         <CompactToolbar editor={editor} />
-      )}
+      ))}
       <div ref={editorViewportRef} className="tiptap-editor">
         <EditorContent editor={editor} />
 

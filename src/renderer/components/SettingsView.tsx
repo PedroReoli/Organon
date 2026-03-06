@@ -19,6 +19,7 @@ interface SettingsViewProps {
   isSyncing?: boolean
   syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   isConfigured?: boolean
+  userLoggedIn?: boolean
 }
 
 interface ThemeCardProps {
@@ -64,7 +65,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured, userLoggedIn }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -1090,6 +1091,8 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
               <span className="settings-help-text" style={{ margin: 0 }}>
                 {!isConfigured
                   ? 'API não configurada (verifique o .env)'
+                  : !userLoggedIn
+                    ? 'Usuário não logado: sincronização desativada (modo local)'
                   : pingStatus === 'ok' ? 'Conectado à API Organon'
                   : pingStatus === 'error' ? 'Sem conexão com a API'
                   : pingStatus === 'testing' ? 'Testando...'
@@ -1099,7 +1102,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             <p className="settings-help-text" style={{ marginBottom: 12 }}>
               API: {settings.apiBaseUrl || 'https://reolicodeapi.com'}
             </p>
-            <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured}>
+            <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured || !userLoggedIn}>
               {pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}
             </button>
           </div>
@@ -1112,7 +1115,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                 background: syncStatus === 'synced' ? '#22c55e' : syncStatus === 'error' ? '#ef4444' : syncStatus === 'syncing' || syncStatus === 'pending' ? '#f97316' : '#6b7280',
               }} />
               <span className="settings-help-text" style={{ margin: 0 }}>
-                {syncStatus === 'idle' || !syncStatus ? (isConfigured ? 'Aguardando alterações' : 'Inativo') : ''}
+                {syncStatus === 'idle' || !syncStatus ? (isConfigured && userLoggedIn ? 'Aguardando alterações' : 'Inativo') : ''}
                 {syncStatus === 'pending' && 'Aguardando 10s para sincronizar...'}
                 {syncStatus === 'syncing' && 'Sincronizando...'}
                 {syncStatus === 'synced' && 'Sincronizado com sucesso'}
@@ -1120,7 +1123,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
               </span>
             </div>
             <p className="settings-help-text">
-              Dados são enviados automaticamente 10 segundos após cada alteração.
+              {!userLoggedIn ? 'Sem login: os dados ficam apenas no dispositivo local.' : 'Dados são enviados automaticamente 10 segundos após cada alteração.'}
             </p>
           </div>
         </div>

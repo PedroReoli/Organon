@@ -311,6 +311,7 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
         parentNoteId: (n as Note & { parentNoteId?: string | null }).parentNoteId ?? null,
         isPinned: Boolean((n as Note & { isPinned?: boolean }).isPinned),
         isFavorite: Boolean((n as Note & { isFavorite?: boolean }).isFavorite),
+        isLocked: Boolean((n as Note & { isLocked?: boolean }).isLocked),
       }))
       : base.notes,
     colorPalettes: Array.isArray((input as Partial<Store> & { colorPalettes?: ColorPalette[] }).colorPalettes)
@@ -1108,6 +1109,7 @@ export const useStore = () => {
       projectId: projectId ?? null,
       isPinned: false,
       isFavorite: false,
+      isLocked: false,
       createdAt: now,
       updatedAt: now,
       order: Date.now(),
@@ -1119,11 +1121,16 @@ export const useStore = () => {
     return newNote
   }, [updateStore])
 
-  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => {
+  const updateNote = useCallback((noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId' | 'isLocked'>>) => {
     updateStore(prev => ({
       ...prev,
       notes: prev.notes.map(note => {
         if (note.id !== noteId) return note
+        if (note.isLocked) {
+          const updateKeys = Object.keys(updates)
+          const unlockOnly = updateKeys.length === 1 && updateKeys[0] === 'isLocked'
+          if (!unlockOnly) return note
+        }
         return { ...note, ...updates, updatedAt: new Date().toISOString() }
       }),
     }))
@@ -1134,6 +1141,7 @@ export const useStore = () => {
       ...prev,
       notes: prev.notes.map(note => {
         if (note.id !== noteId) return note
+        if (note.isLocked) return note
         return { ...note, isFavorite: !note.isFavorite, updatedAt: new Date().toISOString() }
       }),
     }))
@@ -1144,7 +1152,18 @@ export const useStore = () => {
       ...prev,
       notes: prev.notes.map(note => {
         if (note.id !== noteId) return note
+        if (note.isLocked) return note
         return { ...note, isPinned: !note.isPinned, updatedAt: new Date().toISOString() }
+      }),
+    }))
+  }, [updateStore])
+
+  const toggleNoteLock = useCallback((noteId: string) => {
+    updateStore(prev => ({
+      ...prev,
+      notes: prev.notes.map(note => {
+        if (note.id !== noteId) return note
+        return { ...note, isLocked: !note.isLocked, updatedAt: new Date().toISOString() }
       }),
     }))
   }, [updateStore])
@@ -1163,7 +1182,7 @@ export const useStore = () => {
   const removeNote = useCallback((noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.filter(note => note.id !== noteId),
+      notes: prev.notes.filter(note => note.id !== noteId || note.isLocked),
     }))
   }, [updateStore])
 
@@ -2004,6 +2023,7 @@ export const useStore = () => {
     updateNote,
     toggleNoteFavorite,
     toggleNotePinned,
+    toggleNoteLock,
     reorderNotes,
     removeNote,
     addColorPalette,

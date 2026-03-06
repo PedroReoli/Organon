@@ -186,6 +186,7 @@ export interface Note {
   projectId: string | null // vinculo com projeto
   isPinned: boolean
   isFavorite: boolean
+  isLocked: boolean
   createdAt: string
   updatedAt: string
   order: number
