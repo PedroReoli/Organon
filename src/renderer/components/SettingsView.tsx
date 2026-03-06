@@ -20,6 +20,14 @@ interface SettingsViewProps {
   syncStatus?: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   isConfigured?: boolean
   userLoggedIn?: boolean
+  // Auth
+  onLogin?: (email: string, password: string) => Promise<boolean>
+  onRegister?: (email: string, password: string, name?: string) => Promise<boolean>
+  onLogout?: () => Promise<void>
+  authError?: string | null
+  onClearAuthError?: () => void
+  authUser?: { email: string; name: string | null } | null
+  authLoading?: boolean
 }
 
 interface ThemeCardProps {
@@ -65,12 +73,19 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured, userLoggedIn }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, isConfigured, userLoggedIn, onLogin, onRegister, onLogout, authError, onClearAuthError, authUser, authLoading }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
   // Cloud ping state
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+
+  // Auth form state
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authSubmitting, setAuthSubmitting] = useState(false)
 
   const handlePing = async () => {
     setPingStatus('testing')
@@ -1136,41 +1151,155 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
         </div>
 
         <div className="settings-data-grid">
-          <div className="settings-data-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: 'var(--color-primary, #6366f1)', opacity: 0.15,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, flexShrink: 0,
-              }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="24" height="24" style={{ opacity: 0.6 }}>
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
+          {/* Logado */}
+          {userLoggedIn && authUser ? (
+            <div className="settings-data-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--color-primary, #6366f1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 700, fontSize: 18,
+                }}>
+                  {(authUser.name ?? authUser.email).charAt(0).toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  {authUser.name && <div style={{ fontWeight: 600, fontSize: 14 }}>{authUser.name}</div>}
+                  <div className="settings-help-text" style={{ margin: 0, wordBreak: 'break-all' }}>{authUser.email}</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>Organon Personal</div>
-                <div className="settings-help-text" style={{ margin: 0 }}>Modo local + sincronização via API</div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  className="btn btn-secondary"
+                  disabled
+                  style={{ opacity: 0.45, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                    <path d="M19.6 10.2c0-.7-.1-1.4-.2-2H10v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4"/>
+                    <path d="M10 20c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H1.1v2.6A10 10 0 0 0 10 20z" fill="#34A853"/>
+                    <path d="M4.4 12c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V5.4H1.1A10 10 0 0 0 0 10c0 1.6.4 3.2 1.1 4.6L4.4 12z" fill="#FBBC05"/>
+                    <path d="M10 3.9c1.5 0 2.8.5 3.8 1.5L16.7 3C15 1.4 12.7.5 10 .5A10 10 0 0 0 1.1 5.5l3.3 2.5C5.2 5.6 7.4 3.9 10 3.9z" fill="#EA4335"/>
+                  </svg>
+                  Vincular ao Google
+                  <span style={{ fontSize: 10, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ color: 'var(--color-danger)' }}
+                  onClick={() => onLogout?.()}
+                >
+                  Sair da conta
+                </button>
               </div>
             </div>
+          ) : (
+            /* Não logado — formulário de login/cadastro */
+            <div className="settings-data-card" style={{ maxWidth: 400 }}>
+              {authLoading ? (
+                <p className="settings-help-text">Restaurando sessão...</p>
+              ) : (
+                <>
+                  {/* Abas */}
+                  <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid var(--color-border, rgba(255,255,255,.1))' }}>
+                    {(['login', 'register'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => { setAuthTab(tab); onClearAuthError?.() }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: '6px 14px', fontSize: 13, fontWeight: 600,
+                          color: authTab === tab ? 'var(--color-primary, #6366f1)' : 'var(--color-text-muted)',
+                          borderBottom: authTab === tab ? '2px solid var(--color-primary, #6366f1)' : '2px solid transparent',
+                          marginBottom: -1,
+                        }}
+                      >
+                        {tab === 'login' ? 'Entrar' : 'Criar conta'}
+                      </button>
+                    ))}
+                  </div>
 
-            <p className="settings-help-text" style={{ marginBottom: 14 }}>
-              Login com conta Google e criação de perfil pessoal chegam em breve.
-            </p>
+                  <form
+                    style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                    onSubmit={async (e) => {
+                      e.preventDefault()
+                      setAuthSubmitting(true)
+                      try {
+                        if (authTab === 'login') {
+                          await onLogin?.(authEmail, authPassword)
+                        } else {
+                          await onRegister?.(authEmail, authPassword, authName || undefined)
+                        }
+                      } finally {
+                        setAuthSubmitting(false)
+                      }
+                    }}
+                  >
+                    {authTab === 'register' && (
+                      <input
+                        className="form-input"
+                        type="text"
+                        placeholder="Nome (opcional)"
+                        value={authName}
+                        onChange={e => setAuthName(e.target.value)}
+                        disabled={authSubmitting}
+                      />
+                    )}
+                    <input
+                      className="form-input"
+                      type="email"
+                      placeholder="E-mail"
+                      value={authEmail}
+                      onChange={e => setAuthEmail(e.target.value)}
+                      required
+                      disabled={authSubmitting}
+                    />
+                    <input
+                      className="form-input"
+                      type="password"
+                      placeholder="Senha (mínimo 8 caracteres)"
+                      value={authPassword}
+                      onChange={e => setAuthPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      disabled={authSubmitting}
+                    />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button className="btn btn-secondary" disabled style={{ opacity: 0.45, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M19.6 10.2c0-.7-.1-1.4-.2-2H10v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4"/><path d="M10 20c2.7 0 5-0.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H1.1v2.6A10 10 0 0 0 10 20z" fill="#34A853"/><path d="M4.4 12c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V5.4H1.1A10 10 0 0 0 0 10c0 1.6.4 3.2 1.1 4.6L4.4 12z" fill="#FBBC05"/><path d="M10 3.9c1.5 0 2.8.5 3.8 1.5L16.7 3C15 1.4 12.7.5 10 .5A10 10 0 0 0 1.1 5.5l3.3 2.5C5.2 5.6 7.4 3.9 10 3.9z" fill="#EA4335"/></svg>
-                Entrar com Google
-                <span style={{ fontSize: 10, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
-              </button>
-              <button className="btn btn-secondary" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>
-                Criar conta
-                <span style={{ fontSize: 10, marginLeft: 6, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
-              </button>
+                    {authError && (
+                      <p style={{ color: 'var(--color-danger)', fontSize: 12, margin: 0 }}>{authError}</p>
+                    )}
+
+                    <button
+                      className="btn btn-primary"
+                      type="submit"
+                      disabled={authSubmitting || !authEmail || !authPassword}
+                    >
+                      {authSubmitting
+                        ? (authTab === 'login' ? 'Entrando...' : 'Criando conta...')
+                        : (authTab === 'login' ? 'Entrar' : 'Criar conta')}
+                    </button>
+                  </form>
+
+                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--color-border, rgba(255,255,255,.08))' }}>
+                    <button
+                      className="btn btn-secondary"
+                      disabled
+                      style={{ width: '100%', opacity: 0.45, cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    >
+                      <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+                        <path d="M19.6 10.2c0-.7-.1-1.4-.2-2H10v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4"/>
+                        <path d="M10 20c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H1.1v2.6A10 10 0 0 0 10 20z" fill="#34A853"/>
+                        <path d="M4.4 12c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V5.4H1.1A10 10 0 0 0 0 10c0 1.6.4 3.2 1.1 4.6L4.4 12z" fill="#FBBC05"/>
+                        <path d="M10 3.9c1.5 0 2.8.5 3.8 1.5L16.7 3C15 1.4 12.7.5 10 .5A10 10 0 0 0 1.1 5.5l3.3 2.5C5.2 5.6 7.4 3.9 10 3.9z" fill="#EA4335"/>
+                      </svg>
+                      Entrar com Google
+                      <span style={{ fontSize: 10, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </section>
       </div>

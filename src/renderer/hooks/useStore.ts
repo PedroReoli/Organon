@@ -363,6 +363,8 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
       backupIntervalMinutes: (settings as Settings)?.backupIntervalMinutes ?? base.settings.backupIntervalMinutes,
       apiToken: (settings as Settings)?.apiToken ?? base.settings.apiToken,
       apiBaseUrl: (settings as Settings)?.apiBaseUrl ?? base.settings.apiBaseUrl,
+      apiEmail: (settings as Settings)?.apiEmail ?? base.settings.apiEmail,
+      apiRefreshToken: (settings as Settings)?.apiRefreshToken ?? base.settings.apiRefreshToken,
     },
   }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { useApiToken } from '../hooks/useApiToken'
+import { useAuth } from '../hooks/useAuth'
 import { pushAllToApi, hasRemoteChanges, pullFromApi } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
@@ -176,8 +176,13 @@ export const App = () => {
     storeVersion,
   } = useStore()
 
-  const { isConfigured } = useApiToken(settings.apiBaseUrl ?? '', settings.apiToken ?? '')
-  const userLoggedIn = useMemo(() => Boolean(settings.apiToken?.trim()), [settings.apiToken])
+  const auth = useAuth(
+    settings.apiBaseUrl ?? '',
+    settings.apiRefreshToken ?? '',
+    (refreshToken, email) => updateSettings({ apiRefreshToken: refreshToken, apiEmail: email }),
+  )
+  const isConfigured = auth.isAuthenticated || auth.isRestoring
+  const userLoggedIn = auth.isAuthenticated
 
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
@@ -856,6 +861,13 @@ export const App = () => {
               syncStatus={syncStatus}
               isConfigured={isConfigured}
               userLoggedIn={userLoggedIn}
+              onLogin={auth.login}
+              onRegister={auth.register}
+              onLogout={auth.logout}
+              authError={auth.authError}
+              onClearAuthError={auth.clearError}
+              authUser={auth.user}
+              authLoading={auth.isRestoring}
             />
           )}
 

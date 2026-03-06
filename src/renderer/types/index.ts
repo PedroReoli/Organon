@@ -771,8 +771,11 @@ export interface Settings {
   navbarConfig?: NavbarConfig
   backupEnabled?: boolean
   backupIntervalMinutes?: number
+  /** @deprecated usar apiRefreshToken + apiEmail */
   apiToken?: string
   apiBaseUrl?: string
+  apiEmail?: string
+  apiRefreshToken?: string
 }
 
 // Acesso Rápido (atalhos para views da aplicação)
