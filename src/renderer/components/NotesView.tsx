@@ -49,6 +49,18 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 )
 
+type TreeItemKind = 'note' | 'folder'
+type TreeItemKey = string
+
+const noteTreeKey = (id: string): TreeItemKey => `note:${id}`
+const folderTreeKey = (id: string): TreeItemKey => `folder:${id}`
+
+const parseTreeKey = (key: TreeItemKey): { kind: TreeItemKind; id: string } | null => {
+  if (key.startsWith('note:')) return { kind: 'note', id: key.slice(5) }
+  if (key.startsWith('folder:')) return { kind: 'folder', id: key.slice(7) }
+  return null
+}
+
 // ---- Main component ----
 
 export const NotesView = ({
@@ -82,7 +94,10 @@ export const NotesView = ({
   const [newFolderName, setNewFolderName] = useState('')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ noteId: string; title: string } | null>(null)
+  const [folderDeleteConfirm, setFolderDeleteConfirm] = useState<{ folderId: string; name: string } | null>(null)
   const [isNoteLoading, setIsNoteLoading] = useState(false)
+  const [selectedTreeItems, setSelectedTreeItems] = useState<Set<TreeItemKey>>(new Set())
+  const [selectionAnchor, setSelectionAnchor] = useState<TreeItemKey | null>(null)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentNoteIdRef = useRef<string | null>(null)
@@ -94,15 +109,14 @@ export const NotesView = ({
   const markdownImportRef = useRef<HTMLInputElement>(null)
 
   // Drag-and-drop state
-  const [dragNote, setDragNote] = useState<Note | null>(null)
-  const [dragFolder, setDragFolder] = useState<NoteFolder | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
-  // Refs for instant access inside drag event handlers (state is stale in closures)
-  const dragNoteRef = useRef<Note | null>(null)
-  const dragFolderRef = useRef<NoteFolder | null>(null)
+  const [dragCount, setDragCount] = useState(0)
+  const dragPayloadRef = useRef<{ noteIds: string[]; folderIds: string[] }>({ noteIds: [], folderIds: [] })
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) ?? null, [notes, selectedNoteId])
   const selectedNoteLocked = selectedNote?.isLocked === true
+  const noteMap = useMemo(() => new Map(notes.map(note => [note.id, note])), [notes])
+  const folderMap = useMemo(() => new Map(folders.map(folder => [folder.id, folder])), [folders])
 
   // ---- Tree computed ----
 
@@ -139,6 +153,52 @@ export const NotesView = ({
     if (!q) return []
     return notes.filter(n => n.title.toLowerCase().includes(q)).slice(0, 30)
   }, [searchQuery, notes])
+
+  const visibleTreeItemKeys = useMemo(() => {
+    const orderedKeys: TreeItemKey[] = []
+    const seen = new Set<TreeItemKey>()
+    const pushKey = (key: TreeItemKey) => {
+      if (seen.has(key)) return
+      seen.add(key)
+      orderedKeys.push(key)
+    }
+
+    const visitNote = (note: Note) => {
+      pushKey(noteTreeKey(note.id))
+      if (!expandedNotes.has(note.id)) return
+      subNotes(note.id).forEach(visitNote)
+    }
+
+    const visitFolder = (folder: NoteFolder) => {
+      pushKey(folderTreeKey(folder.id))
+      if (!expandedFolders.has(folder.id)) return
+      childFolders(folder.id).forEach(visitFolder)
+      notesInFolder(folder.id).forEach(visitNote)
+    }
+
+    if (searchQuery.trim()) {
+      searchResults.forEach(note => pushKey(noteTreeKey(note.id)))
+      return orderedKeys
+    }
+
+    favorites.forEach(note => pushKey(noteTreeKey(note.id)))
+    pinned.forEach(note => pushKey(noteTreeKey(note.id)))
+    rootFolders.forEach(visitFolder)
+    rootNotes.forEach(visitNote)
+    return orderedKeys
+  }, [
+    childFolders,
+    expandedFolders,
+    expandedNotes,
+    favorites,
+    notesInFolder,
+    pinned,
+    rootFolders,
+    rootNotes,
+    searchQuery,
+    searchResults,
+    subNotes,
+  ])
 
   // ---- Breadcrumb ----
 
@@ -241,9 +301,34 @@ export const NotesView = ({
     }
   }, [])
 
+  useEffect(() => {
+    const validKeys = new Set<TreeItemKey>([
+      ...notes.map(note => noteTreeKey(note.id)),
+      ...folders.map(folder => folderTreeKey(folder.id)),
+    ])
+
+    setSelectedTreeItems(prev => {
+      const next = new Set<TreeItemKey>()
+      let changed = false
+      prev.forEach(key => {
+        if (validKeys.has(key)) {
+          next.add(key)
+        } else {
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+
+    setSelectionAnchor(prev => (prev && validKeys.has(prev)) ? prev : null)
+  }, [folders, notes])
+
   // ---- Open note ----
 
   const openNote = useCallback((noteId: string) => {
+    const key = noteTreeKey(noteId)
+    setSelectedTreeItems(new Set([key]))
+    setSelectionAnchor(key)
     if (selectedNoteId === noteId) {
       setSearchQuery('')
       setSearchVisible(false)
@@ -273,9 +358,73 @@ export const NotesView = ({
     if (!deleteConfirm) return
     onRemoveNote(deleteConfirm.noteId)
     if (selectedNoteId === deleteConfirm.noteId) setSelectedNoteId(null)
+    setSelectedTreeItems(prev => {
+      if (!prev.has(noteTreeKey(deleteConfirm.noteId))) return prev
+      const next = new Set(prev)
+      next.delete(noteTreeKey(deleteConfirm.noteId))
+      return next
+    })
     setDeleteConfirm(null)
     setContextMenu(null)
   }, [deleteConfirm, onRemoveNote, selectedNoteId])
+
+  const requestDeleteFolder = useCallback((folderId: string) => {
+    const folder = folders.find(item => item.id === folderId)
+    if (!folder) return
+    setFolderDeleteConfirm({ folderId, name: folder.name || 'Sem nome' })
+  }, [folders])
+
+  const confirmDeleteFolder = useCallback(() => {
+    if (!folderDeleteConfirm) return
+    onRemoveFolder(folderDeleteConfirm.folderId)
+    const removedFolderKey = folderTreeKey(folderDeleteConfirm.folderId)
+    setSelectedTreeItems(prev => {
+      if (!prev.has(removedFolderKey)) return prev
+      const next = new Set(prev)
+      next.delete(removedFolderKey)
+      return next
+    })
+    setFolderDeleteConfirm(null)
+  }, [folderDeleteConfirm, onRemoveFolder])
+
+  const selectTreeItemRange = useCallback((targetKey: TreeItemKey) => {
+    const anchor = selectionAnchor ?? targetKey
+    const anchorIndex = visibleTreeItemKeys.indexOf(anchor)
+    const targetIndex = visibleTreeItemKeys.indexOf(targetKey)
+    if (anchorIndex < 0 || targetIndex < 0) {
+      setSelectedTreeItems(new Set([targetKey]))
+      setSelectionAnchor(targetKey)
+      return
+    }
+    const start = Math.min(anchorIndex, targetIndex)
+    const end = Math.max(anchorIndex, targetIndex)
+    setSelectedTreeItems(new Set(visibleTreeItemKeys.slice(start, end + 1)))
+    setSelectionAnchor(anchor)
+  }, [selectionAnchor, visibleTreeItemKeys])
+
+  const selectSingleTreeItem = useCallback((itemKey: TreeItemKey) => {
+    setSelectedTreeItems(new Set([itemKey]))
+    setSelectionAnchor(itemKey)
+  }, [])
+
+  const handleTreeRowSelection = useCallback((itemKey: TreeItemKey, e: React.MouseEvent): boolean => {
+    const isToggleSelection = e.ctrlKey || e.metaKey
+    if (e.shiftKey) {
+      selectTreeItemRange(itemKey)
+      return true
+    }
+    if (isToggleSelection) {
+      setSelectedTreeItems(prev => {
+        const next = new Set(prev)
+        if (next.has(itemKey)) next.delete(itemKey)
+        else next.add(itemKey)
+        return next
+      })
+      setSelectionAnchor(itemKey)
+      return true
+    }
+    return false
+  }, [selectTreeItemRange])
 
   // ---- Add note ----
 
@@ -291,6 +440,9 @@ export const NotesView = ({
     setIsNoteLoading(true)
     setNoteContent('')
     setSelectedNoteId(note.id)
+    const key = noteTreeKey(note.id)
+    setSelectedTreeItems(new Set([key]))
+    setSelectionAnchor(key)
     setTimeout(() => {
       setIsTitleEditing(true)
       titleInputRef.current?.focus()
@@ -366,6 +518,8 @@ export const NotesView = ({
         setSearchVisible(false)
         setSearchQuery('')
         setContextMenu(null)
+        setDeleteConfirm(null)
+        setFolderDeleteConfirm(null)
       }
     }
     document.addEventListener('keydown', handler)
@@ -428,66 +582,136 @@ export const NotesView = ({
   // ---- Drag-and-drop ----
 
   const isFolderDescendant = useCallback((candidateId: string, ancestorId: string) => {
-    let current = folders.find(folder => folder.id === candidateId)?.parentId ?? null
+    let current = folderMap.get(candidateId)?.parentId ?? null
     while (current) {
       if (current === ancestorId) return true
-      current = folders.find(folder => folder.id === current)?.parentId ?? null
+      current = folderMap.get(current)?.parentId ?? null
     }
     return false
-  }, [folders])
+  }, [folderMap])
 
   const isNoteDescendant = useCallback((candidateId: string, ancestorId: string) => {
-    let current = notes.find(note => note.id === candidateId)?.parentNoteId ?? null
+    let current = noteMap.get(candidateId)?.parentNoteId ?? null
     while (current) {
       if (current === ancestorId) return true
-      current = notes.find(note => note.id === current)?.parentNoteId ?? null
+      current = noteMap.get(current)?.parentNoteId ?? null
     }
     return false
-  }, [notes])
+  }, [noteMap])
+
+  const isNoteInsideAnyFolder = useCallback((noteId: string, folderIds: Set<string>) => {
+    let current = noteMap.get(noteId)?.folderId ?? null
+    while (current) {
+      if (folderIds.has(current)) return true
+      current = folderMap.get(current)?.parentId ?? null
+    }
+    return false
+  }, [folderMap, noteMap])
+
+  const buildDragPayload = useCallback((dragKind: TreeItemKind, dragId: string) => {
+    const draggedKey = dragKind === 'note' ? noteTreeKey(dragId) : folderTreeKey(dragId)
+    let baseSelection = selectedTreeItems
+    if (!baseSelection.has(draggedKey)) {
+      baseSelection = new Set([draggedKey])
+      setSelectedTreeItems(new Set([draggedKey]))
+      setSelectionAnchor(draggedKey)
+    }
+
+    const folderIds: string[] = []
+    const noteIds: string[] = []
+    baseSelection.forEach(key => {
+      const parsed = parseTreeKey(key)
+      if (!parsed) return
+      if (parsed.kind === 'folder') {
+        if (folderMap.has(parsed.id)) folderIds.push(parsed.id)
+      } else {
+        if (noteMap.has(parsed.id)) noteIds.push(parsed.id)
+      }
+    })
+
+    const selectedFolderSet = new Set(folderIds)
+    const uniqueFolderIds = folderIds.filter(folderId => {
+      let parentId = folderMap.get(folderId)?.parentId ?? null
+      while (parentId) {
+        if (selectedFolderSet.has(parentId)) return false
+        parentId = folderMap.get(parentId)?.parentId ?? null
+      }
+      return true
+    })
+    const uniqueFolderSet = new Set(uniqueFolderIds)
+    const selectedNoteSet = new Set(noteIds)
+    const uniqueNoteIds = noteIds.filter(noteId => {
+      const note = noteMap.get(noteId)
+      if (!note || note.isLocked) return false
+      let parentNoteId = note.parentNoteId
+      while (parentNoteId) {
+        if (selectedNoteSet.has(parentNoteId)) return false
+        parentNoteId = noteMap.get(parentNoteId)?.parentNoteId ?? null
+      }
+      if (isNoteInsideAnyFolder(noteId, uniqueFolderSet)) return false
+      return true
+    })
+    return { noteIds: uniqueNoteIds, folderIds: uniqueFolderIds }
+  }, [folderMap, isNoteInsideAnyFolder, noteMap, selectedTreeItems])
 
   const handleDragEnd = useCallback(() => {
-    dragNoteRef.current = null
-    dragFolderRef.current = null
-    setDragNote(null)
-    setDragFolder(null)
+    dragPayloadRef.current = { noteIds: [], folderIds: [] }
+    setDragCount(0)
     setDropTargetId(null)
   }, [])
 
+  const startTreeDrag = useCallback((e: React.DragEvent, kind: TreeItemKind, id: string) => {
+    e.stopPropagation()
+    const payload = buildDragPayload(kind, id)
+    const count = payload.noteIds.length + payload.folderIds.length
+    if (count === 0) {
+      e.preventDefault()
+      return
+    }
+    dragPayloadRef.current = payload
+    setDragCount(count)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', `${kind}:${id}`)
+  }, [buildDragPayload])
+
   const handleDropOnFolder = useCallback((folderId: string) => {
-    const dn = dragNoteRef.current
-    const df = dragFolderRef.current
-    if (dn) {
-      onUpdateNote(dn.id, { folderId, parentNoteId: null })
-      if (folderId) setExpandedFolders(prev => new Set([...prev, folderId]))
-    } else if (df && df.id !== folderId) {
-      if (!isFolderDescendant(folderId, df.id)) {
-        onUpdateFolder(df.id, { parentId: folderId })
-        setExpandedFolders(prev => new Set([...prev, folderId]))
-      }
+    const { noteIds, folderIds } = dragPayloadRef.current
+    const movedFolderIds = folderIds.filter(id => id !== folderId && !isFolderDescendant(folderId, id))
+    const movedNoteIds = noteIds.filter(id => !noteMap.get(id)?.isLocked)
+
+    movedFolderIds.forEach(id => onUpdateFolder(id, { parentId: folderId }))
+    movedNoteIds.forEach(id => onUpdateNote(id, { folderId, parentNoteId: null }))
+
+    if (movedFolderIds.length > 0 || movedNoteIds.length > 0) {
+      setExpandedFolders(prev => new Set([...prev, folderId]))
     }
     handleDragEnd()
-  }, [isFolderDescendant, onUpdateFolder, onUpdateNote, handleDragEnd])
+  }, [handleDragEnd, isFolderDescendant, noteMap, onUpdateFolder, onUpdateNote])
 
   const handleDropOnNote = useCallback((targetNote: Note) => {
-    const dn = dragNoteRef.current
-    if (!dn || dn.id === targetNote.id) { handleDragEnd(); return }
     if (targetNote.isLocked) { handleDragEnd(); return }
-    if (isNoteDescendant(targetNote.id, dn.id)) { handleDragEnd(); return }
-    onUpdateNote(dn.id, { folderId: targetNote.folderId, parentNoteId: targetNote.id })
-    setExpandedNotes(prev => new Set([...prev, targetNote.id]))
+    const { noteIds } = dragPayloadRef.current
+    const movedNoteIds = noteIds.filter(id => {
+      if (id === targetNote.id) return false
+      const note = noteMap.get(id)
+      if (!note || note.isLocked) return false
+      if (isNoteDescendant(targetNote.id, id)) return false
+      return true
+    })
+    movedNoteIds.forEach(id => onUpdateNote(id, { folderId: targetNote.folderId, parentNoteId: targetNote.id }))
+    if (movedNoteIds.length > 0) setExpandedNotes(prev => new Set([...prev, targetNote.id]))
     handleDragEnd()
-  }, [isNoteDescendant, onUpdateNote, handleDragEnd])
+  }, [handleDragEnd, isNoteDescendant, noteMap, onUpdateNote])
 
   const handleDropOnRoot = useCallback(() => {
-    const dn = dragNoteRef.current
-    const df = dragFolderRef.current
-    if (dn) {
-      onUpdateNote(dn.id, { folderId: null, parentNoteId: null })
-    } else if (df) {
-      onUpdateFolder(df.id, { parentId: null })
-    }
+    const { noteIds, folderIds } = dragPayloadRef.current
+    folderIds.forEach(id => onUpdateFolder(id, { parentId: null }))
+    noteIds.forEach(id => {
+      if (noteMap.get(id)?.isLocked) return
+      onUpdateNote(id, { folderId: null, parentNoteId: null })
+    })
     handleDragEnd()
-  }, [onUpdateFolder, onUpdateNote, handleDragEnd])
+  }, [handleDragEnd, noteMap, onUpdateFolder, onUpdateNote])
 
   // ---- Markdown import ----
 
@@ -539,6 +763,9 @@ export const NotesView = ({
           window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
         }
         setSelectedNoteId(note.id)
+        const key = noteTreeKey(note.id)
+        setSelectedTreeItems(new Set([key]))
+        setSelectionAnchor(key)
         setNoteContent(html)
       }
       reader.readAsText(file)
@@ -550,34 +777,48 @@ export const NotesView = ({
   const renderNote = (note: Note, depth: number) => {
     const children = subNotes(note.id)
     const isExpanded = expandedNotes.has(note.id)
-    const isSelected = selectedNoteId === note.id
+    const isOpenNote = selectedNoteId === note.id
     const hasChildren = children.length > 0
+    const treeKey = noteTreeKey(note.id)
+    const isTreeSelected = selectedTreeItems.has(treeKey)
 
     const isDropTarget = dropTargetId === note.id
     return (
       <div key={note.id} className="notes-tree-group">
         <div
-          className={`notes-tree-row notes-tree-note${isSelected ? ' is-active' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
+          className={`notes-tree-row notes-tree-note${isOpenNote ? ' is-active' : ''}${isTreeSelected ? ' is-selected' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           draggable={!note.isLocked}
-          onDragStart={e => { e.stopPropagation(); dragNoteRef.current = note; dragFolderRef.current = null; setDragNote(note); setDragFolder(null) }}
+          onDragStart={e => startTreeDrag(e, 'note', note.id)}
           onDragEnd={handleDragEnd}
           onDragOver={e => {
             e.preventDefault()
             e.stopPropagation()
-            // Only notes can be dropped onto notes (to create subpages)
-            if (dragNoteRef.current && dragNoteRef.current.id !== note.id && !note.isLocked) setDropTargetId(note.id)
+            if (note.isLocked) return
+            const canDrop = dragPayloadRef.current.noteIds.some(noteId => {
+              if (noteId === note.id) return false
+              if (noteMap.get(noteId)?.isLocked) return false
+              return !isNoteDescendant(note.id, noteId)
+            })
+            if (canDrop) setDropTargetId(note.id)
           }}
           onDragLeave={e => {
             e.stopPropagation()
-            // Only clear if truly leaving this element (not entering a child)
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setDropTargetId(null)
             }
           }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnNote(note) }}
-          onClick={() => openNote(note.id)}
-          onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id }) }}
+          onClick={e => {
+            if (handleTreeRowSelection(treeKey, e)) return
+            selectSingleTreeItem(treeKey)
+            openNote(note.id)
+          }}
+          onContextMenu={e => {
+            e.preventDefault()
+            if (!selectedTreeItems.has(treeKey)) selectSingleTreeItem(treeKey)
+            setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id })
+          }}
         >
           <button
             className={`notes-tree-chevron${hasChildren ? ' visible' : ''}${isExpanded ? ' open' : ''}`}
@@ -626,22 +867,26 @@ export const NotesView = ({
     const isExpanded = expandedFolders.has(folder.id)
     const childFlds = childFolders(folder.id)
     const childNts = notesInFolder(folder.id)
+    const treeKey = folderTreeKey(folder.id)
+    const isTreeSelected = selectedTreeItems.has(treeKey)
 
     const isFolderDropTarget = dropTargetId === folder.id
     return (
       <div key={folder.id} className="notes-tree-group">
         <div
-          className={`notes-tree-row notes-tree-folder${isFolderDropTarget ? ' is-drop-target' : ''}`}
+          className={`notes-tree-row notes-tree-folder${isTreeSelected ? ' is-selected' : ''}${isFolderDropTarget ? ' is-drop-target' : ''}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           draggable
-          onDragStart={e => { e.stopPropagation(); dragFolderRef.current = folder; dragNoteRef.current = null; setDragFolder(folder); setDragNote(null) }}
+          onDragStart={e => startTreeDrag(e, 'folder', folder.id)}
           onDragEnd={handleDragEnd}
           onDragOver={e => {
             e.preventDefault()
             e.stopPropagation()
-            // Prevent a folder from dropping into itself
-            if (dragFolderRef.current?.id === folder.id) return
-            setDropTargetId(folder.id)
+            const canDropFolders = dragPayloadRef.current.folderIds.some(folderId => (
+              folderId !== folder.id && !isFolderDescendant(folder.id, folderId)
+            ))
+            const canDropNotes = dragPayloadRef.current.noteIds.some(noteId => !noteMap.get(noteId)?.isLocked)
+            if (canDropFolders || canDropNotes) setDropTargetId(folder.id)
           }}
           onDragLeave={e => {
             e.stopPropagation()
@@ -650,7 +895,11 @@ export const NotesView = ({
             }
           }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnFolder(folder.id) }}
-          onClick={() => toggleFolder(folder.id)}
+          onClick={e => {
+            if (handleTreeRowSelection(treeKey, e)) return
+            selectSingleTreeItem(treeKey)
+            toggleFolder(folder.id)
+          }}
         >
           <button
             className="notes-tree-chevron visible"
@@ -680,7 +929,7 @@ export const NotesView = ({
             <button
               className="notes-tree-action-btn"
               title="Excluir pasta"
-              onClick={e => { e.stopPropagation(); onRemoveFolder(folder.id) }}
+              onClick={e => { e.stopPropagation(); requestDeleteFolder(folder.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
             </button>
@@ -810,7 +1059,7 @@ export const NotesView = ({
               )}
 
               {/* Drop zone para mover para a raiz (visível durante drag) */}
-              {(dragFolder || dragNote) && (
+              {dragCount > 0 && (
                 <div
                   className={`notes-tree-root-drop-zone${dropTargetId === 'root-zone' ? ' is-drop-target' : ''}`}
                   onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDropTargetId('root-zone') }}
@@ -823,7 +1072,7 @@ export const NotesView = ({
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
                     <polyline points="17 11 12 6 7 11" /><line x1="12" y1="18" x2="12" y2="6" />
                   </svg>
-                  Mover para raiz
+                  {dragCount > 1 ? `Mover ${dragCount} itens para raiz` : 'Mover para raiz'}
                 </div>
               )}
 
@@ -1068,6 +1317,33 @@ export const NotesView = ({
                 Cancelar
               </button>
               <button className="notes-delete-modal-btn confirm" onClick={confirmDeleteNote}>
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {folderDeleteConfirm && (
+        <div className="notes-delete-modal-overlay" onClick={() => setFolderDeleteConfirm(null)}>
+          <div className="notes-delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="notes-delete-modal-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="28" height="28">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+                <path d="M9 13h6" />
+              </svg>
+            </div>
+            <h3 className="notes-delete-modal-title">Excluir pasta</h3>
+            <p className="notes-delete-modal-desc">
+              Tem certeza que deseja excluir <strong>"{folderDeleteConfirm.name}"</strong>?<br />
+              Esta acao nao pode ser desfeita.
+            </p>
+            <div className="notes-delete-modal-actions">
+              <button className="notes-delete-modal-btn cancel" onClick={() => setFolderDeleteConfirm(null)}>
+                Cancelar
+              </button>
+              <button className="notes-delete-modal-btn confirm" onClick={confirmDeleteFolder}>
                 Excluir
               </button>
             </div>
