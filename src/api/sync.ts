@@ -73,16 +73,13 @@ function cardToApi(c: Card): Payload {
 
 function noteToApi(note: Note, contentMarkdown: string): Payload {
   return {
+    id: note.id,
     title: note.title,
-    content_markdown: contentMarkdown,
-    md_path: note.mdPath,
+    content_markdown: contentMarkdown ?? '',
+    content_html: '',
     folder_id: note.folderId ?? null,
-    parent_note_id: note.parentNoteId ?? null,
     project_id: note.projectId ?? null,
-    is_pinned: note.isPinned ?? false,
-    is_favorite: note.isFavorite ?? false,
     sort_order: note.order ?? 0,
-    created_at: note.createdAt,
     updated_at: note.updatedAt,
   }
 }
@@ -288,7 +285,8 @@ function noteFromApi(id: string, p: Payload): Note {
   return {
     id,
     title: s(p.title),
-    mdPath: s(p.md_path) || `nota-${id}.md`,
+    // mdPath é um detalhe local do app desktop; não vem mais da API.
+    mdPath: `${id}.md`,
     folderId: p.folder_id ? s(p.folder_id) : null,
     parentNoteId: p.parent_note_id ? s(p.parent_note_id) : null,
     projectId: p.project_id ? s(p.project_id) : null,
@@ -504,7 +502,13 @@ function applyChange(
 
   switch (resource) {
     case 'cards':              result.cards.push(cardFromApi(id, p)); break
-    case 'notes':              result.notes.push(noteFromApi(id, p)); noteContents.set(id, s(p.content_markdown)); break
+    case 'notes': {
+      // Fonte de verdade do conteúdo de nota na API: content_markdown.
+      const markdown = s(p.content_markdown)
+      result.notes.push(noteFromApi(id, p))
+      noteContents.set(id, markdown)
+      break
+    }
     case 'note_folders':       result.noteFolders.push(noteFolderFromApi(id, p)); break
     case 'calendar_events':    result.calendarEvents.push(calendarEventFromApi(id, p)); break
     case 'projects':           result.projects.push(projectFromApi(id, p)); break
@@ -574,11 +578,28 @@ export async function pushAllToApi(
   console.log(`[Sync] push — ${ops.length} operações em ${totalBatches} lote(s)`)
   for (let i = 0; i < ops.length; i += BATCH_SIZE) {
     const batch = ops.slice(i, i + BATCH_SIZE)
+    const batchIndex = Math.floor(i / BATCH_SIZE) + 1
+    const noteOps = batch.filter(op => op.resource === 'notes')
+    if (noteOps.length > 0) {
+      const noteFields = Array.from(new Set(
+        noteOps.flatMap(op => Object.keys((op.payload ?? {}) as Payload)),
+      )).sort()
+      console.log(
+        `[Sync][notes] lote ${batchIndex}/${totalBatches} enviando ${noteOps.length} operação(ões) | campos: ${noteFields.join(', ')}`,
+      )
+    }
     try {
-      await organonApi.sync.batch(batch)
-      console.log(`[Sync] lote ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches} OK`)
+      const res = await organonApi.sync.batch(batch)
+      console.log(`[Sync] lote ${batchIndex}/${totalBatches} OK`)
+      if (noteOps.length > 0) {
+        console.log(`[Sync][notes] lote ${batchIndex}/${totalBatches} HTTP ${res.status} OK`)
+      }
     } catch (err) {
-      console.error(`[Sync] lote ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches} ERRO:`, err)
+      const status = (err as { status?: number }).status ?? 'desconhecido'
+      if (noteOps.length > 0) {
+        console.error(`[Sync][notes] lote ${batchIndex}/${totalBatches} HTTP ${status} ERRO`)
+      }
+      console.error(`[Sync] lote ${batchIndex}/${totalBatches} ERRO:`, err)
       throw err
     }
   }

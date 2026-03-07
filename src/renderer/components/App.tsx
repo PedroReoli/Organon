@@ -221,10 +221,14 @@ export const App = () => {
         const merged = {
           ...rawStore,
           cards: pulled.cards,
-          notes: pulled.notes.map(note => ({
-            ...note,
-            isLocked: rawStore.notes.find((localNote: { id: string; isLocked?: boolean }) => localNote.id === note.id)?.isLocked ?? note.isLocked ?? false,
-          })),
+          notes: pulled.notes.map(note => {
+            const localNote = rawStore.notes.find((item: { id: string; mdPath?: string; isLocked?: boolean }) => item.id === note.id)
+            return {
+              ...note,
+              mdPath: localNote?.mdPath ?? note.mdPath,
+              isLocked: localNote?.isLocked ?? note.isLocked ?? false,
+            }
+          }),
           noteFolders: pulled.noteFolders,
           calendarEvents: pulled.calendarEvents,
           projects: pulled.projects,

@@ -98,6 +98,43 @@ async function doFetch<T>(path: string, init?: RequestInit, withAuth = true): Pr
   return res.json() as Promise<T>
 }
 
+async function doFetchWithStatus<T>(path: string, init?: RequestInit, withAuth = true): Promise<{ status: number; data: T }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (withAuth && _accessToken) headers['Authorization'] = `Bearer ${_accessToken}`
+
+  const res = await fetch(buildUrl(path), {
+    ...init,
+    headers: { ...headers, ...(init?.headers as Record<string, string> | undefined) },
+  })
+
+  if (res.status === 204) return { status: res.status, data: undefined as T }
+
+  if (res.status === 401 && withAuth && _accessToken) {
+    await doRefresh()
+    const headers2: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${_accessToken}`,
+    }
+    const res2 = await fetch(buildUrl(path), {
+      ...init,
+      headers: { ...headers2, ...(init?.headers as Record<string, string> | undefined) },
+    })
+    if (res2.status === 204) return { status: res2.status, data: undefined as T }
+    if (!res2.ok) {
+      const body = await res2.json().catch(() => ({}))
+      throw makeError(res2.status, body)
+    }
+    return { status: res2.status, data: await res2.json() as T }
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw makeError(res.status, body)
+  }
+
+  return { status: res.status, data: await res.json() as T }
+}
+
 function makeError(status: number, body: unknown): Error {
   const b = body as { error?: { message?: string; code?: string } }
   return Object.assign(new Error(b?.error?.message ?? `HTTP ${status}`), {
@@ -190,6 +227,11 @@ export interface SyncOperationResult {
 
 export interface SyncBatchResult {
   results: SyncOperationResult[]
+}
+
+export interface SyncBatchHttpResult {
+  status: number
+  data: SyncBatchResult
 }
 
 export interface SyncChange {
@@ -626,8 +668,11 @@ export const organonApi = {
     batch: (
       operations: SyncOperation[],
       options?: { client_id?: string; base_cursor?: string },
-    ): Promise<SyncBatchResult> =>
-      post('/sync/batch', { operations, ...options }),
+    ): Promise<SyncBatchHttpResult> =>
+      doFetchWithStatus<SyncBatchResult>('/sync/batch', {
+        method: 'POST',
+        body: JSON.stringify({ operations, ...options }),
+      }),
 
     changes: (since: string, cursor?: string, limit = 500): Promise<SyncChangesResponse> =>
       get(`/sync/changes${qs({ since, cursor, limit })}`),
