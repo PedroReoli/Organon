@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Card, CardPriority, CardStatus, ChecklistItem, Project } from '../types'
+import type { Card, CardPriority, CardStatus, Project } from '../types'
 import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_ORDER } from '../types'
 import { WysiwygEditor } from './WysiwygEditor'
-import { getTodayISO, generateId } from '../utils'
+import { getTodayISO } from '../utils'
 
 interface CardModalProps {
   card: Card
@@ -16,7 +16,6 @@ interface CardModalProps {
     hasDate: boolean
     priority: CardPriority | null
     status: CardStatus
-    checklist: ChecklistItem[]
     projectId: string | null
   }) => void
   onDelete: () => void
@@ -31,8 +30,6 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
   const [priority, setPriority] = useState<CardPriority | null>(card.priority)
   const [status, setStatus] = useState<CardStatus>(card.status)
   const [projectId, setProjectId] = useState<string | null>(card.projectId ?? null)
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(card.checklist ?? [])
-  const [newChecklistText, setNewChecklistText] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -68,7 +65,6 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
         hasDate,
         priority,
         status,
-        checklist,
         projectId,
       })
     } else {
@@ -93,23 +89,6 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
     if (!checked) {
       setTime('')
     }
-  }
-
-  const addChecklistItem = () => {
-    const text = newChecklistText.trim()
-    if (!text) return
-    setChecklist(prev => [...prev, { id: generateId(), text, done: false }])
-    setNewChecklistText('')
-  }
-
-  const toggleChecklistItem = (itemId: string) => {
-    setChecklist(prev => prev.map(item =>
-      item.id === itemId ? { ...item, done: !item.done } : item
-    ))
-  }
-
-  const removeChecklistItem = (itemId: string) => {
-    setChecklist(prev => prev.filter(item => item.id !== itemId))
   }
 
   const priorities: (CardPriority | null)[] = [null, 'P1', 'P2', 'P3', 'P4']
@@ -238,67 +217,16 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
             </div>
           )}
 
-          {/* Checklist */}
-          <div className="form-group">
-            <label className="form-label">
-              Checklist
-              {checklist.length > 0 && (
-                <span className="card-modal-checklist-count">
-                  {checklist.filter(c => c.done).length}/{checklist.length}
-                </span>
-              )}
-            </label>
-            <div className="card-modal-checklist">
-              {checklist.map(item => (
-                <div key={item.id} className={`card-modal-checklist-item ${item.done ? 'is-done' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => toggleChecklistItem(item.id)}
-                  />
-                  <span className="card-modal-checklist-text">{item.text}</span>
-                  <button
-                    type="button"
-                    className="card-modal-checklist-remove"
-                    onClick={() => removeChecklistItem(item.id)}
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-              <div className="card-modal-checklist-add">
-                <input
-                  type="text"
-                  value={newChecklistText}
-                  onChange={(e) => setNewChecklistText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      addChecklistItem()
-                    }
-                  }}
-                  placeholder="Adicionar item..."
-                  className="form-input"
-                />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={addChecklistItem}
-                  disabled={!newChecklistText.trim()}
-                >
-                  +
-                </button>
-              </div>
+          <div className="form-group card-modal-description-group">
+            <label className="form-label">Descrição</label>
+            <div className="card-modal-editor-shell">
+              <WysiwygEditor
+                content={descriptionHtml}
+                onChange={setDescriptionHtml}
+                mode="full"
+                placeholder="Adicione detalhes, notas ou instruções..."
+              />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Descricao</label>
-            <WysiwygEditor
-              content={descriptionHtml}
-              onChange={setDescriptionHtml}
-              placeholder="Adicione detalhes, notas ou instrucoes..."
-            />
           </div>
         </div>
 

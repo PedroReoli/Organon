@@ -346,11 +346,6 @@ export const TodayView = ({
                       <div className="today-item-title">
                         {card.time ? `${card.time} — ` : ''}{card.title}
                       </div>
-                      {card.checklist.length > 0 && (
-                        <div className="today-item-desc">
-                          Checklist: {card.checklist.filter(c => c.done).length}/{card.checklist.length}
-                        </div>
-                      )}
                     </div>
                     <div className="today-item-badges">
                       {card.priority && (
@@ -368,7 +363,6 @@ export const TodayView = ({
                       {card.location.period && (
                         <div className="today-item-desc">
                           {PERIOD_LABELS[card.location.period]}
-                          {card.checklist.length > 0 && ` | Checklist: ${card.checklist.filter(c => c.done).length}/${card.checklist.length}`}
                         </div>
                       )}
                     </div>

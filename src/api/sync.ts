@@ -65,7 +65,6 @@ function cardToApi(c: Card): Payload {
     has_date: c.hasDate ?? false,
     priority: c.priority ?? null,
     status: c.status ?? 'todo',
-    checklist: c.checklist ?? [],
     project_id: c.projectId ?? null,
     created_at: c.createdAt,
     updated_at: c.updatedAt,

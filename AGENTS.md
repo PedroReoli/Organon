@@ -34,3 +34,11 @@
 - Exemplo:
   - `feat(api): adiciona endpoint de sincronizacao de cards`
   - `Descricao: cria rota de listagem com paginacao por cursor e validacao de parametros.`
+
+6. **Compatibilidade App x API (obrigatório)**
+- Quando existir um campo no app e esse campo não existir na API, **não remover o campo do app por conta própria**.
+- Antes de qualquer alteração de contrato no app:
+  - sinalizar claramente o problema ao usuário;
+  - gerar um prompt para a IA responsável pela API pedindo criação/ajuste do campo faltante (incluindo migration e retrocompatibilidade);
+  - aguardar decisão do usuário.
+- Só remover/alterar campo no app com aprovação explícita do usuário.

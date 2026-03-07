@@ -9634,15 +9634,6 @@ input:focus, textarea:focus, select:focus {
   gap: 3px;
 }
 
-.card-indicator-checklist {
-  color: var(--color-text-muted);
-  font-weight: 600;
-}
-
-.card-indicator-checklist-done {
-  color: var(--color-success);
-}
-
 .card-project-dot {
   width: 8px;
   height: 8px;
@@ -9652,7 +9643,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ========================================
- * CARD MODAL - PILLS & CHECKLIST
+ * CARD MODAL - PILLS & DESCRIÇÃO
  * ======================================== */
 
 .card-modal-pills {
@@ -9682,84 +9673,54 @@ input:focus, textarea:focus, select:focus {
   border-color: transparent;
 }
 
-.card-modal-checklist {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.card-modal-description-group {
+  margin-top: 8px;
 }
 
-.card-modal-checklist-count {
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.card-modal-checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--color-surface);
+.card-modal-editor-shell {
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 220px at -8% -20%, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(900px 180px at 108% -24%, rgba(34, 197, 94, 0.06), transparent 62%),
+    var(--color-surface);
 }
 
-.card-modal-checklist-item.is-done {
-  opacity: 0.6;
+.card-modal-editor-shell .editor-container {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.card-modal-checklist-item.is-done .card-modal-checklist-text {
-  text-decoration: line-through;
-  color: var(--color-text-muted);
+.card-modal-editor-shell .editor-toolbar {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-tertiary) 82%, transparent);
+  padding: 8px 10px;
+  max-height: 92px;
+  overflow-y: auto;
 }
 
-.card-modal-checklist-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-  flex-shrink: 0;
+.card-modal-editor-shell .tiptap-editor {
+  min-height: 240px;
+  max-height: 400px;
+  padding: 16px 14px 18px;
+  background: transparent;
 }
 
-.card-modal-checklist-text {
-  flex: 1;
-  font-size: 14px;
-  color: var(--color-text);
+.card-modal-editor-shell .tiptap-editor .ProseMirror {
+  min-height: 180px;
+  font-size: 15px;
+  line-height: 1.65;
 }
 
-.card-modal-checklist-remove {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  font-size: 16px;
-  transition: all var(--transition-fast);
-}
-
-.card-modal-checklist-remove:hover {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--color-danger);
-}
-
-.card-modal-checklist-add {
-  display: flex;
-  gap: 8px;
-}
-
-.card-modal-checklist-add .form-input {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.card-modal-checklist-add .btn {
-  padding: 8px 14px;
+.card-modal-editor-shell .editor-link-popover,
+.card-modal-editor-shell .editor-toolbar-dropdown-menu,
+.card-modal-editor-shell .editor-color-picker,
+.card-modal-editor-shell .editor-table-picker {
+  z-index: 220;
 }
 
 /* ========================================
