@@ -1,13 +1,12 @@
 // Cliente HTTP para a Organon API
-// Auth: Bearer token — accessToken em memória, auto-refresh via refreshToken
+// Auth: Bearer token — sessão baseada em token JWT único (sem refresh token separado no runtime atual)
 
 const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
 // ── Estado de autenticação (módulo singleton) ─────────────────────────────────
 
 let _baseUrl: string = (import.meta.env.VITE_API_BASE_URL as string) || DEFAULT_BASE_URL
-let _accessToken = ''
-let _refreshToken = ''
+let _accessToken = (import.meta.env.VITE_API_TOKEN as string) || ''
 let _refreshPromise: Promise<void> | null = null
 let _onTokensUpdated: ((accessToken: string, refreshToken: string) => void) | null = null
 
@@ -17,12 +16,9 @@ const asRecord = (value: unknown): Record<string, unknown> => (
 
 const getString = (value: unknown): string => (typeof value === 'string' ? value : '')
 
-const readTokenPair = (payload: unknown): { accessToken: string; refreshToken: string } | null => {
+const readAccessToken = (payload: unknown): string => {
   const root = asRecord(payload)
-  const accessToken = getString(root.accessToken ?? root.access_token)
-  const refreshToken = getString(root.refreshToken ?? root.refresh_token)
-  if (!accessToken || !refreshToken) return null
-  return { accessToken, refreshToken }
+  return getString(root.token ?? root.accessToken ?? root.access_token)
 }
 
 export function configureOrganon(config: {
@@ -32,7 +28,11 @@ export function configureOrganon(config: {
 }): void {
   if (config.baseUrl) _baseUrl = config.baseUrl || DEFAULT_BASE_URL
   if (config.accessToken !== undefined) _accessToken = config.accessToken
-  if (config.refreshToken !== undefined) _refreshToken = config.refreshToken
+  // Compatibilidade retroativa: alguns fluxos antigos ainda enviam refreshToken.
+  // No runtime atual da API, o token de sessão é único.
+  if (config.refreshToken !== undefined && config.accessToken === undefined) {
+    _accessToken = config.refreshToken
+  }
 }
 
 export function setOrganonCallbacks(callbacks: {
@@ -46,7 +46,7 @@ export function isOrganonAuthenticated(): boolean {
 }
 
 export function getOrganonRefreshToken(): string {
-  return _refreshToken
+  return ''
 }
 
 export function getOrganonBaseUrl(): string {
@@ -71,7 +71,7 @@ async function doFetch<T>(path: string, init?: RequestInit, withAuth = true): Pr
   if (res.status === 204) return undefined as T
 
   // Auto-refresh on 401 (token expirado)
-  if (res.status === 401 && withAuth && _refreshToken) {
+  if (res.status === 401 && withAuth && _accessToken) {
     await doRefresh()
     const headers2: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -110,32 +110,28 @@ async function doRefresh(): Promise<void> {
   if (_refreshPromise) return _refreshPromise
 
   _refreshPromise = (async () => {
-    if (!_refreshToken) throw new Error('No refresh token')
-
-    const tryRefresh = async (body: Record<string, string>) => {
-      const res = await fetch(buildUrl('/auth/refresh'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) return null
-      const json = await res.json().catch(() => ({}))
-      return readTokenPair(asRecord(json).data ?? json)
-    }
-
-    const tokenPair =
-      await tryRefresh({ refreshToken: _refreshToken })
-      ?? await tryRefresh({ refresh_token: _refreshToken })
-
-    if (!tokenPair) {
+    if (!_accessToken) throw new Error('No access token')
+    const res = await fetch(buildUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${_accessToken}`,
+      },
+    })
+    if (!res.ok) {
       _accessToken = ''
-      _refreshToken = ''
       _onTokensUpdated?.('', '')
       throw new Error('Token refresh failed')
     }
-    _accessToken = tokenPair.accessToken
-    _refreshToken = tokenPair.refreshToken
-    _onTokensUpdated?.(_accessToken, _refreshToken)
+    const json = await res.json().catch(() => ({}))
+    const token = readAccessToken(asRecord(json).data ?? json)
+    if (!token) {
+      _accessToken = ''
+      _onTokensUpdated?.('', '')
+      throw new Error('Token refresh payload invalid')
+    }
+    _accessToken = token
+    _onTokensUpdated?.(_accessToken, '')
   })().finally(() => {
     _refreshPromise = null
   })
@@ -173,8 +169,9 @@ export interface OrganonUser {
 
 export interface AuthData {
   user: OrganonUser
-  accessToken: string
-  refreshToken: string
+  token?: string
+  accessToken?: string
+  access_token?: string
 }
 
 export interface SyncOperation {
@@ -236,11 +233,11 @@ export const organonApi = {
 
   // HEALTH
   pingDetailed: async (): Promise<PingDiagnostics> => {
-    const attempts: Array<{ path: string; withAuth: boolean }> = [
-      { path: '/health/db-ping', withAuth: false },
-      { path: '/health', withAuth: false },
+    const attempts: Array<{ path: string; withAuth: boolean; url?: string }> = [
+      { path: '/falaatipica/health/ping', withAuth: false, url: `${_baseUrl}/api/v1/falaatipica/health/ping` },
+      { path: '/health/db-ping', withAuth: true, url: buildUrl('/health/db-ping') },
       { path: '/auth/me', withAuth: true },
-    ]
+    ].map(item => ({ ...item, url: item.url ?? buildUrl(item.path) }))
 
     const results: PingAttemptResult[] = []
 
@@ -261,7 +258,7 @@ export const organonApi = {
         if (attempt.withAuth && _accessToken) {
           headers.Authorization = `Bearer ${_accessToken}`
         }
-        const res = await fetch(buildUrl(attempt.path), { method: 'GET', headers })
+        const res = await fetch(attempt.url, { method: 'GET', headers })
         results.push({
           path: attempt.path,
           withAuth: attempt.withAuth,
@@ -290,9 +287,12 @@ export const organonApi = {
       }
     }
 
+    const publicPingOk = results.some(item => item.path === '/falaatipica/health/ping' && item.ok)
     const hasUnauthorized = results.some(item => item.status === 401)
-    const message = hasUnauthorized
-      ? 'API alcançada, mas a autenticação falhou (401: token inválido/expirado).'
+    const message = publicPingOk
+      ? (hasUnauthorized
+          ? 'API pública online, mas autenticação Organon falhou (401).'
+          : 'API pública online, mas endpoints Organon não responderam como esperado.')
       : 'Não foi possível confirmar conectividade com a API.'
 
     return {
@@ -317,11 +317,11 @@ export const organonApi = {
     login: (email: string, password: string): Promise<{ data: AuthData }> =>
       post('/auth/login', { email, password }, false),
 
-    refresh: (refreshToken: string): Promise<{ data: { accessToken: string; refreshToken: string } }> =>
-      post('/auth/refresh', { refreshToken }, false),
+    refresh: (): Promise<{ data: { token?: string; accessToken?: string; access_token?: string } }> =>
+      doFetch('/auth/refresh', { method: 'POST' }, true),
 
-    logout: (refreshToken: string): Promise<void> =>
-      post('/auth/logout', { refreshToken }),
+    logout: (): Promise<void> =>
+      doFetch('/auth/logout', { method: 'POST' }, true),
 
     me: (): Promise<{ data: OrganonUser }> =>
       get('/auth/me'),

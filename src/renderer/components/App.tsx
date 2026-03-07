@@ -178,8 +178,8 @@ export const App = () => {
 
   const auth = useAuth(
     settings.apiBaseUrl ?? '',
-    settings.apiRefreshToken ?? '',
-    (refreshToken, email) => updateSettings({ apiRefreshToken: refreshToken, apiEmail: email }),
+    settings.apiToken ?? settings.apiRefreshToken ?? '',
+    (token, email) => updateSettings({ apiToken: token, apiRefreshToken: '', apiEmail: email }),
   )
   const apiBaseUrl = (settings.apiBaseUrl ?? '').trim() || 'https://reolicodeapi.com'
   const isConfigured = /^https?:\/\/.+/i.test(apiBaseUrl)
