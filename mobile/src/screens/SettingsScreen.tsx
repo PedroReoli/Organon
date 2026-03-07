@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Header } from '../components/shared/Header'
 import { useStore } from '../hooks/useMobileStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAppwriteContext } from '../hooks/useAppwriteContext'
-import { organonApi, getOrganonConfig } from '../api/organon'
+import { organonApi, getOrganonBaseUrl } from '../api/organon'
 import { THEMES, THEME_LABELS, type ThemeName } from '../types'
 
 const THEME_NAMES = Object.keys(THEMES) as ThemeName[]
@@ -25,15 +25,22 @@ const SYNC_STATUS_LABELS = {
 export function SettingsScreen() {
   const theme = useTheme()
   const { store, updateSettings } = useStore()
-  const { isConfigured, syncStatus } = useAppwriteContext()
+  const { isAuthenticated, isRestoring, user, authError, login, register, logout, clearError, syncStatus } = useAppwriteContext()
 
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
 
+  // Auth form state
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authSubmitting, setAuthSubmitting] = useState(false)
+
   useEffect(() => {
-    if (isConfigured) {
+    if (isAuthenticated) {
       organonApi.ping().then(ok => setPingStatus(ok ? 'ok' : 'error'))
     }
-  }, [isConfigured])
+  }, [isAuthenticated])
 
   const handlePing = async () => {
     setPingStatus('testing')
@@ -41,12 +48,25 @@ export function SettingsScreen() {
     setPingStatus(ok ? 'ok' : 'error')
   }
 
-  const connectivityColor = !isConfigured ? '#6b7280'
+  const handleAuthSubmit = async () => {
+    setAuthSubmitting(true)
+    try {
+      if (authTab === 'login') {
+        await login(authEmail, authPassword)
+      } else {
+        await register(authEmail, authPassword, authName || undefined)
+      }
+    } finally {
+      setAuthSubmitting(false)
+    }
+  }
+
+  const connectivityColor = !isAuthenticated ? '#6b7280'
     : pingStatus === 'ok' ? '#22c55e'
     : pingStatus === 'error' ? '#ef4444'
     : '#6b7280'
 
-  const connectivityLabel = !isConfigured ? 'API não configurada'
+  const connectivityLabel = !isAuthenticated ? 'Não autenticado'
     : pingStatus === 'ok' ? 'Conectado à API Organon'
     : pingStatus === 'error' ? 'Sem conexão com a API'
     : pingStatus === 'testing' ? 'Testando...'
@@ -78,12 +98,22 @@ export function SettingsScreen() {
     pingBtn: { marginTop: 12, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 8, backgroundColor: theme.primary + '18', alignItems: 'center' },
     pingBtnTxt: { color: theme.primary, fontSize: 14, fontWeight: '600' },
     accountCard: { backgroundColor: theme.surface, borderRadius: 12, padding: 16 },
-    avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: theme.primary + '22', alignItems: 'center', justifyContent: 'center' },
-    accountName: { color: theme.text, fontSize: 16, fontWeight: '700' },
+    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center' },
+    accountName: { color: theme.text, fontSize: 15, fontWeight: '700' },
     accountSub: { color: theme.text + '50', fontSize: 12, marginTop: 2 },
     comingSoon: { fontSize: 10, color: theme.text + '40', marginLeft: 6, backgroundColor: theme.text + '14', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
     disabledBtn: { marginTop: 10, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.text + '18', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', opacity: 0.5 },
     disabledBtnTxt: { color: theme.text + '80', fontSize: 14 },
+    // auth form
+    authTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.text + '14', marginBottom: 16 },
+    authTab: { paddingVertical: 8, paddingHorizontal: 14, fontSize: 13, fontWeight: '600' },
+    authInput: { backgroundColor: theme.background, borderWidth: 1, borderColor: theme.text + '20', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: theme.text, fontSize: 14, marginBottom: 10 },
+    authBtn: { backgroundColor: theme.primary, borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+    authBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    authError: { color: '#ef4444', fontSize: 12, marginBottom: 8 },
+    logoutBtn: { marginTop: 12, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ef444430', alignItems: 'center' },
+    logoutBtnTxt: { color: '#ef4444', fontSize: 14, fontWeight: '600' },
+    divider: { borderTopWidth: 1, borderTopColor: theme.text + '10', marginTop: 16, paddingTop: 14 },
   })
 
   return (
@@ -96,26 +126,108 @@ export function SettingsScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Conta</Text>
           <View style={s.accountCard}>
-            <View style={[s.cloudRow, { marginBottom: 14 }]}>
-              <View style={s.avatar}>
-                <Feather name="user" size={24} color={theme.primary} />
+            {isRestoring ? (
+              <View style={{ alignItems: 'center', padding: 16 }}>
+                <ActivityIndicator color={theme.primary} />
+                <Text style={[s.accountSub, { marginTop: 8 }]}>Restaurando sessão...</Text>
               </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={s.accountName}>Organon Personal</Text>
-                <Text style={s.accountSub}>Local + sincronização via API</Text>
-              </View>
-            </View>
-            <Text style={{ color: theme.text + '40', fontSize: 12, marginBottom: 12, lineHeight: 17 }}>
-              Login com Google e criação de conta chegam em breve.
-            </Text>
-            <View style={[s.disabledBtn, { marginTop: 0 }]}>
-              <Text style={s.disabledBtnTxt}>Entrar com Google</Text>
-              <Text style={s.comingSoon}>Em breve</Text>
-            </View>
-            <View style={s.disabledBtn}>
-              <Text style={s.disabledBtnTxt}>Criar conta</Text>
-              <Text style={s.comingSoon}>Em breve</Text>
-            </View>
+            ) : isAuthenticated && user ? (
+              /* Logado */
+              <>
+                <View style={[s.cloudRow, { marginBottom: 14 }]}>
+                  <View style={s.avatar}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>
+                      {(user.name ?? user.email).charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    {user.name ? <Text style={s.accountName}>{user.name}</Text> : null}
+                    <Text style={s.accountSub} numberOfLines={1}>{user.email}</Text>
+                  </View>
+                </View>
+
+                <View style={s.disabledBtn}>
+                  <Feather name="globe" size={14} color={theme.text + '80'} />
+                  <Text style={[s.disabledBtnTxt, { marginLeft: 6 }]}>Vincular ao Google</Text>
+                  <Text style={s.comingSoon}>Em breve</Text>
+                </View>
+
+                <TouchableOpacity style={s.logoutBtn} onPress={() => logout()}>
+                  <Text style={s.logoutBtnTxt}>Sair da conta</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* Não logado — formulário */
+              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                {/* Abas */}
+                <View style={s.authTabs}>
+                  {(['login', 'register'] as const).map(tab => (
+                    <TouchableOpacity
+                      key={tab}
+                      onPress={() => { setAuthTab(tab); clearError() }}
+                      style={{ borderBottomWidth: 2, borderBottomColor: authTab === tab ? theme.primary : 'transparent', marginBottom: -1 }}
+                    >
+                      <Text style={[s.authTab, { color: authTab === tab ? theme.primary : theme.text + '50' }]}>
+                        {tab === 'login' ? 'Entrar' : 'Criar conta'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {authTab === 'register' && (
+                  <TextInput
+                    style={s.authInput}
+                    placeholder="Nome (opcional)"
+                    placeholderTextColor={theme.text + '40'}
+                    value={authName}
+                    onChangeText={setAuthName}
+                    editable={!authSubmitting}
+                    autoCapitalize="words"
+                  />
+                )}
+                <TextInput
+                  style={s.authInput}
+                  placeholder="E-mail"
+                  placeholderTextColor={theme.text + '40'}
+                  value={authEmail}
+                  onChangeText={setAuthEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!authSubmitting}
+                />
+                <TextInput
+                  style={s.authInput}
+                  placeholder="Senha (mínimo 8 caracteres)"
+                  placeholderTextColor={theme.text + '40'}
+                  value={authPassword}
+                  onChangeText={setAuthPassword}
+                  secureTextEntry
+                  editable={!authSubmitting}
+                />
+
+                {authError ? <Text style={s.authError}>{authError}</Text> : null}
+
+                <TouchableOpacity
+                  style={[s.authBtn, (authSubmitting || !authEmail || !authPassword) && { opacity: 0.5 }]}
+                  onPress={handleAuthSubmit}
+                  disabled={authSubmitting || !authEmail || !authPassword}
+                >
+                  {authSubmitting
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={s.authBtnTxt}>{authTab === 'login' ? 'Entrar' : 'Criar conta'}</Text>
+                  }
+                </TouchableOpacity>
+
+                <View style={s.divider}>
+                  <View style={s.disabledBtn}>
+                    <Feather name="globe" size={14} color={theme.text + '80'} />
+                    <Text style={[s.disabledBtnTxt, { marginLeft: 6 }]}>Entrar com Google</Text>
+                    <Text style={s.comingSoon}>Em breve</Text>
+                  </View>
+                </View>
+              </KeyboardAvoidingView>
+            )}
           </View>
         </View>
 
@@ -129,11 +241,11 @@ export function SettingsScreen() {
               <View style={[s.dot, { backgroundColor: connectivityColor }]} />
               <Text style={s.cloudValue}>{connectivityLabel}</Text>
             </View>
-            <Text style={s.cloudSub}>{getOrganonConfig().baseUrl}</Text>
+            <Text style={s.cloudSub}>{getOrganonBaseUrl()}</Text>
             <TouchableOpacity
-              style={[s.pingBtn, (!isConfigured || pingStatus === 'testing') && { opacity: 0.4 }]}
+              style={[s.pingBtn, (!isAuthenticated || pingStatus === 'testing') && { opacity: 0.4 }]}
               onPress={handlePing}
-              disabled={!isConfigured || pingStatus === 'testing'}
+              disabled={!isAuthenticated || pingStatus === 'testing'}
             >
               <Text style={s.pingBtnTxt}>{pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}</Text>
             </TouchableOpacity>

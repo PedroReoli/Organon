@@ -1,25 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { configureOrganon, hasOrganonToken, getOrganonConfig } from '../api/organon'
+import { isOrganonAuthenticated } from '../api/organon'
 import { pushAllToApi, pullFromApi, hasRemoteChanges } from '../api/sync'
 import type { PartialSyncedStore } from '../api/sync'
 import type { MobileStore } from '../types'
 
-const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
-
 export type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 
+/**
+ * Gerencia pull no startup e push debounced nas mudanças.
+ * Auth (Bearer tokens) é configurado pelo useAuth — este hook só faz sync.
+ */
 export function useOrganonSync(
-  token: string | undefined,
-  baseUrl: string | undefined,
+  isAuthenticated: boolean,
   lastSyncAt: string | undefined,
   onPullComplete: (store: PartialSyncedStore, serverTime: string) => void,
 ): {
-  isConfigured: boolean
   syncStatus: SyncStatus
   triggerSync: (store: MobileStore) => void
 } {
-  // hasOrganonToken() já é true quando EXPO_PUBLIC_API_TOKEN está no .env
-  const [isConfigured, setIsConfigured] = useState(() => hasOrganonToken())
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestStoreRef = useRef<MobileStore | null>(null)
@@ -27,18 +25,13 @@ export function useOrganonSync(
   const onPullCompleteRef = useRef(onPullComplete)
   onPullCompleteRef.current = onPullComplete
 
-  // On mount: configure client and do startup pull se tiver token
+  // Startup pull quando autenticação fica disponível
   useEffect(() => {
-    // Token das settings sobrescreve o .env; se não tem nenhum, sai
-    const activeToken = token?.trim() || getOrganonConfig().token
-    if (!activeToken) return
-    if (token?.trim()) {
-      configureOrganon({ baseUrl: baseUrl || DEFAULT_BASE_URL, token: token.trim() })
-    }
-    setIsConfigured(true)
-
+    if (!isAuthenticated) return
+    if (isPullingRef.current) return
     isPullingRef.current = true
-    ;(async () => {
+
+    void (async () => {
       try {
         const hasChanges = await hasRemoteChanges(lastSyncAt)
         if (hasChanges) {
@@ -54,15 +47,15 @@ export function useOrganonSync(
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // only on mount
+  }, [isAuthenticated])
 
   const triggerSync = useCallback((store: MobileStore) => {
-    if (!hasOrganonToken() || isPullingRef.current) return
+    if (!isOrganonAuthenticated() || isPullingRef.current) return
     latestStoreRef.current = store
     setSyncStatus('pending')
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
-      if (!latestStoreRef.current || !hasOrganonToken()) return
+      if (!latestStoreRef.current || !isOrganonAuthenticated()) return
       setSyncStatus('syncing')
       try {
         await pushAllToApi(latestStoreRef.current)
@@ -73,5 +66,5 @@ export function useOrganonSync(
     }, 10000)
   }, [])
 
-  return { isConfigured, syncStatus, triggerSync }
+  return { syncStatus, triggerSync }
 }

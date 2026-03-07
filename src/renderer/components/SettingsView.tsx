@@ -3,6 +3,7 @@ import type { Settings, ThemeName, RegisteredIDE, KeyboardShortcut, CalendarEven
 import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
 import { KeyboardShortcutCapture } from './KeyboardShortcutCapture'
+import type { PingDiagnostics } from '../../api/organon'
 
 interface SettingsViewProps {
   settings: Settings
@@ -80,6 +81,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
 
   // Cloud ping state
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [pingReport, setPingReport] = useState<PingDiagnostics | null>(null)
 
   // Auth form state
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
@@ -93,11 +95,21 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
 
   const handlePing = async () => {
     setPingStatus('testing')
+    setPingReport(null)
     try {
       const { organonApi } = await import('../../api/organon')
-      const ok = await organonApi.ping()
-      setPingStatus(ok ? 'ok' : 'error')
-    } catch {
+      const report = await organonApi.pingDetailed()
+      setPingReport(report)
+      setPingStatus(report.ok ? 'ok' : 'error')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido ao testar conexão.'
+      setPingReport({
+        ok: false,
+        baseUrl: settings.apiBaseUrl || 'https://reolicodeapi.com',
+        checkedAt: new Date().toISOString(),
+        message,
+        attempts: [],
+      })
       setPingStatus('error')
     }
   }
@@ -1113,7 +1125,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
                   : !userLoggedIn
                     ? 'API configurada. Faça login para habilitar sincronização na nuvem.'
                   : pingStatus === 'ok' ? 'Conectado à API Organon'
-                  : pingStatus === 'error' ? 'Sem conexão com a API'
+                  : pingStatus === 'error' ? (pingReport?.message || 'Sem conexão com a API')
                   : pingStatus === 'testing' ? 'Testando...'
                   : 'Clique em "Testar" para verificar'}
               </span>
@@ -1124,6 +1136,37 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
             <button className="btn btn-secondary" onClick={handlePing} disabled={pingStatus === 'testing' || !isConfigured}>
               {pingStatus === 'testing' ? 'Testando...' : 'Testar conexão'}
             </button>
+            {pingStatus === 'error' && pingReport && (
+              <div style={{
+                marginTop: 10,
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid rgba(239,68,68,0.35)',
+                background: 'rgba(239,68,68,0.08)',
+              }}>
+                <p className="settings-help-text" style={{ margin: 0, color: 'var(--color-danger)' }}>
+                  Relatorio: {pingReport.message}
+                </p>
+                <p className="settings-help-text" style={{ margin: '4px 0 0 0' }}>
+                  Base: {pingReport.baseUrl} | Horario: {new Date(pingReport.checkedAt).toLocaleString('pt-BR')}
+                </p>
+                {pingReport.attempts.length > 0 && (
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {pingReport.attempts.map((attempt, idx) => (
+                      <p key={`${attempt.path}-${idx}`} className="settings-help-text" style={{ margin: 0 }}>
+                        - {attempt.path} [{attempt.withAuth ? 'auth' : 'publico'}]: {
+                          attempt.skipped
+                            ? `pulado (${attempt.error || 'sem token'})`
+                            : attempt.ok
+                              ? `ok (HTTP ${attempt.status ?? '-'})`
+                              : `falhou (${attempt.status ? `HTTP ${attempt.status}` : (attempt.error || 'sem resposta')})`
+                        }
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="settings-data-card">

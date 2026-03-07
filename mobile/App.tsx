@@ -46,13 +46,16 @@ function InnerApp() {
 
   if (!isLoaded) return null
 
+  const { updateSettings } = useStore()
+
   return (
     <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <AppwriteProvider
-        token={store.settings.apiToken}
         baseUrl={store.settings.apiBaseUrl}
+        refreshToken={store.settings.apiRefreshToken}
         lastSyncAt={store.lastSyncAt}
         onPullComplete={handlePullComplete}
+        onSessionChange={(rt, email) => updateSettings({ apiRefreshToken: rt, apiEmail: email })}
       >
         <StoreSyncBridge />
         <NavigationContainer>

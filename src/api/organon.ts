@@ -211,6 +211,23 @@ export interface SyncChangesResponse {
   }
 }
 
+export interface PingAttemptResult {
+  path: string
+  withAuth: boolean
+  ok: boolean
+  status: number | null
+  error?: string
+  skipped?: boolean
+}
+
+export interface PingDiagnostics {
+  ok: boolean
+  baseUrl: string
+  checkedAt: string
+  message: string
+  attempts: PingAttemptResult[]
+}
+
 type Paginated<T> = { data: T[]; meta: { cursor: string | null; limit: number } }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -218,27 +235,78 @@ type Paginated<T> = { data: T[]; meta: { cursor: string | null; limit: number } 
 export const organonApi = {
 
   // HEALTH
-  ping: async (): Promise<boolean> => {
+  pingDetailed: async (): Promise<PingDiagnostics> => {
     const attempts: Array<{ path: string; withAuth: boolean }> = [
       { path: '/health/db-ping', withAuth: false },
       { path: '/health', withAuth: false },
       { path: '/auth/me', withAuth: true },
     ]
 
+    const results: PingAttemptResult[] = []
+
     for (const attempt of attempts) {
-      if (attempt.withAuth && !_accessToken) continue
+      if (attempt.withAuth && !_accessToken) {
+        results.push({
+          path: attempt.path,
+          withAuth: true,
+          ok: false,
+          status: null,
+          skipped: true,
+          error: 'Sem access token na sessão atual.',
+        })
+        continue
+      }
       try {
         const headers: Record<string, string> = {}
         if (attempt.withAuth && _accessToken) {
           headers.Authorization = `Bearer ${_accessToken}`
         }
         const res = await fetch(buildUrl(attempt.path), { method: 'GET', headers })
-        if (res.ok) return true
+        results.push({
+          path: attempt.path,
+          withAuth: attempt.withAuth,
+          ok: res.ok,
+          status: res.status,
+        })
+        if (res.ok) {
+          return {
+            ok: true,
+            baseUrl: _baseUrl,
+            checkedAt: new Date().toISOString(),
+            message: attempt.withAuth
+              ? 'API online e autenticação válida.'
+              : 'API online (endpoint público respondeu).',
+            attempts: results,
+          }
+        }
       } catch {
-        // tenta próximo endpoint
+        results.push({
+          path: attempt.path,
+          withAuth: attempt.withAuth,
+          ok: false,
+          status: null,
+          error: 'Falha de rede/timeout/CORS ao alcançar o endpoint.',
+        })
       }
     }
-    return false
+
+    const hasUnauthorized = results.some(item => item.status === 401)
+    const message = hasUnauthorized
+      ? 'API alcançada, mas a autenticação falhou (401: token inválido/expirado).'
+      : 'Não foi possível confirmar conectividade com a API.'
+
+    return {
+      ok: false,
+      baseUrl: _baseUrl,
+      checkedAt: new Date().toISOString(),
+      message,
+      attempts: results,
+    }
+  },
+
+  ping: async (): Promise<boolean> => {
+    const report = await organonApi.pingDetailed()
+    return report.ok
   },
 
   // AUTH

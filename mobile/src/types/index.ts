@@ -428,8 +428,11 @@ export const THEME_LABELS: Record<ThemeName, string> = {
 export interface Settings {
   themeName: ThemeName
   weekStart: 'sun' | 'mon'
+  /** @deprecated usar apiRefreshToken + apiEmail */
   apiToken?: string
   apiBaseUrl?: string
+  apiEmail?: string
+  apiRefreshToken?: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
