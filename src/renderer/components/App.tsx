@@ -193,6 +193,7 @@ export const App = () => {
   const startupCheckedRef = useRef(false)
   const syncInFlightRef = useRef(false)
   const syncQueuedRef = useRef(false)
+  const INT32_MAX = 2147483647
 
   // Startup sync: se API configurada, verifica se há mudanças no servidor
   useEffect(() => {
@@ -270,8 +271,9 @@ export const App = () => {
     syncInFlightRef.current = true
     setSyncStatus('syncing')
     setSyncError(null)
+    let rawStore: Awaited<ReturnType<typeof window.electronAPI.loadStore>> | null = null
     try {
-      const rawStore = await window.electronAPI.loadStore()
+      rawStore = await window.electronAPI.loadStore()
 
       const noteContents = new Map<string, string>()
       await Promise.all(rawStore.notes.map(async (note) => {
@@ -292,7 +294,30 @@ export const App = () => {
     } catch (err) {
       console.error('[Sync] Erro no push:', err)
       setSyncStatus('error')
-      setSyncError(err instanceof Error ? err.message : 'Erro desconhecido na sincronização.')
+      const errorObj = err as { message?: string; status?: number; code?: string }
+      const overflowNotes = (rawStore?.notes ?? [])
+        .filter(note => {
+          const value = typeof note.order === 'number' ? note.order : Number(note.order)
+          return Number.isFinite(value) && Math.abs(value) > INT32_MAX
+        })
+        .slice(0, 10)
+        .map(note => `- noteId=${note.id} | order=${String(note.order)} | titulo=${note.title ?? ''}`)
+
+      const reportLines = [
+        `Resumo: ${errorObj?.message || 'Erro desconhecido na sincronização.'}`,
+        `Horário: ${new Date().toLocaleString('pt-BR')}`,
+        `Status HTTP: ${String(errorObj?.status ?? 'desconhecido')}`,
+        `Código: ${String(errorObj?.code ?? 'n/a')}`,
+        `Total de notas no envio: ${String(rawStore?.notes?.length ?? 0)}`,
+        'Observação: markdown enviado em content_markdown; md_path não é enviado.',
+      ]
+
+      if (overflowNotes.length > 0) {
+        reportLines.push('Possíveis ordens fora do range int32 (amostra):')
+        reportLines.push(...overflowNotes)
+      }
+
+      setSyncError(reportLines.join('\n'))
     } finally {
       syncInFlightRef.current = false
       if (syncQueuedRef.current) {

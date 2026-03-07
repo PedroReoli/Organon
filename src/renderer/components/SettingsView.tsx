@@ -82,6 +82,7 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   // Cloud ping state
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [pingReport, setPingReport] = useState<PingDiagnostics | null>(null)
+  const [showSyncErrorReport, setShowSyncErrorReport] = useState(false)
 
   // Auth form state
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
@@ -131,6 +132,39 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   const [mergeLoading, setMergeLoading] = useState(false)
   const [importMarkdownLoading, setImportMarkdownLoading] = useState(false)
   const [importPlanningLoading, setImportPlanningLoading] = useState(false)
+
+  const syncErrorLines = useMemo(() => (syncError ?? '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean), [syncError])
+  const syncErrorSummary = syncErrorLines.length > 0
+    ? syncErrorLines[0].replace(/^Resumo:\s*/i, '')
+    : (syncError ?? '')
+  const syncErrorIsLarge = (syncError?.length ?? 0) > 260 || syncErrorLines.length > 4
+
+  useEffect(() => {
+    if (syncStatus !== 'error') setShowSyncErrorReport(false)
+  }, [syncStatus])
+
+  const handleDownloadSyncErrorReport = () => {
+    if (!syncError) return
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const reportText = [
+      'Relatório de erro de sincronização',
+      `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      '',
+      syncError,
+    ].join('\n')
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `relatorio-sync-erro-${stamp}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const scrollThemes = (direction: 'left' | 'right') => {
     if (!themeCarouselRef.current) return
@@ -1188,9 +1222,55 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
               {!userLoggedIn ? 'Sem login: os dados ficam apenas no dispositivo local.' : 'Dados são enviados automaticamente 10 segundos após cada alteração.'}
             </p>
             {syncStatus === 'error' && syncError && (
-              <p className="settings-help-text" style={{ color: 'var(--color-danger)', marginTop: 6 }}>
-                Detalhe: {syncError}
-              </p>
+              <div style={{
+                marginTop: 8,
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid rgba(239,68,68,0.35)',
+                background: 'rgba(239,68,68,0.08)',
+              }}>
+                <p className="settings-help-text" style={{ color: 'var(--color-danger)', margin: 0 }}>
+                  Detalhe: {syncErrorSummary || 'Erro na sincronização.'}
+                </p>
+
+                {syncErrorIsLarge && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setShowSyncErrorReport(prev => !prev)}
+                    >
+                      {showSyncErrorReport ? 'Ocultar relatório' : 'Ver relatório de erro'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleDownloadSyncErrorReport}
+                    >
+                      Baixar .txt
+                    </button>
+                  </div>
+                )}
+
+                {(!syncErrorIsLarge || showSyncErrorReport) && (
+                  <pre style={{
+                    margin: '8px 0 0 0',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: 220,
+                    overflow: 'auto',
+                    fontSize: 12,
+                    lineHeight: 1.45,
+                    color: 'var(--color-text)',
+                    background: 'rgba(0,0,0,0.18)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                  }}>
+                    {syncError}
+                  </pre>
+                )}
+              </div>
             )}
           </div>
         </div>

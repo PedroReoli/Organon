@@ -51,6 +51,19 @@ function n(v: unknown, def = 0): number { return typeof v === 'number' ? v : def
 function b(v: unknown, def = false): boolean { return typeof v === 'boolean' ? v : def }
 function arr<T>(v: unknown): T[] { return Array.isArray(v) ? (v as T[]) : [] }
 
+const INT32_MAX = 2147483647
+const INT32_MIN = -2147483648
+function i32(v: unknown, def = 0): number {
+  const parsed = typeof v === 'number'
+    ? v
+    : (typeof v === 'string' && v.trim() !== '' ? Number(v) : def)
+  if (!Number.isFinite(parsed)) return def
+  const truncated = Math.trunc(parsed)
+  if (truncated > INT32_MAX) return INT32_MAX
+  if (truncated < INT32_MIN) return INT32_MIN
+  return truncated
+}
+
 // ── toApi: local → payload ────────────────────────────────────────────────────
 
 function cardToApi(c: Card): Payload {
@@ -59,7 +72,7 @@ function cardToApi(c: Card): Payload {
     description_html: c.descriptionHtml ?? '',
     location_day: c.location?.day ?? null,
     location_period: c.location?.period ?? null,
-    sort_order: c.order ?? 0,
+    sort_order: i32(c.order, 0),
     date: c.date ?? null,
     time: c.time ?? null,
     has_date: c.hasDate ?? false,
@@ -79,7 +92,7 @@ function noteToApi(note: Note, contentMarkdown: string): Payload {
     content_html: '',
     folder_id: note.folderId ?? null,
     project_id: note.projectId ?? null,
-    sort_order: note.order ?? 0,
+    sort_order: i32(note.order, 0),
     updated_at: note.updatedAt,
   }
 }
@@ -88,7 +101,7 @@ function noteFolderToApi(f: NoteFolder): Payload {
   return {
     name: f.name,
     parent_id: f.parentId ?? null,
-    sort_order: f.order ?? 0,
+    sort_order: i32(f.order, 0),
   }
 }
 
@@ -100,7 +113,7 @@ function projectToApi(p: Project): Payload {
     color: p.color ?? '',
     links: p.links ?? [],
     preferred_ide_id: p.preferredIdeId ?? null,
-    sort_order: p.order ?? 0,
+    sort_order: i32(p.order, 0),
     created_at: p.createdAt,
     updated_at: p.updatedAt,
   }
@@ -132,7 +145,7 @@ function habitToApi(h: Habit): Payload {
     reason: h.reason ?? '',
     minimum_target: h.minimumTarget ?? 0,
     color: h.color ?? '',
-    sort_order: h.order ?? 0,
+    sort_order: i32(h.order, 0),
     created_at: h.createdAt,
   }
 }
@@ -162,7 +175,7 @@ function crmContactToApi(c: CRMContact): Payload {
     stage_id: c.stageId ?? 'prospeccao',
     description: c.description ?? '',
     follow_up_date: c.followUpDate ?? null,
-    sort_order: c.order ?? 0,
+    sort_order: i32(c.order, 0),
     created_at: c.createdAt,
     updated_at: c.updatedAt,
   }
@@ -226,7 +239,7 @@ function playbookToApi(p: Playbook): Payload {
     description: p.sector ?? '',
     content: p.content ?? '',
     summary: p.summary ?? '',
-    sort_order: p.order ?? 0,
+    sort_order: i32(p.order, 0),
     created_at: p.createdAt,
     updated_at: p.updatedAt,
   }
