@@ -1,5 +1,5 @@
 // Cliente HTTP para a Organon API
-// Auth: Bearer token — sessão baseada em token JWT único (sem refresh token separado no runtime atual)
+// Auth: Bearer accessToken (15 min) + refreshToken (30 dias) conforme API docs
 
 const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
@@ -7,6 +7,7 @@ const DEFAULT_BASE_URL = 'https://reolicodeapi.com'
 
 let _baseUrl: string = (import.meta.env.VITE_API_BASE_URL as string) || DEFAULT_BASE_URL
 let _accessToken = (import.meta.env.VITE_API_TOKEN as string) || ''
+let _refreshToken = ''
 let _refreshPromise: Promise<void> | null = null
 let _onTokensUpdated: ((accessToken: string, refreshToken: string) => void) | null = null
 
@@ -28,11 +29,11 @@ export function configureOrganon(config: {
 }): void {
   if (config.baseUrl) _baseUrl = config.baseUrl || DEFAULT_BASE_URL
   if (config.accessToken !== undefined) _accessToken = config.accessToken
-  // Compatibilidade retroativa: alguns fluxos antigos ainda enviam refreshToken.
-  // No runtime atual da API, o token de sessão é único.
-  if (config.refreshToken !== undefined && config.accessToken === undefined) {
-    _accessToken = config.refreshToken
-  }
+  if (config.refreshToken !== undefined) _refreshToken = config.refreshToken
+}
+
+export function getOrganonTokens(): { accessToken: string; refreshToken: string } {
+  return { accessToken: _accessToken, refreshToken: _refreshToken }
 }
 
 export function setOrganonCallbacks(callbacks: {
@@ -147,28 +148,32 @@ async function doRefresh(): Promise<void> {
   if (_refreshPromise) return _refreshPromise
 
   _refreshPromise = (async () => {
-    if (!_accessToken) throw new Error('No access token')
+    const tokenForRefresh = _refreshToken || _accessToken
+    if (!tokenForRefresh) throw new Error('No token available for refresh')
     const res = await fetch(buildUrl('/auth/refresh'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_accessToken}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: tokenForRefresh }),
     })
     if (!res.ok) {
       _accessToken = ''
+      _refreshToken = ''
       _onTokensUpdated?.('', '')
       throw new Error('Token refresh failed')
     }
     const json = await res.json().catch(() => ({}))
-    const token = readAccessToken(asRecord(json).data ?? json)
-    if (!token) {
+    const data = asRecord(asRecord(json).data ?? json)
+    const newAccess = readAccessToken(data)
+    const newRefresh = getString(data.refreshToken ?? data.refresh_token ?? '')
+    if (!newAccess) {
       _accessToken = ''
+      _refreshToken = ''
       _onTokensUpdated?.('', '')
       throw new Error('Token refresh payload invalid')
     }
-    _accessToken = token
-    _onTokensUpdated?.(_accessToken, '')
+    _accessToken = newAccess
+    if (newRefresh) _refreshToken = newRefresh
+    _onTokensUpdated?.(_accessToken, _refreshToken)
   })().finally(() => {
     _refreshPromise = null
   })

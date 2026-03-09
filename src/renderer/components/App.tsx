@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useAuth } from '../hooks/useAuth'
-import { pushAllToApi, hasRemoteChanges, pullFromApi } from '../../api/sync'
+import { pushAllToApi, hasRemoteChanges, pullFromApi, deleteAllFromApi } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, getTodayISO, isElectron, getShortcutById, matchesShortcut } from '../utils'
 import { THEMES, DEFAULT_SETTINGS } from '../types'
 import { Titlebar } from './Titlebar'
@@ -178,8 +178,8 @@ export const App = () => {
 
   const auth = useAuth(
     settings.apiBaseUrl ?? '',
-    settings.apiToken ?? settings.apiRefreshToken ?? '',
-    (token, email) => updateSettings({ apiToken: token, apiRefreshToken: '', apiEmail: email }),
+    settings.apiRefreshToken ?? '',
+    (accessToken, email, refreshToken) => updateSettings({ apiRefreshToken: refreshToken || accessToken, apiEmail: email }),
   )
   const apiBaseUrl = (settings.apiBaseUrl ?? '').trim() || 'https://reolicodeapi.com'
   const isConfigured = /^https?:\/\/.+/i.test(apiBaseUrl)
@@ -193,7 +193,7 @@ export const App = () => {
   const startupCheckedRef = useRef(false)
   const syncInFlightRef = useRef(false)
   const syncQueuedRef = useRef(false)
-  const INT32_MAX = 2147483647
+
 
   // Startup sync: se API configurada, verifica se há mudanças no servidor
   useEffect(() => {
@@ -212,36 +212,57 @@ export const App = () => {
         const { store: pulled, noteContents, serverTime } = await pullFromApi(rawStore.lastSyncAt)
         console.log('[Sync] Pull OK — cards:', pulled.cards.length, 'notes:', pulled.notes.length)
 
+        // Merge seguro: remoto prevalece para o mesmo ID, entidades só-locais são preservadas.
+        // Nunca sobrescreve com array vazio se o local tem dados (proteção contra API vazia).
+        function mergeById<T extends { id: string }>(local: T[], remote: T[]): T[] {
+          if (remote.length === 0) return local // API não tem dados → mantém local intacto
+          const map = new Map<string, T>(local.map(e => [e.id, e]))
+          for (const r of remote) map.set(r.id, r) // remoto prevalece para mesmo ID
+          return Array.from(map.values())
+        }
+
+        // Escreve conteúdo das notas APENAS se não-vazio (proteção contra sobrescrever com vazio)
         await Promise.all(
           pulled.notes.map(async (note) => {
             const content = noteContents.get(note.id) ?? ''
-            if (content) await window.electronAPI.writeNote(note.mdPath, content).catch((e: unknown) => console.warn('[Sync] writeNote falhou:', e))
+            if (content.trim()) {
+              await window.electronAPI.writeNote(note.mdPath, content).catch((e: unknown) => console.warn('[Sync] writeNote falhou:', e))
+            }
           })
+        )
+
+        type LocalNote = { id: string; mdPath?: string; isLocked?: boolean }
+        const localNoteMap = new Map<string, LocalNote>(
+          (rawStore.notes as LocalNote[]).map(n => [n.id, n])
         )
 
         const merged = {
           ...rawStore,
-          cards: pulled.cards,
-          notes: pulled.notes.map(note => {
-            const localNote = rawStore.notes.find((item: { id: string; mdPath?: string; isLocked?: boolean }) => item.id === note.id)
+          cards: mergeById(rawStore.cards, pulled.cards),
+          notes: mergeById(rawStore.notes, pulled.notes).map(note => {
+            const local = localNoteMap.get(note.id)
             return {
               ...note,
-              mdPath: localNote?.mdPath ?? note.mdPath,
-              isLocked: localNote?.isLocked ?? note.isLocked ?? false,
+              mdPath: local?.mdPath ?? note.mdPath,  // mdPath é local, não vem da API
+              isLocked: local?.isLocked ?? (note as { isLocked?: boolean }).isLocked ?? false,
             }
           }),
-          noteFolders: pulled.noteFolders,
-          calendarEvents: pulled.calendarEvents,
-          projects: pulled.projects,
-          habits: pulled.habits,
-          habitEntries: pulled.habitEntries,
-          crmContacts: pulled.crmContacts,
-          bills: pulled.bills,
-          expenses: pulled.expenses,
-          incomes: pulled.incomes,
-          savingsGoals: pulled.savingsGoals,
-          playbooks: pulled.playbooks,
-          study: { ...rawStore.study, goals: pulled.studyGoals, mediaItems: pulled.studyMediaItems },
+          noteFolders: mergeById(rawStore.noteFolders, pulled.noteFolders),
+          calendarEvents: mergeById(rawStore.calendarEvents, pulled.calendarEvents),
+          projects: mergeById(rawStore.projects, pulled.projects),
+          habits: mergeById(rawStore.habits, pulled.habits),
+          habitEntries: mergeById(rawStore.habitEntries, pulled.habitEntries),
+          crmContacts: mergeById(rawStore.crmContacts, pulled.crmContacts),
+          bills: mergeById(rawStore.bills, pulled.bills),
+          expenses: mergeById(rawStore.expenses, pulled.expenses),
+          incomes: mergeById(rawStore.incomes, pulled.incomes),
+          savingsGoals: mergeById(rawStore.savingsGoals, pulled.savingsGoals),
+          playbooks: mergeById(rawStore.playbooks, pulled.playbooks),
+          study: {
+            ...rawStore.study,
+            goals: mergeById(rawStore.study?.goals ?? [], pulled.studyGoals),
+            mediaItems: mergeById(rawStore.study?.mediaItems ?? [], pulled.studyMediaItems),
+          },
           lastSyncAt: serverTime,
         }
 
@@ -271,9 +292,8 @@ export const App = () => {
     syncInFlightRef.current = true
     setSyncStatus('syncing')
     setSyncError(null)
-    let rawStore: Awaited<ReturnType<typeof window.electronAPI.loadStore>> | null = null
     try {
-      rawStore = await window.electronAPI.loadStore()
+      const rawStore = await window.electronAPI.loadStore()
 
       const noteContents = new Map<string, string>()
       await Promise.all(rawStore.notes.map(async (note) => {
@@ -283,41 +303,32 @@ export const App = () => {
         } catch { /* ignora erros individuais de leitura */ }
       }))
 
-      console.log('[Sync] Enviando para API — ops:', rawStore.cards.length + rawStore.notes.length + rawStore.habits.length, '+ entidades')
-      await pushAllToApi(rawStore, noteContents)
+      const report = await pushAllToApi(rawStore, noteContents)
 
       const syncedAt = new Date().toISOString()
       await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
 
-      console.log('[Sync] Push OK —', syncedAt)
-      setSyncStatus('synced')
-    } catch (err) {
-      console.error('[Sync] Erro no push:', err)
-      setSyncStatus('error')
-      const errorObj = err as { message?: string; status?: number; code?: string }
-      const overflowNotes = (rawStore?.notes ?? [])
-        .filter(note => {
-          const value = typeof note.order === 'number' ? note.order : Number(note.order)
-          return Number.isFinite(value) && Math.abs(value) > INT32_MAX
-        })
-        .slice(0, 10)
-        .map(note => `- noteId=${note.id} | order=${String(note.order)} | titulo=${note.title ?? ''}`)
-
-      const reportLines = [
-        `Resumo: ${errorObj?.message || 'Erro desconhecido na sincronização.'}`,
-        `Horário: ${new Date().toLocaleString('pt-BR')}`,
-        `Status HTTP: ${String(errorObj?.status ?? 'desconhecido')}`,
-        `Código: ${String(errorObj?.code ?? 'n/a')}`,
-        `Total de notas no envio: ${String(rawStore?.notes?.length ?? 0)}`,
-        'Observação: markdown enviado em content_markdown; md_path não é enviado.',
-      ]
-
-      if (overflowNotes.length > 0) {
-        reportLines.push('Possíveis ordens fora do range int32 (amostra):')
-        reportLines.push(...overflowNotes)
+      if (report.errors.length > 0) {
+        setSyncStatus('error')
+        const lines = [
+          `Sincronizado parcialmente — ${report.succeededOps}/${report.totalOps} ops enviadas com sucesso`,
+          `Horário: ${new Date(syncedAt).toLocaleString('pt-BR')}`,
+          '',
+          `⚠ ${report.errors.length} grupo(s) com erro:`,
+          ...report.errors.map(e =>
+            `  [${e.resource}] lote ${e.batchIndex}/${e.totalBatches} | HTTP ${String(e.status)} | ${e.count} item(s) | ${e.message}`
+          ),
+        ]
+        setSyncError(lines.join('\n'))
+      } else {
+        setSyncStatus('synced')
       }
-
-      setSyncError(reportLines.join('\n'))
+    } catch (err) {
+      // Só cai aqui se loadStore ou saveStore falharem
+      console.error('[Sync] Erro crítico (fora do push):', err)
+      setSyncStatus('error')
+      const msg = (err as { message?: string }).message ?? 'Erro desconhecido'
+      setSyncError(`Erro crítico: ${msg}`)
     } finally {
       syncInFlightRef.current = false
       if (syncQueuedRef.current) {
@@ -362,6 +373,18 @@ export const App = () => {
     setSyncError(null)
     startupCheckedRef.current = false
   }, [isConfigured, userLoggedIn])
+
+  const handleResetStore = useCallback(async () => {
+    if (userLoggedIn && isElectron()) {
+      try {
+        const rawStore = await window.electronAPI.loadStore()
+        await deleteAllFromApi(rawStore)
+      } catch {
+        // ignora erros de API — reset local continua
+      }
+    }
+    await resetStore()
+  }, [userLoggedIn, resetStore])
 
   const [activeView, setActiveView] = useState<AppView>('today')
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
@@ -925,7 +948,7 @@ export const App = () => {
               onAddRegisteredIDE={addRegisteredIDE}
               onUpdateRegisteredIDE={updateRegisteredIDE}
               onRemoveRegisteredIDE={removeRegisteredIDE}
-              onResetStore={resetStore}
+              onResetStore={handleResetStore}
               onOpenHistory={() => setActiveView('history')}
               onAddNote={addNote}
               onAddCard={addCard}

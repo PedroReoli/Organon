@@ -6,6 +6,7 @@ import {
   organonApi,
   configureOrganon,
   setOrganonCallbacks,
+  getOrganonTokens,
 } from '../../api/organon'
 import type { OrganonUser } from '../../api/organon'
 
@@ -35,17 +36,17 @@ export interface UseAuthReturn {
 }
 
 /**
- * @param baseUrl        URL base da API (settings.apiBaseUrl)
- * @param persistedToken Token persistido (settings.apiToken)
- * @param onSessionChange  Chamado quando token muda — persiste no store
+ * @param baseUrl               URL base da API (settings.apiBaseUrl)
+ * @param persistedRefreshToken refreshToken persistido (settings.apiRefreshToken)
+ * @param onSessionChange       Chamado quando tokens mudam — persiste no store
  */
 export function useAuth(
   baseUrl: string,
-  persistedToken: string,
-  onSessionChange: (token: string, email: string) => void,
+  persistedRefreshToken: string,
+  onSessionChange: (accessToken: string, email: string, refreshToken: string) => void,
 ): UseAuthReturn {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isRestoring, setIsRestoring] = useState(!!persistedToken)
+  const [isRestoring, setIsRestoring] = useState(!!persistedRefreshToken)
   const [user, setUser] = useState<OrganonUser | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
 
@@ -53,24 +54,24 @@ export function useAuth(
   useEffect(() => {
     configureOrganon({ baseUrl: baseUrl || DEFAULT_BASE_URL })
     setOrganonCallbacks({
-      onTokensUpdated: (at) => {
+      onTokensUpdated: (at, rt) => {
         if (!at) {
           // Sessão invalidada (refresh falhou)
           setIsAuthenticated(false)
           setUser(null)
-          onSessionChange('', '')
+          onSessionChange('', '', '')
           return
         }
         // Token renovado silenciosamente
-        onSessionChange(at, user?.email ?? '')
+        onSessionChange(at, user?.email ?? '', rt)
       },
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl])
 
-  // Auto-restaurar sessão do token salvo
+  // Auto-restaurar sessão via refreshToken persistido
   useEffect(() => {
-    if (!persistedToken) {
+    if (!persistedRefreshToken) {
       setIsRestoring(false)
       return
     }
@@ -78,25 +79,19 @@ export function useAuth(
     void (async () => {
       setIsRestoring(true)
       try {
-        let activeToken = persistedToken
-        configureOrganon({ accessToken: activeToken })
-        const refreshed = await organonApi.auth.refresh().catch(() => null)
-        if (refreshed?.data) {
-          const maybeRefreshed = readAccessToken(refreshed.data)
-          if (maybeRefreshed) {
-            activeToken = maybeRefreshed
-            configureOrganon({ accessToken: activeToken })
-          }
-        }
+        // Usa o refreshToken para obter novo accessToken
+        configureOrganon({ refreshToken: persistedRefreshToken })
+        await organonApi.auth.refresh() // atualiza _accessToken + _refreshToken internamente
+        const { accessToken, refreshToken } = getOrganonTokens()
         const me = await organonApi.auth.me()
         setUser(me.data)
         setIsAuthenticated(true)
-        onSessionChange(activeToken, me.data.email)
+        onSessionChange(accessToken, me.data.email, refreshToken)
       } catch {
-        // Token inválido/expirado — limpa sessão
+        // refreshToken inválido/expirado — limpa sessão
         configureOrganon({ accessToken: '', refreshToken: '' })
         setIsAuthenticated(false)
-        onSessionChange('', '')
+        onSessionChange('', '', '')
       } finally {
         setIsRestoring(false)
       }
@@ -111,13 +106,11 @@ export function useAuth(
         const res = await organonApi.auth.login(email, password)
         const token = readAccessToken(res.data)
         if (!token) throw new Error('Resposta de autenticação inválida. Faça login novamente.')
-        configureOrganon({
-          accessToken: token,
-          refreshToken: '',
-        })
+        const refreshToken = getString((res.data as Record<string, unknown>).refreshToken ?? '')
+        configureOrganon({ accessToken: token, refreshToken })
         setUser(res.data.user)
         setIsAuthenticated(true)
-        onSessionChange(token, email)
+        onSessionChange(token, email, refreshToken)
         return true
       } catch (err) {
         setAuthError((err as Error).message || 'Erro ao fazer login.')
@@ -134,13 +127,11 @@ export function useAuth(
         const res = await organonApi.auth.register(email, password, name)
         const token = readAccessToken(res.data)
         if (!token) throw new Error('Resposta de autenticação inválida. Tente novamente.')
-        configureOrganon({
-          accessToken: token,
-          refreshToken: '',
-        })
+        const refreshToken = getString((res.data as Record<string, unknown>).refreshToken ?? '')
+        configureOrganon({ accessToken: token, refreshToken })
         setUser(res.data.user)
         setIsAuthenticated(true)
-        onSessionChange(token, res.data.user.email)
+        onSessionChange(token, res.data.user.email, refreshToken)
         return true
       } catch (err) {
         setAuthError((err as Error).message || 'Erro ao criar conta.')
@@ -155,7 +146,7 @@ export function useAuth(
     configureOrganon({ accessToken: '', refreshToken: '' })
     setUser(null)
     setIsAuthenticated(false)
-    onSessionChange('', '')
+    onSessionChange('', '', '')
   }, [onSessionChange])
 
   return {

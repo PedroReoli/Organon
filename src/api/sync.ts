@@ -251,7 +251,8 @@ function studyGoalToApi(g: StudyGoal): Payload {
     priority: g.priority ?? null,
     status: g.status ?? 'todo',
     checklist: g.checklist ?? [],
-    linked_planning_card_id: g.linkedPlanningCardId ?? null,
+    // linked_planning_card_id não é enviado: referência local de conveniência,
+    // o card pode não existir na API e causaria FK constraint violation.
     created_at: g.createdAt,
     updated_at: g.updatedAt,
   }
@@ -563,15 +564,150 @@ function toposort<T extends { id: string; parentId?: string | null }>(items: T[]
   return sorted
 }
 
+// ── Tipos do relatório de sync ────────────────────────────────────────────────
+
+export interface SyncGroupError {
+  resource: string
+  batchIndex: number
+  totalBatches: number
+  count: number
+  status: number | string
+  message: string
+}
+
+export interface SyncReport {
+  totalOps: number
+  succeededOps: number
+  errors: SyncGroupError[]
+}
+
+// ── Delete All ────────────────────────────────────────────────────────────────
+
+function makeDeleteOps(resource: string, ids: string[]): SyncOperation[] {
+  return ids.map(id => ({ resource, operation: 'delete' as const, id }))
+}
+
+/**
+ * Apaga todos os dados do usuário na API via /sync/batch (delete de todas as entidades).
+ * Ordem reversa de dependência FK (filhos antes dos pais).
+ * Nunca lança — coleta erros por lote e retorna relatório completo.
+ */
+export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
+  const safeStore = store as Partial<Store>
+  const safeStudy = (safeStore.study ?? {}) as Partial<Store['study']>
+
+  const habitEntries = arr<HabitEntry>(safeStore.habitEntries)
+  const notes        = arr<Note>(safeStore.notes)
+  const cards        = arr<Card>(safeStore.cards)
+  const studyMedia   = arr<StudyMediaItem>(safeStudy.mediaItems)
+  const studyGoals   = arr<StudyGoal>(safeStudy.goals)
+  const crmContacts  = arr<CRMContact>(safeStore.crmContacts)
+  const playbooks    = arr<Playbook>(safeStore.playbooks)
+  const noteFolders  = arr<NoteFolder>(safeStore.noteFolders)
+  const habits       = arr<Habit>(safeStore.habits)
+  const projects     = arr<Project>(safeStore.projects)
+  const calendarEvents = arr<CalendarEvent>(safeStore.calendarEvents)
+  const bills        = arr<Bill>(safeStore.bills)
+  const incomes      = arr<IncomeEntry>(safeStore.incomes)
+  const savingsGoals = arr<SavingsGoal>(safeStore.savingsGoals)
+  const expenses     = arr<Expense>(safeStore.expenses)
+
+  // note_folders: apagar em ordem reversa (folhas → raízes)
+  const noteFolderLevels: NoteFolder[][] = []
+  {
+    const placed = new Set<string>()
+    let level = noteFolders.filter(f => !f.parentId)
+    while (level.length > 0) {
+      noteFolderLevels.push(level)
+      level.forEach(f => placed.add(f.id))
+      level = noteFolders.filter(f => f.parentId && placed.has(f.parentId) && !placed.has(f.id))
+    }
+    const orphans = noteFolders.filter(f => !placed.has(f.id))
+    if (orphans.length > 0) noteFolderLevels.unshift(orphans)
+  }
+
+  // expenses: toposort e inverter (filhos antes dos pais)
+  const expensesSorted = toposort(expenses).reverse()
+
+  const resourceGroups: Array<{ label: string; ops: SyncOperation[] }> = []
+  function addGroup(label: string, ids: string[]) {
+    if (ids.length > 0) resourceGroups.push({ label, ops: makeDeleteOps(label, ids) })
+  }
+
+  // Ordem de delete: filhos antes dos pais
+  addGroup('habit_entries',        habitEntries.map(e => e.id))
+  addGroup('finance_expenses',     expensesSorted.map(e => e.id))
+  addGroup('notes',                notes.map(n => n.id))
+  addGroup('cards',                cards.map(c => c.id))
+  addGroup('study_media_items',    studyMedia.map(m => m.id))
+  addGroup('study_goals',          studyGoals.map(g => g.id))
+  addGroup('crm_contacts',         crmContacts.map(c => c.id))
+  addGroup('playbooks',            playbooks.map(p => p.id))
+  // note_folders: folhas → raízes (reverso do push)
+  for (let i = noteFolderLevels.length - 1; i >= 0; i--) {
+    const ids = noteFolderLevels[i].map(f => f.id)
+    if (ids.length > 0) resourceGroups.push({ label: 'note_folders', ops: makeDeleteOps('note_folders', ids) })
+  }
+  addGroup('habits',               habits.map(h => h.id))
+  addGroup('projects',             projects.map(p => p.id))
+  addGroup('calendar_events',      calendarEvents.map(e => e.id))
+  addGroup('finance_bills',        bills.map(b => b.id))
+  addGroup('finance_incomes',      incomes.map(i => i.id))
+  addGroup('finance_savings_goals', savingsGoals.map(g => g.id))
+
+  const totalOps = resourceGroups.reduce((sum, g) => sum + g.ops.length, 0)
+  let succeededOps = 0
+  const errors: SyncGroupError[] = []
+
+  console.log(`[Sync] deleteAll — ${totalOps} ops em ${resourceGroups.length} grupo(s)`)
+
+  for (const group of resourceGroups) {
+    const { label, ops } = group
+    const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
+
+    for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+      const batch = ops.slice(i, i + BATCH_SIZE)
+      const batchIndex = Math.floor(i / BATCH_SIZE) + 1
+
+      try {
+        await organonApi.sync.batch(batch)
+        succeededOps += batch.length
+        console.log(`[Sync][${label}] delete lote ${batchIndex}/${totalBatches} OK (${batch.length} ops)`)
+      } catch (err) {
+        const e = err as { status?: number; message?: string; body?: { error?: { message?: string } } }
+        const status = e.status ?? 'desconhecido'
+        const message = e.body?.error?.message ?? e.message ?? String(err)
+        errors.push({ resource: label, batchIndex, totalBatches, count: batch.length, status, message })
+        console.error(`[Sync][${label}] delete lote ${batchIndex}/${totalBatches} ERRO (HTTP ${String(status)}, ${batch.length} ops): ${message}`)
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.groupCollapsed(`[Sync] ⚠ deleteAll concluído com ${errors.length} erro(s) | ${succeededOps}/${totalOps} ops`)
+    for (const e of errors) {
+      console.error(`  [${e.resource}] lote ${e.batchIndex}/${e.totalBatches} | HTTP ${String(e.status)} | ${e.count} ops | ${e.message}`)
+    }
+    console.groupEnd()
+  } else {
+    console.log(`[Sync] ✓ deleteAll completo — ${succeededOps}/${totalOps} ops`)
+  }
+
+  return { totalOps, succeededOps, errors }
+}
+
 // ── Push ──────────────────────────────────────────────────────────────────────
 
-/** Envia todo o store para a API via /sync/batch (upsert de todas as entidades). */
+/**
+ * Envia todo o store para a API via /sync/batch (upsert de todas as entidades).
+ * Nunca lança — coleta erros por lote e retorna relatório completo.
+ * Continua sincronizando os recursos seguintes mesmo quando um lote falha.
+ */
 export async function pushAllToApi(
   store: Store,
   noteContents?: Map<string, string>,
-): Promise<void> {
+): Promise<SyncReport> {
   const clientTime = now()
-  const ops: SyncOperation[] = []
   const safeStore = store as Partial<Store>
   const safeStudy = (safeStore.study ?? {}) as Partial<Store['study']>
 
@@ -591,68 +727,126 @@ export async function pushAllToApi(
   const studyGoals = arr<StudyGoal>(safeStudy.goals)
   const studyMediaItems = arr<StudyMediaItem>(safeStudy.mediaItems)
 
-  function upsert(resource: string, id: string, payload: Payload) {
-    ops.push({ resource, operation: 'upsert', id, payload, client_updated_at: clientTime })
+  function makeOps(resource: string, items: Array<{ id: string }>, toApi: (item: never) => Payload): SyncOperation[] {
+    return items.map(item => ({
+      resource,
+      operation: 'upsert' as const,
+      id: item.id,
+      payload: toApi(item as never),
+      client_updated_at: clientTime,
+    }))
   }
 
-  // ── Ordem correta para respeitar FK constraints ───────────────────────────
-  // 1. Entidades independentes (sem FK para outras)
-  for (const p of projects)         upsert('projects', p.id, projectToApi(p))
-  for (const h of habits)           upsert('habits', h.id, habitToApi(h))
-  for (const e of calendarEvents)   upsert('calendar_events', e.id, calendarEventToApi(e))
-  for (const b of bills)            upsert('finance_bills', b.id, billToApi(b))
-  for (const i of incomes)          upsert('finance_incomes', i.id, incomeToApi(i))
-  for (const g of savingsGoals)     upsert('finance_savings_goals', g.id, savingsGoalToApi(g))
-  for (const p of playbooks)        upsert('playbooks', p.id, playbookToApi(p))
-  for (const g of studyGoals)       upsert('study_goals', g.id, studyGoalToApi(g))
-  for (const m of studyMediaItems)  upsert('study_media_items', m.id, studyMediaItemToApi(m))
-  for (const c of crmContacts)      upsert('crm_contacts', c.id, crmContactToApi(c))
+  // ── Grupos de operações em ordem de dependência (FK) ──────────────────────
+  // Cada grupo é enviado sequencialmente — falha de um não para o seguinte.
+  const resourceGroups: Array<{ label: string; ops: SyncOperation[] }> = []
 
-  // 2. note_folders: toposort garante pais antes de filhos (parent_id FK)
-  for (const f of toposort(noteFolders)) upsert('note_folders', f.id, noteFolderToApi(f))
+  function addGroup(label: string, ops: SyncOperation[]) {
+    if (ops.length > 0) resourceGroups.push({ label, ops })
+  }
 
-  // 3. notes: depende de note_folders (folder_id) e projects (project_id)
-  for (const n of notes)            upsert('notes', n.id, noteToApi(n, noteContents?.get(n.id) ?? ''))
+  // 1. Entidades independentes
+  addGroup('projects',              makeOps('projects',              projects,       projectToApi as (i: never) => Payload))
+  addGroup('habits',                makeOps('habits',                habits,         habitToApi as (i: never) => Payload))
+  addGroup('calendar_events',       makeOps('calendar_events',       calendarEvents, calendarEventToApi as (i: never) => Payload))
+  addGroup('finance_bills',         makeOps('finance_bills',         bills,          billToApi as (i: never) => Payload))
+  addGroup('finance_incomes',       makeOps('finance_incomes',       incomes,        incomeToApi as (i: never) => Payload))
+  addGroup('finance_savings_goals', makeOps('finance_savings_goals', savingsGoals,   savingsGoalToApi as (i: never) => Payload))
+  addGroup('playbooks',             makeOps('playbooks',             playbooks,      playbookToApi as (i: never) => Payload))
+  addGroup('study_goals',           makeOps('study_goals',           studyGoals,     studyGoalToApi as (i: never) => Payload))
+  addGroup('study_media_items',     makeOps('study_media_items',     studyMediaItems,studyMediaItemToApi as (i: never) => Payload))
+  addGroup('crm_contacts',          makeOps('crm_contacts',          crmContacts,    crmContactToApi as (i: never) => Payload))
 
-  // 4. cards: depende de projects (project_id)
-  for (const c of cards)            upsert('cards', c.id, cardToApi(c))
-
-  // 5. habit_entries: depende de habits (habit_id)
-  for (const e of habitEntries)     upsert('habit_entries', e.id, habitEntryToApi(e))
-
-  // 6. expenses: toposort garante parcela-pai antes de filhos (parent_id FK)
-  for (const e of toposort(expenses)) upsert('finance_expenses', e.id, expenseToApi(e))
-
-  // Envia em lotes de BATCH_SIZE
-  const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
-  console.log(`[Sync] push — ${ops.length} operações em ${totalBatches} lote(s)`)
-  for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-    const batch = ops.slice(i, i + BATCH_SIZE)
-    const batchIndex = Math.floor(i / BATCH_SIZE) + 1
-    const noteOps = batch.filter(op => op.resource === 'notes')
-    if (noteOps.length > 0) {
-      const noteFields = Array.from(new Set(
-        noteOps.flatMap(op => Object.keys((op.payload ?? {}) as Payload)),
-      )).sort()
-      console.log(
-        `[Sync][notes] lote ${batchIndex}/${totalBatches} enviando ${noteOps.length} operação(ões) | campos: ${noteFields.join(', ')}`,
-      )
+  // 2. note_folders: enviadas nível por nível (raízes → filhos → netos…)
+  //    A API não garante ordem interna do batch, então cada nível vira um grupo separado.
+  //    parent_id é nulificado se o pai não existe no store local (pasta órfã).
+  {
+    const knownFolderIds = new Set(noteFolders.map(f => f.id))
+    const safeItems = noteFolders.map(f => ({
+      ...f,
+      parentId: f.parentId && knownFolderIds.has(f.parentId) ? f.parentId : null,
+    }))
+    const placed = new Set<string>()
+    let level = safeItems.filter(f => !f.parentId)
+    let depth = 0
+    while (level.length > 0) {
+      addGroup(`note_folders`, level.map(f => ({
+        resource: 'note_folders', operation: 'upsert' as const,
+        id: f.id, payload: noteFolderToApi(f), client_updated_at: clientTime,
+      })))
+      level.forEach(f => placed.add(f.id))
+      level = safeItems.filter(f => !placed.has(f.id) && !!f.parentId && placed.has(f.parentId!))
+      depth++
+      if (depth > 50) break // proteção contra ciclo inesperado
     }
-    try {
-      const res = await organonApi.sync.batch(batch)
-      console.log(`[Sync] lote ${batchIndex}/${totalBatches} OK`)
-      if (noteOps.length > 0) {
-        console.log(`[Sync][notes] lote ${batchIndex}/${totalBatches} HTTP ${res.status} OK`)
-      }
-    } catch (err) {
-      const status = (err as { status?: number }).status ?? 'desconhecido'
-      if (noteOps.length > 0) {
-        console.error(`[Sync][notes] lote ${batchIndex}/${totalBatches} HTTP ${status} ERRO`)
-      }
-      console.error(`[Sync] lote ${batchIndex}/${totalBatches} ERRO:`, err)
-      throw err
+    // Órfãs remanescentes (parentId != null mas pai nunca colocado)
+    const orphans = safeItems.filter(f => !placed.has(f.id))
+    if (orphans.length > 0) {
+      addGroup('note_folders', orphans.map(f => ({
+        resource: 'note_folders', operation: 'upsert' as const,
+        id: f.id, payload: noteFolderToApi({ ...f, parentId: null }), client_updated_at: clientTime,
+      })))
     }
   }
+
+  // 3. notes: depende de note_folders + projects
+  addGroup('notes', notes.map(n => ({
+    resource: 'notes', operation: 'upsert' as const,
+    id: n.id, payload: noteToApi(n, noteContents?.get(n.id) ?? ''), client_updated_at: clientTime,
+  })))
+
+  // 4. cards: depende de projects
+  addGroup('cards', makeOps('cards', cards, cardToApi as (i: never) => Payload))
+
+  // 5. habit_entries: depende de habits
+  addGroup('habit_entries', makeOps('habit_entries', habitEntries, habitEntryToApi as (i: never) => Payload))
+
+  // 6. expenses: toposort garante parcela-pai antes de filhos
+  addGroup('finance_expenses', toposort(expenses).map(e => ({
+    resource: 'finance_expenses', operation: 'upsert' as const,
+    id: e.id, payload: expenseToApi(e), client_updated_at: clientTime,
+  })))
+
+  const totalOps = resourceGroups.reduce((sum, g) => sum + g.ops.length, 0)
+  let succeededOps = 0
+  const errors: SyncGroupError[] = []
+
+  console.log(`[Sync] push — ${totalOps} ops em ${resourceGroups.length} grupo(s)`)
+
+  for (const group of resourceGroups) {
+    const { label, ops } = group
+    const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
+
+    for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+      const batch = ops.slice(i, i + BATCH_SIZE)
+      const batchIndex = Math.floor(i / BATCH_SIZE) + 1
+
+      try {
+        await organonApi.sync.batch(batch)
+        succeededOps += batch.length
+        console.log(`[Sync][${label}] lote ${batchIndex}/${totalBatches} OK (${batch.length} ops)`)
+      } catch (err) {
+        const e = err as { status?: number; message?: string; body?: { error?: { message?: string } } }
+        const status = e.status ?? 'desconhecido'
+        const message = e.body?.error?.message ?? e.message ?? String(err)
+        errors.push({ resource: label, batchIndex, totalBatches, count: batch.length, status, message })
+        console.error(`[Sync][${label}] lote ${batchIndex}/${totalBatches} ERRO (HTTP ${String(status)}, ${batch.length} ops): ${message}`)
+      }
+    }
+  }
+
+  // Relatório final no console
+  if (errors.length > 0) {
+    console.groupCollapsed(`[Sync] ⚠ Concluído com ${errors.length} erro(s) | ${succeededOps}/${totalOps} ops enviadas`)
+    for (const e of errors) {
+      console.error(`  [${e.resource}] lote ${e.batchIndex}/${e.totalBatches} | HTTP ${String(e.status)} | ${e.count} ops | ${e.message}`)
+    }
+    console.groupEnd()
+  } else {
+    console.log(`[Sync] ✓ Push completo — ${succeededOps}/${totalOps} ops enviadas`)
+  }
+
+  return { totalOps, succeededOps, errors }
 }
 
 // ── Pull ──────────────────────────────────────────────────────────────────────

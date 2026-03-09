@@ -1,0 +1,10 @@
+Relatório de erro de sincronização
+Gerado em: 09/03/2026, 19:11:42
+
+Sincronizado parcialmente — 17/41 ops enviadas com sucesso
+Horário: 09/03/2026, 19:11:31
+
+⚠ 3 grupo(s) com erro:
+  [note_folders] lote 1/1 | HTTP 500 | 12 item(s) | insert or update on table "note_folders" violates foreign key constraint "note_folders_parent_id_fkey"
+  [notes] lote 1/1 | HTTP 500 | 10 item(s) | insert or update on table "notes" violates foreign key constraint "notes_folder_id_fkey"
+  [habit_entries] lote 1/1 | HTTP 500 | 2 item(s) | column "updated_at" does not exist
