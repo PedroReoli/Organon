@@ -477,7 +477,6 @@ function studyGoalFromApi(id: string, p: Payload): StudyGoal {
   return {
     id,
     title: s(p.title),
-    description: s(p.description),
     priority: (p.priority as CardPriority) ?? null,
     status: (p.status as CardStatus) ?? 'todo',
     checklist: arr<ChecklistItem>(p.checklist),

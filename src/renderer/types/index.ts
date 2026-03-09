@@ -790,7 +790,6 @@ export interface QuickAccessItem {
 export interface StudyGoal {
   id: string
   title: string
-  description: string
   priority: CardPriority | null
   status: CardStatus
   checklist: ChecklistItem[]

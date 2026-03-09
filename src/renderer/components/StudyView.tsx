@@ -83,25 +83,6 @@ const formatHours = (seconds: number): string => {
   return `${hours.toFixed(1)} h`
 }
 
-const htmlToPlain = (html: string): string => {
-  if (!html.trim()) return ''
-  if (typeof window === 'undefined') {
-    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  }
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  return (doc.body.textContent ?? '').trim()
-}
-
-const plainToHtml = (text: string): string => {
-  const trimmed = text.trim()
-  if (!trimmed) return ''
-  const escaped = trimmed
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  return `<p>${escaped.replace(/\n/g, '<br />')}</p>`
-}
-
 const cloneChecklist = (items: ChecklistItem[]): ChecklistItem[] => items.map(item => ({ ...item }))
 
 const buildMediaCandidate = (value: string): Omit<StudyMediaItem, 'id'> | null => {
@@ -192,7 +173,6 @@ const loadStudySettingsFromLocalStorage = (): StudySettingsPersisted | null => {
         ? legacy.goals.map(goal => ({
           id: goal.id ?? generateId(),
           title: goal.title ?? '',
-          description: goal.notes ?? '',
           priority: null,
           status: goal.done ? 'done' : 'todo',
           checklist: [],
@@ -491,7 +471,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
       if (!goal.linkedPlanningCardId) continue
       const payload = {
         title: goal.title,
-        descriptionHtml: plainToHtml(goal.description),
         priority: goal.priority,
         status: goal.status,
         checklist: cloneChecklist(goal.checklist),
@@ -540,7 +519,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
       {
         id: generateId(),
         title,
-        description: '',
         priority: null,
         status: 'todo',
         checklist: [],
@@ -578,7 +556,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
       {
         id: generateId(),
         title: card.title,
-        description: htmlToPlain(card.descriptionHtml),
         priority: card.priority,
         status: card.status,
         checklist: cloneChecklist(card.checklist),
@@ -597,7 +574,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
       return {
         ...goal,
         title: card.title,
-        description: htmlToPlain(card.descriptionHtml),
         priority: card.priority,
         status: card.status,
         checklist: cloneChecklist(card.checklist),
@@ -1277,9 +1253,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
                           <strong>{goal.title}</strong>
                           <span className={`study-goal-card-status is-${goal.status}`}>{STATUS_LABELS[goal.status]}</span>
                         </header>
-                        {goal.description.trim() && (
-                          <p>{goal.description}</p>
-                        )}
                         <footer>
                           <small>{goal.priority ? `${goal.priority} - ${PRIORITY_LABELS[goal.priority]}` : 'Sem prioridade'}</small>
                           <small>{checklistTotal > 0 ? `${doneChecklist}/${checklistTotal} checklist` : 'Sem checklist'}</small>
@@ -1457,12 +1430,6 @@ export const StudyView = ({ cards, study, onUpdateStudy, onUpdatePlanningCard }:
 
                             {isExpanded && (
                               <>
-                                <textarea
-                                  value={goal.description}
-                                  onChange={e => updateGoal(goal.id, current => ({ ...current, description: e.target.value }))}
-                                  placeholder="Descricao / notas da meta"
-                                />
-
                                 <div className="study-goal-checklist">
                                   <span className="study-card-label">Checklist</span>
                                   {goal.checklist.map(item => (

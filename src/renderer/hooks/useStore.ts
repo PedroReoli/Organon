@@ -106,7 +106,6 @@ const normalizeStudyState = (input: Partial<StudyState> | null | undefined): Stu
       .map(goal => ({
         id: goal.id ?? generateId(),
         title: goal.title.trim(),
-        description: goal.description ?? '',
         priority: goal.priority && ['P1', 'P2', 'P3', 'P4'].includes(goal.priority) ? goal.priority : null,
         status: goal.status && ['todo', 'in_progress', 'blocked', 'done'].includes(goal.status) ? goal.status : 'todo',
         checklist: Array.isArray(goal.checklist)
