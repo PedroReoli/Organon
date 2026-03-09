@@ -3,7 +3,10 @@
     "themeName": "dark-matcha",
     "dataDir": null,
     "installerCompleted": false,
-    "weekStart": "2026-03-02",
+    "weekStart": "2026-03-09",
+    "apiToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwOWQxNTExOC01MGY0LTQxZTQtYTg0Yy0zODQ1MGY1ODY4MTQiLCJpYXQiOjE3NzMwOTEzNDcsImV4cCI6MTc3NTY4MzM0N30.OaMRn5B2MTWCqqt5VgJkH_HtxZ-vJ81Y15TxuR6pqxk",
+    "apiEmail": "pedrosousa2160@gmail.com",
+    "apiRefreshToken": "",
     "keyboardShortcuts": [
       {
         "id": "quick-search",

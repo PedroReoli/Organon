@@ -248,7 +248,6 @@ function playbookToApi(p: Playbook): Payload {
 function studyGoalToApi(g: StudyGoal): Payload {
   return {
     title: g.title,
-    description: g.description ?? '',
     priority: g.priority ?? null,
     status: g.status ?? 'todo',
     checklist: g.checklist ?? [],
@@ -538,6 +537,33 @@ function applyChange(
   }
 }
 
+// ── Topological sort (para entidades com parent_id auto-referência) ───────────
+
+/**
+ * Ordena itens que possuem parentId auto-referencial (ex: note_folders, expenses).
+ * Garante que pais sempre precedem filhos no array resultante.
+ * Ciclos são ignorados (itens restantes adicionados ao final).
+ */
+function toposort<T extends { id: string; parentId?: string | null }>(items: T[]): T[] {
+  const byId = new Map<string, T>(items.map(i => [i.id, i]))
+  const sorted: T[] = []
+  const visited = new Set<string>()
+
+  function visit(id: string) {
+    if (visited.has(id)) return
+    const item = byId.get(id)
+    if (!item) return
+    visited.add(id)
+    if (item.parentId && byId.has(item.parentId)) {
+      visit(item.parentId) // garante que o pai vem antes
+    }
+    sorted.push(item)
+  }
+
+  for (const item of items) visit(item.id)
+  return sorted
+}
+
 // ── Push ──────────────────────────────────────────────────────────────────────
 
 /** Envia todo o store para a API via /sync/batch (upsert de todas as entidades). */
@@ -570,21 +596,33 @@ export async function pushAllToApi(
     ops.push({ resource, operation: 'upsert', id, payload, client_updated_at: clientTime })
   }
 
-  for (const c of cards)            upsert('cards', c.id, cardToApi(c))
-  for (const n of notes)            upsert('notes', n.id, noteToApi(n, noteContents?.get(n.id) ?? ''))
-  for (const f of noteFolders)      upsert('note_folders', f.id, noteFolderToApi(f))
-  for (const e of calendarEvents)   upsert('calendar_events', e.id, calendarEventToApi(e))
+  // ── Ordem correta para respeitar FK constraints ───────────────────────────
+  // 1. Entidades independentes (sem FK para outras)
   for (const p of projects)         upsert('projects', p.id, projectToApi(p))
   for (const h of habits)           upsert('habits', h.id, habitToApi(h))
-  for (const e of habitEntries)     upsert('habit_entries', e.id, habitEntryToApi(e))
-  for (const c of crmContacts)      upsert('crm_contacts', c.id, crmContactToApi(c))
+  for (const e of calendarEvents)   upsert('calendar_events', e.id, calendarEventToApi(e))
   for (const b of bills)            upsert('finance_bills', b.id, billToApi(b))
-  for (const e of expenses)         upsert('finance_expenses', e.id, expenseToApi(e))
   for (const i of incomes)          upsert('finance_incomes', i.id, incomeToApi(i))
   for (const g of savingsGoals)     upsert('finance_savings_goals', g.id, savingsGoalToApi(g))
   for (const p of playbooks)        upsert('playbooks', p.id, playbookToApi(p))
   for (const g of studyGoals)       upsert('study_goals', g.id, studyGoalToApi(g))
   for (const m of studyMediaItems)  upsert('study_media_items', m.id, studyMediaItemToApi(m))
+  for (const c of crmContacts)      upsert('crm_contacts', c.id, crmContactToApi(c))
+
+  // 2. note_folders: toposort garante pais antes de filhos (parent_id FK)
+  for (const f of toposort(noteFolders)) upsert('note_folders', f.id, noteFolderToApi(f))
+
+  // 3. notes: depende de note_folders (folder_id) e projects (project_id)
+  for (const n of notes)            upsert('notes', n.id, noteToApi(n, noteContents?.get(n.id) ?? ''))
+
+  // 4. cards: depende de projects (project_id)
+  for (const c of cards)            upsert('cards', c.id, cardToApi(c))
+
+  // 5. habit_entries: depende de habits (habit_id)
+  for (const e of habitEntries)     upsert('habit_entries', e.id, habitEntryToApi(e))
+
+  // 6. expenses: toposort garante parcela-pai antes de filhos (parent_id FK)
+  for (const e of toposort(expenses)) upsert('finance_expenses', e.id, expenseToApi(e))
 
   // Envia em lotes de BATCH_SIZE
   const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
