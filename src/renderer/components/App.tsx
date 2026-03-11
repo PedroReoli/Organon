@@ -138,6 +138,7 @@ export const App = () => {
     removeQuickAccess,
     // Reset Store
     resetStore,
+    clearUserData,
     // Project & IDE methods
     projects,
     meetings,
@@ -176,10 +177,23 @@ export const App = () => {
     storeVersion,
   } = useStore()
 
+  // Rastreia o email do usuário anterior para detectar troca de conta
+  const prevApiEmailRef = useRef<string>(settings.apiEmail ?? '')
+
   const auth = useAuth(
     settings.apiBaseUrl ?? '',
     settings.apiRefreshToken ?? '',
-    (accessToken, email, refreshToken) => updateSettings({ apiRefreshToken: refreshToken || accessToken, apiEmail: email }),
+    (accessToken, email, refreshToken) => {
+      const prevEmail = prevApiEmailRef.current
+      // Se um usuário diferente fez login, limpa dados locais para evitar contaminação entre contas
+      if (email && prevEmail && email !== prevEmail) {
+        console.log(`[Auth] Troca de conta detectada: ${prevEmail} → ${email}. Limpando dados locais...`)
+        void clearUserData()
+        startupCheckedRef.current = false // força pull completo para o novo usuário
+      }
+      prevApiEmailRef.current = email || prevEmail
+      updateSettings({ apiRefreshToken: refreshToken || accessToken, apiEmail: email })
+    },
   )
   const apiBaseUrl = (settings.apiBaseUrl ?? '').trim() || 'https://reolicodeapi.com'
   const isConfigured = /^https?:\/\/.+/i.test(apiBaseUrl)
@@ -305,8 +319,58 @@ export const App = () => {
 
       const report = await pushAllToApi(rawStore, noteContents)
 
-      const syncedAt = new Date().toISOString()
-      await window.electronAPI.saveStore({ ...rawStore, lastSyncAt: syncedAt })
+      // Pull bidirecional: após push, busca mudanças do servidor desde a última sync.
+      // Garante que dados editados em outro dispositivo (ou resolvidos pelo servidor) sejam aplicados.
+      const { store: pulled, noteContents: pulledContents, serverTime } = await pullFromApi(rawStore.lastSyncAt)
+
+      // Aplica conteúdo das notas vindas do servidor (apenas se não-vazias)
+      await Promise.all(
+        pulled.notes.map(async (note) => {
+          const content = pulledContents.get(note.id) ?? ''
+          if (content.trim()) {
+            await window.electronAPI.writeNote((note as { mdPath?: string }).mdPath ?? `notes/${note.id}.md`, content)
+              .catch((e: unknown) => console.warn('[Sync] writeNote (pull) falhou:', e))
+          }
+        })
+      )
+
+      // Merge seguro: servidor prevalece para mesmo ID, dados só-locais preservados
+      function mergeById<T extends { id: string }>(local: T[], remote: T[]): T[] {
+        if (remote.length === 0) return local
+        const map = new Map<string, T>(local.map(e => [e.id, e]))
+        for (const r of remote) map.set(r.id, r)
+        return Array.from(map.values())
+      }
+
+      const localNoteMap = new Map(rawStore.notes.map(n => [n.id, n]))
+      const merged = {
+        ...rawStore,
+        cards: mergeById(rawStore.cards, pulled.cards),
+        notes: mergeById(rawStore.notes, pulled.notes).map(note => {
+          const local = localNoteMap.get(note.id)
+          return { ...note, mdPath: local?.mdPath ?? (note as { mdPath?: string }).mdPath }
+        }),
+        noteFolders: mergeById(rawStore.noteFolders, pulled.noteFolders),
+        calendarEvents: mergeById(rawStore.calendarEvents, pulled.calendarEvents),
+        projects: mergeById(rawStore.projects, pulled.projects),
+        habits: mergeById(rawStore.habits, pulled.habits),
+        habitEntries: mergeById(rawStore.habitEntries, pulled.habitEntries),
+        crmContacts: mergeById(rawStore.crmContacts, pulled.crmContacts),
+        bills: mergeById(rawStore.bills, pulled.bills),
+        expenses: mergeById(rawStore.expenses, pulled.expenses),
+        incomes: mergeById(rawStore.incomes, pulled.incomes),
+        savingsGoals: mergeById(rawStore.savingsGoals, pulled.savingsGoals),
+        playbooks: mergeById(rawStore.playbooks, pulled.playbooks),
+        study: {
+          ...rawStore.study,
+          goals: mergeById(rawStore.study?.goals ?? [], pulled.studyGoals),
+          mediaItems: mergeById(rawStore.study?.mediaItems ?? [], pulled.studyMediaItems),
+        },
+        lastSyncAt: serverTime,
+      }
+
+      await window.electronAPI.saveStore(merged)
+      const syncedAt = serverTime
 
       if (report.errors.length > 0) {
         setSyncStatus('error')

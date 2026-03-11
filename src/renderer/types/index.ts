@@ -174,6 +174,12 @@ export interface NoteFolder {
   name: string
   parentId: string | null  // Para pastas aninhadas
   order: number
+  /**
+   * Pasta Home: ao ativar, a pasta se comporta como uma tela/dashboard dedicada.
+   * Duplo-clique (ou preferência configurável) abre como view própria em vez de expandir sub-itens.
+   * Padrão: false (pasta normal).
+   */
+  isHome: boolean
 }
 
 // Notas - item

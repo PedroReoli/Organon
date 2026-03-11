@@ -390,6 +390,8 @@ export const organonApi = {
     delete: (id: string) => del<void>(`/projects/${id}`),
     addLink: (id: string, body: { label: string; url: string; sort_order?: number }) =>
       post<{ data: unknown }>(`/projects/${id}/links`, body),
+    updateLink: (id: string, linkId: string, body: { label?: string; url?: string; sort_order?: number }) =>
+      patch<{ data: unknown }>(`/projects/${id}/links/${linkId}`, body),
     deleteLink: (id: string, linkId: string) => del<void>(`/projects/${id}/links/${linkId}`),
   },
 
@@ -423,9 +425,9 @@ export const organonApi = {
     list: (params?: { limit?: number; cursor?: string }): Promise<Paginated<unknown>> =>
       get(`/note-folders${qs({ limit: params?.limit, cursor: params?.cursor })}`),
     get: (id: string) => get<{ data: unknown }>(`/note-folders/${id}`),
-    create: (body: { name: string; parent_id?: string | null; sort_order?: number }) =>
+    create: (body: { name: string; parent_id?: string | null; sort_order?: number; is_home?: boolean }) =>
       post<{ data: unknown }>('/note-folders', body),
-    update: (id: string, body: { name?: string; parent_id?: string | null; sort_order?: number }) =>
+    update: (id: string, body: { name?: string; parent_id?: string | null; sort_order?: number; is_home?: boolean }) =>
       patch<{ data: unknown }>(`/note-folders/${id}`, body),
     delete: (id: string) => del<void>(`/note-folders/${id}`),
   },
@@ -465,6 +467,7 @@ export const organonApi = {
         get<{ data: unknown[] }>(`/habits/entries${qs({ habit_id: params?.habit_id, since: params?.since, limit: params?.limit })}`),
       upsert: (body: { habit_id: string; date: string; value?: number; skipped?: boolean; skip_reason?: string }) =>
         post<{ data: unknown }>('/habits/entries', body),
+      delete: (entryId: string) => del<void>(`/habits/entries/${entryId}`),
     },
   },
 
@@ -488,6 +491,7 @@ export const organonApi = {
       list: (params?: { limit?: number; cursor?: string }) =>
         get<{ data: unknown[] }>(`/finance/incomes${qs({ limit: params?.limit, cursor: params?.cursor })}`),
       create: (body: Record<string, unknown>) => post<{ data: unknown }>('/finance/incomes', body),
+      update: (id: string, body: Record<string, unknown>) => patch<{ data: unknown }>(`/finance/incomes/${id}`, body),
       delete: (id: string) => del<void>(`/finance/incomes/${id}`),
     },
     budgetCategories: {
@@ -522,15 +526,21 @@ export const organonApi = {
       addTag: (id: string, tag_id: string) => post<{ data: unknown }>(`/crm/contacts/${id}/tags`, { tag_id }),
       deleteTag: (id: string, tagId: string) => del<void>(`/crm/contacts/${id}/tags/${tagId}`),
       interactions: (id: string) => get<{ data: unknown[] }>(`/crm/contacts/${id}/interactions`),
-      addInteraction: (id: string, body: { type: string; content: string; occurred_at: string }) =>
+      addInteraction: (id: string, body: { type: string; content: string; occurred_at?: string; date?: string; time?: string }) =>
         post<{ data: unknown }>(`/crm/contacts/${id}/interactions`, body),
+      getLinks: (id: string) => get<{ data: unknown }>(`/crm/contacts/${id}/links`),
+      updateLinks: (id: string, links: { noteIds?: string[]; calendarEventIds?: string[]; fileIds?: string[]; cardIds?: string[]; projectIds?: string[] }) =>
+        put<{ data: unknown }>(`/crm/contacts/${id}/links`, links),
     },
     tags: {
       list: () => get<{ data: unknown[] }>('/crm/tags'),
       create: (body: { name: string; color?: string }) => post<{ data: unknown }>('/crm/tags', body),
+      update: (id: string, body: { name?: string; color?: string }) => patch<{ data: unknown }>(`/crm/tags/${id}`, body),
       delete: (id: string) => del<void>(`/crm/tags/${id}`),
     },
     interactions: {
+      update: (id: string, body: { type?: string; content?: string; occurred_at?: string; date?: string; time?: string }) =>
+        patch<{ data: unknown }>(`/crm/interactions/${id}`, body),
       delete: (id: string) => del<void>(`/crm/interactions/${id}`),
     },
   },
@@ -539,8 +549,9 @@ export const organonApi = {
   shortcuts: {
     folders: {
       list: () => get<{ data: unknown[] }>('/shortcuts/folders'),
-      create: (body: { name: string; sort_order?: number }) => post<{ data: unknown }>('/shortcuts/folders', body),
-      update: (id: string, body: { name?: string; sort_order?: number }) =>
+      create: (body: { name: string; parent_id?: string | null; sort_order?: number }) =>
+        post<{ data: unknown }>('/shortcuts/folders', body),
+      update: (id: string, body: { name?: string; parent_id?: string | null; sort_order?: number }) =>
         patch<{ data: unknown }>(`/shortcuts/folders/${id}`, body),
       delete: (id: string) => del<void>(`/shortcuts/folders/${id}`),
     },
@@ -591,20 +602,16 @@ export const organonApi = {
     create: (body: Record<string, unknown>) => post<{ data: unknown }>('/apps', body),
     update: (id: string, body: Record<string, unknown>) => patch<{ data: unknown }>(`/apps/${id}`, body),
     delete: (id: string) => del<void>(`/apps/${id}`),
-    macros: {
-      list: (appId: string) => get<{ data: unknown[] }>(`/apps/${appId}/macros`),
-      create: (appId: string, body: { name: string; sort_order?: number }) =>
-        post<{ data: unknown }>(`/apps/${appId}/macros`, body),
-      delete: (appId: string, macroId: string) => del<void>(`/apps/${appId}/macros/${macroId}`),
-      items: {
-        list: (appId: string, macroId: string) =>
-          get<{ data: unknown[] }>(`/apps/${appId}/macros/${macroId}/items`),
-        create: (appId: string, macroId: string, body: Record<string, unknown>) =>
-          post<{ data: unknown }>(`/apps/${appId}/macros/${macroId}/items`, body),
-        delete: (appId: string, macroId: string, itemId: string) =>
-          del<void>(`/apps/${appId}/macros/${macroId}/items/${itemId}`),
-      },
-    },
+  },
+
+  // MACROS (standalone — app_ids: string[], mode: 'sequential'|'simultaneous')
+  macros: {
+    list: () => get<{ data: unknown[] }>('/macros'),
+    create: (body: { name: string; app_ids: string[]; mode?: 'sequential' | 'simultaneous'; sort_order?: number }) =>
+      post<{ data: unknown }>('/macros', body),
+    update: (id: string, body: { name?: string; app_ids?: string[]; mode?: 'sequential' | 'simultaneous'; sort_order?: number }) =>
+      patch<{ data: unknown }>(`/macros/${id}`, body),
+    delete: (id: string) => del<void>(`/macros/${id}`),
   },
 
   // MEETINGS
@@ -625,8 +632,10 @@ export const organonApi = {
     create: (body: Record<string, unknown>) => post<{ data: unknown }>('/playbooks', body),
     update: (id: string, body: Record<string, unknown>) => patch<{ data: unknown }>(`/playbooks/${id}`, body),
     delete: (id: string) => del<void>(`/playbooks/${id}`),
-    addDialog: (id: string, body: { role: string; content: string; sort_order?: number }) =>
+    addDialog: (id: string, body: { title: string; text: string; sort_order?: number }) =>
       post<{ data: unknown }>(`/playbooks/${id}/dialogs`, body),
+    updateDialog: (id: string, dialogId: string, body: { title?: string; text?: string; sort_order?: number }) =>
+      patch<{ data: unknown }>(`/playbooks/${id}/dialogs/${dialogId}`, body),
     deleteDialog: (id: string, dialogId: string) => del<void>(`/playbooks/${id}/dialogs/${dialogId}`),
   },
 
@@ -635,7 +644,7 @@ export const organonApi = {
     config: {
       get: () =>
         get<{ data: { daily_goal_minutes: number; pomodoro_work_min: number; pomodoro_break_min: number } }>('/study/config'),
-      update: (body: { daily_goal_minutes?: number; pomodoro_work_min?: number; pomodoro_break_min?: number }) =>
+      update: (body: { daily_goal_minutes?: number; pomodoro_work_min?: number; focus_minutes?: number; pomodoro_break_min?: number; break_minutes?: number; wallpaper_url?: string; mute_sound?: boolean }) =>
         patch<{ data: unknown }>('/study/config', body),
     },
     mediaItems: {

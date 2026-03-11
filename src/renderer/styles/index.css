@@ -7648,6 +7648,8 @@ input:focus, textarea:focus, select:focus {
   transition: background 0.1s, color 0.1s;
 }
 .notes-tree-action-btn:hover { background: var(--color-border); color: var(--color-text); }
+.notes-tree-action-btn.is-active-home { color: var(--color-primary); opacity: 1; }
+.notes-tree-action-btn.is-active-home:hover { background: var(--color-primary-light); color: var(--color-primary); }
 .notes-tree-action-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

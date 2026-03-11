@@ -40,6 +40,13 @@ const FolderIcon = ({ open }: { open: boolean }) => (
   </svg>
 )
 
+const HomeFolderIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" style={{ flexShrink: 0, opacity: 0.85, color: 'var(--color-primary)' }}>
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+    <path d="M9 21V12h6v9" />
+  </svg>
+)
+
 const ChevronIcon = ({ open }: { open: boolean }) => (
   <svg
     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="10" height="10"
@@ -1099,7 +1106,7 @@ export const NotesView = ({
           >
             <ChevronIcon open={isExpanded} />
           </button>
-          <FolderIcon open={isExpanded} />
+          {folder.isHome ? <HomeFolderIcon /> : <FolderIcon open={isExpanded} />}
           <span className="notes-tree-label">{folder.name}</span>
           <span className="notes-tree-row-actions">
             <button
@@ -1115,6 +1122,13 @@ export const NotesView = ({
               onClick={e => { e.stopPropagation(); setNewFolderParentId(folder.id); setExpandedFolders(prev => new Set([...prev, folder.id])); setTimeout(() => newFolderInputRef.current?.focus(), 50) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+            </button>
+            <button
+              className={`notes-tree-action-btn${folder.isHome ? ' is-active-home' : ''}`}
+              title={folder.isHome ? 'Remover pasta home' : 'Tornar pasta home'}
+              onClick={e => { e.stopPropagation(); onUpdateFolder(folder.id, { isHome: !folder.isHome }) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" /></svg>
             </button>
             <button
               className="notes-tree-action-btn"
@@ -1541,7 +1555,7 @@ export const NotesView = ({
                     selectedFolderChildren.map(folder => (
                       <button key={folder.id} className="notes-folder-item" onClick={() => openFolder(folder.id)}>
                         <span className="notes-folder-item-main">
-                          <FolderIcon open={expandedFolders.has(folder.id)} />
+                          {folder.isHome ? <HomeFolderIcon /> : <FolderIcon open={expandedFolders.has(folder.id)} />}
                           <span>{folder.name || 'Sem nome'}</span>
                         </span>
                         <span className="notes-folder-item-path">

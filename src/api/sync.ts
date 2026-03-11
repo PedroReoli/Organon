@@ -92,6 +92,10 @@ function noteToApi(note: Note, contentMarkdown: string): Payload {
     content_html: '',
     folder_id: note.folderId ?? null,
     project_id: note.projectId ?? null,
+    parent_note_id: note.parentNoteId ?? null,
+    is_pinned: note.isPinned ?? false,
+    is_favorite: note.isFavorite ?? false,
+    is_locked: note.isLocked ?? false,
     sort_order: i32(note.order, 0),
     updated_at: note.updatedAt,
   }
@@ -102,6 +106,7 @@ function noteFolderToApi(f: NoteFolder): Payload {
     name: f.name,
     parent_id: f.parentId ?? null,
     sort_order: i32(f.order, 0),
+    is_home: f.isHome ?? false,
   }
 }
 
@@ -233,10 +238,11 @@ function savingsGoalToApi(g: SavingsGoal): Payload {
 }
 
 function playbookToApi(p: Playbook): Payload {
-  // local title → API name | local sector → API description | dialogs não vão no batch
+  // title → name, sector → description, category agora é enviado
   return {
     name: p.title,
     description: p.sector ?? '',
+    category: p.category ?? '',
     content: p.content ?? '',
     summary: p.summary ?? '',
     sort_order: i32(p.order, 0),
@@ -259,7 +265,7 @@ function studyGoalToApi(g: StudyGoal): Payload {
 }
 
 function studyMediaItemToApi(m: StudyMediaItem): Payload {
-  // local kind → API type
+  // local kind → API type; show_dock agora é enviado
   return {
     title: m.title,
     url: m.url ?? '',
@@ -267,6 +273,7 @@ function studyMediaItemToApi(m: StudyMediaItem): Payload {
     youtube_video_id: m.youtubeVideoId ?? null,
     volume: m.volume ?? 1,
     loop: m.loop ?? false,
+    show_dock: m.showDock ?? false,
   }
 }
 
@@ -318,6 +325,7 @@ function noteFolderFromApi(id: string, p: Payload): NoteFolder {
     name: s(p.name),
     parentId: p.parent_id ? s(p.parent_id) : null,
     order: n(p.sort_order),
+    isHome: b(p.is_home),
   }
 }
 

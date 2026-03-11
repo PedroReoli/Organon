@@ -1704,6 +1704,28 @@ export const useStore = () => {
     }
   }, [])
 
+  /**
+   * Limpa todos os dados do usuário mas preserva as settings (tema, URLs, etc.).
+   * Usado na troca de conta para evitar que dados de um usuário vazem para outro.
+   * lastSyncAt é zerado para forçar pull completo do servidor na próxima sincronização.
+   */
+  const clearUserData = useCallback(async () => {
+    const def = getDefaultStore()
+    setStore(prev => {
+      const cleared: Store = {
+        ...def,
+        settings: prev.settings,
+        lastSyncAt: undefined, // força pull completo para o novo usuário
+      }
+      if (isElectron()) {
+        void window.electronAPI.saveStore(cleared)
+      } else {
+        localStorage.setItem('organizador-semanal-store', JSON.stringify(cleared))
+      }
+      return cleared
+    })
+  }, [])
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -2091,6 +2113,7 @@ export const useStore = () => {
     removeCRMContactLink,
     // Reset Store
     resetStore,
+    clearUserData,
     // Settings
     updateSettings,
     // Study
