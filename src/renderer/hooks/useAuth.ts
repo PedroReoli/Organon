@@ -79,9 +79,10 @@ export function useAuth(
     void (async () => {
       setIsRestoring(true)
       try {
-        // Usa o refreshToken para obter novo accessToken
-        configureOrganon({ refreshToken: persistedRefreshToken })
-        await organonApi.auth.refresh() // atualiza _accessToken + _refreshToken internamente
+        // A API usa um único JWT (sem refresh token separado). O token persiste por 30 dias.
+        // Configura como accessToken para que o header Bearer seja enviado na requisição.
+        configureOrganon({ accessToken: persistedRefreshToken, refreshToken: persistedRefreshToken })
+        await organonApi.auth.refresh() // obtém novo JWT com TTL renovado
         const { accessToken, refreshToken } = getOrganonTokens()
         const me = await organonApi.auth.me()
         setUser(me.data)

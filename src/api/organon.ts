@@ -150,10 +150,13 @@ async function doRefresh(): Promise<void> {
   _refreshPromise = (async () => {
     const tokenForRefresh = _refreshToken || _accessToken
     if (!tokenForRefresh) throw new Error('No token available for refresh')
+    // A API usa req.jwtVerify() no /auth/refresh — token vai no header Bearer, não no body
     const res = await fetch(buildUrl('/auth/refresh'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: tokenForRefresh }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokenForRefresh}`,
+      },
     })
     if (!res.ok) {
       _accessToken = ''
@@ -365,14 +368,15 @@ export const organonApi = {
       post('/auth/login', { email, password }, false),
 
     refresh: async (): Promise<{ data: { token?: string; accessToken?: string; access_token?: string; refreshToken?: string } }> => {
-      // Envia o refreshToken no body (igual ao doRefresh interno).
-      // Também atualiza _accessToken/_refreshToken em memória para que
-      // getOrganonTokens() retorne os valores corretos logo depois da chamada.
+      // A API usa req.jwtVerify() no /auth/refresh — token vai no header Bearer.
+      // Se _accessToken está vazio mas _refreshToken está definido (sessão sendo restaurada),
+      // usa o _refreshToken temporariamente como _accessToken para que doFetch envie o header.
       const tokenForRefresh = _refreshToken || _accessToken
+      if (!_accessToken && tokenForRefresh) _accessToken = tokenForRefresh
       const res = await doFetch<{ data: { token?: string; accessToken?: string; access_token?: string; refreshToken?: string } }>(
         '/auth/refresh',
-        { method: 'POST', body: JSON.stringify({ refreshToken: tokenForRefresh }) },
-        false, // sem Authorization header — token vai no body
+        { method: 'POST' },
+        true, // Bearer header com _accessToken
       )
       const data = asRecord(asRecord(res).data ?? res)
       const newAccess = getString(data.token ?? data.accessToken ?? data.access_token)
