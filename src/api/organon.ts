@@ -364,8 +364,26 @@ export const organonApi = {
     login: (email: string, password: string): Promise<{ data: AuthData }> =>
       post('/auth/login', { email, password }, false),
 
-    refresh: (): Promise<{ data: { token?: string; accessToken?: string; access_token?: string } }> =>
-      doFetch('/auth/refresh', { method: 'POST' }, true),
+    refresh: async (): Promise<{ data: { token?: string; accessToken?: string; access_token?: string; refreshToken?: string } }> => {
+      // Envia o refreshToken no body (igual ao doRefresh interno).
+      // Também atualiza _accessToken/_refreshToken em memória para que
+      // getOrganonTokens() retorne os valores corretos logo depois da chamada.
+      const tokenForRefresh = _refreshToken || _accessToken
+      const res = await doFetch<{ data: { token?: string; accessToken?: string; access_token?: string; refreshToken?: string } }>(
+        '/auth/refresh',
+        { method: 'POST', body: JSON.stringify({ refreshToken: tokenForRefresh }) },
+        false, // sem Authorization header — token vai no body
+      )
+      const data = asRecord(asRecord(res).data ?? res)
+      const newAccess = getString(data.token ?? data.accessToken ?? data.access_token)
+      const newRefresh = getString((data.refreshToken as string | undefined) ?? (data.refresh_token as string | undefined) ?? '')
+      if (newAccess) {
+        _accessToken = newAccess
+        if (newRefresh) _refreshToken = newRefresh
+        _onTokensUpdated?.(_accessToken, _refreshToken)
+      }
+      return res
+    },
 
     logout: (): Promise<void> =>
       doFetch('/auth/logout', { method: 'POST' }, true),

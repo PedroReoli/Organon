@@ -252,6 +252,12 @@ export const App = () => {
 
         const merged = {
           ...rawStore,
+          // Usa settings do React state (memória) e não do disco.
+          // Motivo: updateSettings tem debounce de 300ms — ao fazer login,
+          // o token ainda não foi gravado no disco quando loadStore() é chamado.
+          // Sem isso, saveStore() sobrescreveria apiRefreshToken com string vazia,
+          // derrubando a sessão após o reload.
+          settings,
           cards: mergeById(rawStore.cards, pulled.cards),
           notes: mergeById(rawStore.notes, pulled.notes).map(note => {
             const local = localNoteMap.get(note.id)
@@ -345,6 +351,7 @@ export const App = () => {
       const localNoteMap = new Map(rawStore.notes.map(n => [n.id, n]))
       const merged = {
         ...rawStore,
+        settings, // sempre usa settings do React state para não perder tokens do debounce
         cards: mergeById(rawStore.cards, pulled.cards),
         notes: mergeById(rawStore.notes, pulled.notes).map(note => {
           const local = localNoteMap.get(note.id)
