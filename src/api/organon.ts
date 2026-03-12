@@ -210,6 +210,7 @@ export interface OrganonUser {
   email: string
   name: string | null
   created_at: string
+  updated_at?: string
 }
 
 export interface AuthData {
@@ -394,6 +395,9 @@ export const organonApi = {
 
     me: (): Promise<{ data: OrganonUser }> =>
       get('/auth/me'),
+
+    updateProfile: (updates: { name?: string }): Promise<{ data: OrganonUser }> =>
+      patch('/auth/profile', updates),
   },
 
   // SETTINGS

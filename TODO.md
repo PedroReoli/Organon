@@ -1,4 +1,7 @@
 ﻿## Roadmap do Organon
+ na interface do notas 
+quero que ao clicar com botao direito em um dos itens da sidebar
+permita eu acessar um pop up menu que deixe customizar os itens
 
 
 ## Novas Telas Prioritarias (Aprovadas)

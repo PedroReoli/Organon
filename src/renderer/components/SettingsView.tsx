@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Settings, ThemeName, RegisteredIDE, KeyboardShortcut, CalendarEvent } from '../types'
 import { THEMES, THEME_LABELS, DEFAULT_SETTINGS } from '../types'
 import { isElectron } from '../utils'
@@ -30,6 +30,9 @@ interface SettingsViewProps {
   onClearAuthError?: () => void
   authUser?: { email: string; name: string | null } | null
   authLoading?: boolean
+  onUpdateProfile?: (updates: { name?: string }) => Promise<boolean>
+  profilePhotoDataUrl?: string
+  onUpdateProfilePhoto?: (dataUrl: string | null) => void
 }
 
 interface ThemeCardProps {
@@ -75,7 +78,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
   )
 }
 
-export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, syncError, isConfigured, userLoggedIn, onLogin, onRegister, onLogout, authError, onClearAuthError, authUser, authLoading }: SettingsViewProps) => {
+export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAddRegisteredIDE, onUpdateRegisteredIDE, onRemoveRegisteredIDE, onResetStore, onOpenHistory, onAddNote, onAddCard, onAddCalendarEvent, syncStatus, syncError, isConfigured, userLoggedIn, onLogin, onRegister, onLogout, authError, onClearAuthError, authUser, authLoading, onUpdateProfile, profilePhotoDataUrl, onUpdateProfilePhoto }: SettingsViewProps) => {
   const [dataDirInfo, setDataDirInfo] = useState<{ current: string; custom: string | null } | null>(null)
   const [dataDirLoading, setDataDirLoading] = useState(false)
 
@@ -93,6 +96,32 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
   const [authLocalError, setAuthLocalError] = useState<string | null>(null)
   const [authName, setAuthName] = useState('')
   const [authSubmitting, setAuthSubmitting] = useState(false)
+
+  // Profile edit state
+  const [editingProfileName, setEditingProfileName] = useState(false)
+  const [profileNameDraft, setProfileNameDraft] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null)
+
+  const handleSaveProfileName = async () => {
+    if (!profileNameDraft.trim() && !authUser?.name) return
+    setProfileSaving(true)
+    const ok = await onUpdateProfile?.({ name: profileNameDraft.trim() || undefined })
+    if (ok !== false) setEditingProfileName(false)
+    setProfileSaving(false)
+  }
+
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string
+      onUpdateProfilePhoto?.(dataUrl)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   const handlePing = async () => {
     setPingStatus('testing')
@@ -1286,36 +1315,101 @@ export const SettingsView = ({ settings, onUpdateSettings, registeredIDEs, onAdd
           {/* Logado */}
           {userLoggedIn && authUser ? (
             <div className="settings-data-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--color-primary, #6366f1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontWeight: 700, fontSize: 18,
-                }}>
-                  {(authUser.name ?? authUser.email).charAt(0).toUpperCase()}
+              {/* Avatar + info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                {/* Foto de perfil */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {profilePhotoDataUrl ? (
+                    <img
+                      src={profilePhotoDataUrl}
+                      alt="Foto de perfil"
+                      style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 52, height: 52, borderRadius: '50%',
+                      background: 'var(--color-primary, #6366f1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontWeight: 700, fontSize: 20,
+                    }}>
+                      {(authUser.name ?? authUser.email).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => profilePhotoInputRef.current?.click()}
+                    title="Alterar foto"
+                    style={{
+                      position: 'absolute', bottom: 0, right: 0,
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="10" height="10">
+                      <path d="M11 2.5l2.5 2.5-8 8H3v-2.5l8-8z" />
+                    </svg>
+                  </button>
+                  <input
+                    ref={profilePhotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleProfilePhotoChange}
+                  />
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  {authUser.name && <div style={{ fontWeight: 600, fontSize: 14 }}>{authUser.name}</div>}
+
+                {/* Nome e email */}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  {editingProfileName ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                      <input
+                        className="form-input"
+                        style={{ fontSize: 13, padding: '4px 8px', flex: 1 }}
+                        value={profileNameDraft}
+                        onChange={e => setProfileNameDraft(e.target.value)}
+                        placeholder="Seu nome"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') void handleSaveProfileName()
+                          if (e.key === 'Escape') setEditingProfileName(false)
+                        }}
+                        disabled={profileSaving}
+                      />
+                      <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => void handleSaveProfileName()} disabled={profileSaving}>
+                        {profileSaving ? '...' : 'Salvar'}
+                      </button>
+                      <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setEditingProfileName(false)} disabled={profileSaving}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{authUser.name || 'Sem nome'}</span>
+                      <button
+                        onClick={() => { setProfileNameDraft(authUser.name ?? ''); setEditingProfileName(true) }}
+                        title="Editar nome"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}
+                      >
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+                          <path d="M11 2.5l2.5 2.5-8 8H3v-2.5l8-8z" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                   <div className="settings-help-text" style={{ margin: 0, wordBreak: 'break-all' }}>{authUser.email}</div>
+                  {profilePhotoDataUrl && (
+                    <button
+                      onClick={() => onUpdateProfilePhoto?.(null)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, color: 'var(--color-danger)', marginTop: 4 }}
+                    >
+                      Remover foto
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button
-                  className="btn btn-secondary"
-                  disabled
-                  style={{ opacity: 0.45, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: 8 }}
-                >
-                  <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-                    <path d="M19.6 10.2c0-.7-.1-1.4-.2-2H10v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4"/>
-                    <path d="M10 20c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H1.1v2.6A10 10 0 0 0 10 20z" fill="#34A853"/>
-                    <path d="M4.4 12c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V5.4H1.1A10 10 0 0 0 0 10c0 1.6.4 3.2 1.1 4.6L4.4 12z" fill="#FBBC05"/>
-                    <path d="M10 3.9c1.5 0 2.8.5 3.8 1.5L16.7 3C15 1.4 12.7.5 10 .5A10 10 0 0 0 1.1 5.5l3.3 2.5C5.2 5.6 7.4 3.9 10 3.9z" fill="#EA4335"/>
-                  </svg>
-                  Vincular ao Google
-                  <span style={{ fontSize: 10, background: 'var(--color-surface-2, rgba(255,255,255,.1))', padding: '1px 6px', borderRadius: 4 }}>Em breve</span>
-                </button>
                 <button
                   className="btn btn-secondary"
                   style={{ color: 'var(--color-danger)' }}

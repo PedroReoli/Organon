@@ -302,7 +302,9 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
         updatedAt: (ev as CalendarEvent).updatedAt ?? (ev as CalendarEvent).createdAt ?? new Date().toISOString(),
       }))
       : base.calendarEvents,
-    noteFolders: Array.isArray(input.noteFolders) ? input.noteFolders : base.noteFolders,
+    noteFolders: Array.isArray(input.noteFolders)
+      ? (input.noteFolders as NoteFolder[]).map(f => ({ ...f, isHome: f.isHome === true }))
+      : base.noteFolders,
     notes: Array.isArray(input.notes)
       ? input.notes.map(n => ({
         ...n,
@@ -1059,6 +1061,7 @@ export const useStore = () => {
       name: name.trim(),
       parentId: parentId ?? null,
       order: Date.now(),
+      isHome: false,
     }
     updateStore(prev => ({
       ...prev,
@@ -1067,7 +1070,7 @@ export const useStore = () => {
     return newFolder.id
   }, [updateStore])
 
-  const updateNoteFolder = useCallback((folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId'>>) => {
+  const updateNoteFolder = useCallback((folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId' | 'isHome'>>) => {
     updateStore(prev => ({
       ...prev,
       noteFolders: prev.noteFolders.map(folder => {

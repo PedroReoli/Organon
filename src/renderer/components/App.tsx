@@ -27,6 +27,7 @@ import { InstallerView } from './InstallerView'
 import { ShortcutSearchModal } from './ShortcutSearchModal'
 import { HistoryView } from './HistoryView'
 import { NavbarCustomizeModal } from './NavbarCustomizeModal'
+import { SyncProgressModal } from './SyncProgressModal'
 
 import type { AppView } from './InternalNav'
 
@@ -199,6 +200,21 @@ export const App = () => {
   const isConfigured = /^https?:\/\/.+/i.test(apiBaseUrl)
   const userLoggedIn = auth.isAuthenticated
 
+  // Modal de sincronização pós-login: aparece apenas em login manual (não em restore)
+  const [showLoginSync, setShowLoginSync] = useState(false)
+
+  const loginWithSync = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const ok = await auth.login(email, password)
+    if (ok) setShowLoginSync(true)
+    return ok
+  }, [auth])
+
+  const registerWithSync = useCallback(async (email: string, password: string, name?: string): Promise<boolean> => {
+    const ok = await auth.register(email, password, name)
+    if (ok) setShowLoginSync(true)
+    return ok
+  }, [auth])
+
   type SyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -213,6 +229,7 @@ export const App = () => {
   useEffect(() => {
     if (!isConfigured || !userLoggedIn || !isElectron() || isLoading) return
     if (startupCheckedRef.current) return
+    if (showLoginSync) return // Modal de login cuida da sync inicial
     startupCheckedRef.current = true
 
     const checkAndPull = async () => {
@@ -220,7 +237,13 @@ export const App = () => {
         const rawStore = await window.electronAPI.loadStore()
         console.log('[Sync] Verificando mudanças remotas desde:', rawStore.lastSyncAt ?? 'início')
         const needsPull = await hasRemoteChanges(rawStore.lastSyncAt)
-        if (!needsPull) { console.log('[Sync] Nenhuma mudança remota.'); return }
+        if (!needsPull) {
+          // Sem mudanças remotas: push imediato dos dados locais (sem aguardar o timer de 10s).
+          // Isso garante que notas/cards criados offline cheguem ao servidor assim que o usuário logar.
+          console.log('[Sync] Nenhuma mudança remota. Iniciando push local imediato...')
+          void runSyncNow()
+          return
+        }
 
         console.log('[Sync] Baixando dados da API...')
         const { store: pulled, noteContents, serverTime } = await pullFromApi(rawStore.lastSyncAt)
@@ -296,7 +319,7 @@ export const App = () => {
 
     void checkAndPull()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConfigured, userLoggedIn, isLoading])
+  }, [isConfigured, userLoggedIn, isLoading, showLoginSync])
 
   const runSyncNow = useCallback(async () => {
     if (!isConfigured || !userLoggedIn || !isElectron()) return
@@ -709,6 +732,9 @@ export const App = () => {
           syncStatus={syncStatus}
           userLoggedIn={userLoggedIn}
           onSync={() => { void runSyncNow() }}
+          user={auth.user}
+          isRestoring={auth.isRestoring}
+          profilePhotoDataUrl={settings.profilePhotoDataUrl}
         />
 
         <div className="app-view">
@@ -1029,13 +1055,16 @@ export const App = () => {
               syncError={syncError}
               isConfigured={isConfigured}
               userLoggedIn={userLoggedIn}
-              onLogin={auth.login}
-              onRegister={auth.register}
+              onLogin={loginWithSync}
+              onRegister={registerWithSync}
               onLogout={auth.logout}
               authError={auth.authError}
               onClearAuthError={auth.clearError}
               authUser={auth.user}
               authLoading={auth.isRestoring}
+              onUpdateProfile={auth.updateProfile}
+              profilePhotoDataUrl={settings.profilePhotoDataUrl}
+              onUpdateProfilePhoto={(dataUrl) => updateSettings({ profilePhotoDataUrl: dataUrl ?? undefined })}
             />
           )}
 
@@ -1108,6 +1137,10 @@ export const App = () => {
         settings={settings}
         onUpdateSettings={updateSettings}
       />
+
+      {showLoginSync && isElectron() && (
+        <SyncProgressModal settings={settings} />
+      )}
 
     </div>
   )

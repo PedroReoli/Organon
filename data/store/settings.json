@@ -1,11 +1,10 @@
 {
   "settings": {
-    "themeName": "dark-matcha",
+    "themeName": "dark-default",
     "dataDir": null,
     "installerCompleted": false,
     "weekStart": "2026-03-09",
-    "apiToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwOWQxNTExOC01MGY0LTQxZTQtYTg0Yy0zODQ1MGY1ODY4MTQiLCJpYXQiOjE3NzMwOTM4MTMsImV4cCI6MTc3NTY4NTgxM30._6Pp7cH8RJ3kFecE9XFAaKvZvldSoex8kssnu6vXfgQ",
-    "apiEmail": "pedrosousa2160@gmail.com",
+    "apiEmail": "",
     "apiRefreshToken": "",
     "keyboardShortcuts": [
       {
@@ -16,9 +15,37 @@
           "ctrl": true,
           "key": "k"
         }
+      },
+      {
+        "id": "reduced-mode",
+        "action": "Alternar modo reduzido",
+        "description": "Reduz paineis da view atual por niveis (pressione novamente para o proximo nivel)",
+        "keys": {
+          "ctrl": true,
+          "shift": true,
+          "key": "m"
+        }
+      },
+      {
+        "id": "notes-new",
+        "action": "Nova nota",
+        "description": "Cria uma nova nota (disponível na view Notas)",
+        "keys": {
+          "ctrl": true,
+          "key": "n"
+        }
+      },
+      {
+        "id": "notes-search",
+        "action": "Buscar notas",
+        "description": "Abre a busca de notas (disponível na view Notas)",
+        "keys": {
+          "ctrl": true,
+          "key": "f"
+        }
       }
     ],
     "backupEnabled": true,
-    "backupIntervalMinutes": 10
+    "backupIntervalMinutes": 15
   }
 }

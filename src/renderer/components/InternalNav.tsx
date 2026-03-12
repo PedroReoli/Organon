@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react'
 import type { NavbarConfig } from '../types'
 import { renderNavIcon, resolveNavbarConfig } from './navConfig'
 import { NavDropdown, type NavDropdownGroup } from './NavDropdown'
+import type { OrganonUser } from '../../api/organon'
 
 export type AppView =
   | 'today'
@@ -35,6 +36,9 @@ interface InternalNavProps {
   syncStatus?: SyncStatus
   userLoggedIn?: boolean
   onSync?: () => void
+  user?: OrganonUser | null
+  isRestoring?: boolean
+  profilePhotoDataUrl?: string
 }
 
 interface NavGroupItem {
@@ -108,7 +112,7 @@ const syncLabels: Record<SyncStatus, string> = {
   error: 'Erro no sync — clique para tentar novamente',
 }
 
-export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize, syncStatus = 'idle', userLoggedIn = false, onSync }: InternalNavProps) => {
+export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize, syncStatus = 'idle', userLoggedIn = false, onSync, user, isRestoring = false, profilePhotoDataUrl }: InternalNavProps) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const groupButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
@@ -274,17 +278,45 @@ export const InternalNav = ({ activeView, onChange, disabled = false, navbarConf
             <span>Navbar</span>
           </button>
 
-          <button
-            className={`app-nav-action app-nav-action-settings ${activeView === 'settings' ? 'is-active' : ''}`}
-            onClick={handleClick('settings')}
-            disabled={disabled}
-            title="Configuracoes"
-          >
-            <span className="app-nav-icon app-nav-settings-icon" aria-hidden="true">
-              {settingsIcon}
-            </span>
-            <span>Config</span>
-          </button>
+          {(userLoggedIn && user) ? (
+            <button
+              className={`app-nav-user-avatar ${activeView === 'settings' ? 'is-active' : ''}`}
+              onClick={handleClick('settings')}
+              disabled={disabled}
+              title={user.name ? `${user.name} — ${user.email}` : user.email}
+            >
+              {profilePhotoDataUrl ? (
+                <img
+                  src={profilePhotoDataUrl}
+                  alt="Foto de perfil"
+                  style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                  aria-hidden="true"
+                />
+              ) : (
+                <span className="app-nav-user-initials" aria-hidden="true">
+                  {(user.name ?? user.email).charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="app-nav-user-label">{user.name || user.email}</span>
+            </button>
+          ) : isRestoring ? (
+            <button className="app-nav-user-avatar app-nav-user-avatar--restoring" disabled title="Restaurando sessão...">
+              <span className="app-nav-user-initials" aria-hidden="true">···</span>
+              <span className="app-nav-user-label">Entrando...</span>
+            </button>
+          ) : (
+            <button
+              className={`app-nav-action app-nav-action-settings ${activeView === 'settings' ? 'is-active' : ''}`}
+              onClick={handleClick('settings')}
+              disabled={disabled}
+              title="Configuracoes"
+            >
+              <span className="app-nav-icon app-nav-settings-icon" aria-hidden="true">
+                {settingsIcon}
+              </span>
+              <span>Config</span>
+            </button>
+          )}
         </div>
       </nav>
     </>

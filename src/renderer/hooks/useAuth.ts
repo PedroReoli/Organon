@@ -1,7 +1,7 @@
 // Hook de autenticação da Organon API
 // Gerencia login/logout/register e restauração de sessão via token persistido
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   organonApi,
   configureOrganon,
@@ -32,6 +32,7 @@ export interface UseAuthReturn {
   login: (email: string, password: string) => Promise<boolean>
   register: (email: string, password: string, name?: string) => Promise<boolean>
   logout: () => Promise<void>
+  updateProfile: (updates: { name?: string }) => Promise<boolean>
   clearError: () => void
 }
 
@@ -46,9 +47,12 @@ export function useAuth(
   onSessionChange: (accessToken: string, email: string, refreshToken: string) => void,
 ): UseAuthReturn {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isRestoring, setIsRestoring] = useState(!!persistedRefreshToken)
+  // isRestoring começa false; será true quando o effect de restore disparar
+  const [isRestoring, setIsRestoring] = useState(false)
   const [user, setUser] = useState<OrganonUser | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
+  // Garante que a restauração ocorra apenas uma vez, mesmo que o token mude
+  const hasTriedRestoreRef = useRef(false)
 
   // Configurar baseUrl e callbacks de refresh automático
   useEffect(() => {
@@ -69,27 +73,26 @@ export function useAuth(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl])
 
-  // Auto-restaurar sessão via refreshToken persistido
+  // Auto-restaurar sessão quando o token persistido se tornar disponível.
+  // IMPORTANTE: useStore carrega o store do disco de forma assíncrona — quando o App
+  // monta pela primeira vez, persistedRefreshToken ainda é '' (store não carregou).
+  // Por isso dependemos de [persistedRefreshToken] e usamos hasTriedRestoreRef para
+  // garantir que a restauração ocorra apenas UMA vez (quando o token aparecer pela 1ª vez).
   useEffect(() => {
-    if (!persistedRefreshToken) {
-      setIsRestoring(false)
-      return
-    }
+    if (!persistedRefreshToken || hasTriedRestoreRef.current) return
+    hasTriedRestoreRef.current = true
 
     void (async () => {
       setIsRestoring(true)
       try {
-        // A API usa um único JWT (sem refresh token separado). O token persiste por 30 dias.
-        // Configura como accessToken para que o header Bearer seja enviado na requisição.
         configureOrganon({ accessToken: persistedRefreshToken, refreshToken: persistedRefreshToken })
-        await organonApi.auth.refresh() // obtém novo JWT com TTL renovado
+        await organonApi.auth.refresh()
         const { accessToken, refreshToken } = getOrganonTokens()
         const me = await organonApi.auth.me()
         setUser(me.data)
         setIsAuthenticated(true)
         onSessionChange(accessToken, me.data.email, refreshToken)
       } catch {
-        // refreshToken inválido/expirado — limpa sessão
         configureOrganon({ accessToken: '', refreshToken: '' })
         setIsAuthenticated(false)
         onSessionChange('', '', '')
@@ -98,7 +101,7 @@ export function useAuth(
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // só no mount
+  }, [persistedRefreshToken])
 
   const login = useCallback(
     async (email: string, password: string): Promise<boolean> => {
@@ -107,8 +110,11 @@ export function useAuth(
         const res = await organonApi.auth.login(email, password)
         const token = readAccessToken(res.data)
         if (!token) throw new Error('Resposta de autenticação inválida. Faça login novamente.')
-        const refreshToken = getString((res.data as Record<string, unknown>).refreshToken ?? '')
+        const refreshToken = getString((res.data as unknown as Record<string, unknown>).refreshToken ?? '')
         configureOrganon({ accessToken: token, refreshToken })
+        // Marca como restaurado para que o effect de restore não dispare novamente
+        // quando updateSettings salvar o token (o que mudaria persistedRefreshToken).
+        hasTriedRestoreRef.current = true
         setUser(res.data.user)
         setIsAuthenticated(true)
         onSessionChange(token, email, refreshToken)
@@ -128,8 +134,10 @@ export function useAuth(
         const res = await organonApi.auth.register(email, password, name)
         const token = readAccessToken(res.data)
         if (!token) throw new Error('Resposta de autenticação inválida. Tente novamente.')
-        const refreshToken = getString((res.data as Record<string, unknown>).refreshToken ?? '')
+        const refreshToken = getString((res.data as unknown as Record<string, unknown>).refreshToken ?? '')
         configureOrganon({ accessToken: token, refreshToken })
+        // Idem ao login: previne o restore effect de rodar após salvar o token.
+        hasTriedRestoreRef.current = true
         setUser(res.data.user)
         setIsAuthenticated(true)
         onSessionChange(token, res.data.user.email, refreshToken)
@@ -150,6 +158,16 @@ export function useAuth(
     onSessionChange('', '', '')
   }, [onSessionChange])
 
+  const updateProfile = useCallback(async (updates: { name?: string }): Promise<boolean> => {
+    try {
+      const res = await organonApi.auth.updateProfile(updates)
+      setUser(res.data)
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
   return {
     isAuthenticated,
     isRestoring,
@@ -158,6 +176,7 @@ export function useAuth(
     login,
     register,
     logout,
+    updateProfile,
     clearError: () => setAuthError(null),
   }
 }

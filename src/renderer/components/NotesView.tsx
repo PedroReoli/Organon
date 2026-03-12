@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { KeyboardShortcut, Note, NoteFolder } from '../types'
 import { isElectron } from '../utils'
 import { WysiwygEditor } from './WysiwygEditor'
@@ -8,7 +9,7 @@ interface NotesViewProps {
   folders: NoteFolder[]
   onAddNote: (title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => Note
   onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => void
-  onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId'>>) => void
+  onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId' | 'isHome'>>) => void
   onRemoveNote: (noteId: string) => void
   onAddFolder: (name: string, parentId?: string | null) => string
   onRemoveFolder: (folderId: string) => void
@@ -104,7 +105,13 @@ export const NotesView = ({
   const [searchVisible, setSearchVisible] = useState(false)
   const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined) // undefined = hidden
   const [newFolderName, setNewFolderName] = useState('')
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null)
+  type SidebarCtxMenu = { x: number; y: number } & (
+    | { kind: 'note'; id: string }
+    | { kind: 'folder'; id: string }
+  )
+  const [ctxMenu, setCtxMenu] = useState<SidebarCtxMenu | null>(null)
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
+  const [renamingFolderName, setRenamingFolderName] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<{ noteId: string; title: string } | null>(null)
   const [folderDeleteConfirm, setFolderDeleteConfirm] = useState<{ folderId: string; name: string } | null>(null)
   const [isNoteLoading, setIsNoteLoading] = useState(false)
@@ -546,7 +553,7 @@ export const NotesView = ({
       return next
     })
     setDeleteConfirm(null)
-    setContextMenu(null)
+    setCtxMenu(null)
   }, [deleteConfirm, onRemoveNote, selectedNoteId])
 
   const requestDeleteFolder = useCallback((folderId: string) => {
@@ -674,15 +681,22 @@ export const NotesView = ({
   // ---- Context menu ----
 
   useEffect(() => {
-    if (!contextMenu) return
+    if (!ctxMenu) return
     const handler = (e: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenu(null)
+        setCtxMenu(null)
       }
     }
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCtxMenu(null)
+    }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [contextMenu])
+    document.addEventListener('keydown', keyHandler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', keyHandler)
+    }
+  }, [ctxMenu])
 
   // ---- Keyboard shortcuts ----
 
@@ -707,7 +721,7 @@ export const NotesView = ({
       if (e.key === 'Escape') {
         setSearchVisible(false)
         setSearchQuery('')
-        setContextMenu(null)
+        setCtxMenu(null)
         setDeleteConfirm(null)
         setFolderDeleteConfirm(null)
       }
@@ -1007,9 +1021,8 @@ export const NotesView = ({
             openNote(note.id)
           }}
           onContextMenu={e => {
-            e.preventDefault()
             if (!selectedTreeItems.has(treeKey)) selectSingleTreeItem(treeKey)
-            setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id })
+            openCtxMenu(e, { kind: 'note', id: note.id })
           }}
         >
           <button
@@ -1024,19 +1037,18 @@ export const NotesView = ({
           <span className="notes-tree-row-actions">
             <button
               className="notes-tree-action-btn"
-              title="Nova subpagina"
+              title="Nova subpágina"
               disabled={note.isLocked}
               onClick={e => { e.stopPropagation(); handleAddNote(note.folderId, note.id) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
             <button
-              className="notes-tree-action-btn"
-              title="Excluir"
-              disabled={note.isLocked}
-              onClick={e => { e.stopPropagation(); requestDeleteNote(note.id) }}
+              className="notes-tree-action-btn notes-tree-action-more"
+              title="Mais opções"
+              onClick={e => { e.stopPropagation(); openCtxMenu(e, { kind: 'note', id: note.id }) }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
             </button>
           </span>
           {note.isFavorite && <span className="notes-tree-star">*</span>}
@@ -1088,14 +1100,17 @@ export const NotesView = ({
             }
           }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); handleDropOnFolder(folder.id) }}
+          onContextMenu={e => openCtxMenu(e, { kind: 'folder', id: folder.id })}
           onClick={e => {
+            if (renamingFolderId === folder.id) return
             if (handleTreeRowSelection(treeKey, e)) return
             selectSingleTreeItem(treeKey)
             toggleFolder(folder.id)
           }}
           onDoubleClick={e => {
             e.stopPropagation()
-            openFolder(folder.id)
+            if (renamingFolderId === folder.id) return
+            if (folder.isHome) openFolder(folder.id)
           }}
         >
           <button
@@ -1107,35 +1122,51 @@ export const NotesView = ({
             <ChevronIcon open={isExpanded} />
           </button>
           {folder.isHome ? <HomeFolderIcon /> : <FolderIcon open={isExpanded} />}
-          <span className="notes-tree-label">{folder.name}</span>
+
+          {renamingFolderId === folder.id ? (
+            <input
+              className="notes-tree-rename-input"
+              value={renamingFolderName}
+              autoFocus
+              onClick={e => e.stopPropagation()}
+              onChange={e => setRenamingFolderName(e.target.value)}
+              onKeyDown={e => {
+                e.stopPropagation()
+                if (e.key === 'Enter') {
+                  const next = renamingFolderName.trim()
+                  if (next && next !== folder.name) onUpdateFolder(folder.id, { name: next })
+                  setRenamingFolderId(null)
+                } else if (e.key === 'Escape') {
+                  setRenamingFolderId(null)
+                }
+              }}
+              onBlur={() => {
+                const next = renamingFolderName.trim()
+                if (next && next !== folder.name) onUpdateFolder(folder.id, { name: next })
+                setRenamingFolderId(null)
+              }}
+            />
+          ) : (
+            <span className="notes-tree-label">
+              {folder.name}
+              {folder.isHome && <span className="notes-tree-hub-badge">Hub</span>}
+            </span>
+          )}
+
           <span className="notes-tree-row-actions">
             <button
               className="notes-tree-action-btn"
-              title="Nova nota"
+              title="Nova nota aqui"
               onClick={e => { e.stopPropagation(); handleAddNote(folder.id, null); setExpandedFolders(prev => new Set([...prev, folder.id])) }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
             <button
-              className="notes-tree-action-btn"
-              title="Nova subpasta"
-              onClick={e => { e.stopPropagation(); setNewFolderParentId(folder.id); setExpandedFolders(prev => new Set([...prev, folder.id])); setTimeout(() => newFolderInputRef.current?.focus(), 50) }}
+              className="notes-tree-action-btn notes-tree-action-more"
+              title="Mais opções"
+              onClick={e => { e.stopPropagation(); openCtxMenu(e, { kind: 'folder', id: folder.id }) }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-            </button>
-            <button
-              className={`notes-tree-action-btn${folder.isHome ? ' is-active-home' : ''}`}
-              title={folder.isHome ? 'Remover pasta home' : 'Tornar pasta home'}
-              onClick={e => { e.stopPropagation(); onUpdateFolder(folder.id, { isHome: !folder.isHome }) }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" /></svg>
-            </button>
-            <button
-              className="notes-tree-action-btn"
-              title="Excluir pasta"
-              onClick={e => { e.stopPropagation(); requestDeleteFolder(folder.id) }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
             </button>
           </span>
         </div>
@@ -1170,7 +1201,29 @@ export const NotesView = ({
     )
   }
 
-  const contextNote = contextMenu ? notes.find(n => n.id === contextMenu.noteId) ?? null : null
+  const ctxNote   = ctxMenu?.kind === 'note'   ? notes.find(n => n.id === ctxMenu.id)   ?? null : null
+  const ctxFolder = ctxMenu?.kind === 'folder' ? folders.find(f => f.id === ctxMenu.id) ?? null : null
+
+  const openCtxMenu = useCallback((e: ReactMouseEvent, target: { kind: 'note'; id: string } | { kind: 'folder'; id: string }) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const PAD = 8
+    const menuW = 220, menuH = 320
+    const x = Math.min(e.clientX, window.innerWidth  - menuW - PAD)
+    const y = Math.min(e.clientY, window.innerHeight - menuH - PAD)
+    setCtxMenu({ ...target, x: Math.max(PAD, x), y: Math.max(PAD, y) })
+  }, [])
+
+  const handleDuplicateNote = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+    const newNote = onAddNote(`${note.title} (cópia)`, note.folderId, null, null)
+    if (isElectron() && note.mdPath && newNote.mdPath) {
+      window.electronAPI.readNote(note.mdPath).then(content => {
+        if (content) window.electronAPI.writeNote(newNote.mdPath!, content).catch(() => {})
+      }).catch(() => {})
+    }
+  }, [notes, onAddNote])
   const isSidebarCollapsed = !sidebarOpen || reduceLevel >= 1
 
   return (
@@ -1553,10 +1606,23 @@ export const NotesView = ({
                 <div className="notes-folder-section-body">
                   {selectedFolderChildren.length > 0 ? (
                     selectedFolderChildren.map(folder => (
-                      <button key={folder.id} className="notes-folder-item" onClick={() => openFolder(folder.id)}>
+                      <button
+                        key={folder.id}
+                        className={`notes-folder-item${!folder.isHome ? ' notes-folder-item--plain' : ''}`}
+                        onClick={() => {
+                          if (folder.isHome) openFolder(folder.id)
+                          else {
+                            // Pasta normal: expande no tree
+                            setExpandedFolders(prev => new Set([...prev, folder.id]))
+                            setSelectedFolderId(null)
+                          }
+                        }}
+                        title={folder.isHome ? `Abrir Hub: ${folder.name}` : folder.name || 'Sem nome'}
+                      >
                         <span className="notes-folder-item-main">
                           {folder.isHome ? <HomeFolderIcon /> : <FolderIcon open={expandedFolders.has(folder.id)} />}
                           <span>{folder.name || 'Sem nome'}</span>
+                          {!folder.isHome && <span className="notes-folder-item-tag">pasta</span>}
                         </span>
                         <span className="notes-folder-item-path">
                           {[...buildFolderTrailParts(folder.parentId).map(item => item.label), folder.name || 'Sem nome'].join(' > ')}
@@ -1677,33 +1743,151 @@ export const NotesView = ({
         </div>
       )}
 
-      {contextMenu && contextNote && (
+      {/* ── Unified sidebar context menu ── */}
+      {ctxMenu && (ctxNote || ctxFolder) && (
         <div
           ref={contextMenuRef}
-          className="notes-context-menu"
-          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y }}
+          className="notes-ctx-menu"
+          style={{ position: 'fixed', left: ctxMenu.x, top: ctxMenu.y }}
+          onContextMenu={e => e.preventDefault()}
         >
-          <button className="notes-context-item" onClick={() => { onToggleLock(contextNote.id); setContextMenu(null) }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2" /><path d={contextNote.isLocked ? 'M8 11V7a4 4 0 0 1 8 0v1' : 'M7 11V7a5 5 0 0 1 10 0v4'} /></svg>
-            {contextNote.isLocked ? 'Destrancar nota' : 'Trancar nota'}
-          </button>
-          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { onToggleFavorite(contextNote.id); setContextMenu(null) }}>
-            <svg viewBox="0 0 24 24" fill={contextNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-            {contextNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-          </button>
-          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { onTogglePinned(contextNote.id); setContextMenu(null) }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
-            {contextNote.isPinned ? 'Desafixar' : 'Fixar'}
-          </button>
-          <button className="notes-context-item" disabled={contextNote.isLocked} onClick={() => { handleAddNote(contextNote.folderId, contextNote.id); setContextMenu(null) }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Nova subpagina
-          </button>
-          <div className="notes-context-divider" />
-          <button className="notes-context-item danger" disabled={contextNote.isLocked} onClick={() => requestDeleteNote(contextNote.id)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
-            Excluir nota
-          </button>
+          {/* ── NOTE context menu ── */}
+          {ctxMenu.kind === 'note' && ctxNote && (() => {
+            const close = () => setCtxMenu(null)
+            const locked = ctxNote.isLocked
+            return (
+              <>
+                {/* Header */}
+                <div className="notes-ctx-header">
+                  <PageIcon />
+                  <span className="notes-ctx-title">{ctxNote.title || 'Sem título'}</span>
+                </div>
+                <div className="notes-ctx-divider" />
+
+                {/* Section: open + rename */}
+                <button className="notes-ctx-item" onClick={() => { openNote(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                  Abrir nota
+                </button>
+                <button className="notes-ctx-item" disabled={locked} onClick={() => { close(); setTimeout(() => titleInputRef.current?.focus(), 80) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  Renomear
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: status flags */}
+                <button className="notes-ctx-item" onClick={() => { onToggleLock(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                    <rect x="3" y="11" width="18" height="10" rx="2" />
+                    <path d={locked ? 'M8 11V7a4 4 0 0 1 8 0v1' : 'M7 11V7a5 5 0 0 1 10 0v4'} />
+                  </svg>
+                  {locked ? 'Destrancar nota' : 'Trancar nota'}
+                  {locked && <span className="notes-ctx-badge">🔒</span>}
+                </button>
+                <button className="notes-ctx-item" disabled={locked} onClick={() => { onToggleFavorite(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill={ctxNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                  {ctxNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  {ctxNote.isFavorite && <span className="notes-ctx-check">✓</span>}
+                </button>
+                <button className="notes-ctx-item" disabled={locked} onClick={() => { onTogglePinned(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
+                  {ctxNote.isPinned ? 'Desafixar' : 'Fixar no topo'}
+                  {ctxNote.isPinned && <span className="notes-ctx-check">✓</span>}
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: creation */}
+                <button className="notes-ctx-item" disabled={locked} onClick={() => { handleAddNote(ctxNote.folderId, ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Nova subpágina
+                </button>
+                <button className="notes-ctx-item" disabled={locked} onClick={() => { handleDuplicateNote(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  Duplicar nota
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: danger */}
+                <button className="notes-ctx-item notes-ctx-danger" disabled={locked} onClick={() => { requestDeleteNote(ctxNote.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+                  Excluir nota
+                </button>
+              </>
+            )
+          })()}
+
+          {/* ── FOLDER context menu ── */}
+          {ctxMenu.kind === 'folder' && ctxFolder && (() => {
+            const close = () => setCtxMenu(null)
+            return (
+              <>
+                {/* Header */}
+                <div className="notes-ctx-header">
+                  {ctxFolder.isHome ? <HomeFolderIcon /> : <FolderIcon open={false} />}
+                  <span className="notes-ctx-title">{ctxFolder.name || 'Sem nome'}</span>
+                  {ctxFolder.isHome && <span className="notes-ctx-badge-hub">Hub</span>}
+                </div>
+                <div className="notes-ctx-divider" />
+
+                {/* Section: open + rename */}
+                {ctxFolder.isHome && (
+                  <button className="notes-ctx-item notes-ctx-item--hub" onClick={() => { openFolder(ctxFolder.id); close() }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" /></svg>
+                    Abrir Hub
+                  </button>
+                )}
+                <button className="notes-ctx-item" onClick={() => {
+                  close()
+                  setRenamingFolderName(ctxFolder.name)
+                  setRenamingFolderId(ctxFolder.id)
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  Renomear pasta
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: hub toggle */}
+                <button className="notes-ctx-item" onClick={() => { onUpdateFolder(ctxFolder.id, { isHome: !ctxFolder.isHome }); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" /></svg>
+                  {ctxFolder.isHome ? 'Remover Hub (tornar pasta normal)' : 'Tornar Hub'}
+                  {ctxFolder.isHome && <span className="notes-ctx-check">✓</span>}
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: creation */}
+                <button className="notes-ctx-item" onClick={() => {
+                  handleAddNote(ctxFolder.id, null)
+                  setExpandedFolders(prev => new Set([...prev, ctxFolder.id]))
+                  close()
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
+                  Nova nota aqui
+                </button>
+                <button className="notes-ctx-item" onClick={() => {
+                  setNewFolderParentId(ctxFolder.id)
+                  setExpandedFolders(prev => new Set([...prev, ctxFolder.id]))
+                  close()
+                  setTimeout(() => newFolderInputRef.current?.focus(), 50)
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>
+                  Nova subpasta aqui
+                </button>
+
+                <div className="notes-ctx-divider" />
+
+                {/* Section: danger */}
+                <button className="notes-ctx-item notes-ctx-danger" onClick={() => { requestDeleteFolder(ctxFolder.id); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /></svg>
+                  Excluir pasta
+                </button>
+              </>
+            )
+          })()}
         </div>
       )}
     </div>

@@ -782,6 +782,10 @@ export interface Settings {
   apiBaseUrl?: string
   apiEmail?: string
   apiRefreshToken?: string
+  /** Nome de exibição do usuário (sincronizado com a API) */
+  apiUserName?: string
+  /** Foto de perfil do usuário como data URL (armazenada localmente) */
+  profilePhotoDataUrl?: string
 }
 
 // Acesso Rápido (atalhos para views da aplicação)

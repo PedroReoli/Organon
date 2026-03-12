@@ -574,6 +574,14 @@ function toposort<T extends { id: string; parentId?: string | null }>(items: T[]
 
 // ── Tipos do relatório de sync ────────────────────────────────────────────────
 
+export interface PushProgress {
+  resource: string
+  label: string
+  count: number
+  groupIndex: number
+  totalGroups: number
+}
+
 export interface SyncGroupError {
   resource: string
   batchIndex: number
@@ -711,9 +719,28 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
  * Nunca lança — coleta erros por lote e retorna relatório completo.
  * Continua sincronizando os recursos seguintes mesmo quando um lote falha.
  */
+const PUSH_RESOURCE_LABELS: Record<string, string> = {
+  projects: 'Projetos',
+  habits: 'Hábitos',
+  calendar_events: 'Eventos de calendário',
+  finance_bills: 'Contas',
+  finance_incomes: 'Rendas',
+  finance_savings_goals: 'Metas de economia',
+  playbooks: 'Playbooks',
+  study_goals: 'Metas de estudo',
+  study_media_items: 'Mídias de estudo',
+  crm_contacts: 'Contatos CRM',
+  note_folders: 'Pastas de notas',
+  notes: 'Notas',
+  cards: 'Cards',
+  habit_entries: 'Registros de hábitos',
+  finance_expenses: 'Despesas',
+}
+
 export async function pushAllToApi(
   store: Store,
   noteContents?: Map<string, string>,
+  onProgress?: (p: PushProgress) => void,
 ): Promise<SyncReport> {
   const clientTime = now()
   const safeStore = store as Partial<Store>
@@ -821,8 +848,16 @@ export async function pushAllToApi(
 
   console.log(`[Sync] push — ${totalOps} ops em ${resourceGroups.length} grupo(s)`)
 
-  for (const group of resourceGroups) {
+  for (let gi = 0; gi < resourceGroups.length; gi++) {
+    const group = resourceGroups[gi]
     const { label, ops } = group
+    onProgress?.({
+      resource: label,
+      label: PUSH_RESOURCE_LABELS[label] ?? label,
+      count: ops.length,
+      groupIndex: gi + 1,
+      totalGroups: resourceGroups.length,
+    })
     const totalBatches = Math.ceil(ops.length / BATCH_SIZE)
 
     for (let i = 0; i < ops.length; i += BATCH_SIZE) {
