@@ -17,12 +17,12 @@ import Image from '@tiptap/extension-image'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import Typography from '@tiptap/extension-typography'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { Extension, mergeAttributes } from '@tiptap/core'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Plugin } from '@tiptap/pm/state'
-import { copyTextToClipboard, openExternalLink } from '../utils'
+import { copyTextToClipboard, detectUrlEmbed, getFaviconUrl, getShortcutTitleFromUrl, normalizeUrl, openExternalLink } from '../utils'
 
 interface WysiwygEditorProps {
   content: string
@@ -31,6 +31,7 @@ interface WysiwygEditorProps {
   mode?: 'compact' | 'full'
   currentNoteId?: string
   readOnly?: boolean
+  floatingToolbox?: boolean
 }
 
 const PRESET_COLORS = [
@@ -587,6 +588,140 @@ const SubpageBlock = TiptapNode.create({
   },
 })
 
+// ---- Link Card ----
+
+type LinkCardDisplay = 'bookmark' | 'embed'
+
+const LinkCardView = ({ node, editor, getPos, selected }: NodeViewProps) => {
+  const { url, display } = node.attrs as { url: string; display: LinkCardDisplay }
+  const normalizedUrl = normalizeUrl(url)
+  const title = getShortcutTitleFromUrl(normalizedUrl)
+  const faviconUrl = getFaviconUrl(normalizedUrl)
+  const embed = detectUrlEmbed(normalizedUrl)
+  const hostname = (() => {
+    try {
+      return new URL(normalizedUrl).hostname.replace(/^www\./i, '')
+    } catch {
+      return normalizedUrl
+    }
+  })()
+
+  const handleDelete = () => {
+    const pos = typeof getPos === 'function' ? getPos() : null
+    if (pos != null) {
+      editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+    }
+  }
+
+  return (
+    <NodeViewWrapper
+      as="div"
+      className={`editor-link-card${display === 'embed' ? ' is-embed' : ''}${selected ? ' is-selected' : ''}`}
+      contentEditable={false}
+    >
+      <div className="editor-link-card-actions">
+        <button type="button" className="editor-link-card-action editor-link-card-action-drag" data-drag-handle="" title="Arrastar card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13" aria-hidden="true">
+            <circle cx="9" cy="7" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="7" r="1" fill="currentColor" stroke="none" />
+            <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
+            <circle cx="9" cy="17" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="17" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+        <button type="button" className="editor-link-card-action" onClick={() => { void openExternalLink(normalizedUrl) }} title="Abrir link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13" aria-hidden="true">
+            <path d="M14 3h7v7" />
+            <path d="M10 14 21 3" />
+            <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+          </svg>
+        </button>
+        <button type="button" className="editor-link-card-action editor-link-card-action-danger" onClick={handleDelete} title="Remover card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6M14 11v6" />
+          </svg>
+        </button>
+      </div>
+
+      {display === 'embed' && embed?.type === 'youtube' ? (
+        <>
+          <div className="editor-link-card-embed-head">
+            <span className="editor-link-card-badge">Embed</span>
+            <span className="editor-link-card-meta">{hostname}</span>
+          </div>
+          <div className="editor-link-card-embed-shell">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${embed.videoId}?rel=0&modestbranding=1&playsinline=1`}
+              title={title}
+              className="editor-link-card-embed-frame"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+          <button
+            type="button"
+            className="editor-link-card-embed-footer"
+            onClick={() => { void openExternalLink(normalizedUrl) }}
+            title={normalizedUrl}
+          >
+            <span className="editor-link-card-embed-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M23.5 6.2a2.9 2.9 0 0 0-2-2.1C19.7 3.5 12 3.5 12 3.5s-7.7 0-9.5.6a2.9 2.9 0 0 0-2 2.1A31.7 31.7 0 0 0 0 12a31.7 31.7 0 0 0 .5 5.8 2.9 2.9 0 0 0 2 2.1c1.8.6 9.5.6 9.5.6s7.7 0 9.5-.6a2.9 2.9 0 0 0 2-2.1A31.7 31.7 0 0 0 24 12a31.7 31.7 0 0 0-.5-5.8ZM9.7 15.7V8.3L16 12l-6.3 3.7Z" />
+              </svg>
+            </span>
+            <span className="editor-link-card-copy">
+              <span className="editor-link-card-title">{title}</span>
+              <span className="editor-link-card-url">{normalizedUrl}</span>
+            </span>
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="editor-link-card-main"
+          onClick={() => { void openExternalLink(normalizedUrl) }}
+          title={normalizedUrl}
+        >
+          <span className="editor-link-card-favicon" aria-hidden="true">
+            {faviconUrl ? <img src={faviconUrl} alt="" loading="lazy" /> : null}
+          </span>
+          <span className="editor-link-card-copy">
+            <span className="editor-link-card-badge">{display === 'embed' ? 'Embed' : 'Bookmark'}</span>
+            <span className="editor-link-card-title">{title}</span>
+            <span className="editor-link-card-url">{normalizedUrl}</span>
+          </span>
+        </button>
+      )}
+    </NodeViewWrapper>
+  )
+}
+
+const LinkCard = TiptapNode.create({
+  name: 'linkCard',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      url: { default: '' },
+      display: { default: 'bookmark' },
+    }
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="link-card"]' }]
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'link-card' })]
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(LinkCardView)
+  },
+})
+
 const getExtensions = (mode: 'compact' | 'full', placeholderText: string) => {
   const base = [
     StarterKit.configure({
@@ -621,6 +756,7 @@ const getExtensions = (mode: 'compact' | 'full', placeholderText: string) => {
       ToggleBlock,
       PasswordBlock,
       SubpageBlock,
+      LinkCard,
     ]
   }
 
@@ -629,6 +765,19 @@ const getExtensions = (mode: 'compact' | 'full', placeholderText: string) => {
 
 interface LinkQuickMenuState {
   href: string
+  left: number
+  top: number
+}
+
+interface LinkPasteMenuState {
+  url: string
+  left: number
+  top: number
+  from: number
+  to: number
+}
+
+interface FloatingToolboxPosition {
   left: number
   top: number
 }
@@ -642,6 +791,23 @@ interface SlashCommand {
   icon: JSX.Element
   keywords: string[]
   action: (editor: Editor) => void
+}
+
+const TOOLBOX_SLASH_COMMAND: SlashCommand = {
+  id: 'toolbox',
+  label: 'Caixa de ferramentas',
+  description: 'Abre a toolbox flutuante do editor',
+  keywords: ['toolbox', 'ferramentas', 'ferramenta', 'caixa', 'caixa de', 'caixa de ferramentas'],
+  icon: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+      <rect x="2" y="5" width="12" height="8" rx="1.5" />
+      <path d="M6 5V4a2 2 0 0 1 4 0v1" />
+      <path d="M2 8h12" />
+    </svg>
+  ),
+  action: () => {
+    document.dispatchEvent(new CustomEvent('slash-open-toolbox'))
+  },
 }
 
 const SLASH_COMMANDS: SlashCommand[] = [
@@ -880,19 +1046,17 @@ interface SlashMenuState {
 
 const SlashCommandMenu = ({
   menu,
+  items,
   onSelect,
+  onHover,
   onClose,
 }: {
   menu: SlashMenuState
+  items: SlashCommand[]
   onSelect: (item: SlashCommand) => void
+  onHover: (index: number) => void
   onClose: () => void
 }) => {
-  const filteredItems = SLASH_COMMANDS.filter(cmd => {
-    if (!menu.query) return true
-    const q = menu.query.toLowerCase()
-    return cmd.label.toLowerCase().includes(q) || cmd.keywords.some(k => k.includes(q))
-  })
-
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -911,7 +1075,7 @@ const SlashCommandMenu = ({
     el?.scrollIntoView({ block: 'nearest' })
   }, [menu.selectedIndex])
 
-  if (!filteredItems.length) return null
+  if (!items.length) return null
 
   return (
     <div
@@ -919,13 +1083,13 @@ const SlashCommandMenu = ({
       className="slash-menu"
       style={{ top: menu.top, left: menu.left }}
     >
-      {filteredItems.map((item, idx) => (
+      {items.map((item, idx) => (
         <button
           key={item.id}
           data-index={idx}
           className={`slash-menu-item ${idx === menu.selectedIndex ? 'selected' : ''}`}
           onMouseDown={e => { e.preventDefault(); onSelect(item) }}
-          onMouseEnter={() => { /* handled via selectedIndex */ }}
+          onMouseEnter={() => onHover(idx)}
         >
           <span className="slash-menu-item-icon">{item.icon}</span>
           <span className="slash-menu-item-text">
@@ -1442,7 +1606,23 @@ const ImageInsertPopover = ({
 
 // ---- Full toolbar ----
 
-const FullToolbar = ({ editor }: { editor: Editor }) => {
+const FullToolbar = ({
+  editor,
+  floating = false,
+  collapsed = false,
+  position,
+  toolboxRef,
+  onToggleCollapsed,
+  onHandlePointerDown,
+}: {
+  editor: Editor
+  floating?: boolean
+  collapsed?: boolean
+  position?: FloatingToolboxPosition
+  toolboxRef?: React.RefObject<HTMLDivElement | null>
+  onToggleCollapsed?: () => void
+  onHandlePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void
+}) => {
   const [showHeading, setShowHeading] = useState(false)
   const [showTextColor, setShowTextColor] = useState(false)
   const [showHighlightColor, setShowHighlightColor] = useState(false)
@@ -1470,9 +1650,8 @@ const FullToolbar = ({ editor }: { editor: Editor }) => {
     return 'Texto'
   }
 
-  return (
+  const toolbarBody = (
     <div className="editor-toolbar editor-toolbar-full">
-      {/* Grupo 1: Tipo de texto */}
       <div className="editor-toolbar-dropdown">
         <button
           type="button"
@@ -1689,6 +1868,48 @@ const FullToolbar = ({ editor }: { editor: Editor }) => {
       )}
     </div>
   )
+
+  if (!floating) {
+    return toolbarBody
+  }
+
+  return (
+    <div
+      ref={toolboxRef as React.RefObject<HTMLDivElement> | undefined}
+      className={`editor-floating-toolbox${collapsed ? ' is-collapsed' : ''}`}
+      style={position ? { left: position.left, top: position.top } : undefined}
+    >
+      <div className="editor-floating-toolbox-head">
+        <button
+          type="button"
+          className="editor-floating-toolbox-drag"
+          onPointerDown={onHandlePointerDown}
+          title="Arrastar toolbox"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
+            <circle cx="9" cy="7" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="7" r="1" fill="currentColor" stroke="none" />
+            <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
+            <circle cx="9" cy="17" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="17" r="1" fill="currentColor" stroke="none" />
+          </svg>
+          <span>Toolbox</span>
+        </button>
+        <button
+          type="button"
+          className="editor-floating-toolbox-toggle"
+          onClick={onToggleCollapsed}
+          title={collapsed ? 'Expandir toolbox' : 'Recolher toolbox'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
+            {collapsed ? <polyline points="6 9 12 15 18 9" /> : <polyline points="18 15 12 9 6 15" />}
+          </svg>
+        </button>
+      </div>
+      {!collapsed && toolbarBody}
+    </div>
+  )
 }
 
 // ---- Compact toolbar ----
@@ -1766,20 +1987,34 @@ export const WysiwygEditor = ({
   mode = 'compact',
   currentNoteId,
   readOnly = false,
+  floatingToolbox = false,
 }: WysiwygEditorProps) => {
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [linkPasteMenu, setLinkPasteMenu] = useState<LinkPasteMenuState | null>(null)
   const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null)
+  const [toolboxVisible, setToolboxVisible] = useState(false)
+  const [toolboxCollapsed, setToolboxCollapsed] = useState(false)
+  const [toolboxPosition, setToolboxPosition] = useState<FloatingToolboxPosition>({ left: 16, top: 16 })
+  const editorContainerRef = useRef<HTMLDivElement>(null)
   const editorViewportRef = useRef<HTMLDivElement>(null)
+  const floatingToolboxRef = useRef<HTMLDivElement>(null)
   const linkMenuRef = useRef<HTMLDivElement>(null)
+  const linkPasteMenuRef = useRef<HTMLDivElement>(null)
   const linkCopiedTimeoutRef = useRef<number | null>(null)
   const slashMenuRef = useRef<SlashMenuState | null>(null)
   const editorRef = useRef<Editor | null>(null)
   const isApplyingExternalContentRef = useRef(false)
   const lastEmittedHtmlRef = useRef(content ?? '')
+  const toolboxDragRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
 
   // Keep slashMenuRef in sync with state
   slashMenuRef.current = slashMenu
+
+  const availableSlashCommands = useMemo(
+    () => (floatingToolbox && mode === 'full' ? [TOOLBOX_SLASH_COMMAND, ...SLASH_COMMANDS] : SLASH_COMMANDS),
+    [floatingToolbox, mode],
+  )
 
   const clearLinkCopiedTimeout = useCallback(() => {
     if (linkCopiedTimeoutRef.current !== null) {
@@ -1787,6 +2022,31 @@ export const WysiwygEditor = ({
       linkCopiedTimeoutRef.current = null
     }
   }, [])
+
+  const clampToolboxPosition = useCallback((next: FloatingToolboxPosition): FloatingToolboxPosition => {
+    const container = editorContainerRef.current
+    if (!container) return next
+
+    const box = floatingToolboxRef.current
+    const boxWidth = box?.offsetWidth ?? (toolboxCollapsed ? 172 : 520)
+    const boxHeight = box?.offsetHeight ?? (toolboxCollapsed ? 48 : 150)
+    const maxLeft = Math.max(16, container.clientWidth - boxWidth - 16)
+    const maxTop = Math.max(16, container.clientHeight - boxHeight - 16)
+
+    return {
+      left: Math.max(16, Math.min(next.left, maxLeft)),
+      top: Math.max(16, Math.min(next.top, maxTop)),
+    }
+  }, [toolboxCollapsed])
+
+  const openFloatingToolbox = useCallback(() => {
+    if (!floatingToolbox) return
+    setToolboxVisible(true)
+    setToolboxCollapsed(false)
+    setTimeout(() => {
+      setToolboxPosition(prev => clampToolboxPosition(prev))
+    }, 0)
+  }, [clampToolboxPosition, floatingToolbox])
 
   const showLinkQuickMenu = useCallback((anchor: HTMLAnchorElement) => {
     const href = anchor.getAttribute('href')?.trim() ?? ''
@@ -1816,6 +2076,59 @@ export const WysiwygEditor = ({
     })
   }, [clearLinkCopiedTimeout])
 
+  const getFilteredSlashItems = useCallback((query: string) => {
+    if (!query) return availableSlashCommands
+    const q = query.toLowerCase()
+    return availableSlashCommands.filter(cmd =>
+      cmd.label.toLowerCase().includes(q) || cmd.keywords.some(k => k.includes(q))
+    )
+  }, [availableSlashCommands])
+
+  const applyPastedLinkChoice = useCallback((kind: 'link' | 'bookmark' | 'embed' | 'text') => {
+    const pending = linkPasteMenu
+    const editor = editorRef.current
+    if (!pending || !editor) return
+
+    const normalized = normalizeUrl(pending.url)
+    const label = getShortcutTitleFromUrl(normalized) || normalized
+    const range = { from: pending.from, to: pending.to }
+
+    if (kind === 'bookmark' || kind === 'embed') {
+      editor.chain().focus().insertContentAt(range, {
+        type: 'linkCard',
+        attrs: { url: normalized, display: kind },
+      }).run()
+    } else if (kind === 'text') {
+      editor.chain().focus().insertContentAt(range, normalized).run()
+    } else if (pending.from !== pending.to) {
+      editor.chain().focus().setTextSelection(range).setLink({ href: normalized }).run()
+    } else {
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(range, [{ type: 'text', text: label }])
+        .setTextSelection({ from: range.from, to: range.from + label.length })
+        .setLink({ href: normalized })
+        .run()
+    }
+
+    setLinkPasteMenu(null)
+  }, [linkPasteMenu])
+
+  const handleToolboxHandlePointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!floatingToolbox) return
+    const container = editorContainerRef.current
+    if (!container) return
+
+    event.preventDefault()
+    const rect = container.getBoundingClientRect()
+    toolboxDragRef.current = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left - toolboxPosition.left,
+      offsetY: event.clientY - rect.top - toolboxPosition.top,
+    }
+  }, [floatingToolbox, toolboxPosition.left, toolboxPosition.top])
+
   const executeSlashCommand = useCallback((item: SlashCommand) => {
     const editor = editorRef.current
     if (!editor) return
@@ -1833,14 +2146,6 @@ export const WysiwygEditor = ({
     item.action(editor)
     setSlashMenu(null)
   }, [])
-
-  const getFilteredSlashItems = (query: string) => {
-    if (!query) return SLASH_COMMANDS
-    const q = query.toLowerCase()
-    return SLASH_COMMANDS.filter(cmd =>
-      cmd.label.toLowerCase().includes(q) || cmd.keywords.some(k => k.includes(q))
-    )
-  }
 
   const insertImageFromFile = useCallback((file: File, editorInstance: Editor) => {
     const reader = new FileReader()
@@ -1921,13 +2226,42 @@ export const WysiwygEditor = ({
         if (!(editorRef.current?.isEditable ?? true)) return true
         const items = Array.from(event.clipboardData?.items ?? [])
         const imageItem = items.find(item => item.type.startsWith('image/'))
-        if (!imageItem) return false
-        event.preventDefault()
-        const file = imageItem.getAsFile()
-        if (!file) return false
+        if (imageItem) {
+          event.preventDefault()
+          const file = imageItem.getAsFile()
+          if (!file) return false
+          const editorInstance = editorRef.current
+          if (!editorInstance) return true
+          insertImageFromFile(file, editorInstance)
+          return true
+        }
+
+        if (!floatingToolbox || mode !== 'full') return false
+
+        const rawText = event.clipboardData?.getData('text/plain')?.trim() ?? ''
+        const normalized = normalizeUrl(rawText)
+        if (!normalized) return false
+
+        try {
+          new URL(normalized)
+        } catch {
+          return false
+        }
+
         const editorInstance = editorRef.current
-        if (!editorInstance) return true
-        insertImageFromFile(file, editorInstance)
+        const viewport = editorViewportRef.current
+        if (!editorInstance || !viewport) return false
+
+        event.preventDefault()
+        const coords = editorInstance.view.coordsAtPos(editorInstance.state.selection.from)
+        const viewportRect = viewport.getBoundingClientRect()
+        setLinkPasteMenu({
+          url: normalized,
+          from: editorInstance.state.selection.from,
+          to: editorInstance.state.selection.to,
+          left: Math.max(12, Math.min(coords.left - viewportRect.left, viewport.clientWidth - 280)),
+          top: Math.max(12, coords.bottom - viewportRect.top + 8),
+        })
         return true
       },
       handleDrop: (_view, event) => {
@@ -2003,6 +2337,49 @@ export const WysiwygEditor = ({
   }, [editor, content])
 
   useEffect(() => {
+    if (!floatingToolbox || mode !== 'full') return
+
+    const handleOpenToolbox = () => openFloatingToolbox()
+    document.addEventListener('slash-open-toolbox', handleOpenToolbox)
+    return () => document.removeEventListener('slash-open-toolbox', handleOpenToolbox)
+  }, [floatingToolbox, mode, openFloatingToolbox])
+
+  useEffect(() => {
+    if (!floatingToolbox || mode !== 'full') return
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = toolboxDragRef.current
+      const container = editorContainerRef.current
+      if (!drag || !container || drag.pointerId !== event.pointerId) return
+
+      const rect = container.getBoundingClientRect()
+      setToolboxPosition(clampToolboxPosition({
+        left: event.clientX - rect.left - drag.offsetX,
+        top: event.clientY - rect.top - drag.offsetY,
+      }))
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const drag = toolboxDragRef.current
+      if (drag && drag.pointerId === event.pointerId) {
+        toolboxDragRef.current = null
+      }
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [clampToolboxPosition, floatingToolbox, mode])
+
+  useEffect(() => {
+    if (!floatingToolbox || mode !== 'full') return
+    setToolboxPosition(prev => clampToolboxPosition(prev))
+  }, [clampToolboxPosition, floatingToolbox, mode, toolboxCollapsed])
+
+  useEffect(() => {
     if (!editor || mode !== 'full') return
 
     const editorRoot = editor.view.dom as HTMLElement
@@ -2028,6 +2405,8 @@ export const WysiwygEditor = ({
       const target = event.target as Node
 
       if (linkMenuRef.current?.contains(target)) return
+      if (linkPasteMenuRef.current?.contains(target)) return
+      if (floatingToolboxRef.current?.contains(target)) return
 
       if (target instanceof HTMLElement) {
         const anchor = target.closest('a[href]')
@@ -2035,9 +2414,13 @@ export const WysiwygEditor = ({
       }
 
       setLinkQuickMenu(null)
+      setLinkPasteMenu(null)
     }
 
-    const handleScroll = () => setLinkQuickMenu(null)
+    const handleScroll = () => {
+      setLinkQuickMenu(null)
+      setLinkPasteMenu(null)
+    }
 
     editorRoot.addEventListener('click', handleLinkInteraction)
     viewport.addEventListener('scroll', handleScroll)
@@ -2053,13 +2436,17 @@ export const WysiwygEditor = ({
   useEffect(() => {
     if (mode !== 'full') {
       setLinkQuickMenu(null)
+      setLinkPasteMenu(null)
       setSlashMenu(null)
+      setToolboxVisible(false)
     }
   }, [mode])
 
   useEffect(() => {
     setLinkQuickMenu(null)
+    setLinkPasteMenu(null)
     setSlashMenu(null)
+    setToolboxVisible(false)
   }, [currentNoteId])
 
   useEffect(() => {
@@ -2122,25 +2509,26 @@ export const WysiwygEditor = ({
   }
 
   return (
-    <div className={`editor-container${readOnly ? ' is-readonly' : ''}`}>
-      {!readOnly && (mode === 'full' ? (
+    <div ref={editorContainerRef} className={`editor-container${readOnly ? ' is-readonly' : ''}`}>
+      {!readOnly && mode === 'full' && !floatingToolbox && (
         <FullToolbar editor={editor} />
-      ) : (
+      )}
+      {!readOnly && mode === 'compact' && (
         <CompactToolbar editor={editor} />
-      ))}
+      )}
       <div ref={editorViewportRef} className="tiptap-editor">
         <EditorContent editor={editor} />
 
-        {/* Slash command menu */}
         {mode === 'full' && slashMenu?.open && (
           <SlashCommandMenu
             menu={slashMenu}
+            items={getFilteredSlashItems(slashMenu.query.toLowerCase())}
             onSelect={executeSlashCommand}
+            onHover={index => setSlashMenu(prev => (prev ? { ...prev, selectedIndex: index } : prev))}
             onClose={() => setSlashMenu(null)}
           />
         )}
 
-        {/* Link quick menu */}
         {mode === 'full' && linkQuickMenu && (
           <div
             ref={linkMenuRef}
@@ -2182,7 +2570,43 @@ export const WysiwygEditor = ({
             </button>
           </div>
         )}
+
+        {mode === 'full' && linkPasteMenu && (
+          <div
+            ref={linkPasteMenuRef}
+            className="editor-link-paste-menu"
+            style={{ left: `${linkPasteMenu.left}px`, top: `${linkPasteMenu.top}px` }}
+          >
+            <div className="editor-link-paste-menu-head">Colar link como</div>
+            <div className="editor-link-paste-menu-actions">
+              <button type="button" className="editor-link-paste-menu-btn" onMouseDown={e => e.preventDefault()} onClick={() => applyPastedLinkChoice('link')}>
+                Link
+              </button>
+              <button type="button" className="editor-link-paste-menu-btn" onMouseDown={e => e.preventDefault()} onClick={() => applyPastedLinkChoice('bookmark')}>
+                Bookmark
+              </button>
+              <button type="button" className="editor-link-paste-menu-btn" onMouseDown={e => e.preventDefault()} onClick={() => applyPastedLinkChoice('embed')}>
+                Embed
+              </button>
+              <button type="button" className="editor-link-paste-menu-btn is-muted" onMouseDown={e => e.preventDefault()} onClick={() => applyPastedLinkChoice('text')}>
+                Texto
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {!readOnly && mode === 'full' && floatingToolbox && toolboxVisible && (
+        <FullToolbar
+          editor={editor}
+          floating
+          collapsed={toolboxCollapsed}
+          position={toolboxPosition}
+          toolboxRef={floatingToolboxRef}
+          onToggleCollapsed={() => setToolboxCollapsed(prev => !prev)}
+          onHandlePointerDown={handleToolboxHandlePointerDown}
+        />
+      )}
     </div>
   )
 }

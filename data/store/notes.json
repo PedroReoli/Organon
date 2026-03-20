@@ -1,4 +1,33 @@
 {
   "noteFolders": [],
-  "notes": []
+  "notes": [
+    {
+      "id": "312b8134-7311-41c5-a250-c7f12065d828",
+      "title": "Nova notadasda",
+      "mdPath": "312b8134-7311-41c5-a250-c7f12065d828.md",
+      "folderId": null,
+      "parentNoteId": null,
+      "projectId": null,
+      "isPinned": false,
+      "isFavorite": false,
+      "isLocked": false,
+      "createdAt": "2026-03-20T23:49:09.243Z",
+      "updatedAt": "2026-03-20T23:55:29.958Z",
+      "order": 1774050549244
+    },
+    {
+      "id": "232142ff-991c-49de-b170-ca88f0b2150e",
+      "title": "Nova nota",
+      "mdPath": "232142ff-991c-49de-b170-ca88f0b2150e.md",
+      "folderId": null,
+      "parentNoteId": null,
+      "projectId": null,
+      "isPinned": false,
+      "isFavorite": false,
+      "isLocked": false,
+      "createdAt": "2026-03-20T23:49:43.361Z",
+      "updatedAt": "2026-03-20T23:52:53.127Z",
+      "order": 1774050583362
+    }
+  ]
 }

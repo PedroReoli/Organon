@@ -1534,6 +1534,7 @@ export const NotesView = ({
                 mode="full"
                 currentNoteId={selectedNote.id}
                 readOnly={selectedNoteLocked}
+                floatingToolbox
               />
             </div>
           </div>
@@ -1668,6 +1669,7 @@ export const NotesView = ({
                   onChange={(html) => handleFolderContentChange(selectedFolder.id, html)}
                   mode="full"
                   placeholder="Escreva aqui o conteudo desta pasta"
+                  floatingToolbox
                 />
               )}
             </div>
