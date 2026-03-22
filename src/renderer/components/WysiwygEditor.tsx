@@ -32,6 +32,7 @@ interface WysiwygEditorProps {
   currentNoteId?: string
   readOnly?: boolean
   floatingToolbox?: boolean
+  disableImages?: boolean
 }
 
 const PRESET_COLORS = [
@@ -1610,6 +1611,7 @@ const FullToolbar = ({
   editor,
   floating = false,
   collapsed = false,
+  disableImages = false,
   position,
   toolboxRef,
   onToggleCollapsed,
@@ -1618,6 +1620,7 @@ const FullToolbar = ({
   editor: Editor
   floating?: boolean
   collapsed?: boolean
+  disableImages?: boolean
   position?: FloatingToolboxPosition
   toolboxRef?: React.RefObject<HTMLDivElement | null>
   onToggleCollapsed?: () => void
@@ -1632,10 +1635,11 @@ const FullToolbar = ({
 
   // React to external "open image" requests (from slash menu)
   useEffect(() => {
+    if (disableImages) return
     const handler = () => setShowImage(true)
     document.addEventListener('slash-insert-image', handler)
     return () => document.removeEventListener('slash-insert-image', handler)
-  }, [])
+  }, [disableImages])
 
   useEffect(() => {
     const handler = () => setShowLink(true)
@@ -1808,14 +1812,16 @@ const FullToolbar = ({
         <LinkPopover editor={editor} show={showLink} onClose={() => setShowLink(false)} />
       </div>
 
-      <div className="editor-toolbar-dropdown">
-        <button type="button" className="editor-toolbar-btn" onClick={() => setShowImage(!showImage)} title="Imagem">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-            <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
-          </svg>
-        </button>
-        <ImageInsertPopover editor={editor} show={showImage} onClose={() => setShowImage(false)} />
-      </div>
+      {!disableImages && (
+        <div className="editor-toolbar-dropdown">
+          <button type="button" className="editor-toolbar-btn" onClick={() => setShowImage(!showImage)} title="Imagem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
+            </svg>
+          </button>
+          <ImageInsertPopover editor={editor} show={showImage} onClose={() => setShowImage(false)} />
+        </div>
+      )}
 
       <div className="editor-toolbar-dropdown">
         <button type="button" className="editor-toolbar-btn" onClick={() => setShowTable(!showTable)} title="Tabela">
@@ -1988,6 +1994,7 @@ export const WysiwygEditor = ({
   currentNoteId,
   readOnly = false,
   floatingToolbox = false,
+  disableImages = false,
 }: WysiwygEditorProps) => {
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -2012,8 +2019,14 @@ export const WysiwygEditor = ({
   slashMenuRef.current = slashMenu
 
   const availableSlashCommands = useMemo(
-    () => (floatingToolbox && mode === 'full' ? [TOOLBOX_SLASH_COMMAND, ...SLASH_COMMANDS] : SLASH_COMMANDS),
-    [floatingToolbox, mode],
+    () => {
+      const commands = floatingToolbox && mode === 'full'
+        ? [TOOLBOX_SLASH_COMMAND, ...SLASH_COMMANDS]
+        : SLASH_COMMANDS
+
+      return disableImages ? commands.filter(command => command.id !== 'image') : commands
+    },
+    [disableImages, floatingToolbox, mode],
   )
 
   const clearLinkCopiedTimeout = useCallback(() => {
@@ -2227,6 +2240,10 @@ export const WysiwygEditor = ({
         const items = Array.from(event.clipboardData?.items ?? [])
         const imageItem = items.find(item => item.type.startsWith('image/'))
         if (imageItem) {
+          if (disableImages) {
+            event.preventDefault()
+            return true
+          }
           event.preventDefault()
           const file = imageItem.getAsFile()
           if (!file) return false
@@ -2269,6 +2286,10 @@ export const WysiwygEditor = ({
         const files = Array.from(event.dataTransfer?.files ?? [])
         const imageFile = files.find(f => f.type.startsWith('image/'))
         if (!imageFile) return false
+        if (disableImages) {
+          event.preventDefault()
+          return true
+        }
         event.preventDefault()
         const editorInstance = editorRef.current
         if (!editorInstance) return true
@@ -2511,7 +2532,7 @@ export const WysiwygEditor = ({
   return (
     <div ref={editorContainerRef} className={`editor-container${readOnly ? ' is-readonly' : ''}`}>
       {!readOnly && mode === 'full' && !floatingToolbox && (
-        <FullToolbar editor={editor} />
+        <FullToolbar editor={editor} disableImages={disableImages} />
       )}
       {!readOnly && mode === 'compact' && (
         <CompactToolbar editor={editor} />
@@ -2601,6 +2622,7 @@ export const WysiwygEditor = ({
           editor={editor}
           floating
           collapsed={toolboxCollapsed}
+          disableImages={disableImages}
           position={toolboxPosition}
           toolboxRef={floatingToolboxRef}
           onToggleCollapsed={() => setToolboxCollapsed(prev => !prev)}

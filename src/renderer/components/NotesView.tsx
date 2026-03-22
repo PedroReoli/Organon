@@ -1535,6 +1535,7 @@ export const NotesView = ({
                 currentNoteId={selectedNote.id}
                 readOnly={selectedNoteLocked}
                 floatingToolbox
+                disableImages
               />
             </div>
           </div>
@@ -1670,6 +1671,7 @@ export const NotesView = ({
                   mode="full"
                   placeholder="Escreva aqui o conteudo desta pasta"
                   floatingToolbox
+                  disableImages
                 />
               )}
             </div>
