@@ -36,7 +36,7 @@ export interface PartialSyncedStore {
 
 export interface PullResult {
   store: PartialSyncedStore
-  /** noteId → content_markdown (para escrever em disco no desktop) */
+  /** noteId → content HTML (para escrever em disco no desktop) */
   noteContents: Map<string, string>
   serverTime: string
 }
@@ -84,12 +84,13 @@ function cardToApi(c: Card): Payload {
   }
 }
 
-function noteToApi(note: Note, contentMarkdown: string): Payload {
+function noteToApi(note: Note, content: string): Payload {
   return {
     id: note.id,
     title: note.title,
-    content_markdown: contentMarkdown ?? '',
-    content_html: '',
+    content: content ?? '',
+    content_format: 'html',
+    ...(note.checksum ? { base_checksum: note.checksum } : {}),
     folder_id: note.folderId ?? null,
     project_id: note.projectId ?? null,
     parent_note_id: note.parentNoteId ?? null,
@@ -310,6 +311,7 @@ function noteFromApi(id: string, p: Payload): Note {
     folderId: p.folder_id ? s(p.folder_id) : null,
     parentNoteId: p.parent_note_id ? s(p.parent_note_id) : null,
     projectId: p.project_id ? s(p.project_id) : null,
+    checksum: p.checksum ? s(p.checksum) : undefined,
     isPinned: b(p.is_pinned),
     isFavorite: b(p.is_favorite),
     isLocked: b((p as Payload).is_locked),
@@ -523,10 +525,9 @@ function applyChange(
   switch (resource) {
     case 'cards':              result.cards.push(cardFromApi(id, p)); break
     case 'notes': {
-      // Fonte de verdade do conteúdo de nota na API: content_markdown.
-      const markdown = s(p.content_markdown)
+      const content = s(p.content)
       result.notes.push(noteFromApi(id, p))
-      noteContents.set(id, markdown)
+      noteContents.set(id, content)
       break
     }
     case 'note_folders':       result.noteFolders.push(noteFolderFromApi(id, p)); break
@@ -865,8 +866,17 @@ export async function pushAllToApi(
       const batchIndex = Math.floor(i / BATCH_SIZE) + 1
 
       try {
-        await organonApi.sync.batch(batch)
-        succeededOps += batch.length
+        const response = await organonApi.sync.batch(batch)
+        const failedResults = response.data.results.filter(result => result.status !== 'ok')
+        succeededOps += batch.length - failedResults.length
+
+        if (failedResults.length > 0) {
+          const message = failedResults.map(result => `${result.id}:${result.status}`).join(', ')
+          errors.push({ resource: label, batchIndex, totalBatches, count: failedResults.length, status: 'partial_failure', message })
+          console.error(`[Sync][${label}] lote ${batchIndex}/${totalBatches} PARCIAL (${failedResults.length}/${batch.length} com problema): ${message}`)
+          continue
+        }
+
         console.log(`[Sync][${label}] lote ${batchIndex}/${totalBatches} OK (${batch.length} ops)`)
       } catch (err) {
         const e = err as { status?: number; message?: string; body?: { error?: { message?: string } } }

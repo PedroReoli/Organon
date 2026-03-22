@@ -190,6 +190,7 @@ export interface Note {
   folderId: string | null
   parentNoteId: string | null  // Para subpáginas (nota dentro de nota)
   projectId: string | null // vinculo com projeto
+  checksum?: string
   isPinned: boolean
   isFavorite: boolean
   isLocked: boolean

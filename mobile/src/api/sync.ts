@@ -70,10 +70,11 @@ function cardToApi(c: Card): Payload {
 }
 
 function noteToApi(note: Note): Payload {
-  // Mobile: content é inline (não há arquivo .md)
   return {
     title: note.title,
-    content_markdown: note.content ?? '',
+    content: note.content ?? '',
+    content_format: 'html',
+    ...(note.checksum ? { base_checksum: note.checksum } : {}),
     folder_id: note.folderId ?? null,
     parent_note_id: note.parentNoteId ?? null,
     project_id: note.projectId ?? null,
@@ -269,10 +270,11 @@ function noteFromApi(id: string, p: Payload): Note {
   return {
     id,
     title: s(p.title),
-    content: s(p.content_markdown),
+    content: s(p.content),
     folderId: p.folder_id ? s(p.folder_id) : null,
     parentNoteId: p.parent_note_id ? s(p.parent_note_id) : null,
     projectId: p.project_id ? s(p.project_id) : null,
+    checksum: p.checksum ? s(p.checksum) : undefined,
     isPinned: b(p.is_pinned),
     isFavorite: b(p.is_favorite),
     order: n(p.sort_order),
@@ -506,7 +508,11 @@ export async function pushAllToApi(store: MobileStore): Promise<void> {
   for (const m of (store.study.mediaItems ?? [])) upsert('study_media_items', m.id, studyMediaItemToApi(m))
 
   for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-    await organonApi.sync.batch(ops.slice(i, i + BATCH_SIZE))
+    const response = await organonApi.sync.batch(ops.slice(i, i + BATCH_SIZE))
+    const failedResults = response.results.filter(result => result.status !== 'ok')
+    if (failedResults.length > 0) {
+      throw new Error(`Falha no sync: ${failedResults.map(result => `${result.id}:${result.status}`).join(', ')}`)
+    }
   }
 }
 

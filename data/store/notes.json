@@ -28,6 +28,20 @@
       "createdAt": "2026-03-20T23:49:43.361Z",
       "updatedAt": "2026-03-20T23:52:53.127Z",
       "order": 1774050583362
+    },
+    {
+      "id": "4c04578f-7d96-402c-83e3-eeb1fc27944d",
+      "title": "Nova nota",
+      "mdPath": "4c04578f-7d96-402c-83e3-eeb1fc27944d.md",
+      "folderId": null,
+      "parentNoteId": null,
+      "projectId": null,
+      "isPinned": false,
+      "isFavorite": false,
+      "isLocked": false,
+      "createdAt": "2026-03-22T05:40:46.701Z",
+      "updatedAt": "2026-03-22T05:40:49.396Z",
+      "order": 1774158046703
     }
   ]
 }

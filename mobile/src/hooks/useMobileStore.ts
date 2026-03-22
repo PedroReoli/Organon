@@ -593,6 +593,7 @@ export function StoreProvider({ children, onStoreChange }: {
         folderId: n.folderId ?? null,
         parentNoteId: n.parentNoteId ?? null,
         projectId: n.projectId ?? null,
+        checksum: typeof n.checksum === 'string' ? n.checksum : undefined,
         isPinned: Boolean(n.isPinned),
         isFavorite: Boolean(n.isFavorite),
         createdAt: n.createdAt ?? new Date().toISOString(),

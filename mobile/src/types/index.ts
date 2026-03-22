@@ -105,6 +105,7 @@ export interface Note {
   folderId: string | null
   parentNoteId: string | null  // Para subpáginas (nota dentro de nota)
   projectId: string | null
+  checksum?: string
   isPinned: boolean
   isFavorite: boolean
   createdAt: string
