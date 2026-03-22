@@ -1,4 +1,4 @@
-src/main/index.ts | 2095
+
 src/api/organon.ts | 641
 src/api/sync.ts | 846
 mobile/src/api/sync.ts | 503
