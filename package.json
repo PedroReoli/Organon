@@ -14,7 +14,9 @@
     "exec": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win --publish never",
     "exec:1": "npm run exec && powershell -NoProfile -ExecutionPolicy Bypass -Command \"$installer = Get-ChildItem -Path 'release' -Filter '*Setup*.exe' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if (-not $installer) { throw 'Instalador .exe não encontrado em release/' }; Write-Host ('Iniciando instalador: ' + $installer.FullName); Start-Process -FilePath $installer.FullName -Wait\"",
     "preview": "vite preview",
-    "setup:api": "echo 'Configura token via Settings > API e Sincronização'"
+    "setup:api": "echo 'Configura token via Settings > API e Sincronização'",
+    "manager": "npm --prefix manager run dev",
+    "build:manager": "npm --prefix manager run build:electron"
   },
   "keywords": [
     "electron",
