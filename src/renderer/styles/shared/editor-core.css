@@ -1,0 +1,230 @@
+﻿/* ========================================
+ * EDITOR WYSIWYG
+ * ======================================== */
+
+.editor-container {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: visible;
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.editor-container:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.editor-container.is-readonly:focus-within {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+.editor-container.is-readonly .tiptap-editor .ProseMirror {
+  cursor: default;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 6px 10px;
+  background: var(--color-background-tertiary);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  overflow: visible;
+}
+
+.editor-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-radius: 5px;
+  transition: all var(--transition-fast);
+}
+
+.editor-toolbar-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.editor-toolbar-btn.is-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.editor-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--color-border);
+  align-self: center;
+}
+
+.tiptap-editor {
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.tiptap-editor .ProseMirror {
+  outline: none;
+  min-height: 160px;
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.tiptap-editor .ProseMirror p {
+  margin: 0 0 12px 0;
+}
+
+.tiptap-editor .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor .ProseMirror ul,
+.tiptap-editor .ProseMirror ol {
+  padding-left: 24px;
+  margin: 12px 0;
+}
+
+.tiptap-editor .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.tiptap-editor .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.tiptap-editor .ProseMirror ul ul {
+  list-style-type: circle;
+}
+
+.tiptap-editor .ProseMirror ul ul ul {
+  list-style-type: square;
+}
+
+.tiptap-editor .ProseMirror li {
+  margin: 6px 0;
+}
+
+.tiptap-editor .ProseMirror li::marker {
+  color: var(--color-text-muted);
+}
+
+.tiptap-editor .ProseMirror strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.tiptap-editor .ProseMirror em {
+  font-style: italic;
+}
+
+.tiptap-editor .ProseMirror s {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.tiptap-editor .ProseMirror code {
+  background: var(--color-background-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+  color: var(--color-primary);
+}
+
+.tiptap-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--color-primary);
+  margin: 12px 0;
+  padding-left: 16px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ========================================
+ * MENTION STYLES
+ * ======================================== */
+
+.tiptap-editor .ProseMirror .mention {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tiptap-editor .ProseMirror .mention:hover {
+  background: var(--color-primary);
+  color: var(--color-background);
+}
+
+.mention-suggestions {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  min-width: 200px;
+}
+
+.mention-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+  text-align: left;
+}
+
+.mention-suggestion-item:hover,
+.mention-suggestion-item.is-selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.mention-suggestion-item svg {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.mention-suggestion-item:hover svg,
+.mention-suggestion-item.is-selected svg {
+  color: var(--color-primary);
+}
+
+.mention-suggestion-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+

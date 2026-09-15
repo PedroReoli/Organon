@@ -1,0 +1,305 @@
+/* ========================================
+ * PRIMITIVES (Radix overlays) — Dialog, Popover, Tooltip, DropdownMenu, Select
+ *
+ * Wrappers Radix com portal/overlay. Definidos no upgrade 20.
+ * Split do primitives-radix.css original para respeitar limite de 500 linhas.
+ * ======================================== */
+
+/* ────────────────────────────────────────
+ * Animacoes compartilhadas
+ * ──────────────────────────────────────── */
+
+@keyframes ds-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ds-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ────────────────────────────────────────
+ * Dialog
+ * ──────────────────────────────────────── */
+
+.ds-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: var(--z-modal-backdrop);
+  animation: ds-fade-in var(--transition-base);
+}
+
+.ds-dialog-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-modal);
+  width: min(520px, calc(100vw - var(--space-8)));
+  max-height: calc(100vh - var(--space-8));
+  overflow: auto;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: ds-modal-in var(--transition-base);
+}
+
+.ds-dialog-content:focus {
+  outline: none;
+}
+
+.ds-dialog-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.ds-dialog-description {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: var(--line-height-normal);
+}
+
+.ds-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ────────────────────────────────────────
+ * Popover
+ * ──────────────────────────────────────── */
+
+.ds-popover-content {
+  z-index: var(--z-popover);
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3);
+  min-width: 180px;
+  animation: ds-fade-in var(--transition-fast);
+}
+
+.ds-popover-content:focus {
+  outline: none;
+}
+
+.ds-popover-arrow {
+  fill: var(--color-background-secondary);
+  stroke: var(--color-border);
+}
+
+/* ────────────────────────────────────────
+ * Tooltip
+ * ──────────────────────────────────────── */
+
+.ds-tooltip-content {
+  z-index: var(--z-tooltip);
+  background: var(--color-background-tertiary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-md);
+  max-width: 240px;
+  animation: ds-fade-in var(--transition-fast);
+}
+
+.ds-tooltip-arrow {
+  fill: var(--color-background-tertiary);
+}
+
+/* ────────────────────────────────────────
+ * DropdownMenu
+ * ──────────────────────────────────────── */
+
+.ds-menu-content {
+  z-index: var(--z-popover);
+  min-width: 180px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-1);
+  animation: ds-fade-in var(--transition-fast);
+}
+
+.ds-menu-content:focus {
+  outline: none;
+}
+
+.ds-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.ds-menu-item[data-highlighted],
+.ds-menu-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.ds-menu-item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ds-menu-subtrigger[data-state='open'] {
+  background: var(--color-surface-hover);
+}
+
+.ds-menu-checkbox-item,
+.ds-menu-radio-item {
+  padding-left: var(--space-6);
+  position: relative;
+}
+
+.ds-menu-indicator {
+  position: absolute;
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+}
+
+.ds-menu-label {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ds-menu-separator {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-1) 0;
+}
+
+/* ────────────────────────────────────────
+ * Select
+ * ──────────────────────────────────────── */
+
+.ds-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ds-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.ds-select-trigger[data-placeholder] {
+  color: var(--color-text-muted);
+}
+
+.ds-select-icon {
+  display: inline-flex;
+  color: var(--color-text-muted);
+}
+
+.ds-select-content {
+  z-index: var(--z-popover);
+  min-width: var(--radix-select-trigger-width);
+  max-height: var(--radix-select-content-available-height);
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: ds-fade-in var(--transition-fast);
+}
+
+.ds-select-viewport {
+  padding: var(--space-1);
+}
+
+.ds-select-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  position: relative;
+}
+
+.ds-select-item[data-highlighted] {
+  background: var(--color-surface-hover);
+}
+
+.ds-select-item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ds-select-item-indicator {
+  position: absolute;
+  left: var(--space-2);
+  color: var(--color-primary);
+}
+
+.ds-select-label {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.ds-select-separator {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-1) 0;
+}

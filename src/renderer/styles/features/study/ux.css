@@ -1,0 +1,338 @@
+﻿/* ========================================
+ * STUDY VIEW - UX IMPROVEMENTS
+ * ======================================== */
+
+.study-session-actions-icons {
+  justify-content: flex-start;
+}
+
+.study-btn-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.study-session-config-stepper {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.study-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.study-stepper-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(7, 10, 16, 0.8);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.study-stepper-btn:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.study-file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.study-file-upload-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.study-file-upload-btn input[type='file'] {
+  display: none;
+}
+
+.study-media-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.study-media-item {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.study-media-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.study-media-item-head strong {
+  display: block;
+  font-size: 13px;
+}
+
+.study-media-item-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.study-media-kind {
+  display: inline-flex;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+}
+
+.study-media-kind.youtube {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.study-media-kind.audio {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.study-media-audio-config {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.study-media-audio-config .study-input-group {
+  flex: 1;
+}
+
+.study-goal-item {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.study-goal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.study-goal-done-toggle {
+  margin: 0 !important;
+}
+
+.study-goal-title-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 21, 32, 0.88);
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.study-goal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.study-goal-row select {
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 21, 32, 0.88);
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.study-goal-linked-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.study-goal-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.study-goal-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.study-goal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.study-goal-actions small {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 11px;
+}
+
+.study-planning-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.study-planning-picker-item {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.study-planning-picker-item:hover {
+  border-color: rgba(147, 197, 253, 0.85);
+}
+
+.study-planning-picker-item small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+}
+
+.study-media-dock {
+  left: 24px;
+  right: 24px;
+  bottom: 16px;
+  transform: none;
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  animation: study-player-in 260ms ease-out;
+}
+
+.study-media-dock-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 11, 18, 0.88);
+}
+
+.study-media-dock-topbar strong {
+  font-size: 12px;
+  letter-spacing: 0.1px;
+}
+
+.study-media-dock-toggle {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+.study-media-dock-body {
+  max-height: 40vh;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  overflow: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height 240ms ease,
+    opacity 180ms ease,
+    transform 180ms ease,
+    padding 180ms ease;
+}
+
+.study-media-dock.is-collapsed .study-media-dock-body {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+}
+
+.study-media-dock-item {
+  background: rgba(7, 11, 18, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.study-media-dock-item header {
+  padding: 7px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.study-media-dock-item iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.study-media-dock-item audio {
+  width: 100%;
+}
+
+@keyframes study-player-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

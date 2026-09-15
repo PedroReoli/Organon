@@ -1,0 +1,708 @@
+/* ========================================
+ * NOTAS — Notion-like layout
+ * ======================================== */
+
+/* Layout: sidebar + editor side by side */
+.notes-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  background: var(--color-background);
+}
+
+/* ---- Tree sidebar ---- */
+.notes-tree-sidebar {
+  width: 300px !important;
+  min-width: 300px !important;
+  max-width: 300px !important;
+  box-sizing: border-box;
+  background: var(--color-backlog-bg);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s, min-width 0.2s, max-width 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+.notes-layout.sidebar-collapsed .notes-tree-sidebar {
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  border-right: 1px solid var(--color-border);
+}
+
+.notes-layout.sidebar-collapsed .notes-tree-title,
+.notes-layout.sidebar-collapsed .notes-tree-header-actions,
+.notes-layout.sidebar-collapsed .notes-tree-search-wrap,
+.notes-layout.sidebar-collapsed .notes-tree-section-label-text,
+.notes-layout.sidebar-collapsed .notes-tree-section-count,
+.notes-layout.sidebar-collapsed .notes-tree-section-chevron,
+.notes-layout.sidebar-collapsed .notes-tree-label,
+.notes-layout.sidebar-collapsed .notes-tree-chevron,
+.notes-layout.sidebar-collapsed .notes-tree-row-actions,
+.notes-layout.sidebar-collapsed .notes-tree-folder-count,
+.notes-layout.sidebar-collapsed .notes-tree-star,
+.notes-layout.sidebar-collapsed .notes-tree-pin,
+.notes-layout.sidebar-collapsed .notes-tree-lock {
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.2s;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  pointer-events: none;
+}
+
+.notes-tree-title,
+.notes-tree-header-actions,
+.notes-tree-search-wrap,
+.notes-tree-section-label-text,
+.notes-tree-section-count,
+.notes-tree-section-chevron,
+.notes-tree-label,
+.notes-tree-chevron,
+.notes-tree-row-actions,
+.notes-tree-folder-count,
+.notes-tree-star,
+.notes-tree-pin,
+.notes-tree-lock {
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  visibility: visible;
+}
+
+.notes-layout.sidebar-collapsed .notes-tree-search-wrap {
+  height: 0;
+  overflow: hidden;
+}
+
+.notes-layout.sidebar-collapsed .notes-tree-row {
+  padding-left: 0 !important;
+  justify-content: center;
+  padding: 8px !important;
+}
+
+.notes-layout.sidebar-collapsed .notes-tree-section-header {
+  justify-content: center;
+}
+
+.notes-layout.sidebar-collapsed .notes-tree-footer-wrap {
+  display: none;
+}
+
+.notes-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.notes-tree-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.notes-tree-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.notes-tree-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  background: transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.notes-tree-header-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* Search bar */
+.notes-tree-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  background: var(--color-backlog-bg);
+}
+.notes-tree-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--color-text);
+}
+.notes-tree-search-input::placeholder { color: var(--color-text-muted); }
+.notes-tree-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+}
+.notes-tree-search-clear:hover { color: var(--color-text); }
+
+/* Tree body (scrollable) */
+.notes-tree-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0;
+}
+
+/* Sections (Favoritos, Fixadas, main) */
+.notes-tree-section {
+  margin-bottom: 4px;
+}
+.notes-tree-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+.notes-tree-main { margin-top: 6px; }
+.notes-tree-empty {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Tree row (shared by folder and note) */
+.notes-tree-group { display: flex; flex-direction: column; }
+.notes-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 38px 4px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 2px 6px;
+  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  min-height: 30px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  position: relative;
+  user-select: none;
+}
+.notes-tree-row[draggable="true"] { cursor: grab; }
+.notes-tree-row[draggable="true"]:active { cursor: grabbing; }
+.notes-tree-row:hover { background: var(--color-surface-hover); }
+.notes-tree-row.is-selected {
+  background: var(--color-surface-hover);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+.notes-tree-row.is-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.notes-tree-row.is-drop-target {
+  background: var(--color-primary-alpha, rgba(99,102,241,0.14));
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.notes-tree-row.is-active.is-selected {
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.notes-tree-folder { color: var(--color-text); }
+
+.notes-tree-drag-handle {
+  display: inline-flex;
+  width: 12px;
+  height: 20px;
+  flex: 0 0 12px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  opacity: 0.38;
+  transition: opacity 0.12s ease, color 0.12s ease;
+  cursor: grab;
+}
+.notes-tree-row:hover .notes-tree-drag-handle,
+.notes-tree-row.is-selected .notes-tree-drag-handle,
+.notes-tree-row.is-drop-target .notes-tree-drag-handle {
+  opacity: 0.82;
+}
+.notes-tree-row.is-drop-target .notes-tree-drag-handle { color: var(--color-primary); }
+
+/* Chevron expand button */
+.notes-tree-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+.notes-tree-chevron.visible { opacity: 1; }
+.notes-tree-chevron:hover { background: var(--color-border); color: var(--color-text); }
+.notes-tree-row:hover .notes-tree-chevron { opacity: 1; }
+
+/* Label */
+.notes-tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Row hover actions (add, delete) */
+.notes-tree-row-actions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  background: transparent;
+  transform: translateY(-50%);
+}
+.notes-tree-row:hover .notes-tree-row-actions,
+.notes-tree-row:focus-within .notes-tree-row-actions {
+  background: linear-gradient(90deg, transparent, var(--color-surface-hover) 10px);
+}
+.notes-tree-action-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.notes-tree-row:hover .notes-tree-action-btn,
+.notes-tree-row:focus-within .notes-tree-action-btn {
+  display: inline-flex;
+}
+.notes-tree-action-btn.notes-tree-action-more {
+  display: inline-flex;
+  opacity: 0.42;
+}
+.notes-tree-row:hover .notes-tree-action-btn.notes-tree-action-more,
+.notes-tree-row:focus-within .notes-tree-action-btn.notes-tree-action-more,
+.notes-tree-row.is-active .notes-tree-action-btn.notes-tree-action-more {
+  opacity: 1;
+}
+.notes-tree-action-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+.notes-tree-action-btn:active {
+  transform: scale(0.92);
+}
+.notes-tree-folder.is-drop-target .notes-tree-label { color: var(--color-primary); font-weight: 600; }
+
+/* ---- Sidebar Footer Buttons ---- */
+.notes-sidebar-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.notes-sidebar-footer-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light, #555);
+}
+.notes-sidebar-footer-btn.is-primary {
+  background: var(--color-primary-alpha, rgba(99,102,241,0.1));
+  border-color: transparent;
+  color: var(--color-primary);
+}
+.notes-sidebar-footer-btn.is-primary:hover {
+  background: var(--color-primary-light);
+}
+.notes-sidebar-footer-btn-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.notes-sidebar-footer-btn-group .notes-sidebar-footer-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 6px;
+}
+
+.notes-tree-action-btn.is-active-home { color: var(--color-primary); opacity: 1; }
+.notes-tree-action-btn.is-active-home:hover { background: var(--color-primary-light); color: var(--color-primary); }
+.notes-tree-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.notes-tree-action-btn:disabled:hover {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+/* Star / pin badges */
+.notes-tree-star { font-size: 10px; color: #eab308; flex-shrink: 0; }
+.notes-tree-pin { font-size: 10px; flex-shrink: 0; }
+.notes-tree-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* Children indent */
+.notes-tree-folder-children,
+.notes-tree-section-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.notes-tree-folder-children.is-collapsed,
+.notes-tree-section-content.is-collapsed {
+  grid-template-rows: 0fr;
+}
+.notes-tree-folder-children-inner,
+.notes-tree-section-content-inner {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---- Checkbox selection indicator ---- */
+/* Checkboxes are invisible by default — only appear after Shift+click (when has-selection = 2+ items) */
+.notes-tree-check {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 3px;
+  border: 1.5px solid transparent;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s, border-color 0.1s;
+  cursor: pointer;
+  color: #fff;
+  margin-right: 2px;
+  pointer-events: none; /* disabled until has-selection */
+}
+/* When 2+ items selected (has-selection): enable checkboxes */
+.notes-tree-sidebar.has-selection .notes-tree-check {
+  display: flex;
+  pointer-events: auto;
+  opacity: 0.25;
+  border-color: var(--color-border);
+}
+.notes-tree-sidebar.has-selection .notes-tree-row:hover .notes-tree-check {
+  opacity: 1;
+  border-color: var(--color-border-light, #555);
+  background: var(--color-surface);
+}
+.notes-tree-sidebar.has-selection .notes-tree-check.is-checked {
+  opacity: 1;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ---- Selection bar (shown when 2+ items selected) ---- */
+.notes-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 12px;
+  background: var(--color-primary-light);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+.notes-selection-bar-count {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+}
+.notes-selection-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.notes-selection-bar-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-border-light, #555);
+}
+
+/* New folder inline input */
+.notes-tree-new-folder-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 4px 12px;
+  margin: 2px 6px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  min-height: 30px;
+}
+.notes-tree-new-folder-field {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  color: var(--color-text);
+  outline: none;
+}
+
+/* Folder note count badge */
+.notes-tree-folder-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-hover);
+  flex-shrink: 0;
+  margin-left: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.notes-tree-row:hover .notes-tree-folder-count { opacity: 1; }
+.notes-tree-row.is-active .notes-tree-folder-count { opacity: 0.7; color: var(--color-primary); background: transparent; }
+
+/* Collapsible section header */
+.notes-tree-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-muted);
+  background: transparent;
+  text-align: left;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  opacity: 0.82;
+  margin: 3px 6px;
+  width: calc(100% - 12px);
+}
+.notes-tree-section-header:hover {
+  background: var(--color-surface-hover);
+  opacity: 1;
+  color: var(--color-text-secondary);
+}
+.notes-tree-section-header.is-drop-target {
+  background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 62%, transparent);
+  color: var(--color-primary);
+  opacity: 1;
+}
+.notes-tree-section-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.16s ease;
+}
+.notes-tree-section-chevron.open {
+  transform: rotate(0deg);
+}
+.notes-tree-section-chevron:not(.open) {
+  transform: rotate(-90deg);
+}
+.notes-tree-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.72;
+}
+.notes-tree-section-label-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.notes-tree-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.notes-tree-private-empty {
+  padding: 7px 12px 9px 34px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  opacity: 0.72;
+}
+
+/* Rename input in tree row */
+.notes-tree-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 13px;
+  color: var(--color-text);
+  outline: none;
+}
+
+/* Footer */
+.notes-tree-footer {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.notes-tree-footer-btn,
+.notes-sidebar-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-secondary, var(--color-text));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: all 0.15s ease;
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.notes-sidebar-footer-btn.is-primary {
+  background: var(--color-primary, #6366f1);
+  color: #ffffff;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+.notes-sidebar-footer-btn.is-primary:hover {
+  opacity: 0.92;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.45);
+}
+.notes-sidebar-footer-btn:hover:not(.is-primary) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-primary, #6366f1);
+}
+.notes-sidebar-footer-btn-group {
+  display: flex;
+  gap: 6px;
+}
+.notes-sidebar-footer-btn-group .notes-sidebar-footer-btn {
+  flex: 1;
+}
+
+.notes-sidebar-backdrop {
+  display: none;
+}
+
+
+/* ========================================
+ * RESPONSIVIDADE - SIDEBAR
+ * ======================================== */
+@media (max-width: 700px) {
+  .notes-tree-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 101;
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+  .notes-layout.sidebar-collapsed .notes-tree-sidebar {
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: 300px !important;
+    transform: translateX(-100%);
+    box-shadow: none;
+    border-right: 1px solid var(--color-border);
+  }
+  .notes-sidebar-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.2s;
+  }
+}
+
+

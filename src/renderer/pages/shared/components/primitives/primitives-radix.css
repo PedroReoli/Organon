@@ -1,0 +1,11 @@
+/* ========================================
+ * PRIMITIVES (Radix UI wrappers) — barrel CSS
+ *
+ * Importa os 2 arquivos divididos.
+ * Componentes em primitives/ continuam importando './primitives-radix.css'.
+ *
+ * Split em overlays + form para respeitar limite de 500 linhas.
+ * ======================================== */
+
+@import './primitives-radix-overlays.css';
+@import './primitives-radix-form.css';

@@ -1,0 +1,359 @@
+﻿/* ========================================
+ * INSTALLER
+ * ======================================== */
+
+.installer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--color-background);
+}
+
+.installer-content {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.installer-kicker {
+  margin-bottom: 8px;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.installer-current-path,
+.installer-path-card,
+.installer-review {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.installer-current-path strong,
+.installer-path-card strong,
+.installer-review strong {
+  color: var(--color-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.installer-data-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.installer-data-summary > div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+}
+
+.installer-data-summary strong { color: var(--color-text); font-size: 18px; }
+.installer-data-summary span { color: var(--color-text-muted); font-size: 10px; }
+
+.installer-storage-tree {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 18px 0 0;
+  text-align: left;
+}
+
+.installer-storage-tree > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--color-border);
+  background: var(--color-background);
+}
+
+.installer-storage-tree .tree-root {
+  grid-column: 1 / -1;
+  border-left-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.installer-storage-tree strong { color: var(--color-text); font-size: 12px; }
+.installer-storage-tree span { color: var(--color-text-muted); font-size: 10px; line-height: 1.35; }
+
+.installer-path-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.installer-protection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin: 20px 0 12px;
+}
+
+.installer-protection-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  text-align: left;
+}
+
+.installer-protection-grid strong { color: var(--color-text); font-size: 13px; }
+.installer-protection-grid span, .installer-note { color: var(--color-text-muted); font-size: 11px; }
+
+.installer-review { display: grid; gap: 0; }
+.installer-review > div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--color-border); }
+.installer-review > div:last-child { border-bottom: 0; }
+
+.installer-running { min-height: 260px; justify-content: center; }
+.installer-spinner { width: 34px; height: 34px; margin-bottom: 20px; border: 3px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: installer-spin 0.8s linear infinite; }
+.installer-success-mark { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 14px; border-radius: 14px; background: var(--color-primary-light); color: var(--color-primary); font-size: 28px; font-weight: 700; }
+.installer-warning { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--color-warning); border-radius: 8px; color: var(--color-text); font-size: 11px; }
+
+@keyframes installer-spin { to { transform: rotate(360deg); } }
+
+.installer-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.installer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 24px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.installer-step h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
+.installer-step h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.installer-step p {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.installer-subtitle {
+  font-size: 13px !important;
+  color: var(--color-text-muted) !important;
+  max-width: 400px;
+  margin-bottom: 32px !important;
+}
+
+.installer-btn {
+  min-width: 160px;
+  padding: 14px 32px;
+  font-size: 16px;
+  margin-top: 16px;
+}
+
+.installer-folder-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin: 24px 0;
+}
+
+.installer-folder-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.installer-folder-option:hover {
+  border-color: var(--color-border-light);
+}
+
+.installer-folder-option.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.installer-folder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.installer-folder-option.selected .installer-folder-icon {
+  color: var(--color-primary);
+}
+
+.installer-folder-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.installer-folder-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.installer-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.installer-nav .btn {
+  min-width: 120px;
+}
+
+.installer-theme-grid {
+  margin: 24px 0;
+  width: 100%;
+}
+
+.installer-theme-carousel-wrapper {
+  justify-content: center;
+}
+
+.installer-theme-page {
+  width: 376px; /* 2 cards (180px) + 1 gap (16px) */
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.installer-theme-track {
+  width: 100%;
+  justify-content: center;
+}
+
+.installer-summary {
+  width: 100%;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+}
+
+.installer-summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.installer-summary-item:last-child {
+  border-bottom: none;
+}
+
+.installer-summary-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.installer-summary-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.installer-error {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--color-danger);
+  border-radius: 8px;
+  color: var(--color-danger);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.installer-progress {
+  display: flex;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.installer-progress-step {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.installer-progress-step.active {
+  background: var(--color-primary);
+}
+
+.installer-progress-step.completed {
+  background: var(--color-primary);
+  opacity: 0.5;
+}
+
+@media (max-width: 680px) {
+  .installer-container { padding: 12px; }
+  .installer-content { padding: 22px 16px; border-radius: 12px; }
+  .installer-data-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .installer-storage-tree, .installer-protection-grid { grid-template-columns: 1fr; }
+  .installer-path-card { grid-template-columns: 1fr; }
+  .installer-theme-page { width: 180px; }
+  .installer-nav { width: 100%; }
+  .installer-nav .btn { flex: 1; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .installer-spinner { animation-duration: 1.8s; }
+}
+

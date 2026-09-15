@@ -1,0 +1,272 @@
+/* ========================================
+ * PRIMITIVES (Radix form/display)
+ *   Checkbox, Switch, RadioGroup, Avatar, Accordion, Separator
+ *
+ * Wrappers Radix sem portal. Definidos no upgrade 20.
+ * Split do primitives-radix.css original para respeitar limite de 500 linhas.
+ * ======================================== */
+
+/* ────────────────────────────────────────
+ * Checkbox
+ * ──────────────────────────────────────── */
+
+.ds-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.ds-checkbox:hover {
+  border-color: var(--color-primary);
+}
+
+.ds-checkbox:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ds-checkbox[data-state='checked'],
+.ds-checkbox[data-state='indeterminate'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.ds-checkbox-indicator {
+  display: inline-flex;
+  color: #fff;
+}
+
+/* ────────────────────────────────────────
+ * Switch
+ * ──────────────────────────────────────── */
+
+.ds-switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background: var(--color-border-light);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.ds-switch:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ds-switch[data-state='checked'] {
+  background: var(--color-primary);
+}
+
+.ds-switch-thumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-fast);
+  transform: translateX(2px);
+  will-change: transform;
+}
+
+.ds-switch[data-state='checked'] .ds-switch-thumb {
+  transform: translateX(16px);
+}
+
+/* ────────────────────────────────────────
+ * RadioGroup
+ * ──────────────────────────────────────── */
+
+.ds-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ds-radio-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.ds-radio-item:hover {
+  border-color: var(--color-primary);
+}
+
+.ds-radio-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ds-radio-item[data-state='checked'] {
+  border-color: var(--color-primary);
+}
+
+.ds-radio-indicator {
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+/* ────────────────────────────────────────
+ * Avatar
+ * ──────────────────────────────────────── */
+
+.ds-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-radius: 50%;
+  overflow: hidden;
+  user-select: none;
+  vertical-align: middle;
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.ds-avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: var(--text-xs);
+}
+.ds-avatar--md {
+  width: 32px;
+  height: 32px;
+  font-size: var(--text-sm);
+}
+.ds-avatar--lg {
+  width: 44px;
+  height: 44px;
+  font-size: var(--text-md);
+}
+.ds-avatar--xl {
+  width: 64px;
+  height: 64px;
+  font-size: var(--text-xl);
+}
+
+.ds-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ds-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ────────────────────────────────────────
+ * Accordion
+ * ──────────────────────────────────────── */
+
+.ds-accordion {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-accordion-item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ds-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.ds-accordion-header {
+  margin: 0;
+}
+
+.ds-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.ds-accordion-trigger:hover {
+  background: var(--color-surface-hover);
+}
+
+.ds-accordion-trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.ds-accordion-chevron {
+  display: inline-flex;
+  color: var(--color-text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.ds-accordion-trigger[data-state='open'] .ds-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.ds-accordion-content {
+  overflow: hidden;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.ds-accordion-content-inner {
+  padding: 0 var(--space-2) var(--space-3);
+  line-height: var(--line-height-normal);
+}
+
+/* ────────────────────────────────────────
+ * Separator
+ * ──────────────────────────────────────── */
+
+.ds-separator {
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.ds-separator--horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.ds-separator--vertical {
+  height: 100%;
+  width: 1px;
+}

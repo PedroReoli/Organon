@@ -1,0 +1,1443 @@
+﻿/* ========================================
+ * HABITS VIEW
+ * ======================================== */
+
+.habits-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  gap: 16px;
+}
+
+.habits-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.habits-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.habits-header p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.habits-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.habits-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.habits-stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.habits-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.habits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-header-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 2px 0 0 0;
+}
+
+.habits-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-border);
+  border-radius: 12px;
+  transition: background var(--transition-fast);
+}
+
+.habits-card:hover {
+  background: var(--color-surface-hover);
+}
+
+.habits-card.is-skipped {
+  opacity: 0.6;
+}
+
+.habits-card-main {
+  display: flex;
+  gap: 12px;
+}
+
+.habits-card-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.habits-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.habits-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.habits-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.habits-badge-streak {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.habits-card-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 2px 0 0 0;
+}
+
+.habits-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.habits-confirm-delete {
+  display: flex;
+  gap: 4px;
+}
+
+/* Check Area (right side of card) */
+.habits-check-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.habits-check-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2.5px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.habits-check-btn:hover {
+  border-color: var(--habit-color, var(--color-primary));
+  color: var(--habit-color, var(--color-primary));
+  background: color-mix(in srgb, var(--habit-color, var(--color-primary)) 10%, transparent);
+  transform: scale(1.08);
+}
+
+.habits-check-btn:active {
+  transform: scale(0.95);
+}
+
+.habits-check-btn.is-done {
+  background: var(--habit-color, var(--color-primary));
+  border-color: var(--habit-color, var(--color-primary));
+  color: white;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--habit-color, var(--color-primary)) 40%, transparent);
+}
+
+.habits-check-btn.is-done:hover {
+  opacity: 0.85;
+  background: var(--habit-color, var(--color-primary));
+}
+
+.habits-check-btn.is-timing {
+  width: 52px;
+  height: 52px;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  animation: habits-pulse 2s ease-in-out infinite;
+}
+
+@keyframes habits-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 40%, transparent); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+.habits-check-plus {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.habits-check-progress {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.habits-check-progress.done {
+  color: #22c55e;
+}
+
+.habits-check-undo {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.habits-check-undo:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.habits-timer-display {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.habits-timer-start-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.habits-timer-start-btn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.habits-skip-link {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.habits-card:hover .habits-skip-link {
+  opacity: 1;
+}
+
+.habits-skip-link:hover {
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+}
+
+.habits-skipped-info {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habits-undo-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+/* 7-day week strip */
+.habits-week-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.habits-week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.habits-week-day-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.habits-week-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 30-day heatmap */
+.habits-heatmap-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.habits-heatmap-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.habits-heatmap {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+  flex: 1;
+  max-width: 400px;
+}
+
+.habits-heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+}
+
+/* Detail panel */
+.habits-detail-panel {
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-detail-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.habits-detail-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.habits-detail-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.habits-detail-stat-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.habits-detail-heatmap {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+  max-width: 300px;
+}
+
+.habits-detail-info {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.habits-detail-info strong {
+  color: var(--color-text);
+}
+
+/* Annual heatmap (GitHub-style) */
+.habits-annual-heatmap-section {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.habits-annual-heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+
+.habits-annual-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.habits-annual-legend-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.habits-annual-heatmap-wrap {
+  overflow-x: auto;
+}
+
+.habits-annual-month-row {
+  display: flex;
+  margin-left: 22px;
+  margin-bottom: 4px;
+}
+
+.habits-annual-month-cell {
+  width: 13px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.habits-annual-grid-row {
+  display: flex;
+  gap: 4px;
+}
+
+.habits-annual-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
+}
+
+.habits-annual-day-label {
+  height: 11px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.habits-annual-grid {
+  display: flex;
+  gap: 2px;
+}
+
+.habits-annual-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habits-annual-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.habits-annual-cell-empty {
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+/* Streak record highlight */
+.habits-stat-best-streak .habits-stat-value {
+  color: var(--color-primary);
+}
+
+.habits-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 14px;
+}
+
+/* ========================================
+ * DRAG HANDLE
+ * ======================================== */
+
+.habits-card-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  cursor: grab;
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.habits-card-drag-handle:hover {
+  opacity: 1;
+}
+
+.habits-card-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ========================================
+ * PAUSED STATE
+ * ======================================== */
+
+.habits-card.is-paused {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.habits-badge-paused {
+  background: var(--color-text-muted);
+  color: var(--color-background);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.habits-badge-level {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ========================================
+ * GAMIFICATION
+ * ======================================== */
+
+.habits-gamification {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.habits-gamification-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.habits-gamification-total {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.habits-gamification-top {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.habits-gamification-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.habits-gamification-icon {
+  font-size: 14px;
+}
+
+.habits-gamification-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.habits-gamification-level {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+/* ========================================
+ * ROUTINE SCHEDULE (modal)
+ * ======================================== */
+
+.habit-routine-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.habit-routine-schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habit-routine-schedule-row strong {
+  min-width: 60px;
+  font-size: 13px;
+}
+
+/* ========================================
+ * CALENDAR VIEW
+ * ======================================== */
+
+.habit-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.habit-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.habit-calendar-title {
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 160px;
+  text-align: center;
+}
+
+.habit-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.habit-calendar-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+}
+
+.habit-calendar-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background var(--transition-fast);
+}
+
+.habit-calendar-cell:hover {
+  background: var(--color-surface-hover);
+}
+
+.habit-calendar-cell.empty {
+  cursor: default;
+}
+
+.habit-calendar-cell.is-today {
+  border: 2px solid var(--color-primary);
+}
+
+.habit-calendar-cell.is-future {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.habit-calendar-cell.is-selected {
+  background: var(--color-background-secondary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.habit-calendar-day {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.habit-calendar-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 3px;
+}
+
+.habit-calendar-detail {
+  padding: 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.habit-calendar-detail h4 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.habit-calendar-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.habit-calendar-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.habit-calendar-detail-item.is-done {
+  color: #22c55e;
+}
+
+.habit-calendar-detail-item.is-skipped {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.habit-calendar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.habit-calendar-check {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.habit-calendar-skip {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+/* ========================================
+ * HABITS HOME PAGE
+ * ======================================== */
+
+.habits-home {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.habits-home-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.habits-home-stat-card {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.habits-home-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.habits-home-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.habits-home-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.habits-home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-home-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Annual heatmap */
+.habits-annual-heatmap-wrap {
+  overflow-x: auto;
+}
+
+.habits-annual-month-row {
+  display: flex;
+  gap: 2px;
+  margin-left: 20px;
+  margin-bottom: 4px;
+}
+
+.habits-annual-month-cell {
+  width: 12px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.habits-annual-grid-row {
+  display: flex;
+  gap: 4px;
+}
+
+.habits-annual-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habits-annual-day-label {
+  width: 14px;
+  height: 12px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.habits-annual-grid {
+  display: flex;
+  gap: 2px;
+}
+
+.habits-annual-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habits-annual-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.habits-annual-cell-empty {
+  background: transparent;
+}
+
+/* Achievements */
+.habits-home-achievements {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-home-achievement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.habits-home-achievement-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habits-home-achievement-icon {
+  font-size: 16px;
+}
+
+.habits-home-achievement-name {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.habits-home-achievement-level {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.habits-home-achievement-bar {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.habits-home-achievement-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.habits-home-achievement-xp {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* ========================================
+ * HABITS STATS PAGE
+ * ======================================== */
+
+.habits-stats-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.habits-stats-summary {
+  display: flex;
+  gap: 16px;
+}
+
+.habits-stats-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habits-stats-summary-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.habits-stats-summary-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.habits-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-stats-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Weekday chart */
+.habits-stats-weekday-chart {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  height: 120px;
+  padding: 0 8px;
+}
+
+.habits-stats-weekday-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.habits-stats-weekday-bar {
+  width: 100%;
+  max-width: 40px;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+
+.habits-stats-weekday-fill {
+  border-radius: 4px 4px 0 0;
+}
+
+.habits-stats-weekday-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.habits-stats-weekday-value {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* Monthly chart */
+.habits-stats-monthly-chart {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  height: 120px;
+  padding: 0 8px;
+}
+
+.habits-stats-monthly-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.habits-stats-monthly-bar {
+  width: 100%;
+  max-width: 50px;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+
+.habits-stats-monthly-fill {
+  border-radius: 4px 4px 0 0;
+}
+
+.habits-stats-monthly-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.habits-stats-monthly-value {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* Habit list */
+.habits-stats-habit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habits-stats-habit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habits-stats-habit-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.habits-stats-habit-name {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.habits-stats-habit-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.habits-stats-habit-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.habits-stats-habit-rate {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+.habits-stats-habit-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Category list */
+.habits-stats-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habits-stats-category-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--color-background-secondary);
+  border-radius: 8px;
+}
+
+.habits-stats-category-name {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.habits-stats-category-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.habits-stats-category-rate {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ========================================
+ * HABITS ACHIEVEMENTS PAGE
+ * ======================================== */
+
+.habits-achievements-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.habits-achievements-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.habits-achievements-summary-card {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.habits-achievements-summary-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.habits-achievements-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.habits-achievements-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-achievements-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Levels grid */
+.habits-achievements-levels-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.habits-achievements-level-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  opacity: 0.4;
+  min-width: 80px;
+}
+
+.habits-achievements-level-card.is-unlocked {
+  opacity: 1;
+  border-color: var(--color-primary);
+}
+
+.habits-achievements-level-icon {
+  font-size: 20px;
+}
+
+.habits-achievements-level-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Ranking */
+.habits-achievements-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habits-achievements-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.habits-achievements-rank-pos {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  min-width: 24px;
+}
+
+.habits-achievements-rank-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.habits-achievements-rank-name {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.habits-achievements-rank-icon {
+  font-size: 14px;
+}
+
+.habits-achievements-rank-level {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  min-width: 60px;
+}
+
+.habits-achievements-rank-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.habits-achievements-rank-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.habits-achievements-rank-xp {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 50px;
+  text-align: right;
+}
+
+.habits-achievements-empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  padding: 20px;
+  text-align: center;
+}
+
+/* Milestones */
+.habits-achievements-milestones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.habits-achievements-milestone-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.habits-achievements-milestone-icon {
+  font-size: 14px;
+}
+
+.habits-achievements-milestone-text {
+  font-weight: 500;
+}
+
+/* Upcoming milestones */
+.habits-achievements-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habits-achievements-upcoming-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.habits-achievements-upcoming-name {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.habits-achievements-upcoming-progress {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  min-width: 60px;
+}
+
+.habits-achievements-upcoming-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.habits-achievements-upcoming-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.habits-achievements-upcoming-remaining {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+

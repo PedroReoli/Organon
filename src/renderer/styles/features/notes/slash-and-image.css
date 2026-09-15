@@ -1,0 +1,421 @@
+/* ========================================
+ * SLASH COMMAND MENU
+ * ======================================== */
+
+.slash-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.02);
+  padding: 8px;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.slash-menu::-webkit-scrollbar { width: 4px; }
+.slash-menu::-webkit-scrollbar-track { background: transparent; }
+.slash-menu::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  color: var(--color-text);
+}
+
+.slash-menu-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.slash-menu-item.selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.slash-menu-item-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: all 0.15s ease;
+}
+
+.slash-menu-item.selected .slash-menu-item-icon {
+  background: var(--color-background);
+  border-color: var(--color-primary-glow);
+  color: var(--color-primary);
+  box-shadow: 0 2px 8px var(--color-primary-20);
+}
+
+.slash-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slash-menu-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slash-menu-item-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slash-menu-item.selected .slash-menu-item-desc {
+  color: var(--color-primary);
+  opacity: 0.8;
+}
+
+/* Image insert popover */
+.editor-image-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  min-width: 260px;
+}
+
+.editor-image-popover-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editor-image-popover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-image-popover-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.editor-image-popover-divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  position: relative;
+}
+
+.editor-image-popover-divider::before,
+.editor-image-popover-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.editor-image-popover-divider::before { left: 0; }
+.editor-image-popover-divider::after { right: 0; }
+
+.editor-image-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- Image Editor Modal ---- */
+
+.image-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-editor-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  width: min(780px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.image-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.image-editor-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0 4px;
+  line-height: 1;
+}
+.image-editor-close:hover { color: var(--color-text); }
+
+.image-editor-body {
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  flex: 1;
+}
+
+.image-editor-preview-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background);
+  border-right: 1px solid var(--color-border);
+  padding: 16px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.image-editor-crop-area {
+  position: relative;
+  display: inline-block;
+  cursor: crosshair;
+  user-select: none;
+  max-width: 100%;
+  max-height: 380px;
+  overflow: hidden;
+}
+
+.image-editor-img {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.image-editor-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.image-editor-controls {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.image-editor-label {
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+.image-editor-label small {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.image-editor-slider {
+  width: 100%;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.image-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ---- Resizable Image in Editor ---- */
+
+/* Outer block: controls text-align for left/center/right */
+.resizable-image-outer {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  line-height: 0;
+}
+
+/* Inner block: sized container (inline-block respects text-align of parent) */
+.resizable-image-inner {
+  display: inline-block;
+  position: relative;
+  line-height: 0;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+.resizable-image-inner.is-selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Free mode image */
+.resizable-image-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 3px;
+}
+
+/* Frame mode */
+.image-frame {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+  display: block;
+}
+
+.image-frame-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Resize handle */
+.resizable-image-handle {
+  display: block;
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary);
+  border: 2px solid white;
+  border-radius: 3px;
+  cursor: nwse-resize;
+  z-index: 10;
+}
+
+/* ---- Image floating toolbar ---- */
+
+.image-floating-toolbar {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 3px 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 200;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.image-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.image-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.image-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 5px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1;
+}
+
+.image-toolbar-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.image-toolbar-btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.image-toolbar-btn-text {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 7px;
+  min-width: 0;
+}
+
+.image-toolbar-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+

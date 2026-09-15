@@ -1,0 +1,36 @@
+/* ========================================
+ * DENSIDADE VISUAL
+ *
+ * 3 niveis: compact, default, comfort. Cada um redefine os tokens
+ * --space-* de tokens.css. A classe e aplicada no <html> ou <body>.
+ *
+ * O nivel "default" e o do tokens.css. As classes abaixo sobrescrevem.
+ *
+ * Definido no upgrade 20, integra com Settings.density (upgrade 06).
+ * ======================================== */
+
+.density-compact {
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 9px;
+  --space-4: 12px;
+  --space-5: 15px;
+  --space-6: 18px;
+  --space-8: 24px;
+  --space-10: 30px;
+  --space-12: 36px;
+  --space-16: 48px;
+}
+
+.density-comfort {
+  --space-1: 5px;
+  --space-2: 10px;
+  --space-3: 15px;
+  --space-4: 20px;
+  --space-5: 25px;
+  --space-6: 30px;
+  --space-8: 40px;
+  --space-10: 50px;
+  --space-12: 60px;
+  --space-16: 80px;
+}

@@ -1,0 +1,577 @@
+.playbook-preview {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.playbook-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.playbook-preview pre {
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-secondary);
+  padding: 10px;
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  font-family: var(--font-sans);
+  max-height: 180px;
+  overflow: auto;
+}
+
+.playbook-copy-status {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.playbook-create-modal {
+  max-width: 760px;
+}
+
+.playbook-dialog-preview-modal {
+  max-width: min(980px, 96vw);
+  width: min(980px, 96vw);
+}
+
+.playbook-edit-modal {
+  max-width: min(1280px, 96vw);
+  width: min(1280px, 96vw);
+}
+
+.playbook-create-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 400px;
+}
+
+.playbook-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playbook-dialog-preview-modal-body {
+  max-height: min(75vh, 800px);
+  overflow: auto;
+}
+
+.playbook-edit-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.playbook-create-modal-body textarea,
+.playbook-edit-modal-body textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.playbook-create-modal-body .editor-container,
+.playbook-edit-modal-body .editor-container {
+  min-height: 250px;
+  flex: 1;
+}
+
+.playbook-create-modal-footer {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.playbook-detail-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+}
+
+.playbook-detail-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.playbook-detail-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.playbook-detail-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playbook-detail-content {
+  overflow: auto;
+}
+
+.playbook-dialogs-section,
+.playbook-dialogs-body {
+  overflow: visible;
+}
+
+.playbook-detail-meta {
+  padding: 12px 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.playbook-detail-meta span {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-background-secondary);
+}
+
+.playbook-content-html {
+  padding: 10px 14px 16px;
+  color: var(--color-text);
+}
+
+.playbook-content-html h1,
+.playbook-content-html h2,
+.playbook-content-html h3 {
+  margin: 14px 0 8px;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.playbook-content-html h1 {
+  font-size: 24px;
+}
+
+.playbook-content-html h2 {
+  font-size: 20px;
+}
+
+.playbook-content-html h3 {
+  font-size: 17px;
+}
+
+.playbook-content-html p {
+  margin: 0 0 10px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.playbook-content-html ul,
+.playbook-content-html ol {
+  margin: 0 0 10px;
+  padding-left: 24px;
+  color: var(--color-text-secondary);
+}
+
+.playbook-content-html li {
+  margin-bottom: 4px;
+}
+
+.playbook-content-html blockquote {
+  border-left: 3px solid var(--color-primary);
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: var(--color-primary-light);
+  border-radius: 0 8px 8px 0;
+}
+
+.playbook-content-html code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.playbook-content-html pre {
+  margin: 10px 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.playbook-content-html pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.playbook-content-html a {
+  color: var(--color-primary);
+}
+
+.playbook-content-html img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.playbook-content-html table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  border: 1px solid var(--color-border);
+}
+
+.playbook-content-html table th,
+.playbook-content-html table td {
+  border: 1px solid var(--color-border);
+  padding: 6px 8px;
+}
+
+.playbook-dialog-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playbook-dialog-detail {
+  border-top: 1px solid var(--color-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playbook-dialog-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.playbook-dialog-detail-head strong {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.playbook-dialog-detail-content {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  max-height: 280px;
+  overflow: auto;
+}
+
+.playbook-wysiwyg-shell {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.playbook-wysiwyg-shell .editor-container {
+  background: var(--color-background-secondary);
+}
+
+.playbook-wysiwyg-shell .tiptap-editor {
+  max-height: 300px;
+}
+
+.playbook-wysiwyg-shell-edit .tiptap-editor {
+  max-height: 500px;
+}
+
+.playbook-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 12px;
+  align-items: start;
+}
+
+.playbook-edit-main,
+.playbook-edit-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playbook-dialog-list-edit {
+  max-height: 220px;
+}
+
+.playbook-detail-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+@media (max-width: 1300px) {
+  .playbook-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
+  }
+}
+
+@media (max-width: 1080px) {
+  .playbook-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .playbook-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .playbook-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .playbook-body {
+    padding: 0 14px;
+  }
+
+  .playbook-header {
+    padding: 16px 14px 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .playbook-filters-grid,
+  .playbook-editor-inline-grid,
+  .playbook-variables-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dialog search ─────────────────────────────────────────────────────────── */
+
+.playbook-dialog-search {
+  padding: 8px 12px 0;
+}
+
+.playbook-dialog-search input {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+/* ── Dialog item row (enhanced) ────────────────────────────────────────────── */
+
+.playbook-dialog-item-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  padding: 6px 8px;
+  transition: all var(--transition-fast);
+}
+
+.playbook-dialog-item-row:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.playbook-dialog-item-row.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.playbook-dialog-item-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.playbook-dialog-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.playbook-dialog-item-info .playbook-dialog-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playbook-dialog-var-badge {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.playbook-dialog-item-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.playbook-dialog-item-row:hover .playbook-dialog-item-actions {
+  opacity: 1;
+}
+
+.playbook-dialog-action-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.playbook-dialog-action-btn:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  color: var(--color-text);
+}
+
+.playbook-dialog-action-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.playbook-dialog-action-btn.is-copied {
+  color: #22c55e;
+}
+
+/* ── Dialog tags ───────────────────────────────────────────────────────────── */
+
+.playbook-dialog-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.playbook-dialog-tag {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+/* ── Tags field in form ────────────────────────────────────────────────────── */
+
+.playbook-tags-field {
+  min-width: 200px;
+}
+
+.playbook-tags-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.playbook-tags-input-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.playbook-tags-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.playbook-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+}
+
+.playbook-tag-chip button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  opacity: 0.6;
+}
+
+.playbook-tag-chip button:hover {
+  opacity: 1;
+}
+
+/* ── Dialog form split (editor + preview) ──────────────────────────────────── */
+
+.playbook-dialog-form-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.playbook-dialog-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.playbook-dialog-split-editor,
+.playbook-dialog-split-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.playbook-dialog-live-preview {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background-secondary);
+  padding: 12px;
+  max-height: 500px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .playbook-dialog-split {
+    grid-template-columns: 1fr;
+  }
+
+  .playbook-dialog-form-top {
+    flex-direction: column;
+  }
+}
+
+

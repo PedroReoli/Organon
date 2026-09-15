@@ -1,0 +1,902 @@
+/* ========================================
+ * SPRINT BOARD v2 — Backlog lateral + 4 colunas kanban + subgrupos
+ * ======================================== */
+
+/* ── Layout raiz ───────────────────────────────────────────── */
+.sb2 {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.sb2-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-backlog-bg);
+  flex-shrink: 0;
+}
+
+.sb2-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.sb2-info strong {
+  font-weight: 700;
+}
+
+.sb2-range {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb2-count {
+  padding: 2px 8px;
+  background: var(--color-surface-hover);
+  border-radius: 999px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* ── Rollover banner ───────────────────────────────────────── */
+.sb2-rollover {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border-bottom: 1px solid #f59e0b;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ==== Drop Indicator (Linha Brilhante) ==== */
+.drop-indicator {
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 999px;
+  box-shadow: 0 0 8px var(--color-primary);
+  animation: pulse-glow 1s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.sprint-card.is-dragging-placeholder {
+  opacity: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  position: relative;
+  overflow: visible;
+}
+.sprint-card.is-dragging-placeholder > * {
+  opacity: 0;
+}
+.sprint-card.is-dragging-placeholder::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 999px;
+  box-shadow: 0 0 8px var(--color-primary);
+  animation: pulse-glow 1s infinite;
+}
+
+
+/* ── Body: backlog lateral + colunas ───────────────────────── */
+.sb2-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Backlog lateral (padrao Periodo/Horaria) ──────────────── */
+.sb2-backlog {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-backlog-bg);
+  border-right: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.sb2-backlog-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sb2-backlog-count {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sb2-backlog-quick {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sb2-backlog-quick .form-input {
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.sb2-backlog-list {
+  flex: 1;
+  overflow-y: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Scroll area (colunas) ─────────────────────────────────── */
+.sb2-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+}
+
+/* ── Colunas kanban ────────────────────────────────────────── */
+.sb2-columns {
+  display: flex;
+  gap: 8px;
+  min-height: 100%;
+}
+
+.sb2-col {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  backdrop-filter: blur(8px);
+}
+
+/* ── Header da coluna ──────────────────────────────────────── */
+.sb2-col-head {
+  padding: 10px 14px;
+  border-top: 4px solid;
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sb2-col-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex: 1;
+}
+
+.sb2-col-count {
+  padding: 1px 6px;
+  background: var(--color-surface-hover);
+  border-radius: 999px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.sb2-col-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.sb2-col-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.sb2-col-btn--add-card {
+  width: auto;
+  min-width: 62px;
+  height: 24px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Form inline ───────────────────────────────────────────── */
+.sb2-add-form {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sb2-add-form .form-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+/* ── Drop zone ─────────────────────────────────────────────── */
+.sb2-drop {
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 40px;
+  transition: background 0.12s;
+}
+
+.sb2-drop--over {
+  background: var(--color-primary-light);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* ── Subgrupos (secoes) ────────────────────────────────────── */
+
+.sb2-sec {
+  margin: 6px 6px;
+  background: var(--color-background, #0f0f0f);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--sec-color, var(--color-border));
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.sb2-sec:hover {
+  border-color: color-mix(in srgb, var(--sec-color, var(--color-border)) 60%, var(--color-border));
+}
+
+.sb2-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--sec-color, var(--color-primary)) 6%, transparent);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sb2-sec-icon {
+  flex-shrink: 0;
+  color: var(--sec-color, var(--color-text-muted));
+  opacity: 0.7;
+}
+
+.sb2-sec-name {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--color-text-secondary);
+}
+
+.sb2-sec-count {
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--sec-color, var(--color-primary)) 12%, transparent);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--sec-color, var(--color-text-muted));
+}
+
+.sb2-sec-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.12s;
+  opacity: 0;
+}
+
+.sb2-sec-head:hover .sb2-sec-remove {
+  opacity: 1;
+}
+
+.sb2-sec-remove:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.sb2-sec .sb2-drop {
+  padding: 4px 6px;
+  min-height: 32px;
+}
+
+/* ── Modal de confirmacao ──────────────────────────────────── */
+
+.sb2-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  animation: sb2-fade-in 0.12s ease-out;
+}
+
+@keyframes sb2-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sb2-modal {
+  background: var(--color-background, #0f0f0f);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: sb2-slide-up 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes sb2-slide-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sb2-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sb2-modal-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sb2-modal-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sb2-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.sb2-modal-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.sb2-modal-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  padding: 14px 16px;
+  line-height: 1.5;
+}
+
+.sb2-modal-text strong {
+  color: var(--color-text);
+}
+
+.sb2-modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.sb2-modal-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.sb2-modal-btn--danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.sb2-modal-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+.sb2-modal-btn--cancel {
+  color: var(--color-text-secondary);
+}
+
+.sb2-modal-btn--cancel:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* ========================================
+ * Sprint Card (visual) — compartilhado com SprintCardItem
+ * Usado por HourlyView, PeriodView, SprintBoardView
+ * ======================================== */
+
+.sprint-card {
+  background: var(--color-background, #0f0f0f);
+  border: 1px solid var(--color-border, #2a2a2a);
+  border-left: 4px solid var(--color-text-tertiary, #888);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.sprint-card:hover {
+  background: var(--color-background-secondary, #1e1e1e);
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+[data-dnd-kit-drag-overlay] .sprint-card {
+  cursor: grabbing;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--color-primary);
+  border-color: var(--color-primary);
+  transform: rotate(3deg) scale(1.05);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  opacity: 1;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.sprint-card.is-locked {
+  opacity: 0.7;
+}
+
+.sprint-card.is-in-sprint {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.sprint-card--done {
+  opacity: 0.6;
+}
+
+.sprint-card--done .sprint-card-title {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.sprint-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.sprint-card-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.sprint-card-badge {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary, var(--color-primary));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprint-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sprint-card-priority {
+  padding: 1px 6px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sprint-card-time {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sprint-card-project {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.sprint-card-checklist {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.sprint-card-locked {
+  font-size: 10px;
+}
+
+.sprint-card-note {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  line-height: 1;
+}
+
+/* ── Métricas da Sprint ────────────────────────────────────── */
+.sb2-metrics-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--color-border);
+}
+
+.sb2-metric-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: var(--color-surface-hover);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+}
+
+.sb2-progress-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 6px;
+}
+
+.sb2-progress-track {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.sb2-progress-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.sb2-progress-percent {
+  font-size: 10px;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+/* ── Filtros e Busca ────────────────────────────────────────── */
+.sb2-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.sb2-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sb2-search-box svg {
+  position: absolute;
+  left: 8px;
+  color: var(--color-text-muted);
+}
+
+.sb2-search-input {
+  padding: 4px 24px 4px 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 12px;
+  width: 180px;
+  transition: width 0.2s, border-color 0.2s;
+}
+
+.sb2-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  width: 220px;
+}
+
+.sb2-search-clear {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sb2-prio-filter {
+  display: flex;
+  gap: 3px;
+  background: var(--color-surface);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.sb2-filter-btn {
+  background: transparent;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all 0.12s;
+}
+
+.sb2-filter-btn.is-active, .sb2-filter-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.sb2-sec-toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+.sb2-sec-toggle:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+/* ── Modal de Detalhes de Card ──────────────────────────────── */
+.sb2-modal--card-details {
+  width: 520px;
+  max-width: 95vw;
+}
+
+.sb2-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.sb2-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sb2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sb2-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-text-secondary);
+}
+
+.sb2-input-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sb2-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-size: 12px;
+}
+
+.sb2-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sb2-prio-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sb2-chip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sb2-select {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.sb2-checklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.sb2-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.sb2-checklist-text {
+  flex: 1;
+  font-size: 12px;
+}
+
+.sb2-checklist-text.is-done {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.sb2-checklist-del {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.sb2-checklist-add {
+  display: flex;
+  gap: 6px;
+}
+
+.sb2-checklist-add .form-input {
+  flex: 1;
+  font-size: 12px;
+}
+
+.sb2-btn-add-check {
+  padding: 4px 10px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sb2-modal-btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.sb2-modal-btn--primary:hover {
+  opacity: 0.9;
+}
+

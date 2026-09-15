@@ -1,0 +1,42 @@
+﻿/* ========================================
+ * NAVBAR - IMPROVEMENTS
+ * ======================================== */
+
+.app-nav {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.app-nav-tabs {
+  gap: 4px;
+}
+
+.app-nav-tab,
+.app-nav-action {
+  padding: 5px 9px;
+  font-size: 12px;
+  border-radius: 8px;
+  gap: 6px;
+}
+
+.app-nav-actions {
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.app-nav-action-settings {
+  min-width: auto;
+}
+
+/* Sync indicator */
+.nav-sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+

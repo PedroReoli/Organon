@@ -1,0 +1,71 @@
+﻿const { app, BrowserWindow, ipcMain, session } = require('electron')
+const fs = require('node:fs')
+const path = require('node:path')
+const assert = require('node:assert/strict')
+const root = path.resolve(__dirname, '..')
+const fixture = path.join(root, '.whisper-validation', 'speech.wav')
+const model = path.join(process.env.APPDATA, 'organon', 'models', 'whisper', 'ggml-tiny.bin')
+const data = path.join(root, '.whisper-validation', 'electron-data')
+fs.mkdirSync(data, { recursive: true })
+app.setPath('userData', data)
+process.env.ORGANON_WHISPER_CLI = path.join(root, 'resources', 'whisper', 'whisper-cli.exe')
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
+app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+app.commandLine.appendSwitch('use-file-for-fake-audio-capture', fixture)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+app.whenReady().then(async () => {
+  try {
+    const modelDir = path.join(data, 'models', 'whisper')
+    fs.mkdirSync(modelDir, { recursive: true })
+    const linkedModel = path.join(modelDir, 'ggml-tiny.bin')
+    if (!fs.existsSync(linkedModel)) fs.copyFileSync(model, linkedModel)
+    const originalHandle = ipcMain.handle.bind(ipcMain)
+    ipcMain.handle = (channel, handler) => originalHandle(channel, channel === 'meetings:transcribe' ? async (event, input, ...rest) => {
+      const bytes = Buffer.from(input, 'base64')
+      assert.equal(bytes.toString('ascii', 0, 4), 'RIFF')
+      assert.equal(bytes.readUInt32LE(24), 16000)
+      assert.equal(bytes.readUInt16LE(22), 1)
+      assert.equal(bytes.readUInt16LE(34), 16)
+      assert.ok(bytes.length > 16000 * 2 * 9, 'Final recording must preserve the tail')
+      return handler(event, input, ...rest)
+    } : handler)
+    require('../dist/main/ipcContent').registerContentIpcHandlers()
+    ipcMain.handle = originalHandle
+    const { transcribeAudioLocally } = require('../dist/main/localWhisperTranscriber')
+    const executable = process.env.ORGANON_WHISPER_CLI
+    process.env.ORGANON_WHISPER_CLI = path.join(root, 'missing-whisper.exe')
+    await assert.rejects(() => transcribeAudioLocally(fixture, model), /ausente/)
+    process.env.ORGANON_WHISPER_CLI = executable
+    ipcMain.handle('super-whisper:get-theme', () => ({ primary: '#6366f1', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' }))
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'media'))
+    const win = new BrowserWindow({ show: false, width: 420, height: 420, webPreferences: { preload: path.join(root, 'dist/preload/index.js'), contextIsolation: true, nodeIntegration: false, offscreen: true, backgroundThrottling: false } })
+    win.webContents.on('render-process-gone', (_event, details) => { console.error('renderer gone', details); app.exit(1) })
+    const errors = []
+    win.webContents.on('console-message', (_event, level, message) => { console.log('renderer', level, message); if (level >= 3) errors.push(message) })
+    await win.loadFile(path.join(root, 'dist/renderer/super-whisper.html'))
+    await win.webContents.executeJavaScript(`localStorage.setItem('organon-whisper-service-config', JSON.stringify({ provider: 'local', model: 'ggml-tiny' }))`)
+    await win.webContents.executeJavaScript(`for (const [type, method] of [[AudioContext, 'decodeAudioData'], [AudioContext, 'close'], [OfflineAudioContext, 'startRendering']]) { const original = type.prototype[method]; type.prototype[method] = function (...args) { console.log('audio stage', method); return original.apply(this, args).then(value => { console.log('audio done', method); return value }) } }; void 0`)
+    assert.equal(await win.webContents.executeJavaScript(`typeof window.electronAPI.transcribeAudio`), 'function')
+    win.webContents.send('super-whisper:toggle-recording')
+    await delay(11500)
+    assert.equal(await win.webContents.executeJavaScript(`document.getElementById('recordBtn').dataset.recording`), 'true')
+    win.webContents.send('super-whisper:toggle-recording')
+    let result = ''
+    for (let i = 0; i < 60; i++) {
+      await delay(1000)
+      result = await win.webContents.executeJavaScript(`document.getElementById('transcriptionText').value`)
+      if (result) break
+    }
+    assert.match(result, /tarefas|funcionamento|transcri/i)
+    assert.equal(await win.webContents.executeJavaScript(`document.getElementById('copyBtn').disabled`), false)
+    await delay(500)
+    const screenshot = await win.webContents.capturePage()
+    fs.writeFileSync(path.join(root, '.whisper-validation', 'overlay.png'), screenshot.toPNG())
+    fs.writeFileSync(path.join(root, '.whisper-validation', 'runtime-result.json'), JSON.stringify({ result, errors, pipeline: 'fake microphone -> AudioWorklet PCM -> WAV 16 kHz -> preload -> meetings:transcribe -> whisper.cpp -> overlay' }, null, 2))
+    console.log(JSON.stringify({ result, errors }))
+    assert.equal(errors.length, 0)
+    win.destroy()
+    app.exit(0)
+  } catch (error) { console.error(error); app.exit(1) }
+})
+

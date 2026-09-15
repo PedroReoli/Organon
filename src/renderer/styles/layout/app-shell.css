@@ -1,0 +1,335 @@
+/* ========================================
+ * LAYOUT PRINCIPAL
+ * ======================================== */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+.debug-hud-inline {
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-backlog-bg);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.debug-copy-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--color-background-secondary, #1a1a1a);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  max-width: 80vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.debug-copy-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.app-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-view {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-view-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-view-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-secondary) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.app-view-toolbar-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-view-toolbar-divider {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.app-view-home,
+.app-view-icon-btn,
+.app-view-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.app-view-home {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.app-view-home:hover,
+.app-view-icon-btn:hover:not(:disabled),
+.app-view-switcher-btn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.app-view-toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-view-toolbar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.app-view-toolbar-title strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.app-view-switcher {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.app-view-switcher-btn {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.app-view-switcher-icons {
+  gap: 4px;
+}
+
+.app-view-switcher-item-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 160px;
+  min-height: 30px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.app-view-switcher-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.app-view-switcher-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-view-switcher-btn.is-active,
+.app-view-settings.is-active,
+.app-view-home.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.app-view-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.app-view-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.app-view-sync:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* ── Zoom controls ──────────────────────────────────────────── */
+
+.app-view-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.app-view-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.app-view-zoom-btn:hover:not(:disabled) {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.app-view-zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.app-view-zoom-label {
+  min-width: 36px;
+  height: 22px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.app-view-zoom-label:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.app-view-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.planner-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.app-status-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.app-status-subtitle {
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .app-view-toolbar {
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+  }
+
+  .app-view-toolbar-center {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .app-view-toolbar-title strong {
+    font-size: 16px;
+  }
+
+  .app-view-switcher-item-btn {
+    max-width: none;
+  }
+
+  .app-view-toolbar-actions {
+    margin-left: auto;
+  }
+}

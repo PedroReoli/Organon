@@ -1,0 +1,8 @@
+﻿/* ========================================
+ * UTILITÁRIOS
+ * ======================================== */
+
+.drag-over {
+  background: var(--color-drag-highlight) !important;
+}
+

@@ -1,0 +1,396 @@
+/* ========================================
+ * HABITS — upgrade 13
+ * heatmap, trend, detail view, series, category filter
+ * ======================================== */
+
+/* ── Category filter chips ──────────────────────────────────── */
+
+.habit-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 10px;
+  align-items: center;
+}
+
+.habit-category-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.habit-category-chip:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.habit-category-chip.is-active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.habit-category-chip-archived {
+  margin-left: auto;
+}
+
+/* ── Series marker (ABC buttons no card) ───────────────────── */
+
+.habits-series-marker {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.habits-series-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.habits-series-btn:hover {
+  border-color: var(--habit-color, var(--color-primary));
+  transform: translateY(-1px);
+}
+
+.habits-series-btn.is-active {
+  background: var(--habit-color, var(--color-primary));
+  color: #fff;
+  border-color: var(--habit-color, var(--color-primary));
+}
+
+.habits-series-btn.is-suggested {
+  border-style: dashed;
+  border-color: var(--habit-color, var(--color-primary));
+  color: var(--habit-color, var(--color-primary));
+}
+
+/* ── HabitModal series section ─────────────────────────────── */
+
+.habit-series-section {
+  padding: 10px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.habit-series-labels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habit-series-label-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Heatmap ────────────────────────────────────────────────── */
+
+.habit-heatmap {
+  width: 100%;
+  padding: 6px 0;
+}
+
+.habit-heatmap-svg {
+  display: block;
+  overflow: visible;
+}
+
+.habit-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.habit-heatmap-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.habit-heatmap-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* ── Trend chart ────────────────────────────────────────────── */
+
+.habit-trend-chart {
+  width: 100%;
+}
+
+.habit-trend-chart.is-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.habit-trend-chart-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ── Weekday chart ──────────────────────────────────────────── */
+
+.habit-weekday-chart {
+  width: 100%;
+  max-width: 320px;
+}
+
+.habit-weekday-chart-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ── Detail modal ───────────────────────────────────────────── */
+
+.habit-detail-modal {
+  max-width: 920px;
+  width: 92vw;
+  max-height: 88vh;
+}
+
+.habit-detail-modal .modal-header h2 {
+  margin: 0;
+}
+
+.habits-detail-category {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-background-secondary);
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.habit-detail-body {
+  overflow-y: auto;
+  max-height: calc(88vh - 100px);
+  padding-right: 8px;
+}
+
+.habit-detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.habit-detail-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.habit-detail-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.habit-detail-kpi-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.habit-detail-section {
+  margin-bottom: 20px;
+}
+
+.habit-detail-section h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.habit-detail-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 4px 0 10px;
+}
+
+/* ── Series distribution ────────────────────────────────────── */
+
+.habit-detail-series-dist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habit-detail-series-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.habit-detail-series-row strong {
+  min-width: 40px;
+  text-align: center;
+  padding: 4px 8px;
+  background: var(--color-background-secondary);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.habit-detail-series-bar {
+  flex: 1;
+  height: 12px;
+  background: var(--color-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.habit-detail-series-bar-fill {
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.habit-detail-series-next {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── History editor ─────────────────────────────────────────── */
+
+.habit-history-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.habit-history-entry {
+  padding: 6px 10px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.habit-history-entry.is-done {
+  border-color: var(--color-primary);
+}
+
+.habit-history-entry.is-skipped {
+  opacity: 0.6;
+}
+
+.habit-history-entry-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habit-history-toggle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--habit-color, var(--color-border));
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms ease;
+}
+
+.habit-history-entry.is-done .habit-history-toggle {
+  background: var(--habit-color, var(--color-primary));
+}
+
+.habit-history-date {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  min-width: 70px;
+}
+
+.habit-history-series-label {
+  padding: 1px 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+}
+
+.habit-history-value {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.habit-history-note-btn {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.habit-history-note-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.habit-history-note-editor {
+  margin-top: 6px;
+}
+
+.habit-history-note-display {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: var(--color-surface);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .habit-detail-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

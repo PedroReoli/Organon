@@ -1,0 +1,176 @@
+/* ========================================
+ * COLOR EXTRACTOR — upgrade 04
+ * ======================================== */
+
+.color-extractor-modal {
+  max-width: 720px;
+  width: 92vw;
+}
+
+.color-extractor-dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.color-extractor-dropzone:hover,
+.color-extractor-dropzone.is-over {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light, rgba(99, 102, 241, 0.08));
+}
+
+.color-extractor-dropzone p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.color-extractor-hint {
+  font-size: 11px !important;
+  opacity: 0.7;
+}
+
+.color-extractor-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.color-extractor-image-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 280px;
+}
+
+.color-extractor-image-wrapper img {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.color-extractor-change-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.color-extractor-change-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.color-extractor-loading {
+  text-align: center;
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.color-extractor-error {
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--color-danger, #dc2626);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.color-extractor-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.color-extractor-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease, border-color 120ms ease;
+  min-height: 64px;
+  justify-content: flex-end;
+}
+
+.color-extractor-swatch:hover {
+  transform: translateY(-2px);
+}
+
+.color-extractor-swatch.is-selected {
+  border-color: var(--color-text);
+}
+
+.color-extractor-swatch.is-selected::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.color-extractor-swatch {
+  position: relative;
+}
+
+.color-extractor-swatch-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.color-extractor-swatch-hex {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+}
+
+.color-extractor-save {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.color-extractor-save .form-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.color-extractor-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+}

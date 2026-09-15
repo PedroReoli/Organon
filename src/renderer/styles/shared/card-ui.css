@@ -1,0 +1,140 @@
+﻿/* ========================================
+ * CARD TITLE ROW (Status icon + Title + Priority dot)
+ * ======================================== */
+
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.card-title-row .card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-status-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.card-status-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.card-priority-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+
+.card-compact .card-status-icon {
+  width: 11px;
+  height: 11px;
+  margin-top: 1px;
+}
+
+.card-compact .card-priority-dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 2px;
+}
+
+.card-compact .card-title-row {
+  gap: 3px;
+}
+
+.card-project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ========================================
+ * CARD MODAL - PILLS & DESCRIÇÃO
+ * ======================================== */
+
+.card-modal-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-modal-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.card-modal-pill:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.card-modal-pill.is-active {
+  border-color: transparent;
+}
+
+.card-modal-description-group {
+  margin-top: 8px;
+}
+
+.card-modal-editor-shell {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 220px at -8% -20%, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(900px 180px at 108% -24%, rgba(34, 197, 94, 0.06), transparent 62%),
+    var(--color-surface);
+}
+
+.card-modal-editor-shell .editor-container {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.card-modal-editor-shell .editor-toolbar {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-tertiary) 82%, transparent);
+  padding: 8px 10px;
+  max-height: 92px;
+  overflow-y: auto;
+}
+
+.card-modal-editor-shell .tiptap-editor {
+  min-height: 240px;
+  max-height: 400px;
+  padding: 16px 14px 18px;
+  background: transparent;
+}
+
+.card-modal-editor-shell .tiptap-editor .ProseMirror {
+  min-height: 180px;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.card-modal-editor-shell .editor-link-popover,
+.card-modal-editor-shell .editor-toolbar-dropdown-menu,
+.card-modal-editor-shell .editor-color-picker,
+.card-modal-editor-shell .editor-table-picker {
+  z-index: 220;
+}
+

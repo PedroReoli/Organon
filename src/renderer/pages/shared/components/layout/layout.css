@@ -1,0 +1,28 @@
+/* ========================================
+ * LAYOUT PRIMITIVES — Stack, Cluster, Container, Grid
+ *
+ * Definidos no upgrade 20.
+ * ======================================== */
+
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ds-cluster {
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+}
+
+.ds-container {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.ds-grid {
+  display: grid;
+  min-width: 0;
+}

@@ -1,0 +1,480 @@
+/* ========================================
+ * EDITOR AVANÇADO - Extensões extras
+ * ======================================== */
+
+/* Toolbar full mode */
+.editor-toolbar-full {
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 8px 10px;
+}
+
+.editor-toolbar-btn-wide {
+  min-width: 60px;
+  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.editor-toolbar-btn-danger {
+  color: var(--color-danger) !important;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.editor-toolbar-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+
+.editor-toolbar-color-bar {
+  display: block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+  margin-top: 1px;
+}
+
+/* Dropdown / Popover genérico */
+.editor-toolbar-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.editor-toolbar-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  min-width: 150px;
+}
+
+.editor-toolbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 100%;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.editor-toolbar-dropdown-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.editor-toolbar-dropdown-item.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.editor-floating-toolbox {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(640px, calc(100% - 32px));
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.02);
+}
+
+.editor-floating-toolbox.is-collapsed {
+  width: max-content;
+}
+
+.editor-floating-toolbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.editor-floating-toolbox.is-collapsed .editor-floating-toolbox-head {
+  border-bottom: none;
+}
+
+.editor-floating-toolbox-drag,
+.editor-floating-toolbox-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.editor-floating-toolbox-drag {
+  cursor: grab;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.editor-floating-toolbox-drag:active {
+  cursor: grabbing;
+}
+
+.editor-floating-toolbox-toggle {
+  width: 30px;
+  justify-content: center;
+}
+
+.editor-floating-toolbox-drag:hover,
+.editor-floating-toolbox-toggle:hover {
+  background: color-mix(in srgb, var(--color-surface-hover) 80%, transparent);
+  color: var(--color-text);
+}
+
+.editor-floating-toolbox-close:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: var(--color-danger) !important;
+}
+
+.editor-floating-toolbox .editor-toolbar {
+  border: none;
+  background: transparent;
+  padding: 10px;
+  border-radius: 0 0 14px 14px;
+}
+
+/* Color picker */
+.editor-color-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  display: grid;
+  grid-template-columns: repeat(5, 24px);
+  gap: 4px;
+}
+
+.editor-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+  padding: 0;
+}
+
+.editor-color-swatch:hover {
+  border-color: var(--color-text-muted);
+  transform: scale(1.15);
+}
+
+.editor-color-swatch.active {
+  border-color: var(--color-primary);
+}
+
+/* Link / Image popover */
+.editor-link-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.editor-link-popover .form-input {
+  font-size: 13px;
+  padding: 6px 10px;
+  width: 240px;
+  border-radius: 6px;
+}
+
+.btn-sm {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+}
+
+/* Table picker */
+.editor-table-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.editor-table-picker-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.editor-table-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 22px);
+  gap: 3px;
+}
+
+.editor-table-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.editor-table-cell:hover {
+  border-color: var(--color-primary);
+}
+
+.editor-table-cell.active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+/* ---- Task List ---- */
+.tiptap-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+  margin: 8px 0;
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-light, var(--color-border));
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  position: relative;
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+/* ---- Tabelas ---- */
+.tiptap-editor .ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.tiptap-editor .ProseMirror table td,
+.tiptap-editor .ProseMirror table th {
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  min-width: 80px;
+  vertical-align: top;
+  position: relative;
+}
+
+.tiptap-editor .ProseMirror table th {
+  background: var(--color-background-tertiary);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tiptap-editor .ProseMirror table td p,
+.tiptap-editor .ProseMirror table th p {
+  margin: 0;
+}
+
+.tiptap-editor .ProseMirror table .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary-light);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tiptap-editor .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-primary);
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.tiptap-editor .ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.tiptap-editor .ProseMirror table .resize-cursor {
+  cursor: col-resize;
+}
+
+/* ---- Highlight / Mark ---- */
+.tiptap-editor .ProseMirror mark {
+  background-color: #fef08a;
+  border-radius: 2px;
+  padding: 1px 2px;
+  box-decoration-break: clone;
+}
+
+/* ---- Underline ---- */
+.tiptap-editor .ProseMirror u {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---- Subscript / Superscript ---- */
+.tiptap-editor .ProseMirror sub {
+  font-size: 0.75em;
+}
+
+.tiptap-editor .ProseMirror sup {
+  font-size: 0.75em;
+}
+
+/* ---- Image ---- */
+.tiptap-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 12px 0;
+  display: block;
+}
+
+.tiptap-editor .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ---- Heading styles melhorados ---- */
+.tiptap-editor .ProseMirror h1 {
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 0.6em 0 0.4em;
+  line-height: 1.3;
+}
+
+.tiptap-editor .ProseMirror h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 0.3em;
+  line-height: 1.35;
+}
+
+.tiptap-editor .ProseMirror h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.4em 0 0.25em;
+  line-height: 1.4;
+}
+
+/* ---- Code block melhorado ---- */
+.tiptap-editor .ProseMirror pre {
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--color-text);
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+/* ---- Horizontal rule ---- */
+.tiptap-editor .ProseMirror hr {
+  border: none;
+  border-top: 2px solid var(--color-border);
+  margin: 20px 0;
+}
+
+/* ---- Link ---- */
+.tiptap-editor .ProseMirror .editor-link,
+.tiptap-editor .ProseMirror a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tiptap-editor .ProseMirror a:hover {
+  text-decoration-thickness: 2px;
+}
+

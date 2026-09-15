@@ -1,0 +1,232 @@
+﻿/* ========================================
+ * FORMULÁRIOS NO MODAL
+ * ======================================== */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+}
+
+.form-input-date {
+  width: auto;
+  min-width: 160px;
+}
+
+.form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-sublabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.form-date-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-date-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-input-time {
+  width: auto;
+  min-width: 130px;
+}
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.form-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.form-checkbox-label {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.form-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.form-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+  font-size: 13px;
+  color: #fecaca;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.period-toggle {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.period-toggle-btn {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.period-toggle-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.period-toggle-btn.is-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+/* ========================================
+ * BOTÕES
+ * ======================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-danger.btn-confirm {
+  background: var(--color-danger);
+  color: white;
+}
+
+/* ========================================
+ * CAMPOS DO CARD MODAL
+ * ======================================== */
+
+.card-modal-time-input,
+.card-modal-date-input,
+.card-modal-select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-tertiary) 88%, transparent);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.card-modal-time-input:hover,
+.card-modal-date-input:hover,
+.card-modal-select:hover {
+  border-color: var(--color-border-light);
+  background: color-mix(in srgb, var(--color-surface) 84%, transparent);
+}
+
+.card-modal-time-input:focus,
+.card-modal-date-input:focus,
+.card-modal-select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 72%, transparent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+}
+
+.card-modal-time-input:disabled,
+.card-modal-date-input:disabled,
+.card-modal-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

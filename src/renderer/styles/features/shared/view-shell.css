@@ -1,0 +1,472 @@
+/* ==========================================================================
+   SHARED VIEW SHELL - CSS Unificado para Views com Sidebar
+   Usado por: Projetos, Financeiro, etc.
+   ========================================================================== */
+
+/* ── Tema padrão ──────────────────────────────────────────────────────── */
+
+.view-shell-theme {
+  --bg-primary: var(--color-background);
+  --bg-secondary: var(--color-surface);
+  --bg-tertiary: var(--color-background-secondary);
+  --border: var(--color-border);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --accent-primary: var(--color-primary);
+  --accent-green: var(--color-success);
+  --accent-red: var(--color-danger);
+  --accent-yellow: #f59e0b;
+  --accent-blue: var(--color-primary);
+  --shadow-card: var(--shadow-sm);
+  --shadow-hover: var(--shadow-card-hover);
+}
+
+/* ── Tema Financeiro (verde/vermelho) ─────────────────────────────────── */
+
+.view-shell-theme.fin-theme {
+  --accent-primary: #22c55e;  /* Verde como primário */
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #f59e0b;
+  --accent-blue: var(--color-primary);
+}
+
+/* ── Shell Principal ─────────────────────────────────────────────────── */
+
+.view-shell {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.view-sidebar {
+  width: 200px;
+  min-width: 200px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease-out, min-width 0.2s ease-out;
+  z-index: 50;
+}
+
+.view-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.view-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.view-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.view-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.view-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ── Sidebar Header ──────────────────────────────────────────────────── */
+
+.view-sidebar-header {
+  padding: 20px 16px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-sidebar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.view-sidebar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.view-sidebar-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Sidebar Nav ─────────────────────────────────────────────────────── */
+
+.view-sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.view-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  width: 100%;
+  font-family: inherit;
+}
+
+.view-sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.view-sidebar-item.is-active {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.view-sidebar-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.view-sidebar-item-label {
+  flex: 1;
+}
+
+.view-sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Stats Bar ───────────────────────────────────────────────────────── */
+
+.view-stats-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.view-stat-card {
+  flex: 1;
+  min-width: 120px;
+  height: 70px;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-primary);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.view-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.view-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.view-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* Cores de borda para stats */
+.view-stat-card.stat-green { border-left-color: var(--accent-green); }
+.view-stat-card.stat-red { border-left-color: var(--accent-red); }
+.view-stat-card.stat-yellow { border-left-color: var(--accent-yellow); }
+.view-stat-card.stat-blue { border-left-color: var(--accent-blue); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.view-btn:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+.view-btn-primary {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+.view-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.view-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Dashboard Grid & Cards ──────────────────────────────────────────── */
+
+.view-dashboard-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.view-dashboard-grid.cols-2 {
+  grid-template-columns: 2fr 1fr;
+}
+
+.view-dashboard-grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.view-dashboard-card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.view-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+}
+
+/* ── Lists ───────────────────────────────────────────────────────────── */
+
+.view-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.view-list-item {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.view-list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent-primary);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+
+.view-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  gap: 24px;
+  overflow-x: auto;
+}
+
+.view-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.view-tab:hover {
+  color: var(--text-primary);
+}
+
+.view-tab.is-active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+/* ── Form Elements ───────────────────────────────────────────────────── */
+
+.view-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+}
+
+.view-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.view-input::placeholder {
+  color: var(--text-muted);
+}
+
+.view-select {
+  cursor: pointer;
+}
+
+/* ── Responsividade ──────────────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .view-sidebar {
+    width: 60px;
+    min-width: 60px;
+  }
+
+  .view-sidebar-title,
+  .view-sidebar-subtitle,
+  .view-sidebar-item-label,
+  .view-sidebar-footer {
+    display: none;
+  }
+
+  .view-sidebar-item {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .view-dashboard-grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .view-dashboard-grid.cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .view-shell {
+    position: relative;
+  }
+
+  .view-sidebar {
+    position: absolute;
+    left: -100%;
+  }
+
+  .view-sidebar.is-open {
+    left: 0;
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .view-sidebar-title,
+  .view-sidebar-subtitle,
+  .view-sidebar-item-label,
+  .view-sidebar-footer {
+    display: block;
+  }
+
+  .view-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .view-list {
+    grid-template-columns: 1fr;
+  }
+
+  .view-dashboard-grid.cols-2,
+  .view-dashboard-grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+}

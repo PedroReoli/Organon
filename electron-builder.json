@@ -1,0 +1,74 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.organon",
+  "productName": "Organon",
+  "directories": {
+    "output": "../../release/organon-v${version}"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "PedroReoli",
+    "repo": "Ecossistema",
+    "releaseType": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "src/renderer/images/**/*",
+    "src/renderer/public/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist-python/",
+      "to": "dist-python/",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "resources/whisper/",
+      "to": "resources/whisper/",
+      "filter": [
+        "*.exe",
+        "*.dll",
+        "LICENSE"
+      ]
+    }
+  ],
+  "icon": "src/renderer/images/logo.png",
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "src/renderer/images/logo.png",
+    "compression": "store",
+    "artifactName": "Organon-Setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Organon",
+    "installerLanguages": [
+      "pt_BR",
+      "en_US"
+    ],
+    "language": "1046"
+  },
+  "mac": {
+    "target": [
+      "dmg"
+    ],
+    "icon": "src/renderer/images/logo.png"
+  },
+  "linux": {
+    "target": [
+      "AppImage"
+    ],
+    "icon": "src/renderer/images/logo.png"
+  },
+  "beforePack": "scripts/check-whisper-runtime.cjs"
+}

@@ -1,0 +1,30 @@
+/* ========================================
+ * TODAY - PROGRESS BAR
+ * ======================================== */
+
+.today-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-progress-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+
+.today-progress-fill {
+  transition: width var(--transition-slow);
+}
+
+.today-progress-labels {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 700;
+}

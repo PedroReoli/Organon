@@ -1,0 +1,279 @@
+/* ========================================
+ * PRIMITIVES (display) — Badge, Chip, Pill, Card, Divider, Spinner, Skeleton
+ *
+ * Estilos consumindo tokens de tokens.css.
+ * Definido no upgrade 20.
+ * Split do primitives.css original para respeitar limite de 500 linhas.
+ * ======================================== */
+
+/* ────────────────────────────────────────
+ * Badge
+ * ──────────────────────────────────────── */
+
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.ds-badge--sm {
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+}
+.ds-badge--md {
+  padding: 3px var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.ds-badge--default {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+.ds-badge--success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.ds-badge--warning {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+.ds-badge--danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.ds-badge--info {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* ────────────────────────────────────────
+ * Chip (removivel)
+ * ──────────────────────────────────────── */
+
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-2) 3px var(--space-3);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--chip-color, var(--color-primary)) 15%, transparent);
+  color: var(--chip-color, var(--color-primary));
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  border: 1px solid color-mix(in srgb, var(--chip-color, var(--color-primary)) 30%, transparent);
+}
+
+.ds-chip-label {
+  line-height: 1;
+}
+
+.ds-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.ds-chip-remove:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+/* ────────────────────────────────────────
+ * Pill
+ * ──────────────────────────────────────── */
+
+.ds-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--pill-color, var(--color-text-secondary)) 15%, transparent);
+  color: var(--pill-color, var(--color-text-secondary));
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  border: 1px solid color-mix(in srgb, var(--pill-color, var(--color-text-secondary)) 25%, transparent);
+}
+
+/* ────────────────────────────────────────
+ * Card
+ * ──────────────────────────────────────── */
+
+.ds-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.ds-card--default {
+  border: 1px solid var(--color-border);
+}
+
+.ds-card--elevated {
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.ds-card--outlined {
+  background: transparent;
+  border: 1px solid var(--color-border);
+}
+
+.ds-card--ghost {
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.ds-card--pad-none {
+  padding: 0;
+}
+.ds-card--pad-sm {
+  padding: var(--space-3);
+}
+.ds-card--pad-md {
+  padding: var(--space-4);
+}
+.ds-card--pad-lg {
+  padding: var(--space-6);
+}
+
+.ds-card--interactive {
+  cursor: pointer;
+}
+.ds-card--interactive:hover {
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* ────────────────────────────────────────
+ * Divider
+ * ──────────────────────────────────────── */
+
+.ds-divider {
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.ds-divider--horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.ds-divider--vertical {
+  height: 100%;
+  width: 1px;
+}
+
+.ds-divider--horizontal.ds-divider--space-sm {
+  margin: var(--space-2) 0;
+}
+.ds-divider--horizontal.ds-divider--space-md {
+  margin: var(--space-4) 0;
+}
+.ds-divider--horizontal.ds-divider--space-lg {
+  margin: var(--space-6) 0;
+}
+
+.ds-divider--vertical.ds-divider--space-sm {
+  margin: 0 var(--space-2);
+}
+.ds-divider--vertical.ds-divider--space-md {
+  margin: 0 var(--space-4);
+}
+.ds-divider--vertical.ds-divider--space-lg {
+  margin: 0 var(--space-6);
+}
+
+/* ────────────────────────────────────────
+ * Spinner
+ * (usa @keyframes ds-spin definido em primitives-controls.css)
+ * ──────────────────────────────────────── */
+
+.ds-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-spinner-circle {
+  display: block;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: ds-spin 0.7s linear infinite;
+}
+
+.ds-spinner--sm .ds-spinner-circle {
+  width: 14px;
+  height: 14px;
+}
+.ds-spinner--md .ds-spinner-circle {
+  width: 20px;
+  height: 20px;
+}
+.ds-spinner--lg .ds-spinner-circle {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+/* ────────────────────────────────────────
+ * Skeleton
+ * ──────────────────────────────────────── */
+
+.ds-skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: ds-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.ds-skeleton--text {
+  height: 0.85em;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+}
+
+.ds-skeleton--rect {
+  width: 100%;
+  height: 60px;
+  border-radius: var(--radius-md);
+}
+
+.ds-skeleton--circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+@keyframes ds-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

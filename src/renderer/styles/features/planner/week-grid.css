@@ -1,0 +1,224 @@
+﻿/* ========================================
+ * GRADE SEMANAL
+ * ======================================== */
+
+/* Week column wrapper (nav + grid) */
+.planner-week-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Week navigation bar */
+.planner-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.planner-week-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--transition-fast);
+}
+
+.planner-week-nav-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-border-light);
+}
+
+.planner-week-nav-label {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.planner-week-nav-today {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.planner-week-nav-today:hover {
+  opacity: 0.8;
+}
+
+.week-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+.week-grid-header {
+  display: grid;
+  /* minmax(0, 1fr) evita que o conteúdo (ex: eventos) force larguras diferentes por coluna */
+  grid-template-columns: var(--period-label-width) repeat(7, minmax(0, 1fr));
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.week-grid-corner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-right: 1px solid var(--color-border);
+}
+
+.week-grid-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 8px;
+  border-right: 1px solid var(--color-border);
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  transition: background var(--transition-fast);
+}
+
+.week-grid-day-header.is-today {
+  background: var(--color-primary-light);
+}
+
+.week-grid-day-header.is-today .week-grid-day-label {
+  color: var(--color-primary);
+}
+
+.week-grid-day-header.is-today .week-grid-day-date {
+  color: var(--color-primary);
+}
+
+.week-grid-day-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.week-grid-day-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.week-grid-day-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.2px;
+}
+
+.week-grid-day-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.week-grid-day-events {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 10px;
+}
+
+.week-grid-day-event-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.week-grid-day-header:last-child {
+  border-right: none;
+}
+
+.week-grid-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.week-grid-row {
+  display: grid;
+  grid-template-columns: var(--period-label-width) repeat(7, minmax(0, 1fr));
+  flex: 1;
+  min-height: var(--cell-min-height);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.week-grid-row:last-child {
+  border-bottom: none;
+}
+
+/* ========================================
+ * LABELS DOS PERÍODOS
+ * ======================================== */
+
+.period-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--color-border);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.period-label-morning {
+  background: var(--color-morning);
+  color: var(--color-morning-text);
+  border-left: 3px solid var(--color-morning-border);
+}
+
+.period-label-afternoon {
+  background: var(--color-afternoon);
+  color: var(--color-afternoon-text);
+  border-left: 3px solid var(--color-afternoon-border);
+}
+
+.period-label-night {
+  background: var(--color-night);
+  color: var(--color-night-text);
+  border-left: 3px solid var(--color-night-border);
+}
+

@@ -1,0 +1,22 @@
+/* ========================================
+ * APPS — upgrade 17
+ * advanced fields no AppAddModal
+ * ======================================== */
+
+.apps-advanced-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.apps-advanced-toggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}

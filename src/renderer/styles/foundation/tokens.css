@@ -1,0 +1,98 @@
+/* ========================================
+ * DESIGN TOKENS — fundacao do design system
+ *
+ * Tokens consumidos pelos primitives em components/shared/primitives/
+ * e pelos layouts em components/shared/layout/. Cores ficam em colors.css
+ * (sao trocadas por tema), tudo aqui e estrutural e nao muda por tema.
+ *
+ * Definido no upgrade 20.
+ * ======================================== */
+
+:root {
+  /* ────────────────────────────────────────
+   * SPACING (escala 8px com excecoes)
+   * ──────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ────────────────────────────────────────
+   * TYPOGRAPHY
+   * ──────────────────────────────────────── */
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 28px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* ────────────────────────────────────────
+   * RADIUS
+   * ──────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
+
+  /* ────────────────────────────────────────
+   * SHADOW
+   * ──────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.16);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  /* ────────────────────────────────────────
+   * TRANSITION
+   *
+   * --transition-fast ja existe em colors.css por compatibilidade.
+   * Aqui adicionamos --transition-base e --transition-slow.
+   * ──────────────────────────────────────── */
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.4s ease;
+
+  /* ────────────────────────────────────────
+   * Z-INDEX
+   * ──────────────────────────────────────── */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 40;
+  --z-modal-backdrop: 50;
+  --z-modal: 51;
+  --z-popover: 60;
+  --z-toast: 100;
+  --z-tooltip: 200;
+
+  /* ────────────────────────────────────────
+   * BREAKPOINTS
+   *
+   * Tambem expostos para JS via getComputedStyle no useBreakpoint().
+   * ──────────────────────────────────────── */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+}

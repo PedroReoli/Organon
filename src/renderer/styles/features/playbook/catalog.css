@@ -1,0 +1,346 @@
+﻿/* ========================================
+ * PLAYBOOK VIEW
+ * ======================================== */
+
+.playbook-view {
+  width: 100%;
+  overflow: auto;
+  padding-bottom: 22px;
+}
+
+.playbook-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px 12px;
+}
+
+.playbook-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.playbook-body {
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.playbook-subtitle {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.playbook-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playbook-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.playbook-icon-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.playbook-icon-btn:disabled {
+  opacity: 0.45;
+}
+
+.playbook-icon-btn-danger:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.playbook-icon-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.playbook-icon-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+.playbook-stats {
+  margin-top: -4px;
+}
+
+.playbook-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 500px);
+  gap: 16px;
+  align-items: start;
+}
+
+.playbook-main-col,
+.playbook-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.playbook-filters-section {
+  overflow: visible;
+}
+
+.playbook-filters-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(130px, 1fr) minmax(130px, 1fr) minmax(130px, 1fr);
+  gap: 10px;
+}
+
+.playbook-field {
+  display: grid;
+  gap: 6px;
+}
+
+.playbook-field > span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  color: var(--color-text-muted);
+}
+
+.playbook-card-grid {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.playbook-card {
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  background: var(--color-surface);
+  padding: 12px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.playbook-card:hover {
+  border-color: var(--color-border-light);
+  background: var(--color-surface-hover);
+  transform: translateY(-1px);
+}
+
+.playbook-card.is-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary-light);
+}
+
+.playbook-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.playbook-card-top strong {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.playbook-card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.playbook-card-tags span {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.playbook-editor-section,
+.playbook-dialogs-section {
+  overflow: hidden;
+}
+
+.playbook-editor-body,
+.playbook-dialogs-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playbook-editor-inline-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.playbook-textarea {
+  min-height: 120px;
+  resize: vertical;
+  padding: 10px;
+}
+
+.playbook-dialogs-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playbook-dialog-list {
+  display: grid;
+  gap: 8px;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.playbook-dialog-item {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.playbook-dialog-item:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.playbook-dialog-item.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.playbook-dialog-order {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.playbook-dialog-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.playbook-dialog-editor {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playbook-dialog-textarea {
+  min-height: 132px;
+}
+
+.playbook-variables {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.playbook-variables h4,
+.playbook-preview h4 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.playbook-variables-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.playbook-variable-field > span {
+  font-size: 10px;
+}
+
+.playbook-variable-field {
+  display: grid;
+  gap: 6px;
+}
+
+.playbook-variable-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playbook-variable-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.playbook-bold-toggle {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.playbook-bold-toggle:hover {
+  border-color: var(--color-primary);
+}
+
+.playbook-bold-toggle.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-text);
+}
+

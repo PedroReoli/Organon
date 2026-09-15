@@ -1,0 +1,23 @@
+{
+    "claudeCodeChat.permissions.yoloMode": false,
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#d6e256",
+        "activityBar.background": "#d6e256",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#1c98a3",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "commandCenter.border": "#15202b99",
+        "sash.hoverBorder": "#d6e256",
+        "statusBar.background": "#cbdb2a",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#a6b41e",
+        "statusBarItem.remoteBackground": "#cbdb2a",
+        "statusBarItem.remoteForeground": "#15202b",
+        "titleBar.activeBackground": "#cbdb2a",
+        "titleBar.activeForeground": "#15202b",
+        "titleBar.inactiveBackground": "#cbdb2a99",
+        "titleBar.inactiveForeground": "#15202b99"
+    },
+    "peacock.color": "cbdb2a"
+}

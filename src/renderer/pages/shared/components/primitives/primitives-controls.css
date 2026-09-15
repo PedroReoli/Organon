@@ -1,0 +1,290 @@
+/* ========================================
+ * PRIMITIVES (controls) — Button, IconButton, Input, Textarea
+ *
+ * Estilos consumindo tokens de tokens.css.
+ * Definido no upgrade 20.
+ * Split do primitives.css original para respeitar limite de 500 linhas.
+ * ======================================== */
+
+/* ────────────────────────────────────────
+ * Visually hidden (utility de a11y compartilhada)
+ * ──────────────────────────────────────── */
+
+.ds-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ────────────────────────────────────────
+ * Spin keyframe (compartilhado por Button.is-loading e Spinner)
+ * ──────────────────────────────────────── */
+
+@keyframes ds-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ────────────────────────────────────────
+ * Button
+ * ──────────────────────────────────────── */
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast), box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  text-decoration: none;
+}
+
+.ds-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ds-btn:disabled,
+.ds-btn.is-loading {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ds-btn--full {
+  width: 100%;
+}
+
+/* sizes */
+.ds-btn--sm {
+  height: 26px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.ds-btn--md {
+  height: 32px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+}
+
+.ds-btn--lg {
+  height: 40px;
+  padding: 0 var(--space-5);
+  font-size: var(--text-md);
+}
+
+/* variants */
+.ds-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.ds-btn--primary:hover:not(:disabled):not(.is-loading) {
+  background: color-mix(in srgb, var(--color-primary) 88%, #000);
+  box-shadow: var(--shadow-md);
+}
+
+.ds-btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.ds-btn--secondary:hover:not(:disabled):not(.is-loading) {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.ds-btn--danger {
+  background: #ef4444;
+  color: #fff;
+}
+.ds-btn--danger:hover:not(:disabled):not(.is-loading) {
+  background: #dc2626;
+  box-shadow: var(--shadow-md);
+}
+
+.ds-btn--ghost {
+  background: transparent;
+  color: var(--color-text);
+}
+.ds-btn--ghost:hover:not(:disabled):not(.is-loading) {
+  background: var(--color-surface-hover);
+}
+
+.ds-btn--link {
+  background: transparent;
+  color: var(--color-primary);
+  padding: 0;
+  height: auto;
+  border: none;
+}
+.ds-btn--link:hover:not(:disabled):not(.is-loading) {
+  text-decoration: underline;
+}
+
+.ds-btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ds-spin 0.7s linear infinite;
+}
+
+.ds-btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ds-btn-label {
+  display: inline-block;
+}
+
+/* ────────────────────────────────────────
+ * IconButton
+ * ──────────────────────────────────────── */
+
+.ds-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.ds-icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ds-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ds-icon-btn--sm {
+  width: 24px;
+  height: 24px;
+}
+.ds-icon-btn--md {
+  width: 32px;
+  height: 32px;
+}
+.ds-icon-btn--lg {
+  width: 40px;
+  height: 40px;
+}
+
+.ds-icon-btn--default:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.ds-icon-btn--primary {
+  color: var(--color-primary);
+}
+.ds-icon-btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.ds-icon-btn--danger {
+  color: #ef4444;
+}
+.ds-icon-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.ds-icon-btn--ghost:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* ────────────────────────────────────────
+ * Input
+ * ──────────────────────────────────────── */
+
+.ds-input {
+  display: inline-block;
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ds-input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.ds-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ds-input--full {
+  width: 100%;
+}
+
+.ds-input.is-error {
+  border-color: #ef4444;
+}
+.ds-input.is-error:focus-visible {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+/* ────────────────────────────────────────
+ * Textarea
+ * ──────────────────────────────────────── */
+
+.ds-textarea {
+  display: block;
+  min-height: 80px;
+  padding: var(--space-2) var(--space-3);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ds-textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.ds-textarea--full {
+  width: 100%;
+}
+
+.ds-textarea.is-error {
+  border-color: #ef4444;
+}

@@ -1,0 +1,49 @@
+/* ========================================
+ * REALTIME INDICATOR — upgrade 02
+ * Bolinha discreta fixa que mostra estado da conexao WebSocket.
+ * Visivel apenas quando conectado (verde) ou com erro (vermelho).
+ * Estados transitivos (connecting/reconnecting) ficam ocultos.
+ * ======================================== */
+
+.realtime-indicator {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  z-index: 9999;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  cursor: default;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.realtime-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+  transition: background 200ms ease;
+}
+
+/* Oculto por padrao — idle, connecting, reconnecting */
+.realtime-indicator.is-idle,
+.realtime-indicator.is-closed,
+.realtime-indicator.is-connecting,
+.realtime-indicator.is-reconnecting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Conectado — verde discreto, visivel */
+.realtime-indicator.is-open {
+  opacity: 1;
+}
+
+.realtime-indicator.is-open .realtime-indicator-dot {
+  background: #22c55e;
+}

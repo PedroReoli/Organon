@@ -1,0 +1,35 @@
+import React from 'react'
+import type { WeekReport } from '@types'
+
+interface WeekCardProps {
+  report: WeekReport
+  onSelect: () => void
+}
+
+export const WeekCard: React.FC<WeekCardProps> = ({ report, onSelect }) => {
+  const topRepo = [...report.repos].sort((a, b) => b.commitCount - a.commitCount)[0]
+
+  return (
+    <button type="button" className="projects-dashboard-card projects-commit-row" onClick={onSelect} style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border)', background: 'var(--bg-primary)', padding: '16px', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.2s', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{report.weekLabel}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{report.date}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{report.summary.totalCommits}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>commits</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-secondary)' }}>{report.summary.activeThisWeek}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ativos</span>
+        </div>
+      </div>
+      {topRepo && (
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '4px' }}>
+          🏆 {topRepo.name} ({topRepo.commitCount})
+        </div>
+      )}
+    </button>
+  )
+}

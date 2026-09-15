@@ -1,0 +1,198 @@
+/* ==========================================================================
+   ORGANON ANIMATION SYSTEM — INTERAÇÕES E TRANSIÇÕES SUAVES (SMOOTH EASING)
+   ========================================================================== */
+
+/* ── Curva de Easing Suave Padrão (Apple / Material Smooth) ─────────────── */
+:root {
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 180ms;
+}
+
+/* ── 1. Keyframes de Troca de Telas & Surgimento Suave ───────────────────── */
+
+@keyframes viewSwitchEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sidebarItemEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes modalBackdropSmooth {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
+}
+
+@keyframes modalCardSmooth {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── 2. Troca de Telas / Abas do App (Screen Switcher) ───────────────────── */
+
+.app-view-content-enter,
+.app-view-content {
+  animation: viewSwitchEnter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* ── 3. Transição Suave em TODAS as Sidebars do App ─────────────────────── */
+
+.projects-sidebar,
+.notes-tree-sidebar,
+.settings-sidebar,
+.habits-sidebar,
+.crm-sidebar,
+.study-side-panel,
+.fin-sidebar,
+.financial-sidebar,
+.colors-sidebar,
+.palette-sidebar,
+.apps-group-sidebar {
+  width: 310px !important;
+  min-width: 310px !important;
+  transition: width 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              min-width 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              background 180ms ease,
+              border-color 180ms ease;
+  will-change: width, transform;
+}
+
+/* Transições Suaves nos Itens das Sidebars */
+.notes-tree-row,
+.projects-sidebar-item,
+.settings-nav-item,
+.habits-nav-item {
+  transition: background 120ms ease,
+              color 120ms ease,
+              transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+              padding 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, background;
+}
+
+.notes-tree-row:hover,
+.projects-sidebar-item:hover,
+.settings-nav-item:hover {
+  transform: translateX(3px);
+}
+
+.notes-tree-row:active,
+.projects-sidebar-item:active,
+.settings-nav-item:active {
+  transform: scale(0.985);
+}
+
+/* ── 4. Navegação Superior & Abas de Troca ───────────────────────────────── */
+
+.nav-tab,
+.app-view-switcher-btn,
+.transcripts-filter-tab,
+.workflows-filter-btn {
+  transition: background 120ms ease,
+              color 120ms ease,
+              transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 120ms ease,
+              box-shadow 120ms ease;
+}
+
+.nav-tab:hover,
+.app-view-switcher-btn:hover {
+  transform: translateY(-1px);
+}
+
+.nav-tab:active,
+.app-view-switcher-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── 5. Feedback de Clique Tátil em Botões e Controles ──────────────────── */
+
+button,
+.btn,
+.app-view-icon-btn,
+.transcripts-btn-primary,
+.transcripts-btn-secondary {
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+              background 120ms ease,
+              border-color 120ms ease,
+              box-shadow 120ms ease;
+  will-change: transform;
+}
+
+button:active:not(:disabled),
+.btn:active:not(:disabled),
+.app-view-icon-btn:active:not(:disabled) {
+  transform: scale(0.95) !important;
+}
+
+/* ── 6. Modais & Overlays Suaves ─────────────────────────────────────────── */
+
+.workflows-modal-overlay,
+.quick-search-overlay,
+.settings-modal-overlay,
+.navbar-customize-overlay {
+  animation: modalBackdropSmooth 160ms ease-out both;
+}
+
+.workflows-modal-card,
+.quick-search-modal,
+.settings-modal-card,
+.navbar-customize-modal {
+  animation: modalCardSmooth 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* ── 7. Cards & Elementos de Conteúdo ────────────────────────────────────── */
+
+.transcripts-card,
+.workflow-card,
+.sprint-card,
+.planning-card,
+.projects-dashboard-card,
+.habits-card,
+.crm-card {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 150ms ease,
+              background 150ms ease;
+  will-change: transform, box-shadow;
+}
+
+.transcripts-card:hover,
+.workflow-card:hover,
+.sprint-card:hover,
+.planning-card:hover,
+.habits-card:hover,
+.crm-card:hover {
+  transform: translateY(-2px);
+}

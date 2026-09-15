@@ -1,0 +1,167 @@
+/* ========================================
+ * PLANNER RESPONSIVO (Breakpoints BP-1 até BP-7)
+ * ======================================== */
+
+/* ── Mega Responsividade Global ── */
+.sprint-card-title {
+  font-size: clamp(11px, 1.15vw, 13px);
+  line-height: 1.35;
+}
+
+.period-grid-day-name {
+  font-size: clamp(10px, 1.1vw, 12px);
+}
+
+.period-grid-day-date {
+  font-size: clamp(9px, 1vw, 11px);
+}
+
+.period-grid-row-label {
+  font-size: clamp(10px, 1.1vw, 12px);
+}
+
+/* ── BP-5: Laptops Pequenos & Tablets Landscape (< 1024px) ───── */
+@media (max-width: 1024px) {
+  .planning-hub-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .planning-hub-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .planning-hub-tab {
+    padding: 8px 10px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .period-view-body,
+  .sb2-body {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .period-backlog:not(.is-collapsed),
+  .sb2-backlog:not(.is-collapsed) {
+    width: 200px;
+    flex-shrink: 0;
+  }
+
+  .period-grid {
+    min-width: 680px;
+    overflow-x: auto;
+  }
+
+  .sb2-board {
+    min-width: 720px;
+    overflow-x: auto;
+  }
+}
+
+/* ── BP-4: Tablets Portrait & Telas Divididas (< 768px) ───────── */
+@media (max-width: 768px) {
+  .period-layout {
+    flex-direction: column;
+  }
+
+  .planner-layout {
+    flex-direction: column;
+  }
+
+  .period-view-body,
+  .sb2-body {
+    flex-direction: column;
+  }
+
+  .period-backlog,
+  .sb2-backlog {
+    width: 100%;
+    max-height: 180px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .period-view-toolbar,
+  .sb2-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 10px;
+  }
+
+  .period-view-nav,
+  .period-view-info {
+    font-size: 11px;
+  }
+
+  /* PlanningHomePage Grid */
+  .hubs-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .planning-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+/* ── BP-3: Phablets / Telas Dobráveis (< 480px) ───────────────── */
+@media (max-width: 480px) {
+  .planning-hub-tab span:last-child {
+    display: inline-block;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .period-grid {
+    min-width: 620px;
+  }
+
+  .sb2-board {
+    min-width: 640px;
+  }
+
+  .hubs-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .planning-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .period-view-nav button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* ── BP-1 & BP-2: Mobile Standard / Pequeno (< 390px / < 320px) ── */
+@media (max-width: 390px) {
+  .planning-hub-tab {
+    padding: 6px 6px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .planning-hub-tab-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .period-backlog,
+  .sb2-backlog {
+    max-height: 140px;
+  }
+
+  .period-grid-day-name {
+    font-size: 10px;
+  }
+
+  .period-grid-day-date {
+    font-size: 9px;
+  }
+}

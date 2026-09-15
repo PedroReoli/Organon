@@ -1,0 +1,1031 @@
+/* ========================================
+ * GRADE HORÁRIA DO PLANNER
+ * ======================================== */
+
+:root {
+  --hourly-axis-width: 60px;
+}
+
+/* ── Barra de filtros ─────────────────────────────────────────── */
+
+.hourly-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.hourly-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hourly-filter-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.hourly-filter-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  cursor: pointer;
+}
+
+.hourly-filter-select-wrap:hover {
+  border-color: var(--color-border-light);
+  background: var(--color-surface-hover);
+}
+
+.hourly-filter-select-wrap:focus-within {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.hourly-filter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  pointer-events: none;
+  transition: background var(--transition-fast);
+}
+
+.hourly-filter-select {
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  min-width: 90px;
+}
+
+.hourly-filter-select:focus {
+  outline: none;
+}
+
+.hourly-filter-select option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.hourly-filter-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.hourly-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.hourly-filter-clear:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Contêiner externo — ocupa o espaço restante após o nav */
+.hourly-scroll-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Grade inteira: cabeçalho + zona sem horário + corpo */
+.hourly-week-grid {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Cabeçalho com nomes dos dias ─────────────────────────────── */
+
+.hourly-week-header {
+  display: grid;
+  grid-template-columns: var(--hourly-axis-width) repeat(7, minmax(0, 1fr));
+  background: var(--color-background-secondary);
+  border-bottom: 2px solid var(--color-border);
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.hourly-axis-corner {
+  border-right: 1px solid var(--color-border);
+}
+
+.hourly-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-right: 1px solid var(--color-border);
+  gap: 2px;
+  min-width: 0;
+  transition: background var(--transition-fast);
+}
+
+.hourly-day-header:last-child {
+  border-right: none;
+}
+
+.hourly-day-header.is-today {
+  background: var(--color-primary-light);
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.hourly-day-header.is-today .hourly-day-label,
+.hourly-day-header.is-today .hourly-day-date {
+  color: var(--color-primary);
+}
+
+.hourly-day-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.hourly-day-date {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Faixa de cards sem horário ───────────────────────────────── */
+
+.hourly-week-no-time {
+  display: grid;
+  grid-template-columns: var(--hourly-axis-width) repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+  flex-shrink: 0;
+}
+
+.hourly-axis-corner-sm {
+  border-right: 1px solid var(--color-border);
+  min-height: 4px;
+  background: var(--color-background-secondary);
+}
+
+.hourly-no-time-col {
+  border-right: 1px solid var(--color-border);
+  padding: 3px 4px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hourly-no-time-col:last-child {
+  border-right: none;
+}
+
+/* ── Corpo da grade (eixo + colunas de dias) ─ scrollável ──────── */
+
+.hourly-week-body {
+  display: grid;
+  grid-template-columns: var(--hourly-axis-width) repeat(7, minmax(0, 1fr));
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Scrollbar discreta */
+.hourly-week-body::-webkit-scrollbar {
+  width: 5px;
+}
+.hourly-week-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hourly-week-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-light);
+  border-radius: 999px;
+}
+
+/* ── Eixo de horários (coluna esquerda) ───────────────────────── */
+
+.hourly-axis {
+  position: relative;
+  background: var(--color-background-secondary);
+  border-right: 1px solid var(--color-border);
+  z-index: 1;
+}
+
+.hourly-axis-slot {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  overflow: visible;
+}
+
+.hourly-axis-label {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Primeiro label: não deixa clipar no topo */
+.hourly-axis-label.is-first {
+  top: 2px;
+}
+
+/* ── Coluna de cada dia ───────────────────────────────────────── */
+
+.hourly-day-col {
+  position: relative;
+  border-right: 1px solid var(--color-border);
+  min-width: 0;
+  overflow: hidden;
+  background-image: 
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-border) 35%, transparent) 1px, transparent 1px);
+  background-size: 100% var(--hour-height), 100% var(--slot-height);
+  background-position: 0 0, 0 0;
+}
+
+.hourly-day-col:last-child {
+  border-right: none;
+}
+
+.hourly-day-col.is-today {
+  background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+}
+
+/* ── Zonas de período como fundo colorido ─────────────────────── */
+
+.hourly-period-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.hourly-period-zone--morning {
+  background: var(--color-morning);
+}
+
+.hourly-period-zone--afternoon {
+  background: var(--color-afternoon);
+}
+
+.hourly-period-zone--night {
+  background: var(--color-night);
+}
+
+/* ── Zonas droppáveis (DnD) ───────────────────────────────────── */
+
+.hourly-drop-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  transition: background var(--transition-fast), outline var(--transition-fast);
+  pointer-events: all;
+}
+
+.hourly-drop-zone.is-over {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: 3px;
+  z-index: 4;
+}
+
+.hourly-quick-add-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 5;
+  cursor: pointer;
+}
+
+.hourly-drop-zone:hover .hourly-quick-add-btn {
+  opacity: 0.8;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.hourly-quick-add-btn:hover {
+  opacity: 1 !important;
+  transform: translate(-50%, -50%) scale(1.1) !important;
+}
+
+/* ── Linhas horizontais de slot ───────────────────────────────── */
+
+/* As linhas agora são renderizadas pelo background-image em .hourly-day-col, então podemos esconder as divs de linha solta para otimização, se ainda existirem no DOM. */
+.hourly-slot-line {
+  display: none;
+}
+
+/* ── Linha do "agora" ─────────────────────────────────────────── */
+
+.hourly-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  display: flex;
+  align-items: center;
+}
+
+.hourly-now-dot {
+  position: absolute;
+  left: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+  animation: pulse-dot 2s infinite;
+}
+
+.hourly-now-badge {
+  position: absolute;
+  left: 12px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ── Cards posicionados na grade ──────────────────────────────── */
+
+.hourly-card-wrapper {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: auto;
+  transition: opacity var(--transition-normal);
+}
+
+.hourly-card-wrapper.is-past {
+  opacity: 0.45;
+  filter: grayscale(40%);
+}
+
+.hourly-card-wrapper.is-past:hover {
+  opacity: 0.8;
+  filter: grayscale(0%);
+}
+
+.hourly-card-overlap {
+  align-items: center;
+}
+
+/* ── Badge de sobreposição ────────────────────────────────────── */
+
+.hourly-overlap-badge {
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  z-index: 4;
+}
+
+.hourly-overlap-badge:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* ── Chip de evento de calendário ────────────────────────────── */
+
+.hourly-event-chip {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  min-height: 24px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border-left: 3px solid transparent;
+  background: color-mix(in srgb, var(--event-color, var(--color-primary)) 12%, var(--color-surface));
+  border-top: 1px solid color-mix(in srgb, var(--event-color, var(--color-primary)) 25%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--event-color, var(--color-primary)) 15%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--event-color, var(--color-primary)) 15%, transparent);
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  text-align: left;
+  overflow: hidden;
+}
+
+.hourly-event-chip:hover {
+  background: color-mix(in srgb, var(--event-color, var(--color-primary)) 22%, var(--color-surface));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.hourly-event-time {
+  font-size: 9px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--event-color, var(--color-primary)) 80%, var(--color-text));
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-event-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ========================================
+ * CARD COMPACTO
+ * ======================================== */
+
+.compact-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 6px;
+  border-left: 3px solid var(--accent, var(--color-text-muted));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.compact-card:hover {
+  background: var(--color-surface-hover);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  border-color: var(--color-border-light);
+}
+
+/* Drag handle — ocupa todo o espaço interno acima do resize */
+.cc-drag {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 3px 6px 2px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: grab;
+}
+
+.cc-drag:active {
+  cursor: grabbing;
+}
+
+/* Linha com prioridade + título lado a lado */
+.cc-header {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cc-priority {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  align-self: center;
+}
+
+/* Título — protagonista do card */
+.cc-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+/* Duração (só em cards altos) */
+.cc-duration {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+/* Handle de redimensionamento — sempre visível */
+.cc-resize {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 14px;
+  flex-shrink: 0;
+  border-top: 1px solid color-mix(in srgb, var(--accent, var(--color-primary)) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--accent, var(--color-primary)) 8%, var(--color-surface));
+  cursor: ns-resize;
+  transition: background var(--transition-fast);
+}
+
+.cc-resize:hover {
+  background: color-mix(in srgb, var(--accent, var(--color-primary)) 22%, var(--color-surface));
+}
+
+.cc-resize:active {
+  background: color-mix(in srgb, var(--accent, var(--color-primary)) 38%, var(--color-surface));
+}
+
+.cc-resize-grip {
+  display: block;
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, var(--color-primary)) 60%, var(--color-border));
+  transition: background var(--transition-fast), width var(--transition-fast);
+}
+
+.cc-resize:hover .cc-resize-grip {
+  background: var(--accent, var(--color-primary));
+  width: 28px;
+}
+
+/* Estados do card */
+.compact-card--dragging {
+  opacity: 0;
+}
+
+.compact-card--done {
+  opacity: 0.65;
+}
+
+.compact-card--done .cc-title {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.compact-card--blocked .cc-drag {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    rgba(239, 68, 68, 0.04) 4px,
+    rgba(239, 68, 68, 0.04) 8px
+  );
+}
+
+.compact-card--resizing {
+  box-shadow: 0 0 0 2px var(--accent, var(--color-primary)), 0 8px 18px rgba(0,0,0,0.3);
+}
+
+.compact-card--locked .cc-drag {
+  cursor: default;
+}
+
+.compact-card--locked .cc-time::after {
+  content: ' 🔒';
+  font-size: 8px;
+}
+
+/* ========================================
+ * ZONA SEM HORÁRIO (NoTimeZone)
+ * ======================================== */
+
+.no-time-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.no-time-zone-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.no-time-zone-toggle:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-hover);
+}
+
+.no-time-zone-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ========================================
+ * TOOLBAR DO PLANNER (PlannerToolbar)
+ * ======================================== */
+
+.planner-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.planner-toolbar-intervals {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.planner-toolbar-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.planner-toolbar-btn + .planner-toolbar-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.planner-toolbar-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.planner-toolbar-btn.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.planner-toolbar-range {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.planner-toolbar-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.planner-toolbar-settings:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-border-light);
+}
+
+/* ========================================
+ * TOGGLE DE MODO DE VISUALIZAÇÃO (PlannerView)
+ * ======================================== */
+
+.planner-view-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.planner-view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.planner-view-toggle-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.planner-view-toggle-btn.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ========================================
+ * MODAL DE CONFLITO DE HORARIO
+ * ======================================== */
+
+/* ── Modal de conflito ──────────────────────────────────────── */
+
+.hc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  animation: hc-fade-in 0.12s ease-out;
+}
+
+@keyframes hc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hc-modal {
+  background: var(--color-background, #0f0f0f);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: hc-slide-up 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes hc-slide-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
+.hc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hc-header-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.hc-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.hc-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.hc-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* Corpo */
+.hc-text {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  padding: 12px 16px 8px;
+  line-height: 1.5;
+}
+
+.hc-text strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.hc-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 16px 14px;
+}
+
+.hc-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.hc-card-row svg {
+  flex-shrink: 0;
+}
+
+/* Acoes */
+.hc-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.hc-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.hc-action:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.hc-action--primary {
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  color: #fff;
+}
+
+.hc-action--primary:hover {
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 85%, #fff);
+  border-color: color-mix(in srgb, var(--color-primary, var(--color-primary)) 85%, #fff);
+  color: #fff;
+}
+
+.hc-action--secondary {
+  color: var(--color-text-secondary);
+}
+
+.hc-action--secondary:hover {
+  color: var(--color-text);
+}

@@ -1,0 +1,12 @@
+/* ========================================
+ * PRIMITIVES — barrel CSS
+ *
+ * Importa os 2 arquivos divididos do design system.
+ * Componentes em primitives/ continuam importando './primitives.css'.
+ *
+ * Split em controls + display para respeitar limite de 500 linhas
+ * (decisao alinhada no upgrade 19, regra rigida).
+ * ======================================== */
+
+@import './primitives-controls.css';
+@import './primitives-display.css';

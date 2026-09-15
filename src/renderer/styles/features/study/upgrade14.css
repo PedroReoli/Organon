@@ -1,0 +1,393 @@
+/* ========================================
+ * STUDY — upgrade 14
+ * analytics, heatmap, presets, history, goal focus
+ * ======================================== */
+
+/* ── Goal Focus Selector ─────────────────────────────────────── */
+
+.study-goal-focus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.study-goal-focus-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.study-goal-focus-select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.study-goal-focus-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.study-goal-focus-category {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+/* ── Analytics Panel ─────────────────────────────────────────── */
+
+.study-analytics-panel {
+  padding: 16px;
+  max-height: 80vh;
+  overflow-y: auto;
+  min-width: 420px;
+  max-width: 720px;
+}
+
+.study-analytics-header h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.study-analytics-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.study-analytics-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.study-analytics-kpi-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.study-analytics-kpi-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.study-analytics-section {
+  margin-bottom: 18px;
+}
+
+.study-analytics-section h4 {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Hour Heatmap ────────────────────────────────────────────── */
+
+.study-hour-heatmap {
+  width: 100%;
+}
+
+.study-hour-heatmap-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ── Trend chart ─────────────────────────────────────────────── */
+
+.study-trend-chart {
+  width: 100%;
+}
+
+.study-trend-chart.is-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.study-trend-chart-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ── Breakdown ───────────────────────────────────────────────── */
+
+.study-analytics-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.study-analytics-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.study-analytics-breakdown-title {
+  min-width: 100px;
+  max-width: 180px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-analytics-breakdown-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--color-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.study-analytics-breakdown-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 180ms ease;
+}
+
+.study-analytics-breakdown-value {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* ── Session Presets ─────────────────────────────────────────── */
+
+.study-presets-panel {
+  padding: 16px;
+  max-height: 80vh;
+  overflow-y: auto;
+  min-width: 380px;
+  max-width: 520px;
+}
+
+.study-presets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.study-presets-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.study-presets-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.study-presets-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.study-presets-form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.study-presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.study-preset-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.study-preset-card.is-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+.study-preset-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.study-preset-card-main strong {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.study-preset-card-main span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.study-preset-card-meta {
+  font-size: 10px !important;
+  font-style: italic;
+}
+
+.study-preset-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Session History ─────────────────────────────────────────── */
+
+.study-history-panel {
+  padding: 16px;
+  max-height: 80vh;
+  overflow-y: auto;
+  min-width: 420px;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+}
+
+.study-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.study-history-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.study-history-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.study-history-filters > * {
+  flex: 1;
+}
+
+.study-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.study-history-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.study-history-item {
+  padding: 8px 12px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.study-history-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.study-history-item-main strong {
+  font-size: 13px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.study-history-item-date {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.study-history-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.study-history-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .study-analytics-panel,
+  .study-presets-panel,
+  .study-history-panel {
+    min-width: 320px;
+  }
+  .study-analytics-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

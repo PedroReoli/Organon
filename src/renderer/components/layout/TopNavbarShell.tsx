@@ -1,0 +1,184 @@
+import React from 'react'
+import { AppView } from '../../pages/shared/InternalNav'
+import logoNameImg from '../../images/logo-name.png'
+import faviconImg from '../../images/favicon.png'
+
+interface Props {
+  activeView: AppView
+  hubTitle?: string
+  viewTitle: string
+  onNavigateHome: () => void
+  onOpenQuickSearch: () => void
+  onOpenSettings?: () => void
+  onOpenSyncModal?: () => void
+  lastSyncAt?: string
+  syncStatus?: string
+}
+
+export const TopNavbarShell: React.FC<Props> = ({
+  activeView,
+  hubTitle,
+  viewTitle,
+  onNavigateHome,
+  onOpenQuickSearch,
+  onOpenSettings,
+  onOpenSyncModal,
+  lastSyncAt,
+  syncStatus = 'synced',
+}) => {
+  return (
+    <header
+      style={{
+        height: '52px',
+        background: 'var(--color-surface)',
+        borderBottom: '1px solid var(--color-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 20px',
+        zIndex: 100,
+        userSelect: 'none',
+      }}
+    >
+      {/* Canto Esquerdo: Logo Name do Organon (Clicável -> Home) + Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          onClick={onNavigateHome}
+          title="Voltar ao Dashboard Principal (Organon Home)"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            borderRadius: '10px',
+            transition: 'background 0.15s ease',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--color-primary) 15%, transparent)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+        >
+          <img
+            src={logoNameImg}
+            alt="Organon"
+            style={{ height: '28px', objectFit: 'contain' }}
+            onError={(e) => {
+              e.currentTarget.src = faviconImg
+            }}
+          />
+        </button>
+
+        <span style={{ color: 'var(--color-border)', fontSize: '14px' }}>/</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+          {hubTitle && (
+            <>
+              <span style={{ color: 'var(--color-text-muted)' }}>{hubTitle}</span>
+              <span style={{ color: 'var(--color-border)' }}>/</span>
+            </>
+          )}
+          <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{viewTitle}</span>
+        </div>
+      </div>
+
+      {/* Centro: Input de Busca Global Rápida (Ctrl+K) */}
+      <div style={{ flex: 1, maxWidth: '440px', margin: '0 20px' }}>
+        <button
+          onClick={onOpenQuickSearch}
+          title="Buscar tarefas, notas, contatos e arquivos (Ctrl+K)"
+          style={{
+            width: '100%',
+            height: '36px',
+            padding: '0 14px',
+            borderRadius: '10px',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-background)',
+            color: 'var(--color-text-muted)',
+            fontSize: '12.5px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>Buscar no Organon...</span>
+          </div>
+          <kbd
+            style={{
+              fontSize: '10px',
+              fontFamily: 'monospace',
+              padding: '2px 5px',
+              borderRadius: '4px',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)',
+            }}
+          >
+            Ctrl+K
+          </kbd>
+        </button>
+      </div>
+
+      {/* Canto Direito: WiFi Sync Status, Notificações e Configurações */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          onClick={onOpenSyncModal}
+          title={lastSyncAt ? `Última sincronização: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização ativa'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '11px',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            border: '1px solid var(--color-border)',
+            background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+            color: 'var(--color-primary)',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+            <circle cx="12" cy="20" r="1" />
+          </svg>
+          <span>Wi-Fi Sync</span>
+        </button>
+
+        {onOpenSettings && (
+          <button
+            onClick={onOpenSettings}
+            title="Configurações do Sistema"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-muted)',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </header>
+  )
+}

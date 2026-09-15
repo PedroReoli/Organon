@@ -1,0 +1,188 @@
+﻿/* ========================================
+ * CÉLULAS DA GRADE
+ * ======================================== */
+
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-background);
+  transition: background-color var(--transition-fast);
+  min-height: 100%;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cell-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.grid-cell.cell-compact {
+  padding: 5px;
+  gap: 4px;
+}
+
+.grid-cell.cell-compact .cell-events {
+  gap: 1px;
+}
+
+.grid-cell.cell-compact .cell-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cell-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-event {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-left: 3px solid var(--color-primary);
+  border-radius: 0 4px 4px 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  font-size: 10.5px;
+  line-height: 1.3;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.cell-event:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cell-event:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.cell-event-time {
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+  width: 42px;
+  min-width: 0;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-event-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cell-event-more {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.cell-event-more:hover {
+  color: var(--color-primary);
+}
+
+.cell-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.cell-pagination-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.cell-pagination-arrow:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.cell-pagination-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.cell-pagination-info {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: center;
+}
+
+.cell-empty-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  font-size: 18px;
+}
+
+.grid-cell:hover .cell-empty-hint {
+  opacity: 0.3;
+}
+
+/* No contexto da grade de período, o indicador "Sem data" é redundante */
+.grid-cell .card-indicator-nodate {
+  display: none;
+}
+
+.grid-cell:last-child {
+  border-right: none;
+}
+
+.grid-cell.period-morning {
+  background: var(--color-morning);
+}
+
+.grid-cell.period-afternoon {
+  background: var(--color-afternoon);
+}
+
+.grid-cell.period-night {
+  background: var(--color-night);
+}
+
+.grid-cell.drag-over {
+  background: var(--color-drag-highlight) !important;
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+

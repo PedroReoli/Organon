@@ -1,0 +1,25 @@
+/* ========================================
+ * REDUCED MOTION
+ *
+ * Quando o usuario tem prefers-reduced-motion: reduce ativo no SO,
+ * desabilitamos TODAS as animacoes e transicoes (decisao do upgrade 20).
+ *
+ * Isso inclui:
+ * - animation-* properties
+ * - transition-* properties
+ * - scroll-behavior smooth
+ *
+ * Hook useReducedMotion expoe a preferencia para JS quando precisar
+ * desabilitar logica baseada em animacao (timers, fade out, etc).
+ * ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

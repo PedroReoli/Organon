@@ -1,0 +1,359 @@
+/* Editor content area */
+.notes-editor-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 48px 32px;
+}
+
+.notes-layout.reduce-level-2 .notes-editor-breadcrumb,
+.notes-layout.reduce-level-2 .notes-editor-top-bar,
+.notes-layout.reduce-level-2 .notes-subpages-row,
+.notes-layout.reduce-level-2 .notes-folder-overview {
+  display: none;
+}
+
+.notes-layout.reduce-level-2 .notes-editor-content {
+  padding-top: 16px;
+}
+
+.notes-folder-editor-content {
+  padding-top: 6px;
+}
+
+.notes-folder-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+/* Override Tiptap for notes full editor */
+.notes-editor-content .editor-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.notes-editor-content .editor-toolbar {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+}
+.notes-editor-content .tiptap-editor {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 0;
+  font-size: 16px;
+  line-height: 1.65;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  max-height: none;
+}
+.notes-editor-content .tiptap-editor .ProseMirror {
+  min-height: 100%;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+
+/* Empty state */
+.notes-editor-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--color-text-muted);
+}
+.notes-editor-empty-text {
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+/* ── Context menu (sidebar right-click & options menu) ── */
+.notes-ctx-menu {
+  position: fixed;
+  width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 8px;
+  background: color-mix(in srgb, var(--color-surface, #1e293b) 96%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border, #475569) 82%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(18px);
+  z-index: 9999;
+  animation: ctx-appear 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  outline: none;
+  overscroll-behavior: contain;
+}
+
+@keyframes ctx-appear {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.notes-ctx-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px 9px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.notes-ctx-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, var(--text-primary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-ctx-body-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+}
+
+.notes-ctx-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notes-ctx-section-label {
+  min-height: 24px;
+  padding: 2px 7px 4px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.notes-ctx-badge {
+  font-size: 11px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.notes-ctx-badge-hub {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--color-primary, #6366f1);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.notes-ctx-divider {
+  height: 1px;
+  background: var(--color-border, #334155);
+  margin: 4px 0;
+}
+
+.notes-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text, var(--text-primary));
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  position: relative;
+  border: none;
+}
+
+.notes-ctx-item:focus-visible {
+  background: var(--color-primary-light, rgba(99, 102, 241, 0.16));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 65%, transparent);
+  outline: none;
+}
+
+.notes-ctx-item svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.notes-ctx-item:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-emphasis, #ffffff);
+}
+
+.notes-ctx-item:hover:not(:disabled) svg {
+  opacity: 1;
+}
+
+.notes-ctx-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notes-ctx-item--hub {
+  color: var(--color-primary, #6366f1);
+  font-weight: 600;
+}
+
+.notes-ctx-item--hub:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.notes-ctx-danger {
+  color: #ef4444;
+}
+
+.notes-ctx-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.notes-ctx-check {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-primary, #6366f1);
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .notes-ctx-menu {
+    width: min(286px, calc(100vw - 16px));
+  }
+
+  .notes-ctx-body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notes-ctx-section-label {
+    min-height: 0;
+    padding-top: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notes-ctx-menu {
+    animation: none;
+  }
+}
+
+/* Inline folder rename input in tree */
+.notes-tree-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 13px;
+  color: var(--color-text);
+  outline: none;
+}
+
+/* Hub badge in tree label */
+.notes-tree-hub-badge {
+  font-size: 9px;
+  padding: 0px 4px;
+  border-radius: 3px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 700;
+  margin-left: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ⋮ more button — always slightly visible, brighter on hover */
+.notes-tree-action-more {
+  opacity: 0.5;
+}
+.notes-tree-row:hover .notes-tree-action-more,
+.notes-tree-action-more:hover {
+  opacity: 1;
+}
+
+/* Keep old names for backwards compat (some items may still use them) */
+.notes-context-menu { display: none; }
+.notes-context-divider { height: 1px; background: var(--color-border); margin: 3px 0; }
+
+/* ---- Delete confirmation modal ---- */
+.notes-delete-modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+}
+.notes-delete-modal {
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border, #475569);
+  border-radius: 12px;
+  padding: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  box-shadow: var(--shadow-hover);
+}
+.notes-delete-modal-icon {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  display: flex; align-items: center; justify-content: center;
+}
+.notes-delete-modal-title {
+  margin: 0; font-size: 18px; font-weight: 600;
+  color: var(--text-primary);
+}
+.notes-delete-modal-desc {
+  margin: 0; font-size: 14px; color: var(--text-secondary);
+  text-align: center; line-height: 1.5;
+}
+.notes-delete-modal-actions {
+  display: flex; gap: 12px; margin-top: 8px; width: 100%;
+}
+.notes-delete-modal-btn {
+  flex: 1; padding: 10px 0; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+.notes-delete-modal-btn.cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.notes-delete-modal-btn.cancel:hover { background: var(--border); }
+.notes-delete-modal-btn.confirm {
+  background: #ef4444;
+  color: #fff; border-color: #ef4444;
+}
+.notes-delete-modal-btn.confirm:hover { background: #dc2626; border-color: #dc2626; }
+

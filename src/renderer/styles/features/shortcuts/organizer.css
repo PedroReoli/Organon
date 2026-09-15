@@ -1,0 +1,323 @@
+﻿/* Add shortcut form */
+.shortcut-form {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut-form-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-mode-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.shortcut-mode-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.shortcut-mode-btn.is-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+.shortcut-bulk-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 12px;
+}
+
+.shortcut-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.shortcut-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.shortcut-form-field.stretch {
+  flex: 2;
+  min-width: 280px;
+}
+
+.shortcut-form-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.shortcut-auto-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Selection toolbar */
+.shortcut-selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--color-primary-light);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.shortcut-selection-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.shortcut-sel-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.shortcut-sel-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.shortcut-sel-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.shortcut-sel-btn-open {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+.shortcut-sel-btn-open:hover {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.shortcut-sel-btn-danger {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.shortcut-sel-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.shortcut-sel-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 140px;
+  border-radius: 6px;
+}
+
+/* Card grid */
+.shortcut-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+/* Card list */
+.shortcut-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-content: start;
+}
+
+.shortcut-list .shortcut-card {
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.shortcut-list .shortcut-card-title {
+  -webkit-line-clamp: 1;
+}
+
+/* Card */
+.shortcut-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.shortcut-card:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.shortcut-card-wrapper.is-selected .shortcut-card {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.shortcut-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-favicon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.shortcut-favicon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shortcut-favicon-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.shortcut-favicon-fallback svg {
+  width: 14px;
+  height: 14px;
+}
+
+.shortcut-builtin svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.shortcut-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.shortcut-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shortcut-card-url {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.shortcut-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.shortcut-card:hover .shortcut-card-actions {
+  opacity: 1;
+}
+
+/* YouTube embed preview */
+.shortcut-embed-preview {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+  aspect-ratio: 16 / 9;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+}
+
+.shortcut-embed-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.shortcut-embed-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.shortcut-embed-preview:hover .shortcut-embed-play {
+  opacity: 1;
+}
+

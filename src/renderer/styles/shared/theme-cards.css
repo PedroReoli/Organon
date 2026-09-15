@@ -1,0 +1,179 @@
+﻿/* ========================================
+ * THEME SELECTOR CARDS
+ * ======================================== */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.theme-carousel-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-carousel {
+  position: relative;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+}
+
+.theme-carousel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.theme-carousel-arrow:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+  color: var(--color-primary);
+}
+
+.theme-carousel-arrow:active {
+  transform: scale(0.95);
+}
+
+.theme-carousel-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.theme-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.theme-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.theme-carousel::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+
+.theme-carousel::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
+}
+
+
+.theme-carousel-track {
+  display: inline-flex;
+  gap: 16px;
+  padding: 8px 0;
+  min-width: min-content;
+}
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  width: 180px;
+  scroll-snap-align: start;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.theme-card:hover {
+  border-color: var(--color-border-light);
+  transform: translateY(-2px);
+}
+
+.theme-card-selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.theme-card-preview {
+  display: flex;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--preview-bg);
+  border: 1px solid var(--color-border);
+}
+
+.theme-preview-sidebar {
+  width: 40px;
+  background: var(--preview-surface);
+  border-right: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.theme-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 6px;
+}
+
+.theme-preview-header {
+  height: 12px;
+  border-radius: 4px;
+  background: var(--preview-primary);
+  opacity: 0.8;
+}
+
+.theme-preview-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.theme-preview-card {
+  height: 16px;
+  border-radius: 4px;
+  background: var(--preview-surface);
+  border: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.theme-card-label {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.theme-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+}
+

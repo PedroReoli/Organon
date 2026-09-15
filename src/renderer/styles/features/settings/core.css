@@ -1,0 +1,354 @@
+﻿/* ========================================
+ * CONFIGURACOES — base (sobrescrito por two-panel.css)
+ * ======================================== */
+
+.settings-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.settings-color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-color-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-color-input input[type="color"] {
+  width: 40px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.settings-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.settings-data-path {
+  flex: 1;
+  min-width: 280px;
+}
+
+.settings-data-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.settings-data-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Campos genéricos de seção */
+.settings-field-group {
+  margin-bottom: 20px;
+}
+
+.settings-field-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── PlannerSection ───────────────────────────────────────────── */
+
+.planner-interval-toggle {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.planner-interval-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.planner-interval-btn + .planner-interval-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.planner-interval-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.planner-interval-btn.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.planner-range-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planner-range-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planner-range-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.planner-range-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.planner-range-unit {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.planner-range-sep {
+  font-size: 18px;
+  color: var(--color-text-muted);
+  align-self: flex-end;
+  padding-bottom: 6px;
+}
+
+.planner-range-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.planner-range-preview-label {
+  color: var(--color-text-muted);
+}
+
+.planner-range-preview strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.planner-range-preview-sub {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+/* Settings - IDE Registration */
+.settings-ide-form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.settings-ide-form h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-ide-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-ide-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-ide-form-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.settings-ide-form-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.settings-ide-form-hint code {
+  background: var(--color-background-tertiary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.settings-ide-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.settings-ide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-ide-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.settings-ide-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  transition: border-color var(--transition-fast);
+}
+
+.settings-ide-item:hover {
+  border-color: var(--color-border-light);
+}
+
+.settings-ide-item-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.settings-ide-item-icon-placeholder {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.settings-ide-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-ide-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-ide-item-path {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-ide-item-args {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.settings-ide-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.settings-ide-add-btn {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-danger.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.settings-app-info {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-app-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
