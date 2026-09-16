@@ -4,7 +4,7 @@ import { useStore } from '../../shared/hooks';
 import { listenForCliSync } from '../cli/planningCliBridge';
 
 export const usePlanningTasks = () => {
-  const { cards: globalTasks, updateStore } = useStore();
+  const { cards: globalTasks, projects, updateStore } = useStore();
   const [tasks, setTasks] = useState<PlanningTask[]>((globalTasks as unknown as PlanningTask[]) || []);
 
   // Fallback sync listener
@@ -151,6 +151,7 @@ export const usePlanningTasks = () => {
 
   return {
     tasks,
+    projects: projects || [],
     updateTask,
     addTask,
     removeTask,
