@@ -11,8 +11,8 @@
  * Definido nos upgrades 19 e 20.
  */
 
-export * from '../../../shared/components/primitives'
+export * from './primitives'
 export * from './layout'
-export * from '@shared/components/display'
+export * from './display'
 export * from './inputs'
 export * from './a11y'

@@ -6,8 +6,7 @@
  * Upgrade 02.
  */
 
-import React from 'react'
-import type { RealtimeState } from '../../../api/realtime'
+import type { RealtimeState } from '../../../../api/realtime'
 
 interface RealtimeIndicatorProps {
   state: RealtimeState

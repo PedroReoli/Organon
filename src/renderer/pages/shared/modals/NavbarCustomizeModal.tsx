@@ -5,7 +5,7 @@ import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, us
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { NAVBAR_VIEW_LABELS, NAV_ICON_OPTIONS, createDefaultNavbarConfig, renderNavIcon, resolveNavbarConfig } from './navConfig'
+import { NAVBAR_VIEW_LABELS, NAV_ICON_OPTIONS, createDefaultNavbarConfig, renderNavIcon, resolveNavbarConfig } from '../navConfig'
 import { Button } from '@shared/components/primitives'
 
 interface NavbarCustomizeModalProps {
@@ -71,7 +71,7 @@ const IconPicker = ({
       </button>
       {open && (
         <div className="icon-picker-popup">
-          {NAV_ICON_OPTIONS.map(option => (
+          {NAV_ICON_OPTIONS.map((option: any) => (
             <button
               key={option.id}
               type="button"
@@ -519,8 +519,8 @@ export const NavbarCustomizeModal = ({ isOpen, onClose, settings, onUpdateSettin
   const activeDragGroup = activeDragId ? parseGroupId(activeDragId) : null
   const activeDragView = activeDragId ? parseViewId(activeDragId) : null
 
-  const dragGhostGroup = activeDragGroup ? orderedGroups.find(g => g.id === activeDragGroup) : null
-  const dragGhostView = activeDragView ? navbarConfig.items.find(i => i.view === activeDragView) : null
+  const dragGhostGroup = activeDragGroup ? orderedGroups.find((g: any) => g.id === activeDragGroup) : null
+  const dragGhostView = activeDragView ? navbarConfig.items.find((i: any) => i.view === activeDragView) : null
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

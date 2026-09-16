@@ -18,9 +18,33 @@ export {
   getDayFromDate,
   getWeekDatesForOffset,
   getCurrentWeekDates,
-} from './index'
+} from '../../../utils/index'
 
-import { getTodayISO } from './index'
+import { getTodayISO, formatDateShort, getCurrentWeekDates } from '../../../utils/index'
+
+export const formatDate = formatDateShort
+export const formatTime = (iso: string): string => {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch { return '' }
+}
+export const formatDateTime = (iso: string): string => `${formatDateShort(iso)} ${formatTime(iso)}`
+export const parseDate = (d: string): Date => new Date(d)
+export const getToday = (): string => getTodayISO()
+export const getWeekRange = (): { start: string; end: string } => {
+  const dates = getCurrentWeekDates()
+  return { start: dates.mon, end: dates.sun }
+}
+export const getMonthRange = (): { start: string; end: string } => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const start = toISO(y, m, 1)
+  const lastDay = new Date(y, m + 1, 0).getDate()
+  const end = toISO(y, m, lastDay)
+  return { start, end }
+}
 
 /**
  * Constroi string ISO `YYYY-MM-DD` a partir de y/m/d (m e 0-indexed).
@@ -106,8 +130,5 @@ export function formatRelativeDay(iso: string): string {
   const delta = diffDays(today, iso)
   if (delta > 0 && delta <= 7) return `Em ${delta} dias`
   if (delta < 0 && delta >= -7) return `Ha ${Math.abs(delta)} dias`
-  // delegar para formatDateShort
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { formatDateShort } = require('./index') as { formatDateShort: (s: string) => string }
   return formatDateShort(iso)
 }

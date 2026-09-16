@@ -190,29 +190,19 @@ export const renderNavIcon = (iconId: NavIconId): JSX.Element => ICONS[iconId] ?
 
 export const DEFAULT_NAVBAR_GROUPS: NavbarGroupConfig[] = [
   { id: 'organization', label: 'Planejamento', iconId: 'agenda', enabled: true, order: 0 },
-  { id: 'personal', label: 'Foco', iconId: 'study', enabled: true, order: 1 },
-  { id: 'content', label: 'Conhecimento', iconId: 'notes', enabled: true, order: 2 },
-  { id: 'work', label: 'Operação', iconId: 'projects', enabled: true, order: 3 },
-  { id: 'tools', label: 'Ferramentas', iconId: 'tools', enabled: true, order: 4 },
+  { id: 'content', label: 'Conhecimento', iconId: 'notes', enabled: true, order: 1 },
+  { id: 'work', label: 'Operação', iconId: 'projects', enabled: true, order: 2 },
+  { id: 'personal', label: 'Sistema', iconId: 'personal', enabled: true, order: 3 },
 ]
 
 export const DEFAULT_NAVBAR_ITEMS: NavbarItemConfig[] = [
   { view: 'agenda', label: 'Planejamento', iconId: 'agenda', groupId: 'organization', order: 0 },
-  { view: 'calendar', label: 'Calendário', iconId: 'calendar', groupId: 'organization', order: 1 },
-  { view: 'study', label: 'Modo Foco', iconId: 'study', groupId: 'personal', order: 0 },
-  { view: 'notes', label: 'Notas & Chatbot', iconId: 'notes', groupId: 'content', order: 0 },
+  { view: 'notes', label: 'Notas', iconId: 'notes', groupId: 'content', order: 0 },
   { view: 'playbook', label: 'Playbook', iconId: 'playbook', groupId: 'content', order: 1 },
-  { view: 'canvas', label: 'Canvas', iconId: 'canvas', groupId: 'content', order: 2 },
-  { view: 'transcripts', label: 'Whisper', iconId: 'transcripts', groupId: 'content', order: 3 },
-  { view: 'audio', label: 'Áudio', iconId: 'audio', groupId: 'content', order: 4 },
-  { view: 'library', label: 'Biblioteca', iconId: 'library', groupId: 'content', order: 5 },
-  { view: 'projects', label: 'Projetos & Git', iconId: 'projects', groupId: 'work', order: 0 },
-  { view: 'crm', label: 'CRM', iconId: 'crm', groupId: 'work', order: 1 },
-  { view: 'okrs', label: 'OKRs & Metas', iconId: 'okrs', groupId: 'work', order: 2 },
-  { view: 'system-design', label: 'System Design', iconId: 'system-design', groupId: 'work', order: 3 },
-  { view: 'clipboard', label: 'Clipboard', iconId: 'clipboard', groupId: 'tools', order: 0 },
-  { view: 'colors', label: 'Cores', iconId: 'colors', groupId: 'tools', order: 1 },
+  { view: 'transcripts', label: 'Whisper', iconId: 'transcripts', groupId: 'content', order: 2 },
+  { view: 'projects', label: 'Projetos', iconId: 'projects', groupId: 'work', order: 0 },
 ]
+
 
 
 export const NAVBAR_VIEW_LABELS: Record<NavbarView, string> = DEFAULT_NAVBAR_ITEMS.reduce((acc, item) => {

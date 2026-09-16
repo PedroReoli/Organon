@@ -12,6 +12,8 @@ export interface Note {
   id: string
   title: string
   mdPath: string
+  content?: string
+  tags?: string[]
   folderId: string | null
   parentNoteId: string | null
   projectId: string | null
@@ -126,4 +128,51 @@ export interface NoteLinkRef {
   targetTitle: string
   targetNoteId: string | null
   contextSnippet: string
+}
+
+export type TreeItemKind = 'folder' | 'note'
+export type TreeItemKey = string
+
+export interface BreadcrumbPart {
+  id: string | null
+  name?: string
+  label?: string
+  isFolder?: boolean
+  kind?: 'folder' | 'note'
+}
+
+export interface SidebarCtxMenu {
+  x: number
+  y: number
+  type?: 'note' | 'folder'
+  kind?: 'note' | 'folder'
+  id: string
+  folderId?: string | null
+  [key: string]: any
+}
+
+export interface NotesViewProps {
+  [key: string]: any
+}
+
+export type ImageAlign = 'left' | 'center' | 'right'
+export type ImageMode = 'inline' | 'block' | 'card' | 'frame' | 'free'
+export type FrameAspect = 'auto' | '16:9' | '4:3' | '1:1'
+
+export interface SlashCommand {
+  id: string
+  label: string
+  description: string
+  keywords: string[]
+  icon: any
+  action: (editor: any) => void
+}
+
+export interface FolderTreeItem {
+  key: string
+  title: string
+  isFolder: boolean
+  folderId?: string | null
+  noteId?: string
+  children?: FolderTreeItem[]
 }

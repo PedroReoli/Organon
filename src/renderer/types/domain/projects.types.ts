@@ -103,3 +103,85 @@ export interface RegisteredIDE {
   args: string
   order: number
 }
+
+export interface RepoReport {
+  name: string
+  group: string
+  key?: string
+  commitCount: number
+  velocity?: number
+  lastWeek?: number
+  packageJsonChanged?: boolean
+  packageJsonDiff?: string
+  badCommits?: Array<{ hash: string; msg: string; suggestedMsg?: string; fixCommand: string }>
+  [key: string]: any
+}
+
+export interface WeekReport {
+  weekId?: string
+  label?: string
+  startDate?: string
+  endDate?: string
+  metrics?: Record<string, number>
+  blockers?: Array<{ id?: string; text: string; resolved?: boolean } | string>
+  repos: RepoReport[]
+  [key: string]: any
+}
+
+export interface CommitEntry {
+  hash: string
+  msg: string
+  author?: string
+  date?: string
+  [key: string]: any
+}
+
+export interface TodoEntry {
+  file: string
+  line: number
+  text: string
+  [key: string]: any
+}
+
+export interface TopFile {
+  path: string
+  changes?: number
+  commits?: number
+  [key: string]: any
+}
+
+export interface GeneralRepoEntry {
+  name: string
+  group: string
+  velocity?: number
+  commitCount?: number
+  streak?: number
+  [key: string]: any
+}
+
+export interface WeekSummary {
+  totalRepos: number
+  activeThisWeek: number
+  stoppedRepos: number
+  totalCommits: number
+  totalTodos: number
+  totalBadCommits: number
+  [key: string]: any
+}
+
+export interface HeatmapEntry {
+  day: string
+  hour: number
+  commits: number
+  [key: string]: any
+}
+
+export interface GeneralReport {
+  repos?: GeneralRepoEntry[]
+  weeklyTotals?: Record<string, number> | any
+  commitTypesTotals?: Record<string, number> | any
+  totalRepos?: number
+  totalCommitsAllTime?: number
+  updatedAt?: string
+  [key: string]: any
+}

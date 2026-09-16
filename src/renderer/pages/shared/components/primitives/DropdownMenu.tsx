@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react'
 import * as RadixMenu from '@radix-ui/react-dropdown-menu'
+import { Check } from 'lucide-react'
 import './primitives-radix.css'
 
 /**
@@ -75,7 +76,7 @@ const CheckboxItem = forwardRef<
       {...props}
     >
       <span className="ds-menu-indicator">
-        <RadixMenu.ItemIndicator>✓</RadixMenu.ItemIndicator>
+        <RadixMenu.ItemIndicator><Check size={12} /></RadixMenu.ItemIndicator>
       </span>
       {children}
     </RadixMenu.CheckboxItem>
@@ -93,7 +94,7 @@ const RadioItem = forwardRef<
       {...props}
     >
       <span className="ds-menu-indicator">
-        <RadixMenu.ItemIndicator>●</RadixMenu.ItemIndicator>
+        <RadixMenu.ItemIndicator><Check size={12} /></RadixMenu.ItemIndicator>
       </span>
       {children}
     </RadixMenu.RadioItem>

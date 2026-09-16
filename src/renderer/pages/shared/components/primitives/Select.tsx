@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react'
 import * as RadixSelect from '@radix-ui/react-select'
+import { Check } from 'lucide-react'
 import './primitives-radix.css'
 
 /**
@@ -71,7 +72,7 @@ const Item = forwardRef<
   return (
     <RadixSelect.Item ref={ref} className={`ds-select-item ${className}`.trim()} {...props}>
       <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
-      <RadixSelect.ItemIndicator className="ds-select-item-indicator">✓</RadixSelect.ItemIndicator>
+      <RadixSelect.ItemIndicator className="ds-select-item-indicator"><Check size={12} /></RadixSelect.ItemIndicator>
     </RadixSelect.Item>
   )
 })

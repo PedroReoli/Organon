@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CalendarEvent, Card, Note, ShortcutItem } from '@types'
+import type { CalendarEvent, Card, Note, ShortcutItem, AppView } from '@types'
 import { formatDateFull, formatDateShort, isElectron } from '@utils'
-import type { AppView } from './InternalNav'
 
 type QuickResult =
   | { kind: 'card'; id: string; title: string; meta: string }

@@ -699,7 +699,7 @@
 }
 
 .compact-card--locked .cc-time::after {
-  content: ' 🔒';
+  content: '';
   font-size: 8px;
 }
 

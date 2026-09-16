@@ -95,3 +95,7 @@ export function percent(value: number, total: number, decimals = 0): number {
   const factor = Math.pow(10, decimals)
   return Math.round(ratio * factor) / factor
 }
+
+export const formatCurrency = formatMoney
+export const parseCurrency = parseMoneyInput
+export const formatCurrencyInput = formatMoney

@@ -133,11 +133,19 @@ const icons = {
 export const navGroups: NavGroup[] = [
   {
     id: 'organization',
-    label: 'Organização',
+    label: 'Planejamento',
     icon: icons.organization,
     items: [
       { view: 'planner', label: 'Planejamento', icon: icons.planner },
-      { view: 'calendar', label: 'Calendário', icon: icons.calendar },
+    ],
+  },
+  {
+    id: 'content',
+    label: 'Conhecimento',
+    icon: icons.content,
+    items: [
+      { view: 'notes', label: 'Notas', icon: icons.notes },
+      { view: 'playbook', label: 'Playbook', icon: icons.playbook },
     ],
   },
   {
@@ -145,38 +153,7 @@ export const navGroups: NavGroup[] = [
     label: 'Trabalho',
     icon: icons.projects,
     items: [
-      { view: 'crm', label: 'CRM', icon: icons.crm },
-      { view: 'playbook', label: 'Playbook', icon: icons.playbook },
       { view: 'projects', label: 'Projetos', icon: icons.projects },
-      { view: 'colors', label: 'Cores', icon: icons.colors },
-    ],
-  },
-  {
-    id: 'tools',
-    label: 'Ferramentas',
-    icon: icons.tools,
-    items: [
-      { view: 'shortcuts', label: 'Atalhos', icon: icons.shortcuts },
-      { view: 'apps', label: 'Apps', icon: icons.apps },
-    ],
-  },
-  {
-    id: 'content',
-    label: 'Conteúdo',
-    icon: icons.content,
-      items: [
-        { view: 'notes', label: 'Notas', icon: icons.notes },
-        { view: 'clipboard', label: 'Clipboard', icon: icons.clipboard },
-      ],
-  },
-  {
-    id: 'personal',
-    label: 'Pessoal',
-    icon: icons.personal,
-    items: [
-      { view: 'habits', label: 'Hábitos', icon: icons.habits },
-      { view: 'study', label: 'Estudos', icon: icons.study },
-      { view: 'financial', label: 'Financeiro', icon: icons.financial },
     ],
   },
 ]

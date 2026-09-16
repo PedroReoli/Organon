@@ -125,12 +125,15 @@
 }
 
 .color-extractor-swatch.is-selected::after {
-  content: '✓';
+  content: '';
   position: absolute;
   top: 6px;
   right: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
 .color-extractor-swatch {

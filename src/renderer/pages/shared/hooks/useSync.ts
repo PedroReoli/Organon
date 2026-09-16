@@ -288,7 +288,7 @@ export function useSync({
           `Sincronizado parcialmente — ${report.succeededOps}/${report.totalOps} ops enviadas com sucesso`,
           `Horário: ${new Date(serverTime).toLocaleString('pt-BR')}`,
           '',
-          `⚠ ${report.errors.length} grupo(s) com erro:`,
+          `${report.errors.length} grupo(s) com erro:`,
           ...report.errors.map(e =>
             `  [${e.resource}] lote ${e.batchIndex}/${e.totalBatches} | HTTP ${String(e.status)} | ${e.count} item(s) | ${e.message}`
           ),
@@ -340,9 +340,9 @@ export function useSync({
         '',
       ]
       if (isNetwork) {
-        lines.push(`⚠ Causa: Falha de rede — verifique sua conexao com a internet.`)
+        lines.push(`Causa: Falha de rede — verifique sua conexão com a internet.`)
       } else {
-        lines.push(`⚠ Causa: ${errMsg}`)
+        lines.push(`Causa: ${errMsg}`)
         if (httpStatus) lines.push(`   HTTP: ${httpStatus}`)
         if (errorCode) lines.push(`   Codigo: ${errorCode}`)
         if (route) lines.push(`   Rota: ${route}`)
@@ -513,7 +513,7 @@ export function useSync({
           'Erro na sincronização inicial',
           `Horário: ${new Date().toLocaleString('pt-BR')}`,
           '',
-          `⚠ Causa: ${isNetwork ? 'Falha de rede — verifique sua conexão com a internet.' : errMsg}`,
+          `Causa: ${isNetwork ? 'Falha de rede — verifique sua conexão com a internet.' : errMsg}`,
         ].join('\n')
         setSyncStatus('error')
         setSyncError(rawText)
@@ -563,7 +563,7 @@ export function useSync({
             'Sincronização travada em "pendente"',
             `Horário: ${new Date().toLocaleString('pt-BR')}`,
             '',
-            '⚠ Causa: o sync foi agendado mas não iniciou no tempo esperado.',
+            'Causa: o sync foi agendado mas não iniciou no tempo esperado.',
             '  Verifique conexão com a internet e se a sessão está ativa.',
           ].join('\n'),
         )

@@ -10,8 +10,7 @@
  */
 
 import { useEffect } from 'react'
-import type { AppView } from '../../../components/InternalNav'
-import type { KeyboardShortcut } from '@types'
+import type { AppView, KeyboardShortcut } from '@types'
 import { getShortcutById, isElectron, matchesShortcut } from '@utils'
 
 interface UseGlobalShortcutsOptions {

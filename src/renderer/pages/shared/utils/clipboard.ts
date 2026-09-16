@@ -92,3 +92,5 @@ export async function readFromClipboard(): Promise<string | null> {
 
   return null
 }
+
+export const getClipboardContent = readFromClipboard

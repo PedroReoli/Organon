@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react'
 import type { NavbarConfig } from '@types'
 import { renderNavIcon, resolveNavbarConfig } from './navConfig'
 import { NavDropdown, type NavDropdownGroup } from './NavDropdown'
-import type { OrganonUser } from '../../api/organon'
+import type { OrganonUser } from '../../../api/organon'
 
 export type AppView =
   | 'today'
@@ -178,7 +178,7 @@ export const InternalNav = ({ activeView, onChange, disabled = false, navbarConf
     setOpenDropdownId(prev => (prev === groupId ? null : groupId))
   }
 
-  const isGroupActive = (group: NavDropdownGroup): boolean => group.items.some(item => item.view === activeView)
+  const isGroupActive = (group: NavDropdownGroup): boolean => group.items.some((item: any) => item.view === activeView)
 
   const handleDropdownSelect = (view: AppView) => {
     onChange(view)

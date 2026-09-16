@@ -15,6 +15,7 @@ export interface ChecklistItem {
   id: string
   text: string
   done: boolean
+  completed?: boolean
 }
 
 // Labels de prioridade
@@ -66,6 +67,7 @@ export interface Card {
   id: string
   title: string
   descriptionHtml: string
+  description?: string
   location: CardLocation
   order: number
   date: string | null           // ISO date "2026-02-03" ou null
@@ -80,6 +82,7 @@ export interface Card {
   createdAt: string              // ISO timestamp
   updatedAt: string              // ISO timestamp
   inSprint?: boolean
+  sprintId?: string | null
   sprintColumnId?: string | null
   swimLaneId?: string | null
   sprintSectionId?: string | null
@@ -91,6 +94,11 @@ export interface Card {
   cancelReason?: string | null
   startedAt?: string | null
   completedAt?: string | null
+  coverColor?: string | null
+  iconEmoji?: string | null
+  storyPoints?: number | null
+  tags?: string[]
+  reminder?: any
 }
 
 export interface PlannerPreferences {
@@ -149,9 +157,14 @@ export interface SprintSwimLane {
 export interface SprintMetadata {
   id: string
   label?: string
+  name?: string
+  goal?: string
+  projectIds?: string[]
+  targetStoryPoints?: number
   startDate: string
   endDate: string
   createdAt: string
+  [key: string]: any
 }
 
 export interface SprintBoardConfig {

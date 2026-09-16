@@ -1,9 +1,40 @@
-import { Card, PlannerPreferences, SprintCard, SprintColumn, SprintColumnGroup, SprintColumnSection, SprintSwimLane, SprintMetadata, SprintBoardConfig, AgendaCategory, CalendarEvent } from './planner.types'
+import { Card, SprintCard, SprintColumn, SprintColumnGroup, SprintColumnSection, SprintSwimLane, SprintMetadata, SprintBoardConfig, AgendaCategory, CalendarEvent } from './planner.types'
 import { NoteFolder, Note, NoteTemplate, CanvasFolder, CanvasVersionEntry } from './notes.types'
 import { Project, RegisteredIDE } from './projects.types'
-import { FinancialCategory, FinancialTag, Bill, Expense, BudgetCategory, IncomeEntry, FinancialConfig, SavingsGoal, Investment } from './financial.types'
+import { Bill, Expense, BudgetCategory, IncomeEntry, FinancialConfig, SavingsGoal, Investment } from './financial.types'
 import { CRMContact, CRMInteraction, CRMTag, CRMSnapshot } from './crm.types'
 import { StudyState } from './study.types'
+
+export type { PlannerPreferences } from './planner.types'
+export type { FinancialCategory, FinancialTag } from './financial.types'
+
+export type AppView =
+  | 'today'
+  | 'agenda'
+  | 'planner'
+  | 'calendar'
+  | 'crm'
+  | 'playbook'
+  | 'colors'
+  | 'shortcuts'
+  | 'projects'
+  | 'notes'
+  | 'clipboard'
+  | 'apps'
+  | 'habits'
+  | 'study'
+  | 'financial'
+  | 'canvas'
+  | 'transcripts'
+  | 'audio'
+  | 'library'
+  | 'okrs'
+  | 'workflow'
+  | 'system-design'
+  | 'history'
+  | 'settings'
+  | 'whisper'
+  | string
 
 export interface ShortcutKind {
   kind: 'url'
@@ -394,7 +425,7 @@ export interface KeyboardShortcut {
     alt?: boolean
     meta?: boolean
     key: string
-  }
+  } | string[] | any
 }
 
 export type NavbarGroupId = 'organization' | 'work' | 'tools' | 'content' | 'personal'
@@ -535,6 +566,7 @@ export interface Store {
   sprintSwimLanes?: SprintSwimLane[]
   sprintMetadata?: SprintMetadata[]
   sprintBoardConfig?: SprintBoardConfig
+  projectSprints?: SprintMetadata[]
 }
 
 export const DEFAULT_THEME: ThemeSettings = THEMES['dark-default']
@@ -803,7 +835,17 @@ declare global {
       getWakeWordConfig: () => Promise<{ enabled: boolean; keyword: string; sensitivity: number }>
       setWakeWordConfig: (config: { enabled?: boolean; keyword?: string; sensitivity?: number }) => Promise<{ enabled: boolean; keyword: string; sensitivity: number }>
       triggerWakeWord: () => Promise<{ triggered: boolean }>
+      saveConversation?: (id: string, content: string) => Promise<string | null>
       setContentProtection?: (enabled: boolean) => Promise<boolean>
+      onPlanningSync?: (callback: () => void) => () => void
     }
   }
+}
+
+export interface SettingsViewProps {
+  [key: string]: any
+}
+
+export interface StoreSummary {
+  [key: string]: any
 }
