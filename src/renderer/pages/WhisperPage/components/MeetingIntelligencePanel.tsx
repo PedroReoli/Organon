@@ -46,7 +46,7 @@ export const MeetingIntelligencePanel: React.FC<Props> = ({ data, agentProviderN
 
     if (data.decisions.length > 0) {
       textLines.push(`--- DECISÕES TOMADAS (${data.decisions.length}) ---`)
-      data.decisions.forEach(d => textLines.push(`✓ ${d.text}`))
+      data.decisions.forEach(d => textLines.push(`• ${d.text}`))
       textLines.push('')
     }
 

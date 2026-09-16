@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { X, Check } from 'lucide-react'
 
 export interface TranscriptNoteData {
   title: string
@@ -172,7 +173,6 @@ export const GeneratedNoteModal: React.FC<Props> = ({
 
             <button
               onClick={onClose}
-              title="Fechar"
               style={{
                 background: 'none',
                 border: 'none',
@@ -184,8 +184,9 @@ export const GeneratedNoteModal: React.FC<Props> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
+              aria-label="Fechar"
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -264,7 +265,7 @@ export const GeneratedNoteModal: React.FC<Props> = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {noteData.decisions.map((d, idx) => (
                       <div key={idx} style={{ fontSize: '12.5px', color: 'var(--color-text)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <span style={{ color: '#8b5cf6', fontWeight: 700 }}>✓</span>
+                        <span style={{ color: '#8b5cf6', display: 'inline-flex', marginTop: '2px' }}><Check size={14} strokeWidth={2.5} /></span>
                         <span>{d}</span>
                       </div>
                     ))}

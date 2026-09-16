@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { Settings, X } from 'lucide-react'
 import { TranscriptPromptSettingsModal } from './components/TranscriptPromptSettingsModal'
-import { generateTranscriptReport } from '../../services/transcriptReportService'
 
 // ============================================================
 // TYPES
@@ -63,30 +63,6 @@ export const TranscriptsPage: React.FC = () => {
   function sendToAI(text: string) {
     const event = new CustomEvent('transcript:send-to-ai', { detail: { text } })
     window.dispatchEvent(event)
-  }
-
-  const [wakeWordEnabled, setWakeWordEnabled] = useState(false)
-  const [wakeWordName, setWakeWordName] = useState('Organon')
-
-  useEffect(() => {
-    window.electronAPI?.getWakeWordConfig?.().then((cfg) => {
-      if (cfg) {
-        setWakeWordEnabled(cfg.enabled)
-        setWakeWordName(cfg.keyword || 'Organon')
-      }
-    })
-  }, [])
-
-  function toggleWakeWord() {
-    const next = !wakeWordEnabled
-    setWakeWordEnabled(next)
-    window.electronAPI?.setWakeWordConfig?.({ enabled: next, keyword: wakeWordName })
-  }
-
-  function convertToNote(text: string) {
-    const event = new CustomEvent('notes:create-from-transcript', { detail: { text, title: 'Nota de Voz' } })
-    window.dispatchEvent(event)
-    alert('Transcrição enviada para o Módulo de Notas!')
   }
 
   function openSuperWhisper() {
@@ -164,8 +140,10 @@ export const TranscriptsPage: React.FC = () => {
               className="transcripts-btn-secondary"
               onClick={() => setIsPromptModalOpen(true)}
               title="Configurar prompts e modelo de relatório IA"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <span>⚙️ Configurar Prompts</span>
+              <Settings size={14} />
+              <span>Configurar Prompts</span>
             </button>
 
             {transcripts.length > 0 && (
@@ -198,8 +176,8 @@ export const TranscriptsPage: React.FC = () => {
                   onChange={e => setSearch(e.target.value)}
                 />
                 {search && (
-                  <button className="transcripts-search-clear" onClick={() => setSearch('')} title="Limpar busca">
-                    ✕
+                  <button className="transcripts-search-clear" onClick={() => setSearch('')} title="Limpar busca" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={12} />
                   </button>
                 )}
               </div>

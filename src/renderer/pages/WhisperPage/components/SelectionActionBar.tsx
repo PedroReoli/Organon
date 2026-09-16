@@ -1,4 +1,5 @@
 import React from 'react'
+import { X } from 'lucide-react'
 
 export interface SelectionAnalysis {
   intent: 'question' | 'decision' | 'action_item' | 'note' | 'prompt'
@@ -273,8 +274,9 @@ export const SelectionActionBar: React.FC<Props> = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}
+          aria-label="Fechar"
         >
-          ✕
+          <X size={12} />
         </button>
       </div>
     </div>

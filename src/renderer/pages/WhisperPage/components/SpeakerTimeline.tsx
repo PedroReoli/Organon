@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Check } from 'lucide-react'
 import { Popover } from '../../shared/components/primitives/Popover'
 import { SpeakerSegment } from '../types/whisper.types'
 
@@ -326,7 +327,7 @@ export const SpeakerTimeline: React.FC<Props> = ({
                     opacity: isMultiSelected || isHovered ? 1 : 0.4,
                   }}
                 >
-                  {isMultiSelected && '✓'}
+                  {isMultiSelected && <Check size={10} strokeWidth={3} />}
                 </span>
 
                 <span

@@ -1,5 +1,6 @@
 import { WhisperModelSettings } from './WhisperModelSettings'
 import React, { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import {
   ReportPromptConfig,
   loadPromptConfig,
@@ -125,7 +126,7 @@ export const TranscriptPromptSettingsModal: React.FC<Props> = ({ isOpen = true, 
               alignItems: 'center',
             }}
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 

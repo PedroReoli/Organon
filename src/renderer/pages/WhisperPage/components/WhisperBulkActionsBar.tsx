@@ -1,4 +1,5 @@
 import React from 'react'
+import { X } from 'lucide-react'
 
 interface WhisperBulkActionsBarProps {
   selectedCount: number
@@ -142,11 +143,13 @@ export const WhisperBulkActionsBar: React.FC<WhisperBulkActionsBarProps> = ({
             border: '1px solid var(--color-border)',
             background: 'var(--color-surface)',
             color: 'var(--color-text-muted)',
-            fontSize: '11px',
-            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
+          aria-label="Limpar seleção"
         >
-          ✕
+          <X size={12} />
         </button>
       </div>
     </div>

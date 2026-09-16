@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { X } from 'lucide-react'
 import { WhisperFolder, WhisperRecord, DEFAULT_WHISPER_FOLDERS } from '../types/whisper.types'
 import { WhisperContextMenu } from './WhisperContextMenu'
 
@@ -29,7 +30,7 @@ export const WhisperSidebar: React.FC<Props> = ({
   onMoveRecord,
   onDeleteRecord,
   onNewTranscript,
-  onCloseDrawer,
+  onCloseDrawer: _onCloseDrawer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddingFolder, setIsAddingFolder] = useState(false)
@@ -392,7 +393,7 @@ export const WhisperSidebar: React.FC<Props> = ({
                 padding: '2px',
               }}
             >
-              ✕
+              <X size={12} />
             </button>
           )}
         </div>

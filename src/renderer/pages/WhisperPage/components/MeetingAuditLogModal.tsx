@@ -1,4 +1,5 @@
 import React from 'react'
+import { X } from 'lucide-react'
 
 interface AuditEntry {
   id: string
@@ -56,8 +57,8 @@ export const MeetingAuditLogModal: React.FC<Props> = ({ logs, onClose }) => {
               Registro de Auditoria de Agentes (Audit Log)
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '18px' }}>
-            ✕
+          <button onClick={onClose} aria-label="Fechar" style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <X size={18} />
           </button>
         </div>
 

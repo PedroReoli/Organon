@@ -1,4 +1,5 @@
 import React from 'react'
+import { X } from 'lucide-react'
 import { WhisperPathDiagnostic } from '../hooks/useWhisperDiagnostics'
 
 interface WhisperDiagnosticsModalProps {
@@ -66,7 +67,7 @@ export const WhisperDiagnosticsModal: React.FC<WhisperDiagnosticsModalProps> = (
               color: 'var(--color-text-muted)',
             }}
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
