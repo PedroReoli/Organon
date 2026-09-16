@@ -8,7 +8,7 @@ export const usePlanningDragDrop = (onTaskMove: (taskId: string, targetId: strin
         setActiveId(event.active.id as string);
     };
 
-    const handleDragOver = (event: DragOverEvent) => {
+    const handleDragOver = (_event: DragOverEvent) => {
         // Handle visual indicators if needed
     };
 

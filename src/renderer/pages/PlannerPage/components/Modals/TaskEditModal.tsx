@@ -4,7 +4,7 @@ import { PlanningTask } from '../../types/planning.types';
 export const TaskEditModal = ({ task, isOpen, onClose, onSave }: { task: PlanningTask | null, isOpen: boolean, onClose: () => void, onSave: (id: string, updates: Partial<PlanningTask>) => void }) => {
     const [title, setTitle] = useState('');
     const [status, setStatus] = useState<PlanningTask['status']>('todo');
-    const [priority, setPriority] = useState<PlanningTask['priority']>('medium');
+    const [priority, setPriority] = useState<PlanningTask['priority']>('P3');
     const [storyPoints, setStoryPoints] = useState<number>(0);
     const [date, setDate] = useState('');
     const [coverColor, setCoverColor] = useState('');
@@ -14,7 +14,7 @@ export const TaskEditModal = ({ task, isOpen, onClose, onSave }: { task: Plannin
         if (task) {
             setTitle(task.title);
             setStatus(task.status || 'todo');
-            setPriority(task.priority || 'medium');
+            setPriority(task.priority || 'P3');
             setStoryPoints(task.storyPoints || 0);
             setDate(task.date || '');
             setCoverColor(task.coverColor || '');
@@ -39,20 +39,14 @@ export const TaskEditModal = ({ task, isOpen, onClose, onSave }: { task: Plannin
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ background: 'var(--color-bg)', padding: '24px', borderRadius: '8px', width: '480px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '24px' }}>Edit Planning Task</h3>
+                <h3 style={{ marginTop: 0, marginBottom: '24px' }}>Editar Tarefa</h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <input
-                            value={iconEmoji}
-                            onChange={e => setIconEmoji(e.target.value)}
-                            placeholder="🚀"
-                            style={{ width: '48px', padding: '8px', background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', textAlign: 'center' }}
-                        />
-                        <input
                             value={title}
                             onChange={e => setTitle(e.target.value)}
-                            placeholder="Task title"
+                            placeholder="Título da tarefa"
                             style={{ flex: 1, padding: '8px', background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px' }}
                         />
                     </div>
@@ -65,24 +59,25 @@ export const TaskEditModal = ({ task, isOpen, onClose, onSave }: { task: Plannin
                                 onChange={e => setStatus(e.target.value as any)}
                                 style={{ width: '100%', padding: '8px', background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px' }}
                             >
-                                <option value="backlog">Backlog</option>
-                                <option value="todo">To Do</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="review">Review</option>
-                                <option value="done">Done</option>
+                                <option value="todo">A Fazer</option>
+                                <option value="in_progress">Em Progresso</option>
+                                <option value="blocked">Bloqueado</option>
+                                <option value="done">Concluído</option>
+                                <option value="postponed">Adiado</option>
+                                <option value="cancelled">Cancelado</option>
                             </select>
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Priority</label>
+                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Prioridade</label>
                             <select
-                                value={priority}
-                                onChange={e => setPriority(e.target.value as any)}
+                                value={priority || ''}
+                                onChange={e => setPriority((e.target.value as any) || null)}
                                 style={{ width: '100%', padding: '8px', background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px' }}
                             >
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
+                                <option value="P1">P1 (Crítico)</option>
+                                <option value="P2">P2 (Alto)</option>
+                                <option value="P3">P3 (Médio)</option>
+                                <option value="P4">P4 (Baixo)</option>
                             </select>
                         </div>
                     </div>

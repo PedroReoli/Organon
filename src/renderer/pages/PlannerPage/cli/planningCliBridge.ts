@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 export const triggerPlanningSync = () => {
     // Force the app to reload the store from disk when the CLI makes changes
     window.dispatchEvent(new CustomEvent('organon:planning-sync'));

@@ -47,7 +47,7 @@ export const usePlanningReminders = (tasks: PlanningTask[]) => {
 
     const dismissAlert = () => setActiveAlert(null);
 
-    const snoozeAlert = (minutes: number) => {
+    const snoozeAlert = (_minutes: number) => {
         if (!activeAlert) return;
         // Here you would dispatch an update to the task's reminder snoozedUntil value
         // via usePlanningTasks.

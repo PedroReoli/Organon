@@ -8,17 +8,25 @@ export const NaturalLanguageInput = ({ onAdd }: { onAdd: (task: Partial<Planning
         if (e.key === 'Enter' && inputValue.trim()) {
             // Basic NLP parser stub
             let title = inputValue.trim();
-            let priority: PlanningTask['priority'] = 'medium';
+            let priority: PlanningTask['priority'] = 'P3';
             let date = null;
             let tags: string[] = [];
 
-            if (title.includes('#urgent')) {
-                priority = 'urgent';
-                title = title.replace('#urgent', '');
+            if (title.includes('#urgent') || title.includes('#p1')) {
+                priority = 'P1';
+                title = title.replace(/#(urgent|p1)/gi, '');
             }
-            if (title.includes('#high')) {
-                priority = 'high';
-                title = title.replace('#high', '');
+            if (title.includes('#high') || title.includes('#p2')) {
+                priority = 'P2';
+                title = title.replace(/#(high|p2)/gi, '');
+            }
+            if (title.includes('#p3')) {
+                priority = 'P3';
+                title = title.replace(/#p3/gi, '');
+            }
+            if (title.includes('#p4')) {
+                priority = 'P4';
+                title = title.replace(/#p4/gi, '');
             }
 
             const tagMatches = title.match(/@(\w+)/g);

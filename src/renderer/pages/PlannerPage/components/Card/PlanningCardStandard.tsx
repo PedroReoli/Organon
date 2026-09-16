@@ -1,10 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { CheckSquare } from 'lucide-react';
 import { PlanningTask } from '../../types/planning.types';
 
 export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: PlanningTask, onEdit: () => void, isSortable?: boolean }) => {
     const totalSub = task.checklist?.length || 0;
-    const doneSub = task.checklist?.filter(c => c.completed).length || 0;
+    const doneSub = task.checklist?.filter(c => c.done || c.completed).length || 0;
 
     if (isSortable) {
         const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -37,7 +38,6 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                 {...listeners}
             >
                 <div onClick={onEdit} style={{ fontWeight: 500, fontSize: '14px', cursor: 'pointer' }}>
-                    {task.iconEmoji && <span style={{ marginRight: '6px' }}>{task.iconEmoji}</span>}
                     {task.title}
                 </div>
 
@@ -46,8 +46,8 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                         <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{task.projectId}</span>
                     ) : <span />}
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {totalSub > 0 && <span>☑ {doneSub}/{totalSub}</span>}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {totalSub > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckSquare size={12} /> {doneSub}/{totalSub}</span>}
                         {task.storyPoints ? <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '12px' }}>{task.storyPoints}</span> : null}
                     </div>
                 </div>
@@ -70,7 +70,6 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                 gap: '8px'
             }}>
             <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                {task.iconEmoji && <span style={{ marginRight: '6px' }}>{task.iconEmoji}</span>}
                 {task.title}
             </div>
 
@@ -79,8 +78,8 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                     <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{task.projectId}</span>
                 ) : <span />}
 
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {totalSub > 0 && <span>☑ {doneSub}/{totalSub}</span>}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {totalSub > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckSquare size={12} /> {doneSub}/{totalSub}</span>}
                     {task.storyPoints ? <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '12px' }}>{task.storyPoints}</span> : null}
                 </div>
             </div>

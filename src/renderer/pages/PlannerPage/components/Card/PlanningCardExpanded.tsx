@@ -1,8 +1,9 @@
+import { Calendar, Star } from 'lucide-react';
 import { PlanningTask } from '../../types/planning.types';
 
 export const PlanningCardExpanded = ({ task, onEdit }: { task: PlanningTask, onEdit: () => void }) => {
     const totalSub = task.checklist?.length || 0;
-    const doneSub = task.checklist?.filter(c => c.completed).length || 0;
+    const doneSub = task.checklist?.filter(c => c.done || c.completed).length || 0;
     const progress = totalSub > 0 ? (doneSub / totalSub) * 100 : 0;
 
     return (
@@ -22,7 +23,6 @@ export const PlanningCardExpanded = ({ task, onEdit }: { task: PlanningTask, onE
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontWeight: 600, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {task.iconEmoji && <span>{task.iconEmoji}</span>}
                     {task.title}
                 </div>
                 {task.priority && (
@@ -30,7 +30,7 @@ export const PlanningCardExpanded = ({ task, onEdit }: { task: PlanningTask, onE
                         fontSize: '11px',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        background: task.priority === 'urgent' ? 'var(--color-danger)' : 'rgba(255,255,255,0.1)',
+                        background: task.priority === 'P1' ? 'var(--color-danger)' : 'rgba(255,255,255,0.1)',
                         textTransform: 'uppercase',
                         fontWeight: 'bold'
                     }}>
@@ -63,9 +63,9 @@ export const PlanningCardExpanded = ({ task, onEdit }: { task: PlanningTask, onE
                     {task.tags?.map(t => <span key={t}>#{t}</span>)}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    {task.date && <span>📅 {task.date}</span>}
-                    {task.storyPoints ? <span style={{ fontWeight: 'bold' }}>⭐ {task.storyPoints}</span> : null}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {task.date && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {task.date}</span>}
+                    {task.storyPoints ? <span style={{ fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Star size={12} fill="#f59e0b" color="#f59e0b" /> {task.storyPoints}</span> : null}
                 </div>
             </div>
         </div>

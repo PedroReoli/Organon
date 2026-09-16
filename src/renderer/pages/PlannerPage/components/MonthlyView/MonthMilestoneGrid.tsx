@@ -71,7 +71,7 @@ export const MonthMilestoneGrid = ({ tasks, sprints, onEdit }: { tasks: Planning
                             <div style={{ color: isToday ? 'var(--color-primary)' : 'var(--color-text-muted)', fontSize: '12px', fontWeight: isToday ? 'bold' : 'normal' }}>{day}</div>
 
                             {/* Render continuous sprint bars (naive implementation for current day if it falls within sprint) */}
-                            {sprints.filter(s => s.startDate <= dateStr && s.endDate >= dateStr && (!selectedProject || s.projectIds.includes(selectedProject))).map(sprint => (
+                            {sprints.filter(s => s.startDate <= dateStr && s.endDate >= dateStr && (!selectedProject || (s.projectIds || []).includes(selectedProject))).map(sprint => (
                                 <div key={sprint.id} style={{
                                     background: 'rgba(16, 185, 129, 0.15)', // Emerald tint
                                     color: '#10b981',

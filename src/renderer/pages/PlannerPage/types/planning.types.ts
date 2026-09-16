@@ -1,7 +1,8 @@
-import { Card, ProjectSprint, CardLocation } from '@types'
+import { Card, SprintMetadata, CardLocation } from '@types'
 
 export type PlanningTask = Card;
-export type PlanningSprint = ProjectSprint;
+export type PlanningSprint = SprintMetadata;
+export type { CardLocation };
 
 export interface DualBufferState<T> {
   data: T;

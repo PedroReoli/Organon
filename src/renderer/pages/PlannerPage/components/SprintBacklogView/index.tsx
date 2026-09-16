@@ -14,8 +14,8 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
         { id: 'done', title: 'Done' }
     ];
 
-    const backlogTasks = tasks.filter(t => t.status === 'backlog' || (!t.sprintId && t.status === 'todo'));
-    const sprintTasks = sprint ? tasks.filter(t => t.sprintId === sprint.id || (t.status !== 'backlog' && t.status !== 'archived' && !t.sprintId)) : [];
+    const backlogTasks = tasks.filter(t => !t.sprintId && t.status === 'todo');
+    const sprintTasks = sprint ? tasks.filter(t => t.sprintId === sprint.id || (t.status !== 'done' && t.status !== 'cancelled' && !t.sprintId)) : [];
 
     const handleTaskMove = (taskId: string, targetId: string) => {
         if (onMoveTask) {
