@@ -27,7 +27,6 @@ export interface StorageSummary {
   calendarEvents: number
   projects: number
   meetings: number
-  playbooks: number
 }
 
 export interface InstallerStatus {
@@ -57,7 +56,6 @@ const summarizeStore = (store: Store): StorageSummary => ({
   calendarEvents: store.calendarEvents.length,
   projects: store.projects.length,
   meetings: store.meetings.length,
-  playbooks: store.playbooks.length,
 })
 
 const sanitizeSegment = (value: string, fallback: string): string => {
@@ -159,7 +157,7 @@ export const getInstallerStatus = (): InstallerStatus => {
   const currentPath = getDataPath()
   let summary: StorageSummary = {
     notes: 0, noteFolders: 0, cards: 0,
-    calendarEvents: 0, projects: 0, meetings: 0, playbooks: 0,
+    calendarEvents: 0, projects: 0, meetings: 0,
   }
   try {
     summary = summarizeStore(loadStoreFromPath(currentPath))

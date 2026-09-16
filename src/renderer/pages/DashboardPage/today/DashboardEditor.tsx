@@ -14,7 +14,6 @@ const WIDGET_LABELS: Record<DashboardWidgetType, string> = {
   'report-system':    'Sistema',
   'hub-planner':      'Hub — Planejamento',
   'hub-calendar':     'Hub — Calendário',
-  'hub-playbook':     'Hub — Playbook',
   'hub-projects':     'Hub — Projetos',
   'hub-notes':        'Hub — Notas',
   'hub-study':        'Hub — Estudos',

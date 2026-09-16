@@ -42,7 +42,6 @@ export const TopNavbarShell: React.FC<Props> = ({
     { view: 'notes', label: 'Notas' },
     { view: 'planner', label: 'Planejamento' },
     { view: 'projects', label: 'Projetos' },
-    { view: 'playbook', label: 'Playbook' },
     { view: 'transcripts', label: 'Whisper' },
     { view: 'history', label: 'Histórico' },
   ]

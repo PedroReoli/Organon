@@ -69,11 +69,9 @@ const countStoreItems = (store: Store): Record<string, number> => ({
   notes: store.notes.length,
   noteFolders: store.noteFolders.length,
   cards: store.cards.length,
-  habits: store.habits.length,
   calendarEvents: store.calendarEvents.length,
   projects: store.projects.length,
   meetings: store.meetings.length,
-  playbooks: store.playbooks.length,
 })
 
 const getCategoryDir = (dataPath: string, category: BackupCategory): string => {

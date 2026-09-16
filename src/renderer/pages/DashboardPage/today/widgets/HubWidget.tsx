@@ -5,7 +5,6 @@ import { DEFAULT_NAVBAR_ITEMS, renderNavIcon } from '../../../shared/navConfig'
 const HUB_TYPE_TO_VIEW: Partial<Record<DashboardWidgetType, AppView>> = {
   'hub-planner':   'planner',
   'hub-calendar':  'calendar',
-  'hub-playbook':  'playbook',
   'hub-projects':  'projects',
   'hub-notes':     'notes',
   'hub-study':     'study',
@@ -18,7 +17,6 @@ const HUB_TYPE_TO_VIEW: Partial<Record<DashboardWidgetType, AppView>> = {
 const HUB_DESCRIPTIONS: Partial<Record<DashboardWidgetType, string>> = {
   'hub-planner':   'Gerencie seus cards e tarefas semanais',
   'hub-calendar':  'Visualize e crie eventos com recorrência',
-  'hub-playbook':  'Documentos de processos e roteiros',
   'hub-projects':  'Projetos ativos e seus links',
   'hub-notes':     'Suas notas em markdown, organizadas em pastas',
   'hub-study':     'Pomodoro, metas e sessões de estudo',

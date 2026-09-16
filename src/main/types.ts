@@ -379,8 +379,6 @@ export interface Store {
   investments: Investment[]
   quickAccess: QuickAccessItem[]
   meetings: Meeting[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  playbooks: any[]
   study: StudyState
   canvases: Canvas[]
   settings: Settings

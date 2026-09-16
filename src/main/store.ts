@@ -33,7 +33,6 @@ export const STORE_SECTIONS: Array<{ fileName: string; keys: Array<keyof Store> 
   { fileName: 'financial.json', keys: ['bills', 'expenses', 'budgetCategories', 'incomes', 'financialConfig', 'savingsGoals', 'investments'] },
   { fileName: 'today.json', keys: ['quickAccess'] },
   { fileName: 'meetings.json', keys: ['meetings'] },
-  { fileName: 'social.json', keys: ['playbooks'] },
   { fileName: 'study.json', keys: ['study'] },
   { fileName: 'sync.json', keys: ['lastSyncAt', 'pendingDeletes', 'storeUpdatedAt'] },
   { fileName: 'canvas.json', keys: ['canvases'] },

@@ -51,8 +51,6 @@
 @import './layout/navigation-improvements.css';
 @import './features/apps/apps.css';
 @import './features/apps/upgrade17.css';
-@import './features/playbook/upgrade15.css';
 @import './features/settings/auto-update.css';
 @import './features/canvas/canvas.css';
 @import './layout/responsive-global.css';
-

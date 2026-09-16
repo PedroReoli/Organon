@@ -25,10 +25,6 @@ import type {
   ProjectLink,
   QuickAccessItem,
   Meeting,
-  Playbook,
-  PlaybookDialog,
-  PlaybookFolder,
-  PlaybookVariable,
   AgendaCategory,
   SprintCard,
   SprintColumn,
@@ -69,7 +65,6 @@ import {
   createMiscSlice,
   createNotesSlice,
   createSprintSlice,
-  createPlaybooksSlice,
   createCanvasSlice,
   createColorPaletteSlice,
   createQuickAccessSlice,
@@ -77,7 +72,6 @@ import {
   createSprintCardsSlice,
   createCalendarCategorySlice,
   createNoteTemplatesSlice,
-  createPlaybookExtrasSlice,
   createStoreManagementSlice,
   createNoteExtrasSlice,
 } from '../../../hooks/useStore/index'
@@ -224,8 +218,6 @@ const getDefaultStore = (): Store => ({
   investments: [],
   quickAccess: [],
   meetings: [],
-  playbooks: [],
-  playbookFolders: [],
   sprintCards: [],
   sprintColumnSections: [],
   calendarCategories: [],
@@ -283,64 +275,6 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
   // Normalizar cards (migrar de formato antigo para novo com date/hasDate)
   const rawCards = Array.isArray(input.cards) ? input.cards : base.cards
   const normalizedCards = rawCards.map(card => normalizeCard(card as Card & { id: string; title: string }))
-  const normalizedPlaybooks: Playbook[] = Array.isArray(input.playbooks)
-    ? input.playbooks
-      .filter(pb => pb && typeof pb.title === 'string')
-      .map(pb => ({
-        id: pb.id ?? generateId(),
-        title: pb.title ?? '',
-        sector: pb.sector ?? 'Geral',
-        category: pb.category ?? 'Geral',
-        summary: pb.summary ?? '',
-        content: pb.content ?? '',
-        dialogs: Array.isArray(pb.dialogs)
-          ? pb.dialogs
-            .filter(dialog => dialog && typeof dialog.text === 'string')
-            .map((dialog, index) => ({
-              id: dialog.id ?? generateId(),
-              title: dialog.title ?? `Dialogo ${index + 1}`,
-              text: dialog.text ?? '',
-              order: Number.isFinite(dialog.order) ? dialog.order : index,
-              createdAt: dialog.createdAt ?? new Date().toISOString(),
-              updatedAt: dialog.updatedAt ?? dialog.createdAt ?? new Date().toISOString(),
-              variables: Array.isArray((dialog as PlaybookDialog).variables)
-                ? (dialog as PlaybookDialog).variables
-                : undefined,
-              copyCount: typeof (dialog as PlaybookDialog).copyCount === 'number'
-                ? (dialog as PlaybookDialog).copyCount
-                : undefined,
-              copyCountByMonth: (dialog as PlaybookDialog).copyCountByMonth && typeof (dialog as PlaybookDialog).copyCountByMonth === 'object'
-                ? (dialog as PlaybookDialog).copyCountByMonth
-                : undefined,
-            }))
-            .sort((a, b) => a.order - b.order)
-          : [],
-        order: Number.isFinite(pb.order) ? pb.order : 0,
-        createdAt: pb.createdAt ?? new Date().toISOString(),
-        updatedAt: pb.updatedAt ?? pb.createdAt ?? new Date().toISOString(),
-        isFavorite: (pb as Playbook).isFavorite === true,
-        isArchived: (pb as Playbook).isArchived === true,
-        folderId: (pb as Playbook).folderId ?? null,
-        viewCount: typeof (pb as Playbook).viewCount === 'number' ? (pb as Playbook).viewCount : 0,
-        versions: Array.isArray((pb as Playbook).versions) ? (pb as Playbook).versions : [],
-      }))
-      .sort((a, b) => a.order - b.order)
-    : base.playbooks
-
-  const normalizedPlaybookFolders: PlaybookFolder[] = Array.isArray(
-    (input as Store).playbookFolders,
-  )
-    ? (input as Store).playbookFolders!
-      .filter((f) => f && typeof f.name === 'string')
-      .map((f, index) => ({
-        id: f.id ?? generateId(),
-        name: f.name ?? 'Pasta',
-        color: f.color ?? '#6b7280',
-        order: Number.isFinite(f.order) ? f.order : index,
-        createdAt: f.createdAt ?? new Date().toISOString(),
-      }))
-      .sort((a, b) => a.order - b.order)
-    : base.playbookFolders ?? []
 
   return {
     ...base,
@@ -435,8 +369,6 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
     savingsGoals: Array.isArray(input.savingsGoals) ? input.savingsGoals : base.savingsGoals,
     quickAccess: normalizedQuickAccess,
     meetings: Array.isArray(input.meetings) ? input.meetings : base.meetings,
-    playbooks: normalizedPlaybooks,
-    playbookFolders: normalizedPlaybookFolders,
     study: normalizeStudyState((input as Partial<Store> & { study?: Partial<StudyState> }).study),
     settings: {
       themeName,
@@ -611,7 +543,6 @@ export const useStore = () => {
   const miscSlice = createMiscSlice(updateStore)
   const notesSlice = createNotesSlice(updateStore)
   const sprintSlice = createSprintSlice(updateStore)
-  const playbooksSlice = createPlaybooksSlice(updateStore)
   const canvasSlice = createCanvasSlice(updateStore)
   const colorPaletteSlice = createColorPaletteSlice(updateStore)
   const quickAccessSlice = createQuickAccessSlice(updateStore, () => ({ quickAccess: store.quickAccess }))
@@ -619,7 +550,6 @@ export const useStore = () => {
   const sprintCardsSlice = createSprintCardsSlice(updateStore)
   const calendarCategorySlice = createCalendarCategorySlice(updateStore)
   const noteTemplatesSlice = createNoteTemplatesSlice(updateStore)
-  const playbookExtrasSlice = createPlaybookExtrasSlice(updateStore)
   const storeManagementSlice = createStoreManagementSlice(setStore, saveStore, isElectron, getDefaultStore)
   const noteExtrasSlice = createNoteExtrasSlice(updateStore, () => store)
 
@@ -1031,122 +961,6 @@ export const useStore = () => {
   }, [meetingSlice])
 
   // ========================================
-  // Playbook methods
-  // ========================================
-
-  const addPlaybook = useCallback((input: {
-    title: string
-    sector?: string
-    category?: string
-    summary?: string
-    content?: string
-  }) => {
-    return playbooksSlice.addPlaybook({
-      title: input.title,
-      sector: input.sector ?? 'Geral',
-      category: input.category ?? 'Geral',
-      summary: input.summary ?? '',
-      content: input.content ?? '',
-    })
-  }, [playbooksSlice])
-
-  const updatePlaybook = useCallback((playbookId: string, updates: Partial<Pick<Playbook, 'title' | 'sector' | 'category' | 'summary' | 'content'>>) => {
-    playbooksSlice.updatePlaybook(playbookId, updates)
-  }, [playbooksSlice])
-
-  const removePlaybook = useCallback((playbookId: string) => {
-    playbooksSlice.removePlaybook(playbookId)
-  }, [playbooksSlice])
-
-  const addPlaybookDialog = useCallback((playbookId: string, input: { title: string; text: string }) => {
-    return playbooksSlice.addPlaybookDialog(playbookId, input)
-  }, [playbooksSlice])
-
-  const updatePlaybookDialog = useCallback((playbookId: string, dialogId: string, updates: Partial<Pick<PlaybookDialog, 'title' | 'text' | 'tags'>>) => {
-    playbooksSlice.updatePlaybookDialog(playbookId, dialogId, updates)
-  }, [playbooksSlice])
-
-  const removePlaybookDialog = useCallback((playbookId: string, dialogId: string) => {
-    playbooksSlice.removePlaybookDialog(playbookId, dialogId)
-  }, [playbooksSlice])
-
-  const reorderPlaybookDialogs = useCallback((playbookId: string, orderedIds: string[]) => {
-    playbooksSlice.reorderPlaybookDialogs(playbookId, orderedIds)
-  }, [playbooksSlice])
-
-  const duplicatePlaybookDialog = useCallback((playbookId: string, dialogId: string) => {
-    return playbooksSlice.duplicatePlaybookDialog(playbookId, dialogId)
-  }, [playbooksSlice])
-
-  // ========================================
-  // Playbook extensions (upgrade 15)
-  // ========================================
-
-  const snapshotPlaybookVersion = useCallback((playbookId: string) => {
-    playbooksSlice.snapshotPlaybookVersion(playbookId)
-  }, [playbooksSlice])
-
-  const restorePlaybookVersion = useCallback((playbookId: string, versionId: string) => {
-    playbooksSlice.restorePlaybookVersion(playbookId, versionId)
-  }, [playbooksSlice])
-
-  const togglePlaybookFavorite = useCallback((playbookId: string) => {
-    playbookExtrasSlice.togglePlaybookFavorite(playbookId)
-  }, [playbookExtrasSlice])
-
-  const togglePlaybookArchived = useCallback((playbookId: string) => {
-    playbookExtrasSlice.togglePlaybookArchived(playbookId)
-  }, [playbookExtrasSlice])
-
-  const movePlaybookToFolder = useCallback((playbookId: string, folderId: string | null) => {
-    playbookExtrasSlice.movePlaybookToFolder(playbookId, folderId)
-  }, [playbookExtrasSlice])
-
-  const incrementPlaybookViewCount = useCallback((playbookId: string) => {
-    playbooksSlice.incrementPlaybookViewCount(playbookId)
-  }, [playbooksSlice])
-
-  const incrementDialogCopyCount = useCallback((playbookId: string, dialogId: string) => {
-    playbooksSlice.incrementDialogCopyCount(playbookId, dialogId)
-  }, [playbooksSlice])
-
-  const updatePlaybookDialogVariables = useCallback(
-    (playbookId: string, dialogId: string, variables: PlaybookVariable[]) => {
-      playbooksSlice.updatePlaybookDialog(playbookId, dialogId, { variables })
-    },
-    [playbooksSlice],
-  )
-
-  /** Cria playbook ja com conteudo e dialogs pre-definidos (usado por template). */
-  const addPlaybookFromTemplate = useCallback((input: {
-    title: string
-    sector?: string
-    category?: string
-    summary?: string
-    content?: string
-    dialogs: Array<{
-      title: string
-      text: string
-      variables?: PlaybookVariable[]
-    }>
-  }) => {
-    return playbookExtrasSlice.addPlaybookFromTemplate(input)
-  }, [playbookExtrasSlice])
-
-  // Playbook folders CRUD
-  const addPlaybookFolder = useCallback((name: string, color = '#6b7280') => {
-    return playbooksSlice.addPlaybookFolder(name, color)
-  }, [playbooksSlice])
-
-  const updatePlaybookFolder = useCallback((folderId: string, updates: Partial<Pick<PlaybookFolder, 'name' | 'color'>>) => {
-    playbooksSlice.updatePlaybookFolder(folderId, updates)
-  }, [playbooksSlice])
-
-  const removePlaybookFolder = useCallback((folderId: string) => {
-    playbooksSlice.removePlaybookFolder(folderId)
-  }, [playbooksSlice])
-
-  // ========================================
   // Reset Store
   // ========================================
 
@@ -1182,8 +996,6 @@ export const useStore = () => {
     financialConfig: store.financialConfig,
     savingsGoals: store.savingsGoals,
     quickAccess: store.quickAccess,
-    playbooks: store.playbooks,
-    playbookFolders: store.playbookFolders ?? [],
     study: store.study,
     settings: store.settings,
     lastSyncAt: store.lastSyncAt,
@@ -1294,28 +1106,6 @@ export const useStore = () => {
     updateMeeting,
     removeMeeting,
 
-    // Playbook methods
-    addPlaybook,
-    updatePlaybook,
-    removePlaybook,
-    addPlaybookDialog,
-    updatePlaybookDialog,
-    removePlaybookDialog,
-    reorderPlaybookDialogs,
-    duplicatePlaybookDialog,
-    // Playbook extensions (upgrade 15)
-    snapshotPlaybookVersion,
-    restorePlaybookVersion,
-    togglePlaybookFavorite,
-    togglePlaybookArchived,
-    movePlaybookToFolder,
-    incrementPlaybookViewCount,
-    incrementDialogCopyCount,
-    updatePlaybookDialogVariables,
-    addPlaybookFromTemplate,
-    addPlaybookFolder,
-    updatePlaybookFolder,
-    removePlaybookFolder,
     replaceStore,
     updateStore,
     // Quick Access

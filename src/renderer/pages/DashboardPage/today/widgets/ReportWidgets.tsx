@@ -165,17 +165,15 @@ export const FinancialWidget = ({ bills, expenses, savingsGoals, onNavigate }: F
 
 interface KnowledgeWidgetProps {
   notes:          Note[]
-  playbooksCount: number
   study:          StudyState
   onNavigate:     (v: AppView) => void
 }
 
-export const KnowledgeWidget = ({ notes, playbooksCount, study, onNavigate }: KnowledgeWidgetProps) => (
+export const KnowledgeWidget = ({ notes, study, onNavigate }: KnowledgeWidgetProps) => (
   <>
     <div className="dw-summary">
       <div className="dw-summary-row"><span>Notas</span><span>{notes.length}</span></div>
-      <div className="dw-summary-row"><span>Playbooks</span><span>{playbooksCount}</span></div>
-      <div className="dw-summary-row"><span>Metas de estudo</span><span>{study.goals.length}</span></div>
+      <div className="dw-summary-row"><span>Metas de foco</span><span>{study.goals.length}</span></div>
       <div className="dw-summary-row"><span>Sessões</span><span>{study.sessions.length}</span></div>
     </div>
     <button type="button" className="dw-link" onClick={() => onNavigate('notes')}>Abrir notas</button>

@@ -21,7 +21,7 @@ const THEMES_PER_PAGE = 2
 
 const SUMMARY_LABELS: Record<string, string> = {
   notes: 'Notas', noteFolders: 'Pastas', cards: 'Cards',
-  calendarEvents: 'Eventos', projects: 'Projetos', meetings: 'Reuniões', playbooks: 'Playbooks',
+  calendarEvents: 'Eventos', projects: 'Projetos', meetings: 'Reuniões',
 }
 
 interface ThemeCardProps {

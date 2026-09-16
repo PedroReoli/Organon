@@ -51,7 +51,6 @@ const APP_VIEW_LABELS: Record<AppView, string> = {
   okrs: 'OKRs & Metas',
   study: 'Modo Foco',
   notes: 'Notas',
-  playbook: 'Playbook',
   canvas: 'Canvas',
   transcripts: 'Whisper Transcrições',
   audio: 'Áudio & Gravações',
@@ -93,12 +92,11 @@ const APP_HUBS: AppHub[] = [
   {
     id: 'content',
     label: 'Conhecimento',
-    description: 'Notas, playbooks, gravações e canvas.',
+    description: 'Notas, gravações, transcrições e canvas.',
     accent: 'var(--color-primary)',
     primaryView: 'notes',
     views: [
       { view: 'notes',       label: 'Notas'        },
-      { view: 'playbook',    label: 'Playbook'     },
       { view: 'canvas',      label: 'Canvas'       },
       { view: 'transcripts', label: 'Whisper'      },
       { view: 'audio',       label: 'Áudio'        },
@@ -174,18 +172,9 @@ export const App = () => {
     setNoteBookmarks,
     addColorPalette, updateColorPalette, removeColorPalette,
     resetStore, clearUserData,
-    projects, meetings, playbooks, registeredIDEs,
+    projects, meetings, registeredIDEs,
     addRegisteredIDE, updateRegisteredIDE, removeRegisteredIDE,
     lastSyncAt,
-    addPlaybook, updatePlaybook, removePlaybook,
-    addPlaybookDialog, updatePlaybookDialog, removePlaybookDialog,
-    reorderPlaybookDialogs, duplicatePlaybookDialog,
-    playbookFolders,
-    addPlaybookFromTemplate, snapshotPlaybookVersion, restorePlaybookVersion,
-    togglePlaybookFavorite, togglePlaybookArchived, movePlaybookToFolder,
-    incrementPlaybookViewCount, incrementDialogCopyCount,
-    updatePlaybookDialogVariables,
-    addPlaybookFolder, updatePlaybookFolder, removePlaybookFolder,
     updateSettings, updateStudy, replaceStore, updateStore, storeVersion,
     incrementClipboardCopyCount,
     updateDashboardLayout, updateDashboardWidgets,
@@ -328,7 +317,6 @@ export const App = () => {
         ...APP_HUBS[2],
         metrics: [
           { label: 'Notas', value: String(notes.length) },
-          { label: 'Playbooks', value: String(playbooks.length) },
         ],
       },
       {
@@ -358,7 +346,6 @@ export const App = () => {
     clipboardItems.length,
     colorPalettes.length,
     notes.length,
-    playbooks.length,
     projects.length,
     study.goals.length,
     study.sessions.length,
@@ -587,8 +574,6 @@ export const App = () => {
           parts.unshift('StudyView')
         } else if (cls.includes('canvas-') && !parts.some(p => p.includes('Canvas'))) {
           parts.unshift('canvas/CanvasView')
-        } else if (cls.includes('playbook-') && !parts.some(p => p.includes('Playbook'))) {
-          parts.unshift('PlaybookView')
         } else if (cls.includes('settings-section') && !parts.some(p => p.includes('Section'))) {
           const heading = node.querySelector('h2, h3, [class*=title]')?.textContent?.trim()
           parts.unshift(`SettingsSection#${heading || '?'}`)
@@ -716,15 +701,6 @@ export const App = () => {
               { label: 'Ditado de Voz', onClick: () => setShowVoiceModal(true), variant: 'primary' as const },
             ],
           }
-        case 'playbook':
-          return {
-            hubTitle: 'Conhecimento',
-            viewTitle: 'Playbooks & Scripts',
-            metricsText: `${playbooks.length} playbooks cadastrados`,
-            actions: [
-              { label: '+ Nova Nota', onClick: () => addNote('Novo Playbook', ''), variant: 'primary' as const },
-            ],
-          }
         case 'settings':
         case 'history':
           return {
@@ -768,7 +744,7 @@ export const App = () => {
       metricsText: cfg.metricsText,
       footerActions: [...cfg.actions, chatAction],
     }
-  }, [activeView, cards, projects, notes, playbooks, study, currentHub, lastSyncAt, addCard, addNote, isChatOpen])
+  }, [activeView, cards, projects, notes, study, currentHub, lastSyncAt, addCard, addNote, isChatOpen])
 
   // ── Early returns ───────────────────────────────────────────────────────────
 
@@ -880,7 +856,6 @@ export const App = () => {
               study={study}
               hubCards={dashboardHubs}
               projectsCount={projects.length}
-              playbooksCount={playbooks.length}
               colorPalettesCount={colorPalettes.length}
               clipboardCategoriesCount={clipboardCategories.length}
               clipboardItemsCount={clipboardItems.length}
@@ -899,6 +874,7 @@ export const App = () => {
               onOpenShortcut={handleOpenShortcut}
               onGoToNotes={() => setActiveView('notes')}
               onNavigate={(view: AppView) => setActiveView(view)}
+              onEditCard={editCard}
             />
           )}
           {activeView !== 'today' && (
@@ -907,9 +883,8 @@ export const App = () => {
                   <PlannerPage />
                 )}
 
-                {(activeView === 'notes' || activeView === 'playbook') && (
+                {activeView === 'notes' && (
                   <HubConhecimento
-                    activeView={activeView}
                     notes={notes}
                     folders={noteFolders}
                     onAddNote={(title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => addNote(typeof title === 'string' ? title : 'Nova nota', folderId, projectId, parentNoteId)}
@@ -936,28 +911,6 @@ export const App = () => {
                     onEmptyTrash={emptyNotesTrash}
                     noteTemplates={noteTemplates}
                     onSetNoteBookmarks={setNoteBookmarks}
-                    playbooks={playbooks}
-                    playbookFolders={playbookFolders}
-                    onAddPlaybook={addPlaybook}
-                    onUpdatePlaybook={updatePlaybook}
-                    onRemovePlaybook={removePlaybook}
-                    onAddDialog={addPlaybookDialog}
-                    onUpdateDialog={updatePlaybookDialog}
-                    onRemoveDialog={removePlaybookDialog}
-                    onReorderDialogs={reorderPlaybookDialogs}
-                    onDuplicateDialog={duplicatePlaybookDialog}
-                    onAddPlaybookFromTemplate={addPlaybookFromTemplate}
-                    onSnapshotPlaybookVersion={snapshotPlaybookVersion}
-                    onRestorePlaybookVersion={restorePlaybookVersion}
-                    onTogglePlaybookFavorite={togglePlaybookFavorite}
-                    onTogglePlaybookArchived={togglePlaybookArchived}
-                    onMovePlaybookToFolder={movePlaybookToFolder}
-                    onIncrementPlaybookViewCount={incrementPlaybookViewCount}
-                    onIncrementDialogCopyCount={incrementDialogCopyCount}
-                    onUpdateDialogVariables={updatePlaybookDialogVariables}
-                    onAddPlaybookFolder={addPlaybookFolder}
-                    onRenamePlaybookFolder={(folderId: string, name: string) => updatePlaybookFolder(folderId, { name })}
-                    onRemovePlaybookFolder={removePlaybookFolder}
                   />
                 )}
 

@@ -32,7 +32,6 @@ interface DashboardHomeProps {
   study?: StudyState
   hubCards?: DashboardHubCard[]
   projectsCount?: number
-  playbooksCount?: number
   colorPalettesCount?: number
   clipboardCategoriesCount?: number
   clipboardItemsCount?: number
@@ -51,6 +50,7 @@ interface DashboardHomeProps {
   onGoToCalendarDate: (dateISO: string) => void
   onOpenShortcut?: (url: string) => void
   onGoToNotes: () => void
+  onEditCard?: (cardId: string, updates: Partial<Card>) => void
 }
 
 const DAYS_ORDER_LABELS = [
@@ -73,6 +73,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
   onGoToCalendarDate,
   onOpenShortcut,
   onGoToNotes,
+  onEditCard,
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isQrSyncOpen, setIsQrSyncOpen] = useState(false)
@@ -285,7 +286,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
             onToggleCard={cardId => {
               const card = cards.find(c => c.id === cardId)
               if (card) {
-                card.status = card.status === 'done' ? 'todo' : 'done'
+                onEditCard?.(cardId, { status: card.status === 'done' ? 'todo' : 'done' })
               }
             }}
             onGoToPlannerCard={onGoToPlannerCard}

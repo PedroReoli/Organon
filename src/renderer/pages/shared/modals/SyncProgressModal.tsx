@@ -83,7 +83,6 @@ export function SyncProgressModal({ settings }: Props) {
           expenses: mergeById(rawStore.expenses, pulled.expenses),
           incomes: mergeById(rawStore.incomes, pulled.incomes),
           savingsGoals: mergeById(rawStore.savingsGoals, pulled.savingsGoals),
-          playbooks: mergeById(rawStore.playbooks, pulled.playbooks),
           study: {
             ...rawStore.study,
             goals: mergeById(rawStore.study?.goals ?? [], pulled.studyGoals),

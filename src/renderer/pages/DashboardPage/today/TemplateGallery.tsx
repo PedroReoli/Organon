@@ -25,7 +25,6 @@ const WIDGET_PREVIEW_LABELS: Record<string, string> = {
   'hub-notes':        'Notas',
   'hub-study':        'Estudos',
   'hub-projects':     'Projetos',
-  'hub-playbook':     'Playbook',
   'hub-shortcuts':    'Atalhos',
   'hub-apps':         'Apps',
   'hub-clipboard':    'Clipboard',

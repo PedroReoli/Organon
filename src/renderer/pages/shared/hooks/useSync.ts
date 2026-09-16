@@ -181,7 +181,6 @@ export function useSync({
       const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
       const remoteDelSavings       = new Set(deletedIds.get('finance_savings_goals') ?? [])
       const remoteDelInvestments   = new Set(deletedIds.get('finance_investments') ?? [])
-      const remoteDelPlaybooks     = new Set(deletedIds.get('playbooks') ?? [])
       const remoteDelMeetings      = new Set(deletedIds.get('meetings') ?? [])
       const remoteDelStudyGoals    = new Set(deletedIds.get('study_goals') ?? [])
       const remoteDelStudyMedia    = new Set(deletedIds.get('study_media_items') ?? [])
@@ -221,7 +220,6 @@ export function useSync({
         savingsGoals:   mergeById(rawStore.savingsGoals.filter(g => !remoteDelSavings.has(g.id)), pulled.savingsGoals),
         investments:    mergeById((rawStore.investments ?? []).filter(i => !remoteDelInvestments.has(i.id)), pulled.investments),
         meetings:       mergeById((rawStore.meetings ?? []).filter(m => !remoteDelMeetings.has(m.id)), pulled.meetings),
-        playbooks:      pf.has('playbooks') ? rawStore.playbooks : mergeById(rawStore.playbooks.filter(p => !remoteDelPlaybooks.has(p.id)), pulled.playbooks),
         colorPalettes:  mergeById((rawStore.colorPalettes ?? []).filter(p => !remoteDelColorPalettes.has(p.id)), pulled.colorPalettes),
         sprintCards:          pf.has('sprint_cards') ? (rawStore.sprintCards ?? []) : mergeById((rawStore.sprintCards ?? []).filter(c => !remoteDelSprintCards.has(c.id)), pulled.sprintCards),
         sprintColumnSections: pf.has('sprint_column_sections') ? (rawStore.sprintColumnSections ?? []) : mergeById((rawStore.sprintColumnSections ?? []).filter(s => !remoteDelSprintSections.has(s.id)), pulled.sprintColumnSections),
@@ -257,7 +255,6 @@ export function useSync({
           incomes:        mergeById(freshStore.incomes, merged.incomes),
           savingsGoals:   mergeById(freshStore.savingsGoals, merged.savingsGoals),
           investments:    mergeById(freshStore.investments ?? [], merged.investments ?? []),
-          playbooks:      mergeById(freshStore.playbooks, merged.playbooks),
           sprintCards:          mergeById(freshStore.sprintCards ?? [], merged.sprintCards ?? []),
           sprintColumnSections: mergeById(freshStore.sprintColumnSections ?? [], merged.sprintColumnSections ?? []),
           calendarCategories:   mergeById(freshStore.calendarCategories ?? [], merged.calendarCategories ?? []),
@@ -419,7 +416,6 @@ export function useSync({
         const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
         const remoteDelSavings       = new Set(deletedIds.get('finance_savings_goals') ?? [])
         const remoteDelInvestments   = new Set(deletedIds.get('finance_investments') ?? [])
-        const remoteDelPlaybooks     = new Set(deletedIds.get('playbooks') ?? [])
         const remoteDelMeetings      = new Set(deletedIds.get('meetings') ?? [])
         const remoteDelStudyGoals    = new Set(deletedIds.get('study_goals') ?? [])
         const remoteDelStudyMedia    = new Set(deletedIds.get('study_media_items') ?? [])
@@ -455,7 +451,6 @@ export function useSync({
           savingsGoals:   mergeById(rawStore.savingsGoals.filter(g => !remoteDelSavings.has(g.id)), pulled.savingsGoals),
           investments:    mergeById((rawStore.investments ?? []).filter(i => !remoteDelInvestments.has(i.id)), pulled.investments),
           meetings:       mergeById((rawStore.meetings ?? []).filter(m => !remoteDelMeetings.has(m.id)), pulled.meetings),
-          playbooks:      mergeById(rawStore.playbooks.filter(p => !remoteDelPlaybooks.has(p.id)), pulled.playbooks),
           colorPalettes:  mergeById((rawStore.colorPalettes ?? []).filter(p => !remoteDelColorPalettes.has(p.id)), pulled.colorPalettes),
           sprintCards:          mergeById((rawStore.sprintCards ?? []).filter(c => !remoteDelSprintCards.has(c.id)), pulled.sprintCards),
           sprintColumnSections: mergeById((rawStore.sprintColumnSections ?? []).filter(s => !remoteDelSprintSections.has(s.id)), pulled.sprintColumnSections),

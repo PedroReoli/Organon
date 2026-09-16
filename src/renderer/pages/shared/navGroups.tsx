@@ -68,12 +68,6 @@ const icons = {
       <path d="M3 6.5V11l5 2.5 5-2.5V6.5" />
     </svg>
   ),
-  playbook: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3.5 2.5h7a2 2 0 0 1 2 2v9h-9a1 1 0 0 1-1-1v-8a2 2 0 0 1 2-2Z" />
-      <path d="M5 5.5h6M5 8h6M5 10.5h4" />
-    </svg>
-  ),
   colors: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="8" cy="8" r="5.5" />
@@ -113,7 +107,6 @@ export const navGroups: NavGroup[] = [
     icon: icons.content,
     items: [
       { view: 'notes', label: 'Notas', icon: icons.notes },
-      { view: 'playbook', label: 'Playbook', icon: icons.playbook },
     ],
   },
   {

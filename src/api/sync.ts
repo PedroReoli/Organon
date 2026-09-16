@@ -6,7 +6,7 @@ import { organonApi, SyncOperation, SyncChange } from './organon'
 import type {
   Store, Card, Note, NoteFolder, CalendarEvent, Project,
   Bill, Expense, IncomeEntry,
-  SavingsGoal, Investment, Meeting, Playbook, StudyGoal, StudyMediaItem,
+  SavingsGoal, Investment, Meeting, StudyGoal, StudyMediaItem,
   FinancialConfig, ColorPalette, BudgetCategory,
   ChecklistItem, CardPriority, CardStatus,
   ProjectLink, CalendarRecurrence, CalendarReminder,
@@ -31,7 +31,6 @@ export interface PartialSyncedStore {
   savingsGoals: SavingsGoal[]
   investments: Investment[]
   meetings: Meeting[]
-  playbooks: Playbook[]
   studyGoals: StudyGoal[]
   studyMediaItems: StudyMediaItem[]
   financeConfig: FinancialConfig | null
@@ -230,20 +229,6 @@ function meetingToApi(m: Meeting): Payload {
     date: m.createdAt ? m.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
     created_at: m.createdAt,
     updated_at: m.updatedAt,
-  }
-}
-
-function playbookToApi(p: Playbook): Payload {
-  // title → name, sector → description, category agora é enviado
-  return {
-    name: p.title,
-    description: p.sector ?? '',
-    category: p.category ?? '',
-    content: p.content ?? '',
-    summary: p.summary ?? '',
-    sort_order: i32(p.order, 0),
-    created_at: p.createdAt,
-    updated_at: p.updatedAt,
   }
 }
 
@@ -481,32 +466,6 @@ export function meetingFromApi(id: string, p: Payload): Meeting {
   }
 }
 
-export function playbookFromApi(id: string, p: Payload): Playbook {
-  // API name → local title | API description → local sector
-  const dialogs = Array.isArray(p.dialogs)
-    ? (p.dialogs as Payload[]).map((d: Payload) => ({
-        id: s(d.id),
-        title: s(d.title),
-        text: s(d.text),
-        order: n(d.sort_order),
-        createdAt: s(d.created_at) || now(),
-        updatedAt: s(d.updated_at) || now(),
-      }))
-    : []
-  return {
-    id,
-    title: s(p.name),
-    sector: s(p.description),
-    category: s(p.category),
-    summary: s(p.summary),
-    content: s(p.content),
-    dialogs,
-    order: n(p.sort_order),
-    createdAt: s(p.created_at) || now(),
-    updatedAt: s(p.updated_at) || now(),
-  }
-}
-
 export function studyGoalFromApi(id: string, p: Payload): StudyGoal {
   return {
     id,
@@ -650,7 +609,6 @@ function applyChange(
     case 'finance_savings_goals':  result.savingsGoals.push(savingsGoalFromApi(id, p)); break
     case 'finance_investments':    result.investments.push(investmentFromApi(id, p)); break
     case 'meetings':           result.meetings.push(meetingFromApi(id, p)); break
-    case 'playbooks':          result.playbooks.push(playbookFromApi(id, p)); break
     case 'study_goals':        result.studyGoals.push(studyGoalFromApi(id, p)); break
     case 'study_media_items':  result.studyMediaItems.push(studyMediaItemFromApi(id, p)); break
     case 'finance_config':
@@ -736,7 +694,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   const cards        = arr<Card>(safeStore.cards)
   const studyMedia   = arr<StudyMediaItem>(safeStudy.mediaItems)
   const studyGoals   = arr<StudyGoal>(safeStudy.goals)
-  const playbooks    = arr<Playbook>(safeStore.playbooks)
   const noteFolders  = arr<NoteFolder>(safeStore.noteFolders)
   const projects     = arr<Project>(safeStore.projects)
   const calendarEvents = arr<CalendarEvent>(safeStore.calendarEvents)
@@ -775,7 +732,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   addGroup('cards',                cards.map(c => c.id))
   addGroup('study_media_items',    studyMedia.map(m => m.id))
   addGroup('study_goals',          studyGoals.map(g => g.id))
-  addGroup('playbooks',            playbooks.map(p => p.id))
   // note_folders: folhas → raízes (reverso do push)
   for (let i = noteFolderLevels.length - 1; i >= 0; i--) {
     const ids = noteFolderLevels[i].map(f => f.id)
@@ -846,7 +802,6 @@ const PUSH_RESOURCE_LABELS: Record<string, string> = {
   finance_savings_goals: 'Metas de economia',
   finance_investments: 'Investimentos',
   meetings: 'Reuniões',
-  playbooks: 'Playbooks',
   study_goals: 'Metas de estudo',
   study_media_items: 'Mídias de estudo',
   crm_contacts: 'Contatos CRM',
@@ -881,7 +836,6 @@ export async function pushAllToApi(
   const savingsGoals = arr<SavingsGoal>(safeStore.savingsGoals)
   const investments = arr<Investment>(safeStore.investments)
   const meetings = arr<Meeting>(safeStore.meetings)
-  const playbooks = arr<Playbook>(safeStore.playbooks)
   const studyGoals = arr<StudyGoal>(safeStudy.goals)
   const studyMediaItems = arr<StudyMediaItem>(safeStudy.mediaItems)
   const colorPalettes = arr<ColorPalette>(safeStore.colorPalettes)
@@ -929,7 +883,6 @@ export async function pushAllToApi(
   addGroup('finance_savings_goals', makeOps('finance_savings_goals', savingsGoals,   savingsGoalToApi as (i: never) => Payload))
   addGroup('finance_investments',   makeOps('finance_investments',   investments,    investmentToApi as (i: never) => Payload))
   addGroup('meetings',              makeOps('meetings',              meetings,       meetingToApi as (i: never) => Payload))
-  addGroup('playbooks',             makeOps('playbooks',             playbooks,      playbookToApi as (i: never) => Payload))
   addGroup('study_goals',           makeOps('study_goals',           studyGoals,     studyGoalToApi as (i: never) => Payload))
   addGroup('study_media_items',     makeOps('study_media_items',     studyMediaItems,studyMediaItemToApi as (i: never) => Payload))
 
@@ -1071,43 +1024,6 @@ export async function pushAllToApi(
     }
   }
 
-  // Relatório final no console
-  // ── Sync playbook dialogs via REST endpoints (batch API doesn't cover these)
-  if (playbooks.length > 0) {
-    await Promise.all(playbooks.map(async (pb) => {
-      if (!pb.dialogs?.length && pb.dialogs !== undefined) {
-        // playbook has no dialogs locally — skip (don't delete server dialogs we may not know about)
-        return
-      }
-      try {
-        const res = await organonApi.playbooks.get(pb.id)
-        const serverPb = res.data as Payload
-        const serverDialogs: Payload[] = Array.isArray(serverPb.dialogs) ? serverPb.dialogs as Payload[] : []
-        const serverDialogIds = new Set(serverDialogs.map(d => s(d.id)))
-        const localDialogs = pb.dialogs ?? []
-        const localDialogIds = new Set(localDialogs.map(d => d.id))
-
-        // Create or update local dialogs on server
-        await Promise.all(localDialogs.map(async (d) => {
-          const body = { title: d.title, text: d.text, sort_order: d.order }
-          if (serverDialogIds.has(d.id)) {
-            await organonApi.playbooks.updateDialog(pb.id, d.id, body)
-          } else {
-            await organonApi.playbooks.addDialog(pb.id, body)
-          }
-        }))
-
-        // Delete server dialogs no longer present locally
-        await Promise.all(serverDialogs
-          .filter(d => !localDialogIds.has(s(d.id)))
-          .map(d => organonApi.playbooks.deleteDialog(pb.id, s(d.id)))
-        )
-      } catch (err) {
-        console.warn(`[Sync] pushAllToApi: falha ao sincronizar dialogs do playbook ${pb.id}:`, err)
-      }
-    }))
-  }
-
   // ── Sync shortcuts via endpoints individuais (batch API não cobre esses recursos) ──
   {
     const localFolders = arr<ShortcutFolder>(safeStore.shortcutFolders)
@@ -1229,7 +1145,7 @@ export async function pullFromApi(since?: string): Promise<PullResult> {
     cards: [], notes: [], noteFolders: [], calendarEvents: [],
     projects: [],
     bills: [], expenses: [], incomes: [], savingsGoals: [], investments: [], meetings: [],
-    playbooks: [], studyGoals: [], studyMediaItems: [],
+    studyGoals: [], studyMediaItems: [],
     financeConfig: null, financeConfigBudgetCategories: null, studyConfig: null,
     colorPalettes: [],
     shortcutFolders: [], shortcuts: [],
@@ -1260,19 +1176,6 @@ export async function pullFromApi(since?: string): Promise<PullResult> {
     store.shortcuts       = arr<Payload>(itemsRes.data).map(sc => shortcutItemFromApi(s(sc.id), sc))
   } catch (err) {
     console.warn('[Sync] pullFromApi: falha ao buscar atalhos:', err)
-  }
-
-  // Fetch full playbook data (including dialogs) for each pulled playbook
-  if (store.playbooks.length > 0) {
-    await Promise.all(store.playbooks.map(async (pb, idx) => {
-      try {
-        const res = await organonApi.playbooks.get(pb.id)
-        const full = res.data as Payload
-        store.playbooks[idx] = playbookFromApi(pb.id, full)
-      } catch (err) {
-        console.warn(`[Sync] pullFromApi: falha ao buscar playbook ${pb.id}:`, err)
-      }
-    }))
   }
 
   return { store, noteContents, serverTime, deletedIds }

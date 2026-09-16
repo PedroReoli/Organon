@@ -32,7 +32,6 @@ interface CustomLayoutProps {
   syncStatus:         DashboardSyncStatus
   lastSyncAt?:        string | null
   userLoggedIn:       boolean
-  playbooksCount:     number
   appsCount:          number
   clipboardCount:     number
   colorPalettesCount: number
@@ -63,7 +62,7 @@ export const CustomLayout = ({
   widgets, onWidgetsChange,
   cards, calendarEvents, bills, expenses, savingsGoals,
   shortcuts, notes, study, syncStatus, lastSyncAt, userLoggedIn,
-  playbooksCount, appsCount, clipboardCount, colorPalettesCount,
+  appsCount, clipboardCount, colorPalettesCount,
   onNavigate, onGoToPlannerCard, onGoToCalendarDate,
   userTemplates, onSaveTemplate, onDeleteTemplate, onApplyTemplate,
 }: CustomLayoutProps) => {
@@ -126,7 +125,7 @@ export const CustomLayout = ({
       case 'report-financial':
         return <FinancialWidget bills={bills} expenses={expenses} savingsGoals={savingsGoals} onNavigate={onNavigate} />
       case 'report-knowledge':
-        return <KnowledgeWidget notes={notes} playbooksCount={playbooksCount} study={study} onNavigate={onNavigate} />
+        return <KnowledgeWidget notes={notes} study={study} onNavigate={onNavigate} />
       case 'report-tools':
         return <ToolsWidget shortcutsCount={shortcuts.length} appsCount={appsCount} clipboardCount={clipboardCount} colorPalettesCount={colorPalettesCount} />
       case 'report-system':

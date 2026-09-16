@@ -1,4 +1,4 @@
-﻿// Cliente HTTP para a Organon API
+// Cliente HTTP para a Organon API
 // Auth: Bearer token de 30 dias (token único — sem refresh token separado).
 // O token é armazenado em settings.apiRefreshToken e restaurado no boot.
 // Ao receber 401, o client tenta renovar via POST /auth/refresh (Bearer) antes de deslogar.
@@ -707,21 +707,6 @@ export const organonApi = {
     create: (body: Record<string, unknown>) => post<{ data: unknown }>('/meetings', body),
     update: (id: string, body: Record<string, unknown>) => patch<{ data: unknown }>(`/meetings/${id}`, body),
     delete: (id: string) => del<void>(`/meetings/${id}`),
-  },
-
-  // PLAYBOOKS
-  playbooks: {
-    list: (params?: { limit?: number; cursor?: string }) =>
-      get<{ data: unknown[] }>(`/playbooks${qs({ limit: params?.limit, cursor: params?.cursor })}`),
-    get: (id: string) => get<{ data: unknown }>(`/playbooks/${id}`),
-    create: (body: Record<string, unknown>) => post<{ data: unknown }>('/playbooks', body),
-    update: (id: string, body: Record<string, unknown>) => patch<{ data: unknown }>(`/playbooks/${id}`, body),
-    delete: (id: string) => del<void>(`/playbooks/${id}`),
-    addDialog: (id: string, body: { title: string; text: string; sort_order?: number }) =>
-      post<{ data: unknown }>(`/playbooks/${id}/dialogs`, body),
-    updateDialog: (id: string, dialogId: string, body: { title?: string; text?: string; sort_order?: number }) =>
-      patch<{ data: unknown }>(`/playbooks/${id}/dialogs/${dialogId}`, body),
-    deleteDialog: (id: string, dialogId: string) => del<void>(`/playbooks/${id}/dialogs/${dialogId}`),
   },
 
   // STUDY

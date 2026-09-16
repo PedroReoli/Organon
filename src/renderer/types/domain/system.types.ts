@@ -12,7 +12,6 @@ export type AppView =
   | 'agenda'
   | 'planner'
   | 'calendar'
-  | 'playbook'
   | 'colors'
   | 'shortcuts'
   | 'projects'
@@ -84,65 +83,6 @@ export interface Meeting {
   updatedAt: string
 }
 
-export type PlaybookVariableType = 'text' | 'number' | 'date' | 'choice' | 'email' | 'phone' | 'cpf'
-
-export interface PlaybookVariable {
-  key: string
-  label: string
-  type: PlaybookVariableType
-  choices?: string[]
-  defaultValue?: string
-  required?: boolean
-}
-
-export interface PlaybookDialog {
-  id: string
-  title: string
-  text: string
-  order: number
-  createdAt: string
-  updatedAt: string
-  variables?: PlaybookVariable[]
-  copyCount?: number
-  copyCountByMonth?: Record<string, number>
-  tags?: string[]
-}
-
-export interface PlaybookVersion {
-  id: string
-  createdAt: string
-  content: string
-  dialogs: PlaybookDialog[]
-}
-
-export interface PlaybookFolder {
-  id: string
-  name: string
-  color: string
-  order: number
-  createdAt: string
-}
-
-export interface Playbook {
-  id: string
-  title: string
-  sector: string
-  category: string
-  summary: string
-  content: string
-  dialogs: PlaybookDialog[]
-  order: number
-  createdAt: string
-  updatedAt: string
-  isFavorite?: boolean
-  isArchived?: boolean
-  folderId?: string | null
-  viewCount?: number
-  versions?: PlaybookVersion[]
-}
-
-export const PLAYBOOK_VERSIONS_LIMIT = 10
-
 export interface ClipboardCategory {
   id: string
   name: string
@@ -175,7 +115,7 @@ export const DEFAULT_CLIPBOARD_CONFIG: ClipboardConfig = {
 }
 
 export type DashboardWidgetType =
-  | 'hub-planner' | 'hub-calendar' | 'hub-playbook'
+  | 'hub-planner' | 'hub-calendar'
   | 'hub-projects' | 'hub-notes' | 'hub-study'
   | 'hub-financial' | 'hub-shortcuts' | 'hub-apps' | 'hub-clipboard' | 'hub-colors'
   | 'report-tasks' | 'report-events' | 'report-week' | 'report-financial'
@@ -357,14 +297,14 @@ export interface KeyboardShortcut {
 export type NavbarGroupId = 'organization' | 'work' | 'tools' | 'content' | 'personal'
 
 export type NavbarView =
-  | 'agenda' | 'planner' | 'calendar' | 'crm' | 'playbook' | 'projects'
+  | 'agenda' | 'planner' | 'calendar' | 'crm' | 'projects'
   | 'colors' | 'shortcuts' | 'apps' | 'notes' | 'clipboard'
   | 'study' | 'financial' | 'audio' | 'transcripts' | 'workflows' | 'system-design'
 
 export type NavIconId =
   | 'agenda' | 'planner' | 'calendar' | 'shortcuts' | 'projects' | 'notes'
   | 'clipboard' | 'apps' | 'study' | 'financial' | 'organization'
-  | 'content' | 'tools' | 'personal' | 'crm' | 'playbook' | 'colors'
+  | 'content' | 'tools' | 'personal' | 'crm' | 'colors'
   | 'transcripts' | 'audio' | 'dashboard' | 'system-design'
 
 export interface NavbarGroupConfig {
@@ -471,8 +411,6 @@ export interface Store {
   investments: Investment[]
   quickAccess: QuickAccessItem[]
   meetings: Meeting[]
-  playbooks: Playbook[]
-  playbookFolders?: PlaybookFolder[]
   study: StudyState
   settings: Settings
   noteTemplates?: NoteTemplate[]
@@ -558,13 +496,12 @@ export const DEFAULT_DASHBOARD_WIDGETS: DashboardWidget[] = [
   { id: 'w-hub-study',        type: 'hub-study',        colSpan: 1, order: 10, visible: true },
   { id: 'w-hub-financial',    type: 'hub-financial',    colSpan: 1, order: 11, visible: true },
   { id: 'w-hub-projects',     type: 'hub-projects',     colSpan: 1, order: 12, visible: false },
-  { id: 'w-hub-playbook',     type: 'hub-playbook',     colSpan: 1, order: 13, visible: false },
-  { id: 'w-hub-shortcuts',    type: 'hub-shortcuts',    colSpan: 1, order: 14, visible: false },
-  { id: 'w-hub-apps',         type: 'hub-apps',         colSpan: 1, order: 15, visible: false },
-  { id: 'w-hub-clipboard',    type: 'hub-clipboard',    colSpan: 1, order: 16, visible: false },
-  { id: 'w-hub-colors',       type: 'hub-colors',       colSpan: 1, order: 17, visible: false },
-  { id: 'w-widget-search',    type: 'widget-search',    colSpan: 2, order: 18, visible: false },
-  { id: 'w-widget-datetime',  type: 'widget-datetime',  colSpan: 1, order: 19, visible: false },
+  { id: 'w-hub-shortcuts',    type: 'hub-shortcuts',    colSpan: 1, order: 13, visible: false },
+  { id: 'w-hub-apps',         type: 'hub-apps',         colSpan: 1, order: 14, visible: false },
+  { id: 'w-hub-clipboard',    type: 'hub-clipboard',    colSpan: 1, order: 15, visible: false },
+  { id: 'w-hub-colors',       type: 'hub-colors',       colSpan: 1, order: 16, visible: false },
+  { id: 'w-widget-search',    type: 'widget-search',    colSpan: 2, order: 17, visible: false },
+  { id: 'w-widget-datetime',  type: 'widget-datetime',  colSpan: 1, order: 18, visible: false },
 ]
 
 export const BUILTIN_DASHBOARD_TEMPLATES: DashboardTemplate[] = [
