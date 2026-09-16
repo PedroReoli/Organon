@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   DndContext,
   type DragEndEvent,
@@ -9,6 +9,10 @@ import {
   useSensors,
   useDroppable,
   closestCorners,
+  pointerWithin,
+  MeasuringStrategy,
+  getClientRect,
+  defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlanningTask } from '../../types/planning.types';
@@ -83,7 +87,7 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
       }}
       style={{
         background: isOver
-          ? 'color-mix(in srgb, var(--color-primary, #6366f1) 16%, #0f172a)'
+          ? 'color-mix(in srgb, var(--color-primary, #6366f1) 18%, #0f172a)'
           : isBacklog
           ? '#0c1220'
           : '#0e1526',
@@ -93,8 +97,8 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
           ? 'rgba(99,102,241,0.5)'
           : 'rgba(255,255,255,0.06)',
       }}
-      className={`relative flex-1 min-h-[110px] rounded-lg border p-1.5 flex flex-col justify-between transition-all group/slot ${
-        isOver ? 'ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-950/30' : ''
+      className={`relative flex-1 h-full min-h-[90px] rounded-lg border p-1.5 flex flex-col justify-between transition-all group/slot ${
+        isOver ? 'ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-950/40' : ''
       } ${
         selectedTaskId ? 'cursor-pointer hover:border-indigo-400 hover:bg-[#141e34]' : ''
       }`}
@@ -183,6 +187,8 @@ export const WeeklyView = ({
   const [isBacklogCollapsed, setIsBacklogCollapsed] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  const zoomFactorRef = useRef(1);
 
   // Quick Add Modal State
   const [quickAddModal, setQuickAddModal] = useState<{
@@ -287,13 +293,42 @@ export const WeeklyView = ({
     return map;
   }, [tasks, weekDays]);
 
-  // Sensors for DnD (constraint distance 6 to avoid false drag on click)
+  // Sensors for DnD
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+
+  // Zoom calibrated client rect for accurate mouse placement in Electron
+  const zoomedClientRect = useCallback((element: HTMLElement) => {
+    const rect = getClientRect(element);
+    const zoom = zoomFactorRef.current;
+    if (!zoom || zoom === 1) return rect;
+    return {
+      ...rect,
+      top: rect.top * zoom,
+      right: rect.right * zoom,
+      bottom: rect.bottom * zoom,
+      left: rect.left * zoom,
+      width: rect.width * zoom,
+      height: rect.height * zoom,
+    };
+  }, []);
+
+  const measuring = useMemo(() => {
+    return {
+      draggable: { measure: zoomedClientRect },
+      droppable: { strategy: MeasuringStrategy.Always, measure: zoomedClientRect },
+      dragOverlay: { measure: zoomedClientRect },
+    };
+  }, [zoomedClientRect]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTaskId(event.active.id as string);
+    try {
+      zoomFactorRef.current = (window.electronAPI as any)?.getNativeZoom?.() ?? 1;
+    } catch {
+      zoomFactorRef.current = 1;
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -332,6 +367,16 @@ export const WeeklyView = ({
       );
     }
   };
+
+  // Cursor styling during drag
+  useEffect(() => {
+    if (!activeTaskId) return;
+    const prevCursor = document.body.style.cursor;
+    document.body.style.cursor = 'grabbing';
+    return () => {
+      document.body.style.cursor = prevCursor;
+    };
+  }, [activeTaskId]);
 
   const handleSlotClickToMove = (slotId: string) => {
     if (!selectedTaskId) return;
@@ -501,7 +546,7 @@ export const WeeklyView = ({
           </button>
         </div>
 
-        {/* Legend Pills (Anti-AI Slop & Highly Informative) */}
+        {/* Legend Pills */}
         <div className="hidden lg:flex items-center gap-3 px-3 py-1 rounded-full border border-white/5 bg-[#0b101e] text-[11px] text-slate-400">
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-slate-300">Prioridade:</span>
@@ -527,7 +572,12 @@ export const WeeklyView = ({
       {/* Main Board (Backlog + Matrix Grid) */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={(args) => {
+          const pointerHits = pointerWithin(args);
+          if (pointerHits.length > 0) return pointerHits;
+          return closestCorners(args);
+        }}
+        measuring={measuring}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
@@ -541,7 +591,6 @@ export const WeeklyView = ({
             {/* Backlog Header (Ícone posicionado à ESQUERDA do título) */}
             <div className="flex items-center justify-between p-2.5 border-b border-white/5">
               <div className="flex items-center gap-2">
-                {/* Sidebar Toggle Icon Button (Divided Rectangle) à esquerda */}
                 <button
                   type="button"
                   onClick={() => setIsBacklogCollapsed((prev) => !prev)}
@@ -579,7 +628,7 @@ export const WeeklyView = ({
 
             {!isBacklogCollapsed && (
               <div className="flex-1 flex flex-col p-2 gap-2 overflow-y-auto">
-                {/* Clean + Card Button (sem duplicacao de '+') */}
+                {/* Clean + Card Button */}
                 <button
                   type="button"
                   onClick={() => openAddModal()}
@@ -607,10 +656,10 @@ export const WeeklyView = ({
             )}
           </div>
 
-          {/* 7 Days x 3 Shifts Matrix */}
-          <div className="flex-1 flex flex-col border border-white/5 rounded-xl bg-[#0c1220] overflow-auto min-w-0">
+          {/* 7 Days x 3 Shifts Matrix (Fluid Responsive) */}
+          <div className="flex-1 flex flex-col border border-white/5 rounded-xl bg-[#0c1220] overflow-auto min-w-0 h-full">
             {/* Header Row: 7 Day Columns */}
-            <div className="grid grid-cols-[68px_repeat(7,minmax(110px,1fr))] sticky top-0 z-10 border-b border-white/5 bg-[#0e1526] min-w-[770px]">
+            <div className="grid grid-cols-[56px_repeat(7,minmax(105px,1fr))] sticky top-0 z-10 border-b border-white/5 bg-[#0e1526] min-w-[750px]">
               <div className="p-2 border-r border-white/5" />
               {weekDays.map((day) => (
                 <div
@@ -640,11 +689,11 @@ export const WeeklyView = ({
             </div>
 
             {/* 3 Shift Rows: MANHÃ, TARDE, NOITE */}
-            <div className="flex-1 grid grid-rows-3 divide-y divide-white/5 min-h-[420px] min-w-[770px]">
+            <div className="flex-1 grid grid-rows-3 divide-y divide-white/5 min-w-[750px] min-h-[360px] h-full">
               {SHIFTS.map((shift) => (
-                <div key={shift.id} className="grid grid-cols-[68px_repeat(7,minmax(110px,1fr))]">
+                <div key={shift.id} className="grid grid-cols-[56px_repeat(7,minmax(105px,1fr))] h-full">
                   {/* Shift Label Column */}
-                  <div className="p-1.5 border-r border-white/5 flex items-center justify-center text-center bg-[#0d1424] select-none">
+                  <div className="p-1 border-r border-white/5 flex items-center justify-center text-center bg-[#0d1424] select-none">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                       {shift.label}
                     </span>
@@ -658,7 +707,7 @@ export const WeeklyView = ({
                     return (
                       <div
                         key={slotKey}
-                        className="p-1 border-r border-white/5 last:border-r-0 flex flex-col overflow-hidden"
+                        className="p-1 border-r border-white/5 last:border-r-0 flex flex-col overflow-hidden h-full"
                       >
                         <MatrixSlot
                           id={slotKey}
@@ -681,17 +730,24 @@ export const WeeklyView = ({
           </div>
         </div>
 
-        {/* Drag Overlay with Elevation */}
-        <DragOverlay>
+        {/* Precise Drag Overlay with exact coordinate tracking */}
+        <DragOverlay
+          zIndex={9999}
+          dropAnimation={{
+            duration: 200,
+            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+            sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
+          }}
+        >
           {activeTask ? (
-            <div className="w-56 shadow-2xl rounded-lg border border-indigo-500 bg-[#162138] p-1.5 scale-105 rotate-1 opacity-95">
+            <div className="w-[200px] shadow-2xl rounded-lg border border-indigo-500 bg-[#162138] p-1 opacity-95 pointer-events-none">
               <PlanningCardCompact task={activeTask} project={activeTaskProject} onEdit={() => {}} />
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
 
-      {/* Quick Add Modal (Completo, com Horário On/Off, Lembretes e Projetos) */}
+      {/* Quick Add Modal */}
       {quickAddModal?.isOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs"
