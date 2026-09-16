@@ -23,7 +23,6 @@ import {
   useDroppable,
   useDndContext,
   defaultDropAnimationSideEffects,
-  type DropAnimation,
 } from '@dnd-kit/core'
 import type { CollisionDetection, Modifier, PointerSensorOptions } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -643,7 +642,6 @@ export const HourlyView: React.FC<HourlyViewProps> = ({
                       const widthPct = 100 / entry.totalCols
                       const leftPct = entry.col * widthPct
 
-                      const isPast = weekOffset < 0 || (weekOffset === 0 && entry.endMin < nowMinutes && day <= new Date().getDay() - 1);
                       // Ajuste: day <= selectedDay logic não é tão simples, então se usa a data real ou simplifica por weekOffset e nowMinutes
                       const isToday = weekDates[day] === new Date().toISOString().slice(0, 10);
                       const reallyPast = (weekOffset < 0) || (weekOffset === 0 && (weekDates[day] < new Date().toISOString().slice(0, 10) || (isToday && entry.endMin <= nowMinutes)));

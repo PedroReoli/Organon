@@ -1,10 +1,11 @@
-import type { ComponentProps } from 'react'
-import { HabitsView } from '../HabitsView'
-import type { AppView } from '../InternalNav'
+import type { AppView } from '@types'
 
-type HubSaudeProps = { activeView: AppView } & ComponentProps<typeof HabitsView>
+interface HubSaudeProps {
+  activeView: AppView
+  [key: string]: any
+}
 
-export const HubSaude = ({ activeView, ...props }: HubSaudeProps) => {
-  if (activeView !== 'habits') return null
-  return <HabitsView {...props} />
+export const HubSaude = ({ activeView }: HubSaudeProps) => {
+  if (activeView !== ('habits' as any)) return null
+  return null
 }

@@ -21,7 +21,6 @@ import {
   type DragEndEvent,
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import type { CalendarEvent, Card } from '@types'
 import { expandCalendarEvents, getTodayISO } from '@utils'
 import { Button } from '@shared/components/primitives'
@@ -49,6 +48,7 @@ interface MonthViewProps {
   onEditEvent?: (event: CalendarEvent) => void
   onUpdateEvent?: (eventId: string, updates: Partial<CalendarEvent>) => void
   onUpdateCard?: (cardId: string, updates: Partial<Card>) => void
+  onOpenCard?: (card: Card) => void
 }
 
 export const MonthView: React.FC<MonthViewProps> = ({

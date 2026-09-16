@@ -4,7 +4,7 @@
  * Definido no upgrade 01.
  */
 
-import type { Card, Day } from '../../../../types'
+import type { Card, Day } from '@types'
 import type { DropResult } from './dropOnSprintColumn'
 
 export interface DropOnBacklogArgs {

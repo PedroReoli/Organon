@@ -7,7 +7,7 @@
  * Definido no upgrade 01.
  */
 
-import type { Card, CardLocation, Day } from '../../../../types'
+import type { Card, CardLocation, Day } from '@types'
 
 export interface DropOnSprintColumnArgs {
   cardId: string

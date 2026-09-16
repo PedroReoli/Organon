@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react'
-
 interface WeeklyOverviewDay {
   key: string
   label: string

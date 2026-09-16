@@ -4,6 +4,7 @@ import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_
 import { WysiwygEditor } from '../../shared/WysiwygEditor'
 import { getTodayISO } from '@utils'
 import { Button } from '@shared/components/primitives'
+import { Check } from 'lucide-react'
 
 interface CardModalProps {
   card: Card
@@ -64,7 +65,7 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
   const [status,        setStatus]        = useState<CardStatus>(card.status)
   const [projectId,     setProjectId]     = useState<string | null>(card.projectId ?? null)
   const [postponementCount, setPostponementCount] = useState<number>(card.postponementCount ?? 0)
-  const [cancelReason,  setCancelReason]  = useState<string>(card.cancelReason ?? '')
+  const [cancelReason] = useState<string>(card.cancelReason ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [reminderToast, setReminderToast] = useState<string | null>(null)
   const [showDesc,      setShowDesc]      = useState(
@@ -106,7 +107,7 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
     }
 
     const triggerNotification = () => {
-      new Notification(`🔔 Lembrete Organon: ${title || 'Tarefa'}`, {
+      new Notification(`Lembrete Organon: ${title || 'Tarefa'}`, {
         body: `Lembrete do Planejamento: "${title || 'Tarefa'}"`,
       })
     }
@@ -577,8 +578,8 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
             )}
 
             {reminderToast && (
-              <span style={{ fontSize: '11px', color: '#22c55e', marginTop: '6px', fontWeight: 600, display: 'block' }}>
-                ✓ {reminderToast}
+              <span style={{ fontSize: '11px', color: '#22c55e', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Check size={13} /> {reminderToast}
               </span>
             )}
           </div>

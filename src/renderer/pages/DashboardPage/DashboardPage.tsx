@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react'
-import type { CalendarEvent, Card, DashboardLayoutMode, DashboardTemplate, DashboardWidget, Note, Period, StudyState } from '@types'
-import { expandCalendarEvents, getCurrentWeekDates, getDayFromDate, getTodayISO } from '@utils'
+import React, { useEffect, useState, useMemo } from 'react'
+import type { CalendarEvent, Card, DashboardLayoutMode, DashboardTemplate, DashboardWidget, Note, StudyState } from '@types'
+import { expandCalendarEvents, getCurrentWeekDates, getTodayISO } from '@utils'
 import type { AppView } from '../shared/InternalNav'
 import { QuickSearchModal } from '../shared/modals/QuickSearchModal'
 import { LocalSyncModal } from '../shared/modals/LocalSyncModal'
-import { CustomLayout } from './today/CustomLayout'
-import { AgendaCard } from './dashboard/AgendaCard'
-import { FocusCard } from './dashboard/FocusCard'
-import { WeekOverviewCard } from './dashboard/WeekOverviewCard'
-import { ProjectsSummaryCard } from './dashboard/ProjectsSummaryCard'
-import { HubGroupCard } from './dashboard/HubGroupCard'
+import { DashboardKpiRow } from './components/DashboardKpiRow'
+import { WeeklyActivityChart, type DayActivity } from './components/WeeklyActivityChart'
+import { PriorityDonutChart } from './components/PriorityDonutChart'
+import { CompactTodayQueue } from './components/CompactTodayQueue'
+import { ActiveSprintWidget } from './components/ActiveSprintWidget'
+import { RecentNotesWidget } from './components/RecentNotesWidget'
+import { ModernHubNavigation } from './components/ModernHubNavigation'
+import { Sparkles, Clock, CheckCircle2 } from 'lucide-react'
 
 export type DashboardSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 
@@ -27,17 +29,17 @@ interface DashboardHomeProps {
   cards: Card[]
   calendarEvents: CalendarEvent[]
   notes: Note[]
-  study: StudyState
-  hubCards: DashboardHubCard[]
-  crmContactsCount: number
-  projectsCount: number
-  playbooksCount: number
-  colorPalettesCount: number
-  clipboardCategoriesCount: number
-  clipboardItemsCount: number
-  syncStatus: DashboardSyncStatus
+  study?: StudyState
+  hubCards?: DashboardHubCard[]
+  crmContactsCount?: number
+  projectsCount?: number
+  playbooksCount?: number
+  colorPalettesCount?: number
+  clipboardCategoriesCount?: number
+  clipboardItemsCount?: number
+  syncStatus?: DashboardSyncStatus
   lastSyncAt?: string | null
-  userLoggedIn: boolean
+  userLoggedIn?: boolean
   dashboardLayout?: DashboardLayoutMode
   dashboardWidgets?: DashboardWidget[]
   onDashboardLayoutChange?: (layout: DashboardLayoutMode) => void
@@ -58,309 +60,261 @@ const DAYS_ORDER_LABELS = [
   { key: 'wed' as const, label: 'Qua' },
   { key: 'thu' as const, label: 'Qui' },
   { key: 'fri' as const, label: 'Sex' },
-  { key: 'sat' as const, label: 'Sab' },
+  { key: 'sat' as const, label: 'Sáb' },
   { key: 'sun' as const, label: 'Dom' },
 ]
 
-import img01Planejamento from '../../images/organon_icons/01_planejamento.png'
-import img02Calendario from '../../images/organon_icons/02_calendario.png'
-import img04Estudos from '../../images/organon_icons/04_estudos.png'
-import img05Notas from '../../images/organon_icons/05_notas.png'
-import img06Playbook from '../../images/organon_icons/06_playbook.png'
-import img07Crm from '../../images/organon_icons/07_crm.png'
-import img08Projetos from '../../images/organon_icons/08_projetos.png'
-import img12Whisper from '../../images/organon_icons/12_whisper.png'
-import img13Clipboard from '../../images/organon_icons/13_clipboard.png'
-import img14Cores from '../../images/organon_icons/14_cores.png'
-import img15Workflows from '../../images/organon_icons/15_workflows.png'
-import img16Configuracoes from '../../images/organon_icons/16_configuracoes.png'
-import img17Historico from '../../images/organon_icons/17_historico.png'
-
-const imgStyle: React.CSSProperties = {
-  width: 20,
-  height: 20,
-  objectFit: 'contain',
-  display: 'inline-block',
-  verticalAlign: 'middle',
-}
-
-const HUB_VIEW_ICONS: Record<AppView, JSX.Element> = {
-  today: <img src={img01Planejamento} alt="Hoje" style={imgStyle} />,
-  planner: <img src={img01Planejamento} alt="Planejamento" style={imgStyle} />,
-  agenda: <img src={img01Planejamento} alt="Agenda" style={imgStyle} />,
-  calendar: <img src={img02Calendario} alt="Calendário" style={imgStyle} />,
-  habits: <img src={img01Planejamento} alt="Hábitos" style={imgStyle} />,
-  study: <img src={img04Estudos} alt="Modo Foco" style={imgStyle} />,
-  notes: <img src={img05Notas} alt="Notas" style={imgStyle} />,
-  playbook: <img src={img06Playbook} alt="Playbook" style={imgStyle} />,
-  crm: <img src={img07Crm} alt="CRM" style={imgStyle} />,
-  projects: <img src={img08Projetos} alt="Projetos" style={imgStyle} />,
-  financial: <img src={img01Planejamento} alt="Financeiro" style={imgStyle} />,
-  apps: <img src={img01Planejamento} alt="Apps" style={imgStyle} />,
-  shortcuts: <img src={img01Planejamento} alt="Atalhos" style={imgStyle} />,
-  transcripts: <img src={img12Whisper} alt="Whisper" style={imgStyle} />,
-  audio: <img src={img12Whisper} alt="Áudio" style={imgStyle} />,
-  clipboard: <img src={img13Clipboard} alt="Clipboard" style={imgStyle} />,
-  colors: <img src={img14Cores} alt="Cores" style={imgStyle} />,
-  workflow: <img src={img15Workflows} alt="Workflow" style={imgStyle} />,
-  'system-design': <img src={img15Workflows} alt="System Design" style={imgStyle} />,
-  canvas: <img src={img15Workflows} alt="Canvas" style={imgStyle} />,
-  settings: <img src={img16Configuracoes} alt="Configurações" style={imgStyle} />,
-  history: <img src={img17Historico} alt="Histórico" style={imgStyle} />,
-  library: <img src={img06Playbook} alt="Biblioteca" style={imgStyle} />,
-  okrs: <img src={img08Projetos} alt="OKRs" style={imgStyle} />,
-}
-
-export const DashboardPage = ({
+export const DashboardPage: React.FC<DashboardHomeProps> = ({
   cards,
   calendarEvents,
   notes,
-  study,
-  hubCards,
-  crmContactsCount,
-  projectsCount,
-  playbooksCount,
-  colorPalettesCount,
-  clipboardCategoriesCount,
-  clipboardItemsCount,
-  syncStatus,
-  lastSyncAt,
-  userLoggedIn,
-  dashboardLayout = 'hub',
-  dashboardWidgets,
-  onDashboardLayoutChange,
-  onDashboardWidgetsChange,
-  dashboardTemplates = [],
-  onSaveTemplate,
-  onDeleteTemplate,
   onNavigate,
   onGoToPlannerCard,
   onGoToCalendarDate,
   onOpenShortcut,
   onGoToNotes,
-}: DashboardHomeProps) => {
+}) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isQrSyncOpen, setIsQrSyncOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
 
-  if (dashboardLayout === 'custom' && dashboardWidgets && onDashboardWidgetsChange) {
-    return (
-      <div className="today-outer">
-        <div className="today-layout">
-          <CustomLayout
-            widgets={dashboardWidgets}
-            onWidgetsChange={onDashboardWidgetsChange}
-            cards={cards}
-            calendarEvents={calendarEvents}
-            bills={[]}
-            expenses={[]}
-            savingsGoals={[]}
-            shortcuts={[]}
-            notes={notes}
-            study={study}
-            syncStatus={syncStatus}
-            lastSyncAt={lastSyncAt}
-            userLoggedIn={userLoggedIn}
-            playbooksCount={playbooksCount}
-            appsCount={0}
-            clipboardCount={clipboardItemsCount}
-            colorPalettesCount={colorPalettesCount}
-            onNavigate={onNavigate}
-            onGoToPlannerCard={onGoToPlannerCard}
-            onGoToCalendarDate={onGoToCalendarDate}
-            userTemplates={dashboardTemplates}
-            onSaveTemplate={onSaveTemplate ?? (() => undefined)}
-            onDeleteTemplate={onDeleteTemplate ?? (() => undefined)}
-            onApplyTemplate={(widgets) => {
-              onDashboardWidgetsChange(widgets)
-              onDashboardLayoutChange?.('custom')
-            }}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  const today = getTodayISO()
-  const todayEvents = expandCalendarEvents(calendarEvents, today, today)
-    .filter(event => event.date === today)
-    .sort((a, b) => {
-      if (!a.time && !b.time) return a.title.localeCompare(b.title)
-      if (!a.time) return 1
-      if (!b.time) return -1
-      return a.time.localeCompare(b.time)
-    })
-  const todayDay = getDayFromDate(today)
-
-  const todayCardsWithDate = cards.filter(card => card.hasDate && card.date === today)
-  const todayCardsNoDate = cards
-    .filter(card => !card.hasDate && card.location.day === todayDay && !!card.location.period)
-    .sort((a, b) => {
-      const order: Record<Period, number> = { morning: 0, afternoon: 1, night: 2 }
-      const ap = a.location.period as Period
-      const bp = b.location.period as Period
-      if (order[ap] !== order[bp]) return order[ap] - order[bp]
-      return a.order - b.order
-    })
-
-  const allTodayCards = [...todayCardsWithDate, ...todayCardsNoDate]
-
-  const weekDates = getCurrentWeekDates()
-  const weeklyOverview = DAYS_ORDER_LABELS.map(({ key, label }) => {
-    const date = weekDates[key]
-    const dayEvents = expandCalendarEvents(calendarEvents, date, date).filter(event => event.date === date)
-    const dayCards = cards.filter(card =>
-      (card.hasDate && card.date === date) ||
-      (!card.hasDate && card.location.day === key && !!card.location.period)
-    )
-
-    return {
-      key,
-      label,
-      date,
-      total: dayEvents.length + dayCards.length,
-      eventCount: dayEvents.length,
-      eventDots: dayEvents.slice(0, 3).map(event => event.color || 'var(--color-primary)'),
-      isToday: date === today,
-    }
-  })
-
-  const weekTotalItems = weeklyOverview.reduce((sum, day) => sum + day.total, 0)
-  const weekEventCount = weeklyOverview.reduce((sum, day) => sum + day.eventCount, 0)
-  const weekCardsCount = weekTotalItems - weekEventCount
-
+  // Clock tick
   useEffect(() => {
     const interval = window.setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
-
     return () => window.clearInterval(interval)
   }, [])
 
+  // Keyboard shortcut for Quick Search (Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsSearchOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const todayStr = getTodayISO()
+  const weekDates = getCurrentWeekDates()
+
+  // Compute Today's Cards
+  const todayCards = useMemo(() => {
+    return cards.filter(c => c.date === todayStr || (!c.date && c.status === 'todo'))
+  }, [cards, todayStr])
+
+  // Compute Priority counts
+  const urgentCount = useMemo(() => cards.filter(c => c.priority === 'P1' && c.status !== 'done').length, [cards])
+  const highCount = useMemo(() => cards.filter(c => c.priority === 'P2' && c.status !== 'done').length, [cards])
+  const mediumCount = useMemo(() => cards.filter(c => (c.priority === 'P3' || !c.priority) && c.status !== 'done').length, [cards])
+  const lowCount = useMemo(() => cards.filter(c => c.priority === 'P4' && c.status !== 'done').length, [cards])
+  const completedTasks = useMemo(() => cards.filter(c => c.status === 'done').length, [cards])
+  const completedCount = completedTasks
+  const totalTasks = cards.length
+  const pendingTasks = totalTasks - completedTasks
+
+  // Compute Weekly Activity
+  const weeklyData: DayActivity[] = useMemo(() => {
+    return DAYS_ORDER_LABELS.map(({ key, label }) => {
+      const date = weekDates[key]
+      const dayCards = cards.filter(c => c.date === date)
+      const dayEvents = expandCalendarEvents(calendarEvents, date, date).filter(e => e.date === date)
+      const total = dayCards.length + dayEvents.length
+      const completed = dayCards.filter(c => c.status === 'done').length
+      return {
+        key,
+        label,
+        date,
+        total: Math.max(total, completed),
+        completed,
+        isToday: date === todayStr,
+      }
+    })
+  }, [cards, calendarEvents, weekDates, todayStr])
+
+  const weekTotal = weeklyData.reduce((acc, d) => acc + d.total, 0)
+  const weekCompleted = weeklyData.reduce((acc, d) => acc + d.completed, 0)
+
+  // Header date formatting
   const monthNames = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
-  const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-  const formattedTime = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`
-  const fullDateText = `${dayNames[currentTime.getDay()]}, ${currentTime.getDate()} de ${monthNames[currentTime.getMonth()]} • ${formattedTime}`
-  const plannedCardsCount = cards.filter(card => card.location.day || card.hasDate).length
+  const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+  const hour = currentTime.getHours()
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+  const timeFormatted = `${String(hour).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`
+  const dateFormatted = `${dayNames[currentTime.getDay()]}, ${currentTime.getDate()} de ${monthNames[currentTime.getMonth()]}`
 
   return (
-    <div className="today-outer">
-      <div className="today-layout" style={{ maxWidth: 1600, margin: '0 auto', width: '100%', padding: '20px 28px', gap: '24px' }}>
-        {/* Modal de busca global ativado por atalho (Ctrl+K) */}
-        {isSearchOpen && (
-          <QuickSearchModal
-            cards={cards}
-            events={calendarEvents}
-            shortcuts={[]}
-            notes={notes}
-            onClose={() => setIsSearchOpen(false)}
-            onGoToPlannerCard={(cardId) => {
-              setIsSearchOpen(false)
-              onGoToPlannerCard(cardId)
-            }}
-            onGoToCalendarDate={(dateISO) => {
-              setIsSearchOpen(false)
-              onGoToCalendarDate(dateISO)
-            }}
-            onOpenShortcut={(url) => {
-              setIsSearchOpen(false)
-              onOpenShortcut?.(url)
-            }}
-            onGoToNotes={() => {
-              setIsSearchOpen(false)
-              onGoToNotes()
-            }}
-            onNavigate={(view) => {
-              setIsSearchOpen(false)
-              onNavigate(view)
-            }}
-          />
-        )}
+    <div
+      className="w-full h-full min-h-screen p-4 sm:p-6 overflow-y-auto space-y-4"
+      style={{
+        background: 'var(--color-background)',
+        color: 'var(--color-text)',
+      }}
+    >
+      {/* Search Modal */}
+      {isSearchOpen && (
+        <QuickSearchModal
+          cards={cards}
+          events={calendarEvents}
+          shortcuts={[]}
+          notes={notes}
+          onClose={() => setIsSearchOpen(false)}
+          onGoToPlannerCard={cardId => {
+            setIsSearchOpen(false)
+            onGoToPlannerCard(cardId)
+          }}
+          onGoToCalendarDate={dateISO => {
+            setIsSearchOpen(false)
+            onGoToCalendarDate(dateISO)
+          }}
+          onOpenShortcut={url => {
+            setIsSearchOpen(false)
+            onOpenShortcut?.(url)
+          }}
+          onGoToNotes={() => {
+            setIsSearchOpen(false)
+            onGoToNotes()
+          }}
+          onNavigate={view => {
+            setIsSearchOpen(false)
+            onNavigate(view as AppView)
+          }}
+        />
+      )}
 
-        {/* Modal QR Code Sync */}
-        {isQrSyncOpen && (
-          <LocalSyncModal
-            isOpen={isQrSyncOpen}
-            onClose={() => setIsQrSyncOpen(false)}
-          />
-        )}
+      {/* Local Sync QR Modal */}
+      {isQrSyncOpen && (
+        <LocalSyncModal
+          isOpen={isQrSyncOpen}
+          onClose={() => setIsQrSyncOpen(false)}
+        />
+      )}
 
-        {/* Header Consolidado com KPIs Luminosos */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-primary, #6366f1)', background: 'rgba(99,102,241,0.15)', padding: '6px 14px', borderRadius: 99, border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 2px 10px rgba(99,102,241,0.2)' }}>
-              Painel Central
+      {/* Clean Cockpit Hero Banner (No duplicate navbar) */}
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+        }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border shadow-xs transition-all"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              style={{
+                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+                color: 'var(--color-primary)',
+                borderColor: 'color-mix(in srgb, var(--color-primary) 28%, transparent)',
+              }}
+              className="text-xs font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3 h-3" />
+              Cockpit Geral
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3 }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary, #6366f1)" strokeWidth="2.2" width="20" height="20">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>{fullDateText}</span>
-            </div>
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {dateFormatted} • <strong style={{ color: 'var(--color-text)' }}>{timeFormatted}</strong>
+            </span>
           </div>
-
-          {/* Quick Metrics Badges no Topo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary, #818cf8)' }}>{plannedCardsCount}</span>
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>cards ativos</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#10b981' }}>{todayEvents.length}</span>
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>eventos hoje</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#f59e0b' }}>{notes.length}</span>
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>notas</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#ec4899' }}>{projectsCount}</span>
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>projetos</span>
-            </div>
-          </div>
+          <h1
+            style={{ color: 'var(--color-text)' }}
+            className="text-lg sm:text-xl font-extrabold tracking-tight"
+          >
+            {greeting} · Painel Central do Organon
+          </h1>
         </div>
 
-        {/* ── SEÇÃO 1: HUBS DE NAVEGAÇÃO & ACESSO DIRETO (TUDO NA TELA PRINCIPAL) ── */}
-        <section className="today-hub-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
-              Áreas do Sistema & Hubs
-            </h2>
+        {/* Live Overview Badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div
+            style={{
+              background: 'color-mix(in srgb, var(--color-primary) 8%, var(--color-surface))',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
+              color: 'var(--color-text)',
+            }}
+            className="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
+            <span><strong>{pendingTasks}</strong> pendentes hoje</span>
           </div>
-          <div className="today-hubs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, alignItems: 'stretch' }}>
-            {hubCards.map(hub => (
-              <HubGroupCard key={hub.id} hub={hub} icons={HUB_VIEW_ICONS} onNavigate={onNavigate} />
-            ))}
-          </div>
-        </section>
+        </div>
+      </div>
 
-        {/* ── SEÇÃO 2: AGENDA, FOCO E PROJETOS DIÁRIOS ── */}
-        <section className="today-reports-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
-              Rotina & Foco de Hoje
-            </h2>
-          </div>
-          <div className="today-report-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'stretch' }}>
-            <AgendaCard todayEvents={todayEvents} onGoToCalendarDate={onGoToCalendarDate} onNavigate={onNavigate} />
-            <FocusCard allTodayCards={allTodayCards} onGoToPlannerCard={onGoToPlannerCard} onNavigate={onNavigate} />
-            <ProjectsSummaryCard projectsCount={projectsCount} onNavigate={onNavigate} />
-          </div>
-        </section>
+      {/* 4 Metric KPI Badges */}
+      <DashboardKpiRow
+        totalTasks={totalTasks}
+        pendingTasks={pendingTasks}
+        completedTasks={completedTasks}
+        weekCompleted={weekCompleted}
+        weekTotal={weekTotal}
+        notesCount={notes.length}
+        habitsCompletedToday={0}
+        totalHabits={0}
+        onNavigateToTasks={() => onNavigate('planner')}
+        onNavigateToNotes={onGoToNotes}
+        onNavigateToHabits={() => onNavigate('habits')}
+      />
 
-        {/* ── SEÇÃO 3: VISÃO DA SEMANA INTEGRADA ── */}
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <WeekOverviewCard
-            weeklyOverview={weeklyOverview}
-            weekTotalItems={weekTotalItems}
-            weekEventCount={weekEventCount}
-            weekCardsCount={weekCardsCount}
+      {/* Main Charts & Queue Grid (3 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        {/* Weekly Activity Bar Chart (5 Columns) */}
+        <div className="lg:col-span-5 h-full">
+          <WeeklyActivityChart
+            days={weeklyData}
+            onSelectDate={date => onGoToCalendarDate(date)}
           />
-        </section>
+        </div>
+
+        {/* Priority Donut Chart (3 Columns) */}
+        <div className="lg:col-span-3 h-full">
+          <PriorityDonutChart
+            urgentCount={urgentCount}
+            highCount={highCount}
+            mediumCount={mediumCount}
+            lowCount={lowCount}
+            completedCount={completedCount}
+          />
+        </div>
+
+        {/* Compact Today Executive Queue (4 Columns) */}
+        <div className="lg:col-span-4 h-full">
+          <CompactTodayQueue
+            todayCards={todayCards}
+            onToggleCard={cardId => {
+              const card = cards.find(c => c.id === cardId)
+              if (card) {
+                card.status = card.status === 'done' ? 'todo' : 'done'
+              }
+            }}
+            onGoToPlannerCard={onGoToPlannerCard}
+            onNavigateToPlanner={() => onNavigate('planner')}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Grid: Sprint Widget, Recent Notes & Modern Hub Navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        <ActiveSprintWidget
+          sprintName="Sprint 1 - Launch & Growth"
+          goal="Finalizar Módulo de Planejamento e migrar notas legadas"
+          startDate="16 Set"
+          endDate="30 Set"
+          completedPoints={completedCount}
+          totalPoints={totalTasks || 10}
+          onNavigateToSprint={() => onNavigate('planner')}
+        />
+
+        <RecentNotesWidget
+          notes={notes}
+          onOpenNote={() => onGoToNotes()}
+          onNavigateToNotes={onGoToNotes}
+        />
+
+        <ModernHubNavigation onNavigate={onNavigate} />
       </div>
     </div>
   )
 }
-
-export const DashboardHome = DashboardPage

@@ -9,7 +9,7 @@
 
 import React from 'react'
 import type { CardPriority, CardStatus, Day, Project } from '@types'
-import { getISOWeekNumber } from '../../../utils/date'
+import { getISOWeekNumber } from '@shared/utils/date'
 
 const MONTH_SHORT = [
   'Jan',

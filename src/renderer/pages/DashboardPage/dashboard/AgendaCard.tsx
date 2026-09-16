@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import type { CalendarEvent } from '@types'
-import type { AppView } from '../InternalNav'
+import type { CalendarEvent, AppView } from '@types'
 
 interface AgendaCardProps {
   todayEvents: CalendarEvent[]

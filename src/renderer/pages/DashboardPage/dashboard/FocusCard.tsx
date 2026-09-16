@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import type { Card } from '@types'
+import type { Card, AppView } from '@types'
 import { PERIOD_LABELS, STATUS_COLORS, STATUS_LABELS } from '@types'
-import type { AppView } from '../InternalNav'
 import { getRecommendedNextTask, evaluateTaskUrgency } from '../../../utils/reminderScheduler'
 
 interface FocusCardProps {

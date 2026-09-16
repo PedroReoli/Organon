@@ -27,6 +27,9 @@ interface TimelineViewProps {
   onSelectDate: (iso: string) => void
   onEditEvent: (event: CalendarEvent) => void
   onCreateEvent: (date: string) => void
+  onUpdateEvent?: (eventId: string, updates: Partial<CalendarEvent>) => void
+  onUpdateCard?: (cardId: string, updates: Partial<Card>) => void
+  onOpenCard?: (card: Card) => void
 }
 
 const DAY_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']

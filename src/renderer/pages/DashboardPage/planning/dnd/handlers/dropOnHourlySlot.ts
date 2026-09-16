@@ -7,8 +7,8 @@
  * Definido no upgrade 01.
  */
 
-import type { Card, CardLocation, Day, PlannerPreferences } from '../../../../types'
-import { getPeriodFromTime } from '../../../../utils'
+import type { Card, CardLocation, Day, PlannerPreferences } from '@types'
+import { getPeriodFromTime } from '@utils'
 
 export interface DropOnHourlySlotArgs {
   cardId: string

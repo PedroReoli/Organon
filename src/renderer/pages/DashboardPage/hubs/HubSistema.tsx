@@ -30,7 +30,7 @@ export const HubSistema = ({
   authError, onClearAuthError, authUser, authLoading, onUpdateProfile,
   profilePhotoDataUrl, onUpdateProfilePhoto,
   // history + summary data
-  notes, cards, events, projects, meetings,
+  notes, cards, events, projects, meetings, apps,
   lastSyncAt,
   crmContacts, colorPalettes,
 }: HubSistemaProps) => {
@@ -93,7 +93,7 @@ export const HubSistema = ({
         cards={cards}
         events={events}
         notes={notes ?? []}
-        apps={apps}
+        apps={apps ?? []}
         projects={projects}
         meetings={meetings}
       />

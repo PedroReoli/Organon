@@ -237,8 +237,9 @@ export const SprintBoardView: React.FC<SprintBoardViewProps> = ({
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<CardPriority | 'all'>('all')
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
 
-  const activeSprintId = useStore((s) => s.sprintBoardConfig.activeSprintId)
-  const setActiveSprint = useStore((s) => s.setActiveSprint)
+  const store = useStore()
+  const activeSprintId = store.sprintBoardConfig?.activeSprintId
+  const setActiveSprint = store.setActiveSprint
 
   /* Sprint atual */
   const realCurrentSprintId = useMemo(() => getCurrentSprintId(), [])

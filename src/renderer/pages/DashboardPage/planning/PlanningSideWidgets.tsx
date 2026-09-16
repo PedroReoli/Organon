@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react'
+import { Check, X } from 'lucide-react'
 import type { AgendaCategory, Card, CalendarEvent, CardPriority, CardStatus } from '@types'
 import { PRIORITY_COLORS, STATUS_COLORS, STATUS_LABELS, STATUS_ORDER } from '@types'
 import { expandCalendarEvents, getTodayISO } from '@utils'
@@ -130,8 +131,8 @@ export function CatMgr({ categories, filterCatId, onFilter, onAdd, onEdit, onRem
           <input value={editName} className="cat-name-inp" autoFocus
             onChange={e => setEditName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') confirmEdit(); if (e.key === 'Escape') setEditId(null) }} />
-          <button type="button" className="cat-act is-ok" onClick={confirmEdit}>✓</button>
-          <button type="button" className="cat-act" onClick={() => setEditId(null)}>✕</button>
+          <button type="button" className="cat-act is-ok" onClick={confirmEdit} aria-label="Confirmar"><Check size={11} /></button>
+          <button type="button" className="cat-act" onClick={() => setEditId(null)} aria-label="Cancelar"><X size={11} /></button>
         </div>
       ) : (
         <div key={cat.id} className={`cat-row${filterCatId === cat.id ? ' is-active' : ''}`}
@@ -165,8 +166,8 @@ export function CatMgr({ categories, filterCatId, onFilter, onAdd, onEdit, onRem
             <input ref={inp} value={newName} className="cat-name-inp" placeholder="Nome da categoria"
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') setCreating(false) }} />
-            <button type="button" className="cat-act is-ok" onClick={confirm}>✓</button>
-            <button type="button" className="cat-act" onClick={() => setCreating(false)}>✕</button>
+            <button type="button" className="cat-act is-ok" onClick={confirm} aria-label="Confirmar"><Check size={11} /></button>
+            <button type="button" className="cat-act" onClick={() => setCreating(false)} aria-label="Cancelar"><X size={11} /></button>
           </div>
         </div>
       ) : (
@@ -196,8 +197,8 @@ export function ReportsPanel({ cards }: ReportsPanelProps) {
   }, [withDate])
 
   const byStatus = useMemo(() => {
-    const counts: Record<CardStatus, number> = { todo: 0, in_progress: 0, blocked: 0, done: 0 }
-    for (const c of cards) counts[c.status]++
+    const counts: Record<CardStatus, number> = { todo: 0, in_progress: 0, blocked: 0, done: 0, postponed: 0, cancelled: 0, overdue: 0 }
+    for (const c of cards) counts[c.status] = (counts[c.status] ?? 0) + 1
     return counts
   }, [cards])
 

@@ -22,7 +22,7 @@ import type {
   SprintColumnSection,
   SprintMetadata,
 } from '@types'
-import { CalendarEventModal } from '../../CalendarPage/components/CalendarEventModal'
+import { CalendarEventModal } from '../CalendarEventModal'
 import { PlanningHomePage, type PlanningTabId } from '../planning/PlanningHomePage'
 import { PeriodView } from '../planning/views/PeriodView'
 import { HourlyView } from '../planning/views/HourlyView'
@@ -185,14 +185,15 @@ export const HubPlanejamento: React.FC<HubPlanejamentoProps> = ({
     }
   }, [onAddCard, onAddCardWithDate])
 
-  const handlePeriodMoveCard = useCallback((cardId: string, location: CardLocation, date: string | null) => {
+  const handlePeriodMoveCard = useCallback((cardId: string, location: CardLocation, date: string | null, time?: string | null) => {
+    const existing = cards.find(c => c.id === cardId)
     onEditCard(cardId, {
       location,
       date,
       hasDate: date !== null,
-      time: null,
+      time: time !== undefined ? time : (existing?.time ?? null),
     })
-  }, [onEditCard])
+  }, [cards, onEditCard])
 
   const handleHourlyMoveCard = useCallback((cardId: string, location: CardLocation, date: string | null, time: string | null) => {
     onEditCard(cardId, {

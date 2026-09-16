@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import type {
   Bill, CalendarEvent, Card, DashboardWidget, Expense,
   Note, SavingsGoal, ShortcutItem, StudyState,
@@ -177,7 +178,7 @@ export const CustomLayout = ({
                   onKeyDown={e => { if (e.key === 'Enter') handleSaveTemplate(); if (e.key === 'Escape') setShowSaveForm(false) }}
                 />
                 <button type="button" className="cl-confirm-btn" onClick={handleSaveTemplate}>Salvar</button>
-                <button type="button" className="cl-cancel-btn" onClick={() => setShowSaveForm(false)}>✕</button>
+                <button type="button" className="cl-cancel-btn" onClick={() => setShowSaveForm(false)} aria-label="Cancelar"><X size={13} /></button>
               </div>
             ) : (
               <button type="button" className="cl-manage-btn" onClick={() => setShowSaveForm(true)}>

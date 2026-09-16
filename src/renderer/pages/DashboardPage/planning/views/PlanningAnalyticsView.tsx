@@ -11,7 +11,8 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react'
-import type { Card, SprintCard, CardPriority, Day, Period } from '@types'
+import { Check } from 'lucide-react'
+import type { Card, SprintCard, CardPriority, Period } from '@types'
 import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '@types'
 
 export interface PlanningAnalyticsViewProps {
@@ -381,11 +382,13 @@ export const PlanningAnalyticsView: React.FC<PlanningAnalyticsViewProps> = ({
                       color: '#22c55e',
                       fontSize: '10px',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                     onClick={() => onUpdateCard?.(card.id, { status: 'done' })}
                   >
-                    ✓ Concluir
+                    <Check size={11} /> Concluir
                   </button>
                   <button
                     type="button"

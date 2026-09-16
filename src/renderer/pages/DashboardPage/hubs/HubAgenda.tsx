@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
+import { Check, X } from 'lucide-react'
 import { CalendarEventModal } from '../CalendarEventModal'
 import { useAgendaCategories } from '@hooks/useAgendaCategories'
 import type {
@@ -156,8 +157,8 @@ function CatMgr({ categories, filterCatId, onFilter, onAdd, onEdit, onRemove }: 
             onChange={e=>setEditName(e.target.value)}
             onKeyDown={e=>{ if(e.key==='Enter')confirmEdit(); if(e.key==='Escape')setEditId(null) }}
           />
-          <button type="button" className="cat-act is-ok" onClick={confirmEdit}>✓</button>
-          <button type="button" className="cat-act" onClick={()=>setEditId(null)}>✕</button>
+          <button type="button" className="cat-act is-ok" onClick={confirmEdit} aria-label="Salvar"><Check size={11} /></button>
+          <button type="button" className="cat-act" onClick={()=>setEditId(null)} aria-label="Cancelar"><X size={11} /></button>
         </div>
       ) : (
         <div key={cat.id} className={`cat-row${filterCatId===cat.id?' is-active':''}`}
@@ -192,8 +193,8 @@ function CatMgr({ categories, filterCatId, onFilter, onAdd, onEdit, onRemove }: 
               onChange={e=>setNewName(e.target.value)}
               onKeyDown={e=>{ if(e.key==='Enter')confirm(); if(e.key==='Escape')setCreating(false) }}
             />
-            <button type="button" className="cat-act is-ok" onClick={confirm}>✓</button>
-            <button type="button" className="cat-act" onClick={()=>setCreating(false)}>✕</button>
+            <button type="button" className="cat-act is-ok" onClick={confirm} aria-label="Confirmar"><Check size={11} /></button>
+            <button type="button" className="cat-act" onClick={()=>setCreating(false)} aria-label="Cancelar"><X size={11} /></button>
           </div>
         </div>
       ) : (
@@ -370,8 +371,8 @@ function ReportsPanel({ cards, catMap: _catMap }: ReportsPanelProps) {
   }, [withDate])
 
   const byStatus = useMemo(() => {
-    const counts: Record<CardStatus, number> = { todo:0, in_progress:0, blocked:0, done:0 }
-    for (const c of cards) counts[c.status] = (counts[c.status]??0) + 1
+    const counts: Record<CardStatus, number> = { todo: 0, in_progress: 0, blocked: 0, done: 0, postponed: 0, cancelled: 0, overdue: 0 }
+    for (const c of cards) counts[c.status] = (counts[c.status] ?? 0) + 1
     return counts
   }, [cards])
 
@@ -611,7 +612,7 @@ export const HubAgenda = ({
           defaultPeriod="morning"
           categories={categories}
           onClose={() => setEditingEvent(null)}
-          onSave={updates => {
+          onSave={(updates: Partial<CalendarEvent>) => {
             const baseId = (editingEvent as CalendarEvent & {sourceId?:string}).sourceId ?? editingEvent.id
             onEditEvent(baseId, updates)
             setEditingEvent(null)
@@ -629,7 +630,7 @@ export const HubAgenda = ({
           defaultPeriod="morning"
           categories={categories}
           onClose={() => setCreatingEvent(null)}
-          onSave={updates => {
+          onSave={(updates: Partial<CalendarEvent>) => {
             if (!updates.title?.trim()) return
             onAddEvent?.({
               title: updates.title!, date: updates.date ?? creatingEvent.date,

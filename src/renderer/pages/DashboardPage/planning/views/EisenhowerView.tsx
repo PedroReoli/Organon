@@ -11,7 +11,6 @@
 import React, { useMemo } from 'react'
 import type { Card, Project } from '@types'
 import { STATUS_COLORS } from '@types'
-import { Button } from '@shared/components/primitives'
 
 interface EisenhowerViewProps {
   cards: Card[]
@@ -63,7 +62,7 @@ export const EisenhowerView: React.FC<EisenhowerViewProps> = ({
   cards,
   projects,
   onOpenCard,
-  onUpdateCard,
+  onUpdateCard: _onUpdateCard,
 }) => {
   const activeCards = useMemo(() => cards.filter((c) => c.status !== 'done'), [cards])
 
@@ -75,7 +74,7 @@ export const EisenhowerView: React.FC<EisenhowerViewProps> = ({
     const q4: Card[] = []
 
     for (const c of activeCards) {
-      const isHighPriority = c.priority === 'urgent' || c.priority === 'high'
+      const isHighPriority = c.priority === 'P1' || c.priority === 'P2'
       const hasCloseDate = c.hasDate && c.date != null
 
       if (isHighPriority && hasCloseDate) q1.push(c)

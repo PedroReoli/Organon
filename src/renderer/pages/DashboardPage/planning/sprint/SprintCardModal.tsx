@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback } from 'react'
 import type { SprintCard, SprintColumnSection, CardPriority, CardStatus, ChecklistItem } from '@types'
-import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_ORDER } from '@types'
+import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_ORDER } from '@types'
 
 const COLUMNS = [
   { id: 'col-todo', name: 'A fazer' },
