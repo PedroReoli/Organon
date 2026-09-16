@@ -14,7 +14,7 @@ import {
   Wifi,
   Settings,
   Plus,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react'
 
 interface Props {
@@ -54,7 +54,7 @@ export const TopNavbarShell: React.FC<Props> = ({
 }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false)
 
-  // 4 Navegações à Esquerda do Logo
+  // 4 Módulos à Esquerda (perto da logo)
   const leftNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
     { view: 'notes', label: 'NOTAS', icon: <FileText className="w-3.5 h-3.5" /> },
     { view: 'planner', label: 'PLANEJAMENTO', icon: <Kanban className="w-3.5 h-3.5" /> },
@@ -62,7 +62,7 @@ export const TopNavbarShell: React.FC<Props> = ({
     { view: 'system-design', label: 'CANVAS', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
   ]
 
-  // 4 Navegações / Ações Centrais à Direita do Logo
+  // Módulos à Direita (perto da logo)
   const rightNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
     { view: 'transcripts', label: 'WHISPER', icon: <Mic className="w-3.5 h-3.5" /> },
     { view: 'history', label: 'HISTÓRICO', icon: <History className="w-3.5 h-3.5" /> },
@@ -71,22 +71,30 @@ export const TopNavbarShell: React.FC<Props> = ({
   return (
     <header
       style={{
-        height: '56px',
-        background: 'color-mix(in srgb, var(--color-surface) 92%, var(--color-background))',
+        height: '58px',
+        background: 'color-mix(in srgb, var(--color-surface) 94%, var(--color-background))',
         borderBottom: '1px solid var(--color-border)',
         backdropFilter: 'blur(20px)',
         zIndex: 100,
         userSelect: 'none',
         position: 'relative',
       }}
-      className="w-full px-4 sm:px-6 grid grid-cols-12 items-center"
+      className="w-full px-4 sm:px-6 flex items-center justify-between"
     >
       {/* ========================================================
-          ZONA ESQUERDA (5 Colunas): 4 Módulos Principais
+          ESPAÇADOR / BRANDING LATERAL ESQUERDO (Equilibra o CTA da direita)
           ======================================================== */}
-      <div className="col-span-5 flex items-center justify-start gap-1 sm:gap-2">
+      <div className="flex items-center min-w-[60px] lg:min-w-[120px]">
+        {/* Placeholder sutil ou status para garantir simetria perfeita */}
+      </div>
+
+      {/* ========================================================
+          ZONA CENTRAL CONCENTRADA: [ITENS ESQ] [LOGO MAIOR] [ITENS DIR]
+          ======================================================== */}
+      <div className="flex items-center justify-center gap-2 sm:gap-4 flex-1">
+        {/* Bloco de Navegação da Esquerda (justificado ao centro, colado na logo) */}
         {onNavigateView && (
-          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+          <nav className="flex items-center gap-1 sm:gap-1.5 justify-end">
             {leftNavItems.map((item) => {
               const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
               return (
@@ -103,11 +111,11 @@ export const TopNavbarShell: React.FC<Props> = ({
                       : 'transparent',
                     color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   }}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11.5px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.04]"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
                 >
                   <span
                     style={{ color: isActive ? 'var(--color-primary)' : 'inherit' }}
-                    className="opacity-70 group-hover:opacity-100 transition-opacity"
+                    className="opacity-75 group-hover:opacity-100 transition-opacity"
                   >
                     {item.icon}
                   </span>
@@ -123,59 +131,53 @@ export const TopNavbarShell: React.FC<Props> = ({
             })}
           </nav>
         )}
-      </div>
 
-      {/* ========================================================
-          ZONA CENTRAL (2 Colunas): Logo Organon com Destaque
-          ======================================================== */}
-      <div className="col-span-2 flex items-center justify-center">
-        <button
-          type="button"
-          onClick={onNavigateHome}
-          title="Cockpit Geral / Início (Organon Central)"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-          className="group relative flex items-center justify-center py-1 px-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
-        >
-          {/* Ambient Hover Glow behind Logo */}
-          <div
+        {/* LOGO CENTRAL (LEVEMENTE MAIOR, DESTACADO E ILUMINADO) */}
+        <div className="flex items-center justify-center px-1 sm:px-2">
+          <button
+            type="button"
+            onClick={onNavigateHome}
+            title="Cockpit Geral / Início (Organon Home)"
             style={{
-              background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 70%)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
             }}
-            className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"
-          />
-
-          <img
-            src={logoNameImg}
-            alt="Organon"
-            style={{ height: '32px', objectFit: 'contain' }}
-            className="relative z-10 drop-shadow-sm transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
-            onError={(e) => {
-              e.currentTarget.src = faviconImg
-            }}
-          />
-
-          {/* Active indicator when on Cockpit (Today) */}
-          {activeView === 'today' && (
-            <span
-              style={{ background: 'var(--color-primary)' }}
-              className="absolute -bottom-1 w-1.5 h-1.5 rounded-full shadow-[0_0_6px_var(--color-primary)] animate-pulse"
+            className="group relative flex items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+          >
+            {/* Glow Ambiente Neon no Hover */}
+            <div
+              style={{
+                background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 70%)',
+              }}
+              className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
             />
-          )}
-        </button>
-      </div>
 
-      {/* ========================================================
-          ZONA DIREITA (5 Colunas): Itens Simétricos + CTA + Ferramentas
-          ======================================================== */}
-      <div className="col-span-5 flex items-center justify-end gap-2">
-        {/* Right Nav Links (Whisper & Histórico) */}
-        {onNavigateView && (
-          <nav className="flex items-center gap-1 sm:gap-1.5">
-            {rightNavItems.map((item) => {
+            <img
+              src={logoNameImg}
+              alt="Organon"
+              style={{ height: '38px', objectFit: 'contain' }}
+              className="relative z-10 drop-shadow-md transition-all duration-300 group-hover:drop-shadow-[0_0_14px_rgba(99,102,241,0.6)]"
+              onError={(e) => {
+                e.currentTarget.src = faviconImg
+              }}
+            />
+
+            {/* Ponto indicador de Cockpit Ativo */}
+            {activeView === 'today' && (
+              <span
+                style={{ background: 'var(--color-primary)' }}
+                className="absolute -bottom-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-primary)] animate-pulse"
+              />
+            )}
+          </button>
+        </div>
+
+        {/* Bloco de Navegação da Direita (colado na logo) */}
+        <nav className="flex items-center gap-1 sm:gap-1.5 justify-start">
+          {/* Whisper & Histórico */}
+          {onNavigateView &&
+            rightNavItems.map((item) => {
               const isActive = activeView === item.view
               return (
                 <button
@@ -191,11 +193,11 @@ export const TopNavbarShell: React.FC<Props> = ({
                       : 'transparent',
                     color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   }}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11.5px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.04]"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
                 >
                   <span
                     style={{ color: isActive ? 'var(--color-primary)' : 'inherit' }}
-                    className="opacity-70 group-hover:opacity-100 transition-opacity"
+                    className="opacity-75 group-hover:opacity-100 transition-opacity"
                   >
                     {item.icon}
                   </span>
@@ -209,40 +211,79 @@ export const TopNavbarShell: React.FC<Props> = ({
                 </button>
               )
             })}
-          </nav>
-        )}
 
-        {/* Quick Search Pill Button (Ctrl+K) */}
-        <button
-          type="button"
-          onClick={onOpenQuickSearch}
-          title="Buscar no Organon (Ctrl+K)"
-          style={{
-            borderColor: 'var(--color-border)',
-            background: 'color-mix(in srgb, var(--color-background) 80%, var(--color-surface))',
-            color: 'var(--color-text-muted)',
-          }}
-          className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs cursor-pointer hover:border-[var(--color-primary)] hover:text-[var(--color-text)] transition-all"
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="text-[11px] font-medium">Buscar</span>
-          <kbd
+          {/* BOTÃO DE BUSCAR (Botão Elegante e Consistente) */}
+          <button
+            type="button"
+            onClick={onOpenQuickSearch}
+            title="Buscar no Organon (Ctrl+K)"
             style={{
-              background: 'var(--color-surface)',
-              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-muted)',
             }}
-            className="text-[9px] font-mono px-1.5 py-0.5 rounded border leading-none font-bold"
+            className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
           >
-            ⌘K
-          </kbd>
-        </button>
+            <Search className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+            <span>BUSCA</span>
+            <kbd
+              style={{
+                background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-muted)',
+              }}
+              className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-semibold ml-0.5 group-hover:text-[var(--color-text)]"
+            >
+              ⌘K
+            </kbd>
+          </button>
 
-        {/* Voice Dictation (Whisper Direct) */}
+          {/* BOTÃO ASSISTENTE IA */}
+          {onToggleChat && (
+            <button
+              type="button"
+              onClick={onToggleChat}
+              title="Assistente IA Organon"
+              style={{
+                background: isChatOpen
+                  ? 'var(--color-primary)'
+                  : 'transparent',
+                borderColor: isChatOpen
+                  ? 'var(--color-primary)'
+                  : 'transparent',
+                color: isChatOpen ? '#ffffff' : 'var(--color-text-muted)',
+              }}
+              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
+            >
+              <Bot className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+              <span>IA</span>
+            </button>
+          )}
+
+          {/* BOTÃO WI-FI SYNC */}
+          <button
+            type="button"
+            onClick={onOpenSyncModal}
+            title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização Wi-Fi Local'}
+            style={{
+              color: 'var(--color-text-muted)',
+            }}
+            className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
+          >
+            <Wifi className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+            <span>SYNC</span>
+          </button>
+        </nav>
+      </div>
+
+      {/* ========================================================
+          ZONA DIREITA FLANCO: HERO CTA (+ NOVA TAREFA) + CONFIGS
+          ======================================================== */}
+      <div className="flex items-center justify-end gap-2.5 min-w-[60px] lg:min-w-[120px]">
+        {/* Voz / Ditado Direto (Opcional se ativo) */}
         {onOpenVoice && (
           <button
             type="button"
             onClick={onOpenVoice}
-            title="Ditado de Voz (Ctrl+Shift+V)"
+            title="Ditado de Voz / Whisper (Ctrl+Shift+V)"
             style={{
               borderColor: 'var(--color-border)',
               background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
@@ -254,56 +295,20 @@ export const TopNavbarShell: React.FC<Props> = ({
           </button>
         )}
 
-        {/* AI Assistant Chat Toggle */}
-        {onToggleChat && (
-          <button
-            type="button"
-            onClick={onToggleChat}
-            title="Assistente IA Organon"
-            style={{
-              background: isChatOpen
-                ? 'var(--color-primary)'
-                : 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))',
-              borderColor: isChatOpen
-                ? 'var(--color-primary)'
-                : 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
-              color: isChatOpen ? '#ffffff' : 'var(--color-primary)',
-            }}
-            className="p-1.5 rounded-full border font-bold transition-all cursor-pointer flex items-center justify-center shadow-xs hover:scale-105"
-          >
-            <Bot className="w-3.5 h-3.5" />
-          </button>
-        )}
-
-        {/* Wi-Fi Sync */}
-        <button
-          type="button"
-          onClick={onOpenSyncModal}
-          title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Wi-Fi Sync'}
-          style={{
-            borderColor: 'var(--color-border)',
-            background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
-            color: 'var(--color-text-muted)',
-          }}
-          className="p-1.5 rounded-full border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
-        >
-          <Wifi className="w-3.5 h-3.5" />
-        </button>
-
         {/* ========================================================
-            HERO CTA ACTION PILL: + NOVA TAREFA (Estilo LOOG)
+            HERO CTA ACTION PILL: + NOVA TAREFA (Estilo LOOG / Área do Associado)
             ======================================================== */}
         <div className="relative">
-          <div className="flex items-center">
+          <div className="flex items-center shadow-sm">
             <button
               type="button"
               onClick={onNewTask}
               style={{
                 background: 'var(--color-primary)',
                 color: 'var(--color-primary-text, #ffffff)',
-                boxShadow: '0 2px 10px color-mix(in srgb, var(--color-primary) 40%, transparent)',
+                boxShadow: '0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent)',
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wide uppercase transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Nova Tarefa</span>
@@ -325,7 +330,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Mini dropdown for New Note */}
+          {/* Mini dropdown para Nova Nota */}
           {showCreateDropdown && (
             <div
               style={{
@@ -362,7 +367,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           )}
         </div>
 
-        {/* Settings Button */}
+        {/* Botão de Configurações */}
         {onOpenSettings && (
           <button
             type="button"
