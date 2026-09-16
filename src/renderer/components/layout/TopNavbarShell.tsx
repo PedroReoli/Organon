@@ -54,16 +54,12 @@ export const TopNavbarShell: React.FC<Props> = ({
 }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false)
 
-  // 4 Módulos à Esquerda (perto da logo)
-  const leftNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
+  // Todos os módulos principais centralizados
+  const mainNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
     { view: 'notes', label: 'NOTAS', icon: <FileText className="w-3.5 h-3.5" /> },
     { view: 'planner', label: 'PLANEJAMENTO', icon: <Kanban className="w-3.5 h-3.5" /> },
     { view: 'projects', label: 'PROJETOS', icon: <FolderGit2 className="w-3.5 h-3.5" /> },
     { view: 'system-design', label: 'CANVAS', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-  ]
-
-  // Módulos à Direita (perto da logo)
-  const rightNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
     { view: 'transcripts', label: 'WHISPER', icon: <Mic className="w-3.5 h-3.5" /> },
     { view: 'history', label: 'HISTÓRICO', icon: <History className="w-3.5 h-3.5" /> },
   ]
@@ -79,23 +75,58 @@ export const TopNavbarShell: React.FC<Props> = ({
         userSelect: 'none',
         position: 'relative',
       }}
-      className="w-full px-4 sm:px-6 flex items-center justify-between"
+      className="w-full px-4 sm:px-6 flex items-center justify-between gap-4"
     >
       {/* ========================================================
-          ESPAÇADOR / BRANDING LATERAL ESQUERDO (Equilibra o CTA da direita)
+          ZONA ESQUERDA: LOGO ORGANON (TOTAL ESQUERDA)
           ======================================================== */}
-      <div className="flex items-center min-w-[60px] lg:min-w-[120px]">
-        {/* Placeholder sutil ou status para garantir simetria perfeita */}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={onNavigateHome}
+          title="Cockpit Geral / Início (Organon Home)"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          className="group relative flex items-center justify-center py-1 px-2 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+        >
+          {/* Ambient Glow no Hover */}
+          <div
+            style={{
+              background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 70%)',
+            }}
+            className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"
+          />
+
+          <img
+            src={logoNameImg}
+            alt="Organon"
+            style={{ height: '36px', objectFit: 'contain' }}
+            className="relative z-10 drop-shadow-sm transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
+            onError={(e) => {
+              e.currentTarget.src = faviconImg
+            }}
+          />
+
+          {/* Ponto indicador de Cockpit Ativo */}
+          {activeView === 'today' && (
+            <span
+              style={{ background: 'var(--color-primary)' }}
+              className="absolute -bottom-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-primary)] animate-pulse"
+            />
+          )}
+        </button>
       </div>
 
       {/* ========================================================
-          ZONA CENTRAL CONCENTRADA: [ITENS ESQ] [LOGO MAIOR] [ITENS DIR]
+          ZONA CENTRAL: LINKS DE NAVEGAÇÃO & FERRAMENTAS NO CENTRO
           ======================================================== */}
-      <div className="flex items-center justify-center gap-2 sm:gap-4 flex-1">
-        {/* Bloco de Navegação da Esquerda (justificado ao centro, colado na logo) */}
+      <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-1 max-w-4xl">
         {onNavigateView && (
-          <nav className="flex items-center gap-1 sm:gap-1.5 justify-end">
-            {leftNavItems.map((item) => {
+          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
+            {mainNavItems.map((item) => {
               const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
               return (
                 <button
@@ -129,156 +160,75 @@ export const TopNavbarShell: React.FC<Props> = ({
                 </button>
               )
             })}
-          </nav>
-        )}
 
-        {/* LOGO CENTRAL (LEVEMENTE MAIOR, DESTACADO E ILUMINADO) */}
-        <div className="flex items-center justify-center px-1 sm:px-2">
-          <button
-            type="button"
-            onClick={onNavigateHome}
-            title="Cockpit Geral / Início (Organon Home)"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            className="group relative flex items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
-          >
-            {/* Glow Ambiente Neon no Hover */}
-            <div
-              style={{
-                background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 70%)',
-              }}
-              className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
-            />
-
-            <img
-              src={logoNameImg}
-              alt="Organon"
-              style={{ height: '38px', objectFit: 'contain' }}
-              className="relative z-10 drop-shadow-md transition-all duration-300 group-hover:drop-shadow-[0_0_14px_rgba(99,102,241,0.6)]"
-              onError={(e) => {
-                e.currentTarget.src = faviconImg
-              }}
-            />
-
-            {/* Ponto indicador de Cockpit Ativo */}
-            {activeView === 'today' && (
-              <span
-                style={{ background: 'var(--color-primary)' }}
-                className="absolute -bottom-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-primary)] animate-pulse"
-              />
-            )}
-          </button>
-        </div>
-
-        {/* Bloco de Navegação da Direita (colado na logo) */}
-        <nav className="flex items-center gap-1 sm:gap-1.5 justify-start">
-          {/* Whisper & Histórico */}
-          {onNavigateView &&
-            rightNavItems.map((item) => {
-              const isActive = activeView === item.view
-              return (
-                <button
-                  key={item.view}
-                  type="button"
-                  onClick={() => onNavigateView(item.view)}
-                  style={{
-                    background: isActive
-                      ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))'
-                      : 'transparent',
-                    borderColor: isActive
-                      ? 'color-mix(in srgb, var(--color-primary) 35%, transparent)'
-                      : 'transparent',
-                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                  }}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
-                >
-                  <span
-                    style={{ color: isActive ? 'var(--color-primary)' : 'inherit' }}
-                    className="opacity-75 group-hover:opacity-100 transition-opacity"
-                  >
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                  {isActive && (
-                    <span
-                      style={{ background: 'var(--color-primary)' }}
-                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full shadow-[0_0_6px_var(--color-primary)]"
-                    />
-                  )}
-                </button>
-              )
-            })}
-
-          {/* BOTÃO DE BUSCAR (Botão Elegante e Consistente) */}
-          <button
-            type="button"
-            onClick={onOpenQuickSearch}
-            title="Buscar no Organon (Ctrl+K)"
-            style={{
-              color: 'var(--color-text-muted)',
-            }}
-            className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
-          >
-            <Search className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-            <span>BUSCA</span>
-            <kbd
-              style={{
-                background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-muted)',
-              }}
-              className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-semibold ml-0.5 group-hover:text-[var(--color-text)]"
-            >
-              ⌘K
-            </kbd>
-          </button>
-
-          {/* BOTÃO ASSISTENTE IA */}
-          {onToggleChat && (
+            {/* BOTÃO DE BUSCA (Elegante, centralizado junto aos links) */}
             <button
               type="button"
-              onClick={onToggleChat}
-              title="Assistente IA Organon"
+              onClick={onOpenQuickSearch}
+              title="Buscar no Organon (Ctrl+K)"
               style={{
-                background: isChatOpen
-                  ? 'var(--color-primary)'
-                  : 'transparent',
-                borderColor: isChatOpen
-                  ? 'var(--color-primary)'
-                  : 'transparent',
-                color: isChatOpen ? '#ffffff' : 'var(--color-text-muted)',
+                color: 'var(--color-text-muted)',
               }}
-              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
+              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
             >
-              <Bot className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-              <span>IA</span>
+              <Search className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+              <span>BUSCA</span>
+              <kbd
+                style={{
+                  background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-muted)',
+                }}
+                className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-semibold ml-0.5 group-hover:text-[var(--color-text)]"
+              >
+                ⌘K
+              </kbd>
             </button>
-          )}
 
-          {/* BOTÃO WI-FI SYNC */}
-          <button
-            type="button"
-            onClick={onOpenSyncModal}
-            title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização Wi-Fi Local'}
-            style={{
-              color: 'var(--color-text-muted)',
-            }}
-            className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
-          >
-            <Wifi className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-            <span>SYNC</span>
-          </button>
-        </nav>
+            {/* BOTÃO ASSISTENTE IA */}
+            {onToggleChat && (
+              <button
+                type="button"
+                onClick={onToggleChat}
+                title="Assistente IA Organon"
+                style={{
+                  background: isChatOpen
+                    ? 'var(--color-primary)'
+                    : 'transparent',
+                  borderColor: isChatOpen
+                    ? 'var(--color-primary)'
+                    : 'transparent',
+                  color: isChatOpen ? '#ffffff' : 'var(--color-text-muted)',
+                }}
+                className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
+              >
+                <Bot className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+                <span>IA</span>
+              </button>
+            )}
+
+            {/* BOTÃO WI-FI SYNC */}
+            <button
+              type="button"
+              onClick={onOpenSyncModal}
+              title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização Wi-Fi Local'}
+              style={{
+                color: 'var(--color-text-muted)',
+              }}
+              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
+            >
+              <Wifi className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
+              <span>SYNC</span>
+            </button>
+          </nav>
+        )}
       </div>
 
       {/* ========================================================
-          ZONA DIREITA FLANCO: HERO CTA (+ NOVA TAREFA) + CONFIGS
+          ZONA DIREITA: HERO CTA (+ NOVA TAREFA) + CONFIGS (TOTAL DIREITA)
           ======================================================== */}
-      <div className="flex items-center justify-end gap-2.5 min-w-[60px] lg:min-w-[120px]">
-        {/* Voz / Ditado Direto (Opcional se ativo) */}
+      <div className="flex items-center justify-end gap-2.5">
+        {/* Ditado de Voz */}
         {onOpenVoice && (
           <button
             type="button"
@@ -295,9 +245,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           </button>
         )}
 
-        {/* ========================================================
-            HERO CTA ACTION PILL: + NOVA TAREFA (Estilo LOOG / Área do Associado)
-            ======================================================== */}
+        {/* HERO CTA ACTION PILL: + NOVA TAREFA */}
         <div className="relative">
           <div className="flex items-center shadow-sm">
             <button
@@ -330,7 +278,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Mini dropdown para Nova Nota */}
+          {/* Dropdown de Criação Rápida */}
           {showCreateDropdown && (
             <div
               style={{

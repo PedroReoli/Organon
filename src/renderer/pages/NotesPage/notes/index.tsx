@@ -269,15 +269,7 @@ export const NotesView = ({
           </div>
         )}
 
-        {/* Botoes globais (visiveis mesmo fora de nota) */}
-        {(tree.activeView === 'home' || !tree.selectedNote) && (
-          <div className="notes-quick-toolbar" data-debug-name="notes/NotesView.QuickToolbar">
-            <button type="button" className={`notes-quick-btn ${showTrash ? 'is-active' : ''}`} onClick={() => setShowTrash((v) => !v)} title="Lixeira" data-debug-name="btn" data-debug-id="Lixeira">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-              {trashCount > 0 ? `Lixeira (${trashCount})` : 'Lixeira'}
-            </button>
-          </div>
-        )}
+        {/* Lixeira View ou Home/Editor */}
         {showTrash ? (
           <NotesTrashView
             notes={notes}

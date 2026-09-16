@@ -1,76 +1,60 @@
 import React, { useMemo } from 'react'
-import { FolderTree } from 'lucide-react'
+import {
+  FolderTree,
+  FileText,
+  Star,
+  Clock,
+  Search,
+  Folder,
+  Plus,
+  Trash2,
+  Pin,
+  Lock,
+  ArrowUpRight,
+  Sparkles,
+} from 'lucide-react'
 import type { Note, NoteFolder } from '@types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 interface NotesHomePageProps {
-  notes:          Note[]
-  folders:        NoteFolder[]
-  recentNoteIds:  string[]
-  onOpenNote:     (id: string) => void
-  onOpenFolder:   (id: string) => void
-  onAddNote:      () => void
-  onShowSearch:   () => void
-  onOpenTrash?:   () => void
-  trashCount?:    number
+  notes: Note[]
+  folders: NoteFolder[]
+  recentNoteIds: string[]
+  onOpenNote: (id: string) => void
+  onOpenFolder: (id: string) => void
+  onAddNote: () => void
+  onShowSearch: () => void
+  onOpenTrash?: () => void
+  trashCount?: number
   onOpenTreeManager?: () => void
 }
-
-// ── Ícones inline ─────────────────────────────────────────────────────────────
-
-const IconClock = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-  </svg>
-)
-const IconStar = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
-)
-const IconSearch = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-)
-const IconFolder = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-  </svg>
-)
-const IconPage = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-  </svg>
-)
-const IconPlus = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-)
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtRelative(iso: string): string {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
-  const min  = Math.floor(diff / 60000)
-  const hr   = Math.floor(diff / 3600000)
-  const day  = Math.floor(diff / 86400000)
-  if (min < 1)   return 'agora'
-  if (min < 60)  return `${min}min`
-  if (hr < 24)   return `${hr}h`
-  if (day < 7)   return `${day}d`
-  if (day < 30)  return `${Math.floor(day / 7)}sem`
+  const min = Math.floor(diff / 60000)
+  const hr = Math.floor(diff / 3600000)
+  const day = Math.floor(diff / 86400000)
+  if (min < 1) return 'agora'
+  if (min < 60) return `${min}m`
+  if (hr < 24) return `${hr}h`
+  if (day < 7) return `${day}d`
+  if (day < 30) return `${Math.floor(day / 7)}sem`
   return `${Math.floor(day / 30)}mês`
 }
 
-// ── Componente ────────────────────────────────────────────────────────────────
-
-export const NotesHomePage = ({
-  notes, folders, recentNoteIds,
-  onOpenNote, onOpenFolder, onAddNote, onShowSearch, onOpenTrash, trashCount = 0, onOpenTreeManager,
-}: NotesHomePageProps) => {
+export const NotesHomePage: React.FC<NotesHomePageProps> = ({
+  notes,
+  folders,
+  recentNoteIds,
+  onOpenNote,
+  onOpenFolder,
+  onAddNote,
+  onShowSearch,
+  onOpenTrash,
+  trashCount = 0,
+  onOpenTreeManager,
+}) => {
   const noteMap = useMemo(() => new Map(notes.map(n => [n.id, n])), [notes])
 
   const recentNotes = useMemo(
@@ -79,46 +63,18 @@ export const NotesHomePage = ({
   )
 
   const favorites = useMemo(
-    () => notes.filter(n => n.isFavorite).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6),
+    () => notes.filter(n => n.isFavorite).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).slice(0, 6),
     [notes],
   )
 
   const stats = useMemo(() => ({
-    total:     notes.length,
-    folders:   folders.length,
+    total: notes.length,
+    folders: folders.length,
     favorites: notes.filter(n => n.isFavorite).length,
-    pinned:    notes.filter(n => n.isPinned).length,
-    locked:    notes.filter(n => n.isLocked).length,
+    pinned: notes.filter(n => n.isPinned).length,
+    locked: notes.filter(n => n.isLocked).length,
   }), [notes, folders])
 
-  const hubs = [
-    {
-      id: 'recents',
-      label: 'Recentes',
-      sublabel: `${recentNotes.length} acessadas`,
-      icon: <IconClock />,
-      color: 'var(--color-primary)',
-      onClick: onShowSearch,
-    },
-    {
-      id: 'favorites',
-      label: 'Favoritas',
-      sublabel: `${stats.favorites} notas`,
-      icon: <IconStar />,
-      color: '#f59e0b',
-      onClick: onShowSearch,
-    },
-    {
-      id: 'search',
-      label: 'Buscar',
-      sublabel: 'Pesquisar notas',
-      icon: <IconSearch />,
-      color: 'var(--color-primary)',
-      onClick: onShowSearch,
-    },
-  ]
-
-  // Dados para o gráfico
   const chartData = useMemo(() => {
     const sortedFolders = folders.map(f => ({
       name: f.name,
@@ -132,257 +88,483 @@ export const NotesHomePage = ({
   }, [notes, folders])
 
   return (
-    <div className="projects-content-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 20px' }}>
-      
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Visão Geral de Notas</h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-            {stats.total} nota{stats.total !== 1 ? 's' : ''} organizada{stats.total !== 1 ? 's' : ''} em {stats.folders} pasta{stats.folders !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {onOpenTreeManager && (
-            <button 
-              className="projects-btn" 
-              style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }} 
-              onClick={onOpenTreeManager}
-              title="Central de Gerenciamento da Estrutura de Notas"
+    <div
+      style={{
+        background: 'var(--color-background)',
+        color: 'var(--color-text)',
+      }}
+      className="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-4"
+    >
+      {/* ========================================================
+          HERO BANNER & AÇÕES SUPERIORES
+          ======================================================== */}
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+        }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border shadow-xs"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span
+              style={{
+                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+                color: 'var(--color-primary)',
+                borderColor: 'color-mix(in srgb, var(--color-primary) 28%, transparent)',
+              }}
+              className="text-xs font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5"
             >
-              <FolderTree size={15} />
-              <span>Gerenciar Estrutura</span>
-            </button>
-          )}
-          {onOpenTrash && (
-            <button 
-              className="projects-btn" 
-              style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }} 
-              onClick={onOpenTrash}
-              title="Abrir lixeira"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
-              </svg>
-              Lixeira {trashCount !== undefined && trashCount > 0 ? `(${trashCount})` : ''}
-            </button>
-          )}
-          <button 
-            className="projects-btn" 
-            style={{ background: 'var(--accent-primary, var(--color-primary))', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', boxShadow: '0 2px 8px var(--color-primary-glow)', cursor: 'pointer' }} 
-            onClick={onAddNote}
+              <Sparkles className="w-3 h-3" />
+              Base de Conhecimento
+            </span>
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium">
+              {stats.total} notas • {stats.folders} pastas
+            </span>
+          </div>
+          <h1
+            style={{ color: 'var(--color-text)' }}
+            className="text-lg sm:text-xl font-extrabold tracking-tight"
           >
-            <IconPlus /> Nova Nota
+            Hub Geral de Notas & Documentação
+          </h1>
+        </div>
+
+        {/* Barra de Ações Rápidas */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {onOpenTreeManager && (
+            <button
+              type="button"
+              onClick={onOpenTreeManager}
+              style={{
+                borderColor: 'var(--color-border)',
+                background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+                color: 'var(--color-text)',
+              }}
+              className="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all cursor-pointer"
+              title="Gerenciar estrutura de pastas e notas"
+            >
+              <FolderTree className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+              <span>Gerenciar Pastas</span>
+            </button>
+          )}
+
+          {onOpenTrash && (
+            <button
+              type="button"
+              onClick={onOpenTrash}
+              style={{
+                borderColor: trashCount > 0 ? 'rgba(244, 63, 94, 0.3)' : 'var(--color-border)',
+                background: trashCount > 0 ? 'rgba(244, 63, 94, 0.08)' : 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+                color: trashCount > 0 ? '#f43f5e' : 'var(--color-text-muted)',
+              }}
+              className="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 hover:brightness-110 transition-all cursor-pointer"
+              title="Abrir Lixeira de Notas"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Lixeira {trashCount > 0 ? `(${trashCount})` : ''}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onAddNote}
+            style={{
+              background: 'var(--color-primary)',
+              color: 'var(--color-primary-text, #ffffff)',
+              boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent)',
+            }}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:brightness-110 transition-all cursor-pointer active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Nova Nota</span>
           </button>
         </div>
       </div>
 
-      {/* Hubs / Atalhos Compactos em Grid 3 Colunas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-        {hubs.map(hub => {
-          return (
+      {/* ========================================================
+          BENTO GRID DE ESTATÍSTICAS E ATALHOS (3 COLUNAS)
+          ======================================================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        {/* Recentes */}
+        <div
+          onClick={onShowSearch}
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+          className="group relative border p-3.5 rounded-xl shadow-xs hover:border-[var(--color-primary)] transition-all cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Acessadas Recentemente</span>
             <div
-              key={hub.id}
-              className="projects-stat-card"
               style={{
-                cursor: 'pointer',
-                padding: '14px 16px',
-                height: '88px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '12px',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                position: 'relative',
-                overflow: 'hidden',
+                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                color: 'var(--color-primary)',
               }}
-              onClick={hub.onClick}
+              className="p-1.5 rounded-lg"
             >
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: hub.color, borderRadius: '4px 0 0 4px' }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text)', letterSpacing: '-0.01em' }}>{hub.label}</span>
-                <div style={{ color: hub.color, background: `${hub.color}1e`, padding: '6px', borderRadius: '8px', display: 'flex', border: `1px solid ${hub.color}33` }}>
-                  {React.cloneElement(hub.icon as React.ReactElement, { width: 15, height: 15 })}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '20px', fontWeight: 800, lineHeight: 1, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
-                  {hub.id === 'recents' ? recentNotes.length : hub.id === 'favorites' ? stats.favorites : hub.id === 'pinned' ? stats.pinned : ''}
-                  {hub.id === 'search' && <span style={{ fontSize: '13px', color: hub.color, fontWeight: 600 }}>Explorar &rarr;</span>}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>{hub.sublabel}</div>
-              </div>
+              <Clock className="w-4 h-4" />
             </div>
-          )
-        })}
-      </div>
-
-      {/* Corpo principal em 2 colunas */}
-      {notes.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '16px' }}>
-        
-        {/* COLUNA ESQUERDA (Principal) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
-          {/* Favoritas */}
-          {favorites.length > 0 && (
-            <section className="projects-dashboard-card" style={{ borderRadius: '10px', padding: '14px 16px', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ color: '#f59e0b', display: 'flex' }}><IconStar /></div>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--color-text)' }}>Notas Favoritas</h3>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                {favorites.map(note => (
-                  <div 
-                    key={note.id} 
-                    onClick={() => onOpenNote(note.id)} 
-                    style={{ cursor: 'pointer', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px', transition: 'all 0.15s', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '8px' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.15)', padding: '4px', borderRadius: '4px', display: 'flex' }}><IconStar /></div>
-                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 500 }}>{fmtRelative(note.updatedAt)}</span>
-                    </div>
-                    <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
-                      {note.title || 'Sem título'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Minhas Notas (Lista Principal) */}
-          <section className="projects-dashboard-card" style={{ borderRadius: '10px', padding: '14px 16px', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ color: 'var(--color-primary)', display: 'flex' }}><IconPage /></div>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--color-text)' }}>Minhas Notas</h3>
-              </div>
-              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{notes.length} notas</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {notes.slice(0, 10).map(note => {
-                const folder = folders.find(f => f.id === note.folderId)
-                return (
-                  <div 
-                    key={note.id} 
-                    onClick={() => onOpenNote(note.id)} 
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-background)', border: '1px solid var(--color-border)', borderRadius: '6px', transition: 'all 0.15s' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'var(--color-text-muted)', display: 'flex', flexShrink: 0 }}><IconPage /></div>
-                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{note.title || 'Sem título'}</span>
-                      {folder && <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>{folder.name}</span>}
-                      {note.isPinned && <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px', flexShrink: 0 }}>FIXADO</span>}
-                    </div>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500, flexShrink: 0, marginLeft: '12px' }}>{fmtRelative(note.updatedAt)}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span style={{ color: 'var(--color-text)' }} className="text-2xl font-black">
+              {recentNotes.length}
+            </span>
+            <span style={{ color: 'var(--color-primary)' }} className="text-xs font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Ver Histórico <ArrowUpRight className="w-3 h-3" />
+            </span>
+          </div>
         </div>
 
-        {/* COLUNA DIREITA (Sidebar/Estatísticas) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
-          {/* Gráfico */}
-          {notes.length > 0 && chartData.length > 0 && (
-            <section className="projects-dashboard-card" style={{ borderRadius: '12px', padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ color: 'var(--color-primary)', display: 'flex' }}><IconFolder /></div>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Distribuição por Pastas</h3>
-              </div>
-              <div style={{ height: '170px', width: '100%', minWidth: 0, minHeight: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 24 }}>
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="var(--color-text-muted)" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tickFormatter={(val: string) => (val && val.length > 10 ? `${val.slice(0, 10)}…` : val || '')}
-                    />
-                    <YAxis stroke="var(--color-text-muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px' }}
-                      itemStyle={{ color: 'var(--color-primary)', fontWeight: 600 }}
-                      cursor={{ fill: 'var(--color-surface)', opacity: 0.4 }}
-                    />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                      {chartData.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? 'var(--color-primary)' : '#818cf8'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          )}
+        {/* Favoritas */}
+        <div
+          onClick={onShowSearch}
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+          className="group relative border p-3.5 rounded-xl shadow-xs hover:border-amber-500/50 transition-all cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Notas Favoritas</span>
+            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+              <Star className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span style={{ color: 'var(--color-text)' }} className="text-2xl font-black">
+              {stats.favorites}
+            </span>
+            <span className="text-xs font-semibold text-amber-500 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Filtrar Favoritas <ArrowUpRight className="w-3 h-3" />
+            </span>
+          </div>
+        </div>
 
-          {/* Pastas em Destaque */}
-          {folders.length > 0 && (
-            <section className="projects-dashboard-card" style={{ borderRadius: '12px', padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ color: 'var(--color-primary)', display: 'flex' }}><IconFolder /></div>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Pastas Principais</h3>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {folders.filter(f => !f.parentId).slice(0, 6).map(folder => {
-                  const count = notes.filter(n => n.folderId === folder.id).length
-                  return (
-                    <div 
-                      key={folder.id} 
-                      onClick={() => onOpenFolder(folder.id)} 
-                      style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid transparent', borderRadius: '8px', transition: 'all 0.15s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-tertiary)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--bg-primary)' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                        <div style={{ color: 'var(--text-muted)', display: 'flex' }}><IconFolder /></div>
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500, fontSize: '12px', color: 'var(--text-primary)' }}>{folder.name || 'Sem nome'}</span>
+        {/* Busca e Exploração */}
+        <div
+          onClick={onShowSearch}
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+          className="group relative border p-3.5 rounded-xl shadow-xs hover:border-[var(--color-primary)] transition-all cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Pesquisa & Filtros</span>
+            <div
+              style={{
+                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                color: 'var(--color-primary)',
+              }}
+              className="p-1.5 rounded-lg"
+            >
+              <Search className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span style={{ color: 'var(--color-text)' }} className="text-2xl font-black">
+              {stats.total} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">docs</span>
+            </span>
+            <span style={{ color: 'var(--color-primary)' }} className="text-xs font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Buscar Notas ⌘K <ArrowUpRight className="w-3 h-3" />
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================
+          CONTEÚDO PRINCIPAL EM 2 COLUNAS
+          ======================================================== */}
+      {notes.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+          {/* Coluna Esquerda: Favoritas & Lista de Notas (8 Colunas) */}
+          <div className="lg:col-span-8 space-y-3.5">
+            {/* Favoritas em Grade */}
+            {favorites.length > 0 && (
+              <div
+                style={{
+                  background: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+                className="p-4 rounded-xl border shadow-xs"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+                    Notas em Destaque
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {favorites.map(note => {
+                    const folder = folders.find(f => f.id === note.folderId)
+                    return (
+                      <div
+                        key={note.id}
+                        onClick={() => onOpenNote(note.id)}
+                        style={{
+                          background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+                          borderColor: 'var(--color-border)',
+                        }}
+                        className="p-3 rounded-lg border hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between gap-2 group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            style={{ color: 'var(--color-text)' }}
+                            className="text-xs font-bold truncate group-hover:text-amber-400 transition-colors"
+                          >
+                            {note.title || 'Sem título'}
+                          </span>
+                          <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px] shrink-0 font-medium">
+                            {fmtRelative(note.updatedAt)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[10px]">
+                          {folder && (
+                            <span
+                              style={{
+                                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                                color: 'var(--color-primary)',
+                              }}
+                              className="px-1.5 py-0.5 rounded font-semibold truncate max-w-[120px]"
+                            >
+                              📁 {folder.name}
+                            </span>
+                          )}
+                          {note.isPinned && (
+                            <span className="text-emerald-400 flex items-center gap-0.5">
+                              <Pin className="w-2.5 h-2.5" /> Fixada
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '10px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                        {count}
-                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Minhas Notas (Lista Principal) */}
+            <div
+              style={{
+                background: 'var(--color-surface)',
+                borderColor: 'var(--color-border)',
+              }}
+              className="p-4 rounded-xl border shadow-xs"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[var(--color-primary)]" />
+                  <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+                    Todas as Notas Recentes
+                  </h3>
+                </div>
+                <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium">
+                  {notes.length} documentos
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {notes.slice(0, 10).map(note => {
+                  const folder = folders.find(f => f.id === note.folderId)
+                  return (
+                    <div
+                      key={note.id}
+                      onClick={() => onOpenNote(note.id)}
+                      style={{
+                        background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+                        borderColor: 'var(--color-border)',
+                      }}
+                      className="p-2.5 rounded-lg border hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <FileText className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors shrink-0" />
+                        <span
+                          style={{ color: 'var(--color-text)' }}
+                          className="text-xs font-semibold truncate group-hover:text-[var(--color-primary)] transition-colors"
+                        >
+                          {note.title || 'Sem título'}
+                        </span>
+                        {folder && (
+                          <span
+                            style={{
+                              background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+                              color: 'var(--color-primary)',
+                            }}
+                            className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                          >
+                            {folder.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[11px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                        {note.isPinned && <Pin className="w-3 h-3 text-emerald-400" />}
+                        {note.isLocked && <Lock className="w-3 h-3 text-rose-400" />}
+                        {note.isFavorite && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                        <span>{fmtRelative(note.updatedAt)}</span>
+                      </div>
                     </div>
                   )
                 })}
               </div>
-            </section>
-          )}
-
-        </div>
-      </div>
-      )}
-
-      {/* Estado vazio */}
-      {notes.length === 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ background: 'var(--bg-secondary)', padding: '24px', borderRadius: '50%', marginBottom: '24px' }}>
-            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ opacity: 0.5 }}>
-              <path d="M40 8H16a4 4 0 0 0-4 4v40a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4V20L40 8z" />
-              <polyline points="40 8 40 20 52 20" />
-              <line x1="24" y1="32" x2="40" y2="32" />
-              <line x1="24" y1="40" x2="34" y2="40" />
-            </svg>
+            </div>
           </div>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>Seu espaço de anotações</h3>
-          <p style={{ marginBottom: '32px', maxWidth: '300px', lineHeight: 1.5 }}>Comece criando sua primeira nota para organizar suas ideias, documentos e rascunhos.</p>
-          <button 
-            className="projects-btn" 
-            style={{ background: 'var(--accent-primary, var(--color-primary))', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', boxShadow: '0 4px 12px var(--color-primary-glow)' }} 
-            onClick={onAddNote}
+
+          {/* Coluna Direita: Distribuição & Pastas (4 Colunas) */}
+          <div className="lg:col-span-4 space-y-3.5">
+            {/* Gráfico de Distribuição */}
+            {chartData.length > 0 && (
+              <div
+                style={{
+                  background: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+                className="p-4 rounded-xl border shadow-xs"
+              >
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Folder className="w-4 h-4 text-[var(--color-primary)]" />
+                  <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+                    Volume por Pasta
+                  </h3>
+                </div>
+
+                <div className="h-44 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
+                      <XAxis
+                        dataKey="name"
+                        stroke="var(--color-text-muted)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val: string) => (val && val.length > 8 ? `${val.slice(0, 8)}…` : val || '')}
+                      />
+                      <YAxis stroke="var(--color-text-muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--color-surface)',
+                          borderColor: 'var(--color-border)',
+                          borderRadius: '8px',
+                          color: 'var(--color-text)',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={24}>
+                        {chartData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index === 0 ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-primary) 60%, white)'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Pastas em Destaque */}
+            <div
+              style={{
+                background: 'var(--color-surface)',
+                borderColor: 'var(--color-border)',
+              }}
+              className="p-4 rounded-xl border shadow-xs"
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-[var(--color-primary)]" />
+                  <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+                    Pastas Ativas
+                  </h3>
+                </div>
+                <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">
+                  {folders.length} totais
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {folders.length === 0 ? (
+                  <div style={{ color: 'var(--color-text-muted)' }} className="py-4 text-center text-xs">
+                    Nenhuma pasta criada.
+                  </div>
+                ) : (
+                  folders.filter(f => !f.parentId).slice(0, 6).map(folder => {
+                    const count = notes.filter(n => n.folderId === folder.id).length
+                    return (
+                      <div
+                        key={folder.id}
+                        onClick={() => onOpenFolder(folder.id)}
+                        style={{
+                          background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+                          borderColor: 'var(--color-border)',
+                        }}
+                        className="p-2 rounded-lg border hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Folder className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                          <span style={{ color: 'var(--color-text)' }} className="text-xs font-medium truncate group-hover:text-[var(--color-primary)] transition-colors">
+                            {folder.name || 'Sem nome'}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                            color: 'var(--color-primary)',
+                          }}
+                          className="text-[10px] font-bold px-1.5 py-0.2 rounded"
+                        >
+                          {count}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Empty State */
+        <div
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+          className="p-12 rounded-xl border text-center flex flex-col items-center justify-center space-y-4"
+        >
+          <div
+            style={{
+              background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+              color: 'var(--color-primary)',
+            }}
+            className="p-4 rounded-full"
           >
-            <IconPlus /> Criar primeira nota
+            <FileText className="w-8 h-8" />
+          </div>
+          <div className="space-y-1 max-w-sm">
+            <h3 style={{ color: 'var(--color-text)' }} className="text-base font-bold">
+              Seu Caderno de Notas Está Vazio
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+              Crie notas em Markdown com suporte a tags, links bidirecionais e visualizador de grafo.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onAddNote}
+            style={{
+              background: 'var(--color-primary)',
+              color: 'var(--color-primary-text, #ffffff)',
+            }}
+            className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:brightness-110"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Criar Primeira Nota</span>
           </button>
         </div>
       )}
-
     </div>
   )
 }
