@@ -14,7 +14,8 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
         { id: 'done', title: 'Done' }
     ];
 
-    const backlogTasks = tasks.filter(t => t.status === 'backlog');
+    const backlogTasks = tasks.filter(t => t.status === 'backlog' || (!t.sprintId && t.status === 'todo'));
+    const sprintTasks = sprint ? tasks.filter(t => t.sprintId === sprint.id || (t.status !== 'backlog' && t.status !== 'archived' && !t.sprintId)) : [];
 
     const handleTaskMove = (taskId: string, targetId: string) => {
         if (onMoveTask) {
@@ -33,7 +34,7 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
             onDragEnd={handleDragEnd}
         >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <SprintHeader sprint={sprint} />
+                <SprintHeader sprint={sprint} tasks={tasks} />
 
                 <div style={{ display: 'flex', gap: '16px', padding: '24px', overflowX: 'auto', flex: 1 }}>
                     {columns.map(col => (
@@ -41,7 +42,7 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
                             key={col.id}
                             id={col.id}
                             title={col.title}
-                            tasks={tasks.filter(t => t.status === col.id)}
+                            tasks={sprintTasks.filter(t => t.status === col.id)}
                             onEdit={onEdit}
                         />
                     ))}

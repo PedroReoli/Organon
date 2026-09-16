@@ -120,7 +120,7 @@ export const TaskEditModal = ({ task, isOpen, onClose, onSave }: { task: Plannin
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '32px' }}>
                     <button onClick={onClose} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={handleSave} style={{ padding: '8px 16px', background: 'var(--color-primary)', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
+                    <button onClick={handleSave} style={{ padding: '8px 16px', background: 'var(--color-primary)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
                 </div>
             </div>
         </div>

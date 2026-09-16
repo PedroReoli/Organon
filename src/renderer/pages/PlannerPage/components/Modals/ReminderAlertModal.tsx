@@ -6,7 +6,7 @@ export const ReminderAlertModal = ({ isOpen, message, onClose, onSnooze }: { isO
             <div>{message}</div>
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
                 <button onClick={onClose} style={{ flex: 1, padding: '4px', background: 'var(--color-bg)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Dismiss</button>
-                <button onClick={onSnooze} style={{ flex: 1, padding: '4px', background: 'var(--color-primary)', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Snooze 15m</button>
+                <button onClick={onSnooze} style={{ flex: 1, padding: '4px', background: 'var(--color-primary)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Snooze 15m</button>
             </div>
         </div>
     )
