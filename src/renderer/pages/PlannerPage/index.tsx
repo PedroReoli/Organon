@@ -46,8 +46,11 @@ export const PlannerPage = () => {
         {viewMode === 'daily' && (
           <DailyView
             tasks={tasks}
+            projects={projects}
             onEdit={setEditingTaskId}
             onAddTask={addTask}
+            onUpdateTask={updateTask}
+            onMoveTask={moveTask}
             onRescheduleOverdue={rescheduleOverdue}
             onToggleStatus={(id) => {
               const t = tasks.find((item) => item.id === id);
