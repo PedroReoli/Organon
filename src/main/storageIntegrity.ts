@@ -1,7 +1,7 @@
 import type { Store } from './types'
 
 const PROTECTED_COLLECTIONS: Array<keyof Store> = [
-  'notes', 'noteFolders', 'cards', 'habits', 'calendarEvents', 'projects',
+  'notes', 'noteFolders', 'cards', 'calendarEvents', 'projects',
   'meetings', 'playbooks', 'apps', 'shortcuts', 'bills', 'expenses', 'incomes',
 ]
 

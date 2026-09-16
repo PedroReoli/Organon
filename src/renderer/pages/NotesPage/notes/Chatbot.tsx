@@ -93,10 +93,6 @@ Contexto: O usuário pode buscar, resumir, expandir e reescrever notas. Pode tam
 Formato preferido para resumos: bullet points com os pontos principais.
 Ao resumir, identifique os pontos mais importantes e agrupe por tema se aplicável.`,
 
-  habits: `Você está no módulo de Hábitos do Organon. O usuário está gerenciando seus hábitos diários.
-Contexto: Hábitos incluem rastreamento de frequência, metas de consistência, e padrões de comportamento.
-Seja motivacional mas realista. Sugira formas de melhorar consistência.`,
-
   cards: `Você está no módulo de Planejamento (Cards/Tarefas) do Organon. O usuário está gerenciando tarefas e projetos.
 Contexto: Cards podem ter prioridades, datas, checklists e status. O usuário quer organizarse melhor.
 Sugira formas práticas de priorizar e organizar tarefas.`,
@@ -109,12 +105,8 @@ Ajud a otimizar a agenda e identificar conflitos.`,
 Contexto: Inclui despesas, receitas, investimentos, metas de economia e orçamento.
 Seja prático com dicas de economia e investimento.`,
 
-  crm: `Você está no módulo de CRM do Organon. O usuário está gerenciando contatos e relacionamentos.
-Contexto: CRM inclui contatos, tags, interações e histórico de comunicações.
-Ajud e a organizar e priorizar contatos importantes.`,
-
   general: `Você é um assistente pessoal inteligente do Organon, um sistema de produtividade pessoal completo.
-Módulos disponíveis: Notas, Hábitos, Planejamento (Cards), Calendário, Financeiro, CRM, Estudos, Apps.
+Módulos disponíveis: Notas, Planejamento (Cards), Calendário, Financeiro, Projetos, Estudos, Apps.
 O usuário pode perguntar sobre qualquer módulo e eu vou consultar os dados relevantes.
 Seja útil, conciso e proativo em sugerir ações.`
 }
@@ -129,12 +121,6 @@ const SUGGESTIONS_BY_CONTEXT: Record<string, string[]> = {
     'Que notas tenho sobre projetos?',
     'Crie uma nota sobre...',
     'Compare duas notas',
-  ],
-  habits: [
-    'Como está minha consistência?',
-    'Sugira novos hábitos para mim',
-    'Analyze meus padrões de hábito',
-    'Como melhorar minha rotina?',
   ],
   cards: [
     'Priorize minhas tarefas',
@@ -153,12 +139,6 @@ const SUGGESTIONS_BY_CONTEXT: Record<string, string[]> = {
     'Estou dentro do orçamento?',
     'Sugira metas de economia',
     'Como melhorar minha situação?',
-  ],
-  crm: [
-    'Quem são meus contatos importantes?',
-    'Analise meus relacionamentos',
-    'Sugira follow-ups pendentes',
-    'Como melhorar minha rede?',
   ],
   general: [
     'Dê um resumo do meu dia',
@@ -390,7 +370,6 @@ function parseLocalIntent(
 interface ChatbotProps {
   notes?: Array<{ id: string; title: string; content: string; folderId?: string | null }>
   folders?: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }>
-  habits?: Array<{ id: string; name: string; description?: string }>
   cards?: Array<{ id: string; title: string; status?: string }>
   screenContext?: ScreenContext
   onApplyNote?: (noteId: string | undefined, content: string) => void
@@ -416,7 +395,6 @@ export type PendingAction =
 export const Chatbot: React.FC<ChatbotProps> = ({
   notes = [],
   folders = [],
-  habits = [],
   cards = [],
   screenContext,
   onApplyNote,
@@ -502,16 +480,13 @@ Regras para manipulação:
       prompt += `\n\nNotas Existentes (${notes.length} notas):\n`
       prompt += notes.slice(0, 30).map(n => `- Nota "${n.title}" (ID: "${n.id}"${n.folderId ? `, FolderID: "${n.folderId}"` : ''})`).join('\n')
     }
-    if (habits.length > 0) {
-      prompt += `\nHábitos ativos: ${habits.map(h => h.name).join(', ')}.`
-    }
     if (cards.length > 0) {
       const pending = cards.filter(c => c.status !== 'done').length
       prompt += `\nTarefas pendentes: ${pending}.`
     }
 
     return prompt
-  }, [contextDescription, notes, folders, habits, cards])
+  }, [contextDescription, notes, folders, cards])
 
   // Auto-scroll
   useEffect(() => {

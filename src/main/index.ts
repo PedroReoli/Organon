@@ -3,7 +3,6 @@ import * as path from 'path'
 
 import { startBackupTimer } from './backup'
 import { startClipboardMonitor } from './clipboardMonitor'
-import { startHabitReminders } from './habitReminders'
 import { registerIpcHandlers } from './ipc'
 import { loadStore } from './store'
 import { createWindow, focusMainWindow, getMainWindow, setAppQuitting } from './window'
@@ -63,10 +62,6 @@ app.whenReady().then(() => {
     }
   } catch {
     // Ignora erros ao carregar configuracoes.
-  }
-
-  startHabitReminders()
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()

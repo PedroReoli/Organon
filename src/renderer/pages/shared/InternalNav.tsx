@@ -17,7 +17,6 @@ export type AppView =
   | 'notes'
   | 'clipboard'
   | 'apps'
-  | 'habits'
   | 'study'
   | 'financial'
   | 'canvas'

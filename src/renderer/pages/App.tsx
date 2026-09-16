@@ -63,9 +63,8 @@ const APP_VIEW_LABELS: Record<AppView, string> = {
   history: 'Histórico',
   shortcuts: 'Atalhos',
   apps: 'Aplicativos',
-  habits: 'Hábitos',
-  financial: 'Financeiro',
   workflow: 'Workflows',
+  financial: 'Financeiro',
 }
 
 const APP_HUBS: AppHub[] = [
@@ -584,10 +583,6 @@ export const App = () => {
           parts.unshift('NotesView')
         } else if (cls.includes('note-editor') && !parts.some(p => p.includes('Editor'))) {
           parts.unshift('WysiwygEditor')
-        } else if (cls.includes('financial-') && !parts.some(p => p.includes('Financial'))) {
-          parts.unshift('FinancialView')
-        } else if (cls.includes('habits-') && !parts.some(p => p.includes('Habits'))) {
-          parts.unshift('HabitsView')
         } else if (cls.includes('study-') && !parts.some(p => p.includes('Study'))) {
           parts.unshift('StudyView')
         } else if (cls.includes('canvas-') && !parts.some(p => p.includes('Canvas'))) {
@@ -1133,7 +1128,6 @@ export const App = () => {
         hideFloatingTrigger={true}
         notes={notes.map(n => ({ id: n.id, title: n.title, content: n.content || '', folderId: n.folderId }))}
         folders={noteFolders.map(f => ({ id: f.id, name: f.name, parentId: f.parentId, isHome: f.isHome }))}
-        habits={[]}
         cards={cards.map(c => ({ id: c.id, title: c.title, status: c.status }))}
         screenContext={{
           screen: activeView,

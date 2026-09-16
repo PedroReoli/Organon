@@ -20,7 +20,7 @@ type InstallerStep = 'welcome' | 'location' | 'protection' | 'theme' | 'review' 
 const THEMES_PER_PAGE = 2
 
 const SUMMARY_LABELS: Record<string, string> = {
-  notes: 'Notas', noteFolders: 'Pastas', cards: 'Cards', habits: 'Hábitos',
+  notes: 'Notas', noteFolders: 'Pastas', cards: 'Cards',
   calendarEvents: 'Eventos', projects: 'Projetos', meetings: 'Reuniões', playbooks: 'Playbooks',
 }
 
@@ -59,7 +59,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
 const StorageTree = () => (
   <div className="installer-storage-tree" aria-label="Estrutura da pasta Organon">
     <div className="tree-root">Organon</div>
-    <div><strong>Dados</strong><span>Notas, calendário, hábitos, projetos e financeiro</span></div>
+    <div><strong>Dados</strong><span>Notas, calendário, projetos, estudos e financeiro</span></div>
     <div><strong>Anexos</strong><span>Imagens, áudios e arquivos</span></div>
     <div><strong>Backups</strong><span>Diários, semanais, mensais e manuais</span></div>
     <div><strong>Exportações</strong><span>Arquivos gerados pelo aplicativo</span></div>

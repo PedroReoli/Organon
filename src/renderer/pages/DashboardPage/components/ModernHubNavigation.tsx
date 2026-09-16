@@ -6,7 +6,6 @@ import {
   FolderKanban,
   Headphones,
   Network,
-  CheckSquare,
   Settings,
   LayoutGrid
 } from 'lucide-react'
@@ -45,11 +44,6 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
       label: 'System Design',
       view: 'system-design',
       icon: <Network className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
-    },
-    {
-      label: 'Hábitos',
-      view: 'habits',
-      icon: <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Configurações',

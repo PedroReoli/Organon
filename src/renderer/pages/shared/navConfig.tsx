@@ -28,9 +28,7 @@ export const NAV_ICON_OPTIONS: NavIconOption[] = [
   { id: 'apps', label: 'Apps' },
   { id: 'notes', label: 'Notas' },
   { id: 'clipboard', label: 'Clipboard' },
-  { id: 'habits', label: 'Habitos' },
   { id: 'study', label: 'Estudos' },
-  { id: 'financial', label: 'Financeiro' },
 ]
 
 const NAV_ICON_ID_SET = new Set<NavIconId>(NAV_ICON_OPTIONS.map(option => option.id))
@@ -95,12 +93,6 @@ const ICONS: Record<NavIconId, JSX.Element> = {
       <rect x="9" y="2" width="5" height="5" rx="1" />
       <rect x="2" y="9" width="5" height="5" rx="1" />
       <rect x="9" y="9" width="5" height="5" rx="1" />
-    </svg>
-  ),
-  habits: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M13 3L6.5 10.5 3 7" />
-      <circle cx="8" cy="8" r="6.5" />
     </svg>
   ),
   study: (

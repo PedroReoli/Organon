@@ -3,7 +3,7 @@ import {
   CheckCircle2,
   TrendingUp,
   FileText,
-  Flame,
+  FolderKanban,
   ArrowUpRight
 } from 'lucide-react'
 
@@ -14,11 +14,10 @@ interface DashboardKpiRowProps {
   weekCompleted: number
   weekTotal: number
   notesCount: number
-  habitsCompletedToday: number
-  totalHabits: number
+  projectsCount?: number
   onNavigateToTasks?: () => void
   onNavigateToNotes?: () => void
-  onNavigateToHabits?: () => void
+  onNavigateToProjects?: () => void
 }
 
 export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
@@ -28,11 +27,10 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
   weekCompleted,
   weekTotal,
   notesCount,
-  habitsCompletedToday,
-  totalHabits,
+  projectsCount = 0,
   onNavigateToTasks,
   onNavigateToNotes,
-  onNavigateToHabits,
+  onNavigateToProjects,
 }) => {
   const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   const weekRate = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0
@@ -64,9 +62,9 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         </div>
         <div className="flex items-baseline justify-between">
           <div style={{ color: 'var(--color-text)' }} className="text-xl font-bold">
-            {completedTasks} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">/ {totalTasks}</span>
+            {completedTasks} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">/ {totalTasks} feitas</span>
           </div>
-          <span style={{ color: 'var(--color-primary)' }} className="text-xs font-bold flex items-center">
+          <span style={{ color: 'var(--color-primary)' }} className="text-xs font-bold">
             {taskCompletionRate}%
           </span>
         </div>
@@ -83,17 +81,17 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
           />
         </div>
         <div style={{ color: 'var(--color-text-muted)' }} className="flex items-center justify-between mt-2 text-[11px]">
-          <span>{pendingTasks} pendentes</span>
+          <span>{pendingTasks} pendentes hoje</span>
           <span
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-medium"
           >
-            Abrir <ArrowUpRight className="w-3 h-3" />
+            Ver Kanban <ArrowUpRight className="w-3 h-3" />
           </span>
         </div>
       </div>
 
-      {/* KPI 2: Weekly Velocity */}
+      {/* KPI 2: Weekly Performance */}
       <div
         onClick={onNavigateToTasks}
         style={{
@@ -105,7 +103,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
       >
         <div className="flex items-center justify-between mb-2">
-          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Throughput Semanal</span>
+          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Semana Atual</span>
           <div
             style={{
               background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
@@ -118,7 +116,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         </div>
         <div className="flex items-baseline justify-between">
           <div style={{ color: 'var(--color-text)' }} className="text-xl font-bold">
-            {weekCompleted} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">/ {weekTotal || 1} itens</span>
+            {weekCompleted} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">/ {weekTotal} cards</span>
           </div>
           <span style={{ color: 'var(--color-primary)' }} className="text-xs font-bold">
             {weekRate}%
@@ -137,17 +135,17 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
           />
         </div>
         <div style={{ color: 'var(--color-text-muted)' }} className="flex items-center justify-between mt-2 text-[11px]">
-          <span>7 dias em andamento</span>
+          <span>Produtividade semanal</span>
           <span
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-medium"
           >
-            Ver grade <ArrowUpRight className="w-3 h-3" />
+            Detalhes <ArrowUpRight className="w-3 h-3" />
           </span>
         </div>
       </div>
 
-      {/* KPI 3: Knowledge Base */}
+      {/* KPI 3: Notes & Knowledge Base */}
       <div
         onClick={onNavigateToNotes}
         style={{
@@ -159,7 +157,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
       >
         <div className="flex items-center justify-between mb-2">
-          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Base de Conhecimento</span>
+          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Notas & Conhecimento</span>
           <div
             style={{
               background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
@@ -174,19 +172,24 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
           <div style={{ color: 'var(--color-text)' }} className="text-xl font-bold">
             {notesCount} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">documentos</span>
           </div>
-          <span style={{ color: 'var(--color-primary)' }} className="text-xs font-bold">Ativa</span>
+          <span style={{ color: 'var(--color-primary)' }} className="text-xs font-semibold">
+            Markdown
+          </span>
         </div>
         <div
           style={{ background: 'color-mix(in srgb, var(--color-border) 60%, transparent)' }}
           className="w-full h-1.5 rounded-full mt-2.5 overflow-hidden"
         >
           <div
-            style={{ background: 'var(--color-primary)' }}
-            className="h-full rounded-full w-full opacity-80"
+            style={{
+              width: '100%',
+              background: 'var(--color-primary)',
+            }}
+            className="h-full rounded-full"
           />
         </div>
         <div style={{ color: 'var(--color-text-muted)' }} className="flex items-center justify-between mt-2 text-[11px]">
-          <span>Markdown & Wiki-links</span>
+          <span>Base sincronizada</span>
           <span
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-medium"
@@ -196,9 +199,9 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         </div>
       </div>
 
-      {/* KPI 4: Habits & Momentum */}
+      {/* KPI 4: Projects & Git */}
       <div
-        onClick={onNavigateToHabits}
+        onClick={onNavigateToProjects}
         style={{
           background: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
@@ -208,7 +211,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
       >
         <div className="flex items-center justify-between mb-2">
-          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Hábitos Hoje</span>
+          <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-semibold">Projetos & Git</span>
           <div
             style={{
               background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
@@ -216,15 +219,15 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg"
           >
-            <Flame className="w-4 h-4" />
+            <FolderKanban className="w-4 h-4" />
           </div>
         </div>
         <div className="flex items-baseline justify-between">
           <div style={{ color: 'var(--color-text)' }} className="text-xl font-bold">
-            {habitsCompletedToday} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">/ {totalHabits || 1} feitos</span>
+            {projectsCount} <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-normal">repositórios</span>
           </div>
           <span style={{ color: 'var(--color-primary)' }} className="text-xs font-bold">
-            {totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0}%
+            Ativos
           </span>
         </div>
         <div
@@ -233,19 +236,19 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
         >
           <div
             style={{
-              width: `${totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0}%`,
+              width: '100%',
               background: 'var(--color-primary)',
             }}
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full"
           />
         </div>
         <div style={{ color: 'var(--color-text-muted)' }} className="flex items-center justify-between mt-2 text-[11px]">
-          <span>Rotina diária</span>
+          <span>Organon Git Engine</span>
           <span
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-medium"
           >
-            Cumprir <ArrowUpRight className="w-3 h-3" />
+            Acessar <ArrowUpRight className="w-3 h-3" />
           </span>
         </div>
       </div>

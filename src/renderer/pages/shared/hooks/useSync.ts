@@ -176,8 +176,6 @@ export function useSync({
       const remoteDelCards         = new Set(deletedIds.get('cards') ?? [])
       const remoteDelProjects      = new Set(deletedIds.get('projects') ?? [])
       const remoteDelEvents        = new Set(deletedIds.get('calendar_events') ?? [])
-      const remoteDelHabits        = new Set(deletedIds.get('habits') ?? [])
-      const remoteDelHabitEntries  = new Set(deletedIds.get('habit_entries') ?? [])
       const remoteDelBills         = new Set(deletedIds.get('finance_bills') ?? [])
       const remoteDelExpenses      = new Set(deletedIds.get('finance_expenses') ?? [])
       const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
@@ -217,8 +215,6 @@ export function useSync({
         noteFolders:    mergeById(rawStore.noteFolders.filter(f => !deletedFolderIds.has(f.id)), pulled.noteFolders, deletedFolderIds),
         calendarEvents: pf.has('calendar_events') ? rawStore.calendarEvents : mergeById(rawStore.calendarEvents.filter(e => !deletedEventIds.has(e.id)), pulled.calendarEvents, deletedEventIds),
         projects:       pf.has('projects') ? rawStore.projects : mergeById(rawStore.projects.filter(p => !remoteDelProjects.has(p.id)), pulled.projects),
-        habits:         pf.has('habits') ? rawStore.habits : mergeById(rawStore.habits.filter(h => !remoteDelHabits.has(h.id)), pulled.habits),
-        habitEntries:   pf.has('habit_entries') ? rawStore.habitEntries : mergeById(rawStore.habitEntries.filter(e => !remoteDelHabitEntries.has(e.id) && !remoteDelHabits.has(e.habitId)), pulled.habitEntries),
         bills:          pf.has('finance_bills') ? rawStore.bills : mergeById(rawStore.bills.filter(b => !remoteDelBills.has(b.id)), pulled.bills),
         expenses:       pf.has('finance_expenses') ? rawStore.expenses : mergeById(rawStore.expenses.filter(e => !remoteDelExpenses.has(e.id)), pulled.expenses),
         incomes:        pf.has('finance_incomes') ? rawStore.incomes : mergeById(rawStore.incomes.filter(i => !remoteDelIncomes.has(i.id)), pulled.incomes),
@@ -256,8 +252,6 @@ export function useSync({
           noteFolders:    mergeById(freshStore.noteFolders, merged.noteFolders),
           calendarEvents: mergeById(freshStore.calendarEvents, merged.calendarEvents),
           projects:       mergeById(freshStore.projects, merged.projects),
-          habits:         mergeById(freshStore.habits, merged.habits),
-          habitEntries:   mergeById(freshStore.habitEntries, merged.habitEntries),
           bills:          mergeById(freshStore.bills, merged.bills),
           expenses:       mergeById(freshStore.expenses, merged.expenses),
           incomes:        mergeById(freshStore.incomes, merged.incomes),
@@ -420,8 +414,6 @@ export function useSync({
         const remoteDelCards         = new Set(deletedIds.get('cards') ?? [])
         const remoteDelProjects      = new Set(deletedIds.get('projects') ?? [])
         const remoteDelEvents        = new Set(deletedIds.get('calendar_events') ?? [])
-        const remoteDelHabits        = new Set(deletedIds.get('habits') ?? [])
-        const remoteDelHabitEntries  = new Set(deletedIds.get('habit_entries') ?? [])
         const remoteDelBills         = new Set(deletedIds.get('finance_bills') ?? [])
         const remoteDelExpenses      = new Set(deletedIds.get('finance_expenses') ?? [])
         const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
@@ -457,8 +449,6 @@ export function useSync({
           noteFolders:    mergeById(rawStore.noteFolders.filter(f => !deletedFolderIds.has(f.id)), pulled.noteFolders, deletedFolderIds),
           calendarEvents: mergeById(rawStore.calendarEvents.filter(e => !deletedEventIds.has(e.id)), pulled.calendarEvents, deletedEventIds),
           projects:       mergeById(rawStore.projects.filter(p => !remoteDelProjects.has(p.id)), pulled.projects),
-          habits:         mergeById(rawStore.habits.filter(h => !remoteDelHabits.has(h.id)), pulled.habits),
-          habitEntries:   mergeById(rawStore.habitEntries.filter(e => !remoteDelHabitEntries.has(e.id) && !remoteDelHabits.has(e.habitId)), pulled.habitEntries),
           bills:          mergeById(rawStore.bills.filter(b => !remoteDelBills.has(b.id)), pulled.bills),
           expenses:       mergeById(rawStore.expenses.filter(e => !remoteDelExpenses.has(e.id)), pulled.expenses),
           incomes:        mergeById(rawStore.incomes.filter(i => !remoteDelIncomes.has(i.id)), pulled.incomes),

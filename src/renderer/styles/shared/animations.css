@@ -69,8 +69,6 @@
 .projects-sidebar,
 .notes-tree-sidebar,
 .settings-sidebar,
-.habits-sidebar,
-.crm-sidebar,
 .study-side-panel,
 .fin-sidebar,
 .financial-sidebar,
@@ -91,8 +89,7 @@
 /* Transições Suaves nos Itens das Sidebars */
 .notes-tree-row,
 .projects-sidebar-item,
-.settings-nav-item,
-.habits-nav-item {
+.settings-nav-item {
   transition: background 120ms ease,
               color 120ms ease,
               transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -178,9 +175,7 @@ button:active:not(:disabled),
 .workflow-card,
 .sprint-card,
 .planning-card,
-.projects-dashboard-card,
-.habits-card,
-.crm-card {
+.projects-dashboard-card {
   transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
               border-color 150ms ease,
@@ -191,8 +186,6 @@ button:active:not(:disabled),
 .transcripts-card:hover,
 .workflow-card:hover,
 .sprint-card:hover,
-.planning-card:hover,
-.habits-card:hover,
-.crm-card:hover {
+.planning-card:hover {
   transform: translateY(-2px);
 }

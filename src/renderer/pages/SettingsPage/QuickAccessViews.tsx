@@ -104,16 +104,6 @@ export const AVAILABLE_VIEWS: ViewOption[] = [
     ),
   },
   {
-    view: 'habits',
-    label: 'Hábitos',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M13 3L6.5 10.5 3 7" />
-        <circle cx="8" cy="8" r="6.5" />
-      </svg>
-    ),
-  },
-  {
     view: 'study',
     label: 'Estudos',
     icon: (

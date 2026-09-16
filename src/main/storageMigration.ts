@@ -24,7 +24,6 @@ export interface StorageSummary {
   notes: number
   noteFolders: number
   cards: number
-  habits: number
   calendarEvents: number
   projects: number
   meetings: number
@@ -55,7 +54,6 @@ const summarizeStore = (store: Store): StorageSummary => ({
   notes: store.notes.length,
   noteFolders: store.noteFolders.length,
   cards: store.cards.length,
-  habits: store.habits.length,
   calendarEvents: store.calendarEvents.length,
   projects: store.projects.length,
   meetings: store.meetings.length,
@@ -122,10 +120,8 @@ const createStorageTree = (root: string): void => {
     path.join(root, 'Dados', 'Notas'),
     path.join(root, 'Dados', 'Planejamento'),
     path.join(root, 'Dados', 'Calendario'),
-    path.join(root, 'Dados', 'Habitos'),
     path.join(root, 'Dados', 'Financeiro'),
     path.join(root, 'Dados', 'Projetos'),
-    path.join(root, 'Dados', 'CRM'),
     path.join(root, 'Dados', 'Reunioes'),
     path.join(root, 'Anexos', 'Imagens'),
     path.join(root, 'Anexos', 'Audios'),
@@ -162,7 +158,7 @@ export const getInstallerStatus = (): InstallerStatus => {
   const config = getConfig()
   const currentPath = getDataPath()
   let summary: StorageSummary = {
-    notes: 0, noteFolders: 0, cards: 0, habits: 0,
+    notes: 0, noteFolders: 0, cards: 0,
     calendarEvents: 0, projects: 0, meetings: 0, playbooks: 0,
   }
   try {

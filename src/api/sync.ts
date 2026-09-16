@@ -5,7 +5,7 @@
 import { organonApi, SyncOperation, SyncChange } from './organon'
 import type {
   Store, Card, Note, NoteFolder, CalendarEvent, Project,
-  Habit, HabitEntry, Bill, Expense, IncomeEntry,
+  Bill, Expense, IncomeEntry,
   SavingsGoal, Investment, Meeting, Playbook, StudyGoal, StudyMediaItem,
   FinancialConfig, ColorPalette, BudgetCategory,
   ChecklistItem, CardPriority, CardStatus,
@@ -25,8 +25,6 @@ export interface PartialSyncedStore {
   noteFolders: NoteFolder[]
   calendarEvents: CalendarEvent[]
   projects: Project[]
-  habits: Habit[]
-  habitEntries: HabitEntry[]
   bills: Bill[]
   expenses: Expense[]
   incomes: IncomeEntry[]
@@ -156,33 +154,6 @@ function calendarEventToApi(e: CalendarEvent): Payload {
     category_id: e.categoryId ?? null,
     created_at: e.createdAt,
     updated_at: e.updatedAt,
-  }
-}
-
-function habitToApi(h: Habit): Payload {
-  return {
-    name: h.name,
-    type: h.type,
-    target: h.target ?? 1,
-    frequency: h.frequency,
-    weekly_target: h.weeklyTarget ?? 1,
-    week_days: h.weekDays ?? [],
-    trigger: h.trigger ?? '',
-    reason: h.reason ?? '',
-    minimum_target: h.minimumTarget ?? 0,
-    color: h.color ?? '',
-    sort_order: i32(h.order, 0),
-    created_at: h.createdAt,
-  }
-}
-
-function habitEntryToApi(e: HabitEntry): Payload {
-  return {
-    habit_id: e.habitId,
-    date: e.date,
-    value: e.value ?? 0,
-    skipped: e.skipped ?? false,
-    skip_reason: e.skipReason ?? '',
   }
 }
 
@@ -426,35 +397,6 @@ export function calendarEventFromApi(id: string, p: Payload): CalendarEvent {
     categoryId: s(p.category_id) || s(p.category) || null,
     createdAt: s(p.created_at) || now(),
     updatedAt: s(p.updated_at) || now(),
-  }
-}
-
-export function habitFromApi(id: string, p: Payload): Habit {
-  return {
-    id,
-    name: s(p.name),
-    type: (p.type as Habit['type']) ?? 'check',
-    target: n(p.target, 1),
-    frequency: (p.frequency as Habit['frequency']) ?? 'daily',
-    weeklyTarget: n(p.weekly_target, 1),
-    weekDays: arr<number>(p.week_days),
-    trigger: s(p.trigger),
-    reason: s(p.reason),
-    minimumTarget: n(p.minimum_target),
-    color: s(p.color),
-    order: n(p.sort_order),
-    createdAt: s(p.created_at) || now(),
-  }
-}
-
-export function habitEntryFromApi(id: string, p: Payload): HabitEntry {
-  return {
-    id,
-    habitId: s(p.habit_id),
-    date: s(p.date),
-    value: n(p.value),
-    skipped: b(p.skipped),
-    skipReason: s(p.skip_reason),
   }
 }
 
@@ -702,8 +644,6 @@ function applyChange(
     case 'note_folders':       result.noteFolders.push(noteFolderFromApi(id, p)); break
     case 'calendar_events':    result.calendarEvents.push(calendarEventFromApi(id, p)); break
     case 'projects':           result.projects.push(projectFromApi(id, p)); break
-    case 'habits':             result.habits.push(habitFromApi(id, p)); break
-    case 'habit_entries':      result.habitEntries.push(habitEntryFromApi(id, p)); break
     case 'finance_bills':      result.bills.push(billFromApi(id, p)); break
     case 'finance_expenses':   result.expenses.push(expenseFromApi(id, p)); break
     case 'finance_incomes':    result.incomes.push(incomeFromApi(id, p)); break
@@ -792,14 +732,12 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   const safeStore = store as Partial<Store>
   const safeStudy = (safeStore.study ?? {}) as Partial<Store['study']>
 
-  const habitEntries = arr<HabitEntry>(safeStore.habitEntries)
   const notes        = arr<Note>(safeStore.notes)
   const cards        = arr<Card>(safeStore.cards)
   const studyMedia   = arr<StudyMediaItem>(safeStudy.mediaItems)
   const studyGoals   = arr<StudyGoal>(safeStudy.goals)
   const playbooks    = arr<Playbook>(safeStore.playbooks)
   const noteFolders  = arr<NoteFolder>(safeStore.noteFolders)
-  const habits       = arr<Habit>(safeStore.habits)
   const projects     = arr<Project>(safeStore.projects)
   const calendarEvents = arr<CalendarEvent>(safeStore.calendarEvents)
   const bills        = arr<Bill>(safeStore.bills)
@@ -832,7 +770,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   }
 
   // Ordem de delete: filhos antes dos pais
-  addGroup('habit_entries',        habitEntries.map(e => e.id))
   addGroup('finance_expenses',     expensesSorted.map(e => e.id))
   addGroup('notes',                notes.map(n => n.id))
   addGroup('cards',                cards.map(c => c.id))
@@ -844,7 +781,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
     const ids = noteFolderLevels[i].map(f => f.id)
     if (ids.length > 0) resourceGroups.push({ label: 'note_folders', ops: makeDeleteOps('note_folders', ids) })
   }
-  addGroup('habits',               habits.map(h => h.id))
   addGroup('projects',             projects.map(p => p.id))
   addGroup('calendar_events',      calendarEvents.map(e => e.id))
   addGroup('finance_bills',        bills.map(b => b.id))
@@ -904,7 +840,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
  */
 const PUSH_RESOURCE_LABELS: Record<string, string> = {
   projects: 'Projetos',
-  habits: 'Hábitos',
   calendar_events: 'Eventos de calendário',
   finance_bills: 'Contas',
   finance_incomes: 'Rendas',
@@ -922,7 +857,6 @@ const PUSH_RESOURCE_LABELS: Record<string, string> = {
   note_folders: 'Pastas de notas',
   notes: 'Notas',
   cards: 'Cards',
-  habit_entries: 'Registros de hábitos',
   finance_expenses: 'Despesas',
   color_palettes: 'Paletas de cores',
 }
@@ -941,8 +875,6 @@ export async function pushAllToApi(
   const noteFolders = arr<NoteFolder>(safeStore.noteFolders)
   const calendarEvents = arr<CalendarEvent>(safeStore.calendarEvents)
   const projects = arr<Project>(safeStore.projects)
-  const habits = arr<Habit>(safeStore.habits)
-  const habitEntries = arr<HabitEntry>(safeStore.habitEntries)
   const bills = arr<Bill>(safeStore.bills)
   const expenses = arr<Expense>(safeStore.expenses)
   const incomes = arr<IncomeEntry>(safeStore.incomes)
@@ -991,7 +923,6 @@ export async function pushAllToApi(
 
   // 1. Entidades independentes
   addGroup('projects',              makeOps('projects',              projects,       projectToApi as (i: never) => Payload))
-  addGroup('habits',                makeOps('habits',                habits,         habitToApi as (i: never) => Payload))
   addGroup('calendar_events',       makeOps('calendar_events',       calendarEvents, calendarEventToApi as (i: never) => Payload))
   addGroup('finance_bills',         makeOps('finance_bills',         bills,          billToApi as (i: never) => Payload))
   addGroup('finance_incomes',       makeOps('finance_incomes',       incomes,        incomeToApi as (i: never) => Payload))
@@ -1089,10 +1020,7 @@ export async function pushAllToApi(
   // 4. cards: depende de projects
   addGroup('cards', makeOps('cards', cards, cardToApi as (i: never) => Payload))
 
-  // 5. habit_entries: depende de habits
-  addGroup('habit_entries', makeOps('habit_entries', habitEntries, habitEntryToApi as (i: never) => Payload))
-
-  // 6. expenses: toposort garante parcela-pai antes de filhos
+  // 5. expenses: toposort garante parcela-pai antes de filhos
   addGroup('finance_expenses', toposort(expenses).map(e => ({
     resource: 'finance_expenses', operation: 'upsert' as const,
     id: e.id, payload: expenseToApi(e), client_updated_at: clientTime,
@@ -1299,7 +1227,7 @@ export async function pullFromApi(since?: string): Promise<PullResult> {
 
   const store: PartialSyncedStore = {
     cards: [], notes: [], noteFolders: [], calendarEvents: [],
-    projects: [], habits: [], habitEntries: [],
+    projects: [],
     bills: [], expenses: [], incomes: [], savingsGoals: [], investments: [], meetings: [],
     playbooks: [], studyGoals: [], studyMediaItems: [],
     financeConfig: null, financeConfigBudgetCategories: null, studyConfig: null,

@@ -55,7 +55,6 @@ export async function getDashboard(token: string) {
   return api<{
     tasks: any[]
     events: any[]
-    habits: any[]
     finance: any
     goals: any[]
     fetched_at: string
@@ -70,7 +69,6 @@ export async function getMobileHome(token: string) {
   return api<{
     pending_tasks: number
     today_events: any[]
-    habits_today: number
     balance: { income: number; expenses: number }
   }>('/mobile/home', { token })
 }
@@ -235,33 +233,6 @@ export const FinanceAPI = {
   },
 }
 
-// ============================================================
-// HABITS
-// ============================================================
-
-export const HabitsAPI = {
-  list: (token: string) => api<{ items: any[]; nextCursor: string | null }>('/habits', { token }),
-  create: (token: string, data: any) =>
-    api(`/habits`, { method: 'POST', body: data, token }),
-  update: (token: string, id: string, data: any) =>
-    api(`/habits/${id}`, { method: 'PATCH', body: data, token }),
-  delete: (token: string, id: string) =>
-    api(`/habits/${id}`, { method: 'DELETE', token }),
-
-  // Sub-recurso: entries
-  entries: {
-    list: (token: string, habitId?: string, from?: string, to?: string) => {
-      const params = new URLSearchParams()
-      if (habitId) params.set('habit_id', habitId)
-      if (from) params.set('from', from)
-      if (to) params.set('to', to)
-      const qs = params.toString() ? `?${params}` : ''
-      return api<any[]>(`/habits/entries${qs}`, { token })
-    },
-    upsert: (token: string, data: { habit_id: string; date: string; value: number }) =>
-      api(`/habits/entries`, { method: 'POST', body: data, token }),
-  },
-}
 
 // ============================================================
 // CRM (tudo em 1 request!)

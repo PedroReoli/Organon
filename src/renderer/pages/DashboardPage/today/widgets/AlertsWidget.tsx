@@ -4,12 +4,10 @@
  * Consome o hook `useDashboardAlerts`. Ordena por urgencia (menos tempo
  * primeiro). Cada item e clicavel e encaminha para o callback `onOpenItem`
  * com o id do item de origem.
- *
- * Definido no upgrade 05 (foundations).
  */
 
 import React from 'react'
-import type { Bill, CalendarEvent, Card, DashboardWidgetColSpan, Habit, HabitEntry } from '@types'
+import type { Bill, CalendarEvent, Card, DashboardWidgetColSpan } from '@types'
 import {
   useDashboardAlerts,
   type DashboardAlertKind,
@@ -21,8 +19,6 @@ interface AlertsWidgetProps {
   cards: Card[]
   calendarEvents: CalendarEvent[]
   bills: Bill[]
-  habits: Habit[]
-  habitEntries: HabitEntry[]
   editMode?: boolean
   onRemove?: () => void
   onSpanChange?: (span: DashboardWidgetColSpan) => void
@@ -31,21 +27,18 @@ interface AlertsWidgetProps {
   onOpenCard?: (cardId: string) => void
   onOpenEvent?: (eventId: string) => void
   onOpenBill?: (billId: string) => void
-  onOpenHabit?: (habitId: string) => void
 }
 
 const KIND_ICON: Record<DashboardAlertKind, string> = {
   'overdue-card': '!',
   'upcoming-event': '@',
   'due-bill': '$',
-  'missed-habit': '#',
 }
 
 const KIND_LABEL: Record<DashboardAlertKind, string> = {
   'overdue-card': 'Card atrasado',
   'upcoming-event': 'Evento proximo',
   'due-bill': 'Conta vencendo',
-  'missed-habit': 'Habito pendente',
 }
 
 export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
@@ -53,8 +46,6 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
   cards,
   calendarEvents,
   bills,
-  habits,
-  habitEntries,
   editMode,
   onRemove,
   onSpanChange,
@@ -63,14 +54,11 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
   onOpenCard,
   onOpenEvent,
   onOpenBill,
-  onOpenHabit,
 }) => {
   const { alerts } = useDashboardAlerts({
     cards,
     calendarEvents,
     bills,
-    habits,
-    habitEntries,
   })
 
   const handleClick = (kind: DashboardAlertKind, sourceId: string) => {
@@ -83,9 +71,6 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
         break
       case 'due-bill':
         onOpenBill?.(sourceId)
-        break
-      case 'missed-habit':
-        onOpenHabit?.(sourceId)
         break
     }
   }

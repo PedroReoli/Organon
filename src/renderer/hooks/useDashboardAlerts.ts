@@ -4,19 +4,16 @@
  * Define um tipo comum `DashboardAlert` e retorna uma lista ordenada
  * por urgencia (menos tempo restante primeiro). Zero side effects,
  * puramente derivado dos dados passados por parametro.
- *
- * Definido no upgrade 05. Consumido pelo `AlertsWidget`.
  */
 
 import { useMemo } from 'react'
-import type { Bill, CalendarEvent, Card, Habit, HabitEntry } from '../types'
+import type { Bill, CalendarEvent, Card } from '../types'
 import { expandCalendarEvents, getTodayISO } from '../utils'
 
 export type DashboardAlertKind =
   | 'overdue-card'
   | 'upcoming-event'
   | 'due-bill'
-  | 'missed-habit'
 
 export interface DashboardAlert {
   id: string
@@ -33,8 +30,6 @@ interface UseDashboardAlertsOptions {
   cards: Card[]
   calendarEvents: CalendarEvent[]
   bills: Bill[]
-  habits: Habit[]
-  habitEntries: HabitEntry[]
   /** Janela (min) para considerar um evento "proximo". Default: 60. */
   upcomingWindowMinutes?: number
 }
@@ -46,10 +41,6 @@ function timeToMinutes(time: string | null): number | null {
   return h * 60 + m
 }
 
-function currentMinutesSinceMidnight(now: Date): number {
-  return now.getHours() * 60 + now.getMinutes()
-}
-
 function formatRelative(minutes: number): string {
   const abs = Math.abs(minutes)
   const sign = minutes < 0 ? 'ha ' : 'em '
@@ -59,77 +50,65 @@ function formatRelative(minutes: number): string {
   return m === 0 ? `${sign}${h}h` : `${sign}${h}h${m}m`
 }
 
-/**
- * Cards P1/P2 com data anterior a hoje e status diferente de done.
- */
 export function getOverdueCards(cards: Card[], todayISO: string): DashboardAlert[] {
   return cards
-    .filter(
-      (c): c is Card & { date: string } =>
-        c.hasDate &&
-        c.date != null &&
-        c.date < todayISO &&
-        c.status !== 'done' &&
-        (c.priority === 'P1' || c.priority === 'P2'),
-    )
+    .filter((c) => c.status !== 'done' && c.date && c.date < todayISO)
     .map((c) => {
-      const diffDays = Math.floor(
-        (new Date(todayISO + 'T00:00:00').getTime() -
-          new Date(c.date + 'T00:00:00').getTime()) /
-          86_400_000,
+      const daysOverdue = Math.max(
+        1,
+        Math.floor(
+          (new Date(todayISO).getTime() - new Date(c.date!).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
       )
       return {
         id: `overdue-card-${c.id}`,
         kind: 'overdue-card' as const,
         title: c.title,
-        subtitle: `${c.priority} atrasado ${diffDays}d`,
-        minutesRemaining: -diffDays * 1440,
+        subtitle: `atrasado ha ${daysOverdue}d (${c.date})`,
+        minutesRemaining: -daysOverdue * 1440,
         sourceId: c.id,
       }
     })
 }
 
-/**
- * Eventos dentro da janela de `upcomingWindowMinutes` minutos a partir de agora.
- * Usa expansao de recorrencias.
- */
 export function getUpcomingEvents(
-  calendarEvents: CalendarEvent[],
+  events: CalendarEvent[],
   todayISO: string,
   now: Date,
   windowMinutes: number,
 ): DashboardAlert[] {
-  const expanded = expandCalendarEvents(calendarEvents, todayISO, todayISO)
-  const nowMin = currentMinutesSinceMidnight(now)
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const expanded = expandCalendarEvents(events, todayISO, todayISO)
 
   return expanded
+    .filter((e) => e.date === todayISO && e.time)
     .map((e) => {
-      const startMin = timeToMinutes(e.time)
-      if (startMin == null) return null
-      const delta = startMin - nowMin
-      if (delta < 0 || delta > windowMinutes) return null
-      return {
-        id: `upcoming-event-${e.id}`,
-        kind: 'upcoming-event' as const,
-        title: e.title,
-        subtitle: `${e.time} — ${formatRelative(delta)}`,
-        minutesRemaining: delta,
-        sourceId:
-          (e as CalendarEvent & { sourceId?: string }).sourceId ?? e.id,
-      }
+      const eventMinutes = timeToMinutes(e.time)!
+      const diff = eventMinutes - currentMinutes
+      return { event: e, diff }
     })
-    .filter((a): a is NonNullable<typeof a> => a !== null) as DashboardAlert[]
+    .filter(({ diff }) => diff >= -15 && diff <= windowMinutes)
+    .map(({ event: e, diff }) => ({
+      id: `upcoming-event-${e.id}-${e.date}`,
+      kind: 'upcoming-event' as const,
+      title: e.title,
+      subtitle: `${e.time} (${formatRelative(diff)})`,
+      minutesRemaining: diff,
+      sourceId: e.id,
+    }))
 }
 
-/**
- * Contas com dueDay <= dia atual no mes corrente e nao pagas.
- */
 export function getDueBills(bills: Bill[], now: Date): DashboardAlert[] {
-  const today = now.getDate()
+  const currentDay = now.getDate()
   return bills
-    .filter((b) => !b.isPaid && b.dueDay <= today + 3)
+    .filter((b) => !b.isPaid)
     .map((b) => {
-      const daysDiff = b.dueDay - today
+      const daysDiff = b.dueDay - currentDay
+      return { bill: b, daysDiff }
+    })
+    .filter(({ daysDiff }) => daysDiff >= -3 && daysDiff <= 3)
+    .map(({ bill: b, daysDiff }) => {
       const subtitle =
         daysDiff < 0
           ? `vencida ha ${Math.abs(daysDiff)}d`
@@ -147,49 +126,11 @@ export function getDueBills(bills: Bill[], now: Date): DashboardAlert[] {
     })
 }
 
-/**
- * Habitos agendados para hoje e ainda nao marcados (nem skipped).
- */
-export function getMissedHabits(
-  habits: Habit[],
-  entries: HabitEntry[],
-  todayISO: string,
-  now: Date,
-): DashboardAlert[] {
-  const dayOfWeek = now.getDay()
-  const entriesToday = entries.filter((e) => e.date === todayISO)
-  const hourMin = currentMinutesSinceMidnight(now)
-
-  return habits
-    .filter((h) => {
-      if (h.frequency === 'weekly' && h.weekDays.length > 0) {
-        return h.weekDays.includes(dayOfWeek)
-      }
-      return true
-    })
-    .filter((h) => {
-      const entry = entriesToday.find((e) => e.habitId === h.id)
-      if (!entry) return true
-      if (entry.skipped) return false
-      return entry.value < h.target
-    })
-    .filter(() => hourMin >= 12 * 60)
-    .map((h) => ({
-      id: `missed-habit-${h.id}`,
-      kind: 'missed-habit' as const,
-      title: h.name,
-      subtitle: 'ainda nao marcado hoje',
-      minutesRemaining: 0,
-      sourceId: h.id,
-    }))
-}
-
 export interface UseDashboardAlertsResult {
   alerts: DashboardAlert[]
   overdueCards: DashboardAlert[]
   upcomingEvents: DashboardAlert[]
   dueBills: DashboardAlert[]
-  missedHabits: DashboardAlert[]
 }
 
 export function useDashboardAlerts(
@@ -199,8 +140,6 @@ export function useDashboardAlerts(
     cards,
     calendarEvents,
     bills,
-    habits,
-    habitEntries,
     upcomingWindowMinutes = 60,
   } = options
 
@@ -216,15 +155,13 @@ export function useDashboardAlerts(
       upcomingWindowMinutes,
     )
     const dueBills = getDueBills(bills, now)
-    const missedHabits = getMissedHabits(habits, habitEntries, todayISO, now)
 
     const alerts = [
       ...overdueCards,
       ...upcomingEvents,
       ...dueBills,
-      ...missedHabits,
     ].sort((a, b) => a.minutesRemaining - b.minutesRemaining)
 
-    return { alerts, overdueCards, upcomingEvents, dueBills, missedHabits }
-  }, [cards, calendarEvents, bills, habits, habitEntries, upcomingWindowMinutes])
+    return { alerts, overdueCards, upcomingEvents, dueBills }
+  }, [cards, calendarEvents, bills, upcomingWindowMinutes])
 }

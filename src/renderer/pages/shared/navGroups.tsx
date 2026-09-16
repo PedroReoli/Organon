@@ -62,56 +62,10 @@ const icons = {
       <rect x="9" y="9" width="5" height="5" rx="1" />
     </svg>
   ),
-  habits: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M13 3L6.5 10.5 3 7" />
-      <circle cx="8" cy="8" r="6.5" />
-    </svg>
-  ),
   study: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2.5 4.5L8 2l5.5 2.5L8 7 2.5 4.5Z" />
       <path d="M3 6.5V11l5 2.5 5-2.5V6.5" />
-    </svg>
-  ),
-  financial: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <line x1="8" y1="2" x2="8" y2="14" />
-      <path d="M11 4H6.5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4H5" />
-    </svg>
-  ),
-  organization: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="3" width="12" height="11" rx="2" />
-      <path d="M2 6h12" />
-      <path d="M5 2v2M11 2v2" />
-    </svg>
-  ),
-  content: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4Z" />
-      <path d="M9 2v4h4" />
-    </svg>
-  ),
-  tools: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="2" width="5" height="5" rx="1" />
-      <rect x="9" y="2" width="5" height="5" rx="1" />
-      <rect x="2" y="9" width="5" height="5" rx="1" />
-      <rect x="9" y="9" width="5" height="5" rx="1" />
-    </svg>
-  ),
-  personal: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M13 3L6.5 10.5 3 7" />
-      <circle cx="8" cy="8" r="6.5" />
-    </svg>
-  ),
-  crm: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4z" />
-      <path d="M6 8h4M6 10h4" />
-      <circle cx="8" cy="6" r="1" fill="currentColor" />
     </svg>
   ),
   playbook: (
@@ -125,6 +79,20 @@ const icons = {
       <circle cx="8" cy="8" r="5.5" />
       <path d="M8 2.5v11" />
       <path d="M2.5 8h11" />
+    </svg>
+  ),
+  organization: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="2" y="3" width="12" height="11" rx="2" />
+      <path d="M2 6h12" />
+      <path d="M5 2v2M11 2v2" />
+    </svg>
+  ),
+  content: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4Z" />
+      <path d="M9 2v4h4" />
+      <path d="M5 8h6M5 11h4" />
     </svg>
   ),
 }

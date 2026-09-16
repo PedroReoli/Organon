@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto'
 import type {
   ColorPalette,
   FinancialConfig,
-  Habit,
   IncomeEntry,
   Investment,
   LegacyShortcutKind,
@@ -117,8 +116,6 @@ export const getDefaultStore = (): Store => ({
   clipboardItems: [],
   apps: [],
   macros: [],
-  habits: [],
-  habitEntries: [],
   bills: [],
   expenses: [],
   budgetCategories: [],
@@ -132,9 +129,6 @@ export const getDefaultStore = (): Store => ({
   quickAccess: [],
   meetings: [],
   playbooks: [],
-  crmContacts: [],
-  crmInteractions: [],
-  crmTags: [],
   pendingDeletes: [],
   canvases: [],
   projectSprints: [],
@@ -151,33 +145,6 @@ export const getDefaultStore = (): Store => ({
     debugHudHover: true,
   },
 })
-
-const HABIT_TYPE_MIGRATION: Record<string, string> = {
-  boolean: 'check',
-  count: 'measurable',
-  quantity: 'measurable',
-  time: 'timer',
-  series: 'routine',
-}
-
-function migrateHabitTypes(habits: unknown[]): Habit[] {
-  return habits
-    .filter((h): h is Record<string, unknown> => Boolean(h) && typeof h === 'object')
-    .map((habit) => {
-    const oldType = habit.type as string
-    const newType = HABIT_TYPE_MIGRATION[oldType]
-    if (newType) {
-      habit.type = newType
-      if (oldType === 'count' || oldType === 'quantity') {
-        if (!habit.unit) habit.unit = 'vezes'
-      }
-      if (oldType === 'time') {
-        if (!habit.unit) habit.unit = 'min'
-      }
-    }
-    return habit as unknown as Habit
-  })
-}
 
 export const normalizeStore = (input: Partial<Store> | null): Store => {
   const base = getDefaultStore()
@@ -254,8 +221,6 @@ export const normalizeStore = (input: Partial<Store> | null): Store => {
     clipboardItems: Array.isArray(input.clipboardItems) ? input.clipboardItems : base.clipboardItems,
     apps: Array.isArray(input.apps) ? input.apps : base.apps,
     macros: Array.isArray(input.macros) ? input.macros : base.macros,
-    habits: Array.isArray(input.habits) ? migrateHabitTypes(input.habits) : base.habits,
-    habitEntries: Array.isArray(input.habitEntries) ? input.habitEntries : base.habitEntries,
     bills: Array.isArray(input.bills) ? input.bills : base.bills,
     expenses: Array.isArray(input.expenses) ? input.expenses : base.expenses,
     budgetCategories: Array.isArray(input.budgetCategories) ? input.budgetCategories : base.budgetCategories,

@@ -67,6 +67,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
   cards,
   calendarEvents,
   notes,
+  projectsCount = 0,
   onNavigate,
   onGoToPlannerCard,
   onGoToCalendarDate,
@@ -250,11 +251,10 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
         weekCompleted={weekCompleted}
         weekTotal={weekTotal}
         notesCount={notes.length}
-        habitsCompletedToday={0}
-        totalHabits={0}
+        projectsCount={projectsCount}
         onNavigateToTasks={() => onNavigate('planner')}
         onNavigateToNotes={onGoToNotes}
-        onNavigateToHabits={() => onNavigate('habits')}
+        onNavigateToProjects={() => onNavigate('projects')}
       />
 
       {/* Main Charts & Queue Grid (3 Columns) */}

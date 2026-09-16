@@ -130,9 +130,8 @@
   }
 }
 
-/* ── Módulos Adicionais (Hábitos, Calendário, Canvas, Atalhos, Playbook) ─── */
+/* ── Módulos Adicionais (Calendário, Canvas, Atalhos, Playbook) ─── */
 @media (max-width: 640px) {
-  .habits-grid,
   .shortcuts-grid,
   .playbook-catalog-grid,
   .clipboard-list {

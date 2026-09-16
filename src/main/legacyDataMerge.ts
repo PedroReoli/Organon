@@ -60,8 +60,6 @@ export const mergeDataFromOldPath = (oldDataPath: string, currentDataPath: strin
         clipboardItems: mergeArraysById(currentStore.clipboardItems, oldStore.clipboardItems),
         apps: mergeArraysById(currentStore.apps, oldStore.apps),
         macros: mergeArraysById(currentStore.macros, oldStore.macros),
-        habits: mergeArraysById(currentStore.habits, oldStore.habits),
-        habitEntries: mergeArraysById(currentStore.habitEntries, oldStore.habitEntries),
         bills: mergeArraysById(currentStore.bills, oldStore.bills),
         expenses: mergeArraysById(currentStore.expenses, oldStore.expenses),
         budgetCategories: mergeBudgetCategories(currentStore.budgetCategories, oldStore.budgetCategories),
@@ -85,7 +83,6 @@ export const mergeDataFromOldPath = (oldDataPath: string, currentDataPath: strin
         mergedStore.notes.length - currentStore.notes.length +
         mergedStore.colorPalettes.length - currentStore.colorPalettes.length +
         mergedStore.calendarEvents.length - currentStore.calendarEvents.length +
-        mergedStore.habits.length - currentStore.habits.length +
         mergedStore.bills.length - currentStore.bills.length +
         mergedStore.expenses.length - currentStore.expenses.length +
         mergedStore.incomes.length - currentStore.incomes.length +

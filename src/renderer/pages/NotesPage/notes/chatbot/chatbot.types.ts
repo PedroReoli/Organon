@@ -36,7 +36,7 @@ export interface ChatAction {
   icon: React.ReactNode
   prompt: string
   requiresSelection?: boolean
-  context?: 'notes' | 'habits' | 'cards' | 'calendar' | 'finance' | 'crm' | 'general'
+  context?: 'notes' | 'cards' | 'calendar' | 'finance' | 'general'
 }
 
 export interface ScreenContext {

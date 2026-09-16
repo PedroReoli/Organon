@@ -19,7 +19,6 @@ export type AppView =
   | 'notes'
   | 'clipboard'
   | 'apps'
-  | 'habits'
   | 'study'
   | 'financial'
   | 'canvas'
@@ -176,8 +175,8 @@ export const DEFAULT_CLIPBOARD_CONFIG: ClipboardConfig = {
 }
 
 export type DashboardWidgetType =
-  | 'hub-planner' | 'hub-calendar' | 'hub-crm' | 'hub-playbook'
-  | 'hub-projects' | 'hub-notes' | 'hub-habits' | 'hub-study'
+  | 'hub-planner' | 'hub-calendar' | 'hub-playbook'
+  | 'hub-projects' | 'hub-notes' | 'hub-study'
   | 'hub-financial' | 'hub-shortcuts' | 'hub-apps' | 'hub-clipboard' | 'hub-colors'
   | 'report-tasks' | 'report-events' | 'report-week' | 'report-financial'
   | 'report-knowledge' | 'report-tools' | 'report-system'
@@ -262,76 +261,6 @@ export interface AppLaunchLog {
   macroId: string | null
   launchedAt: string
   status?: string
-}
-
-export type HabitType = 'check' | 'measurable' | 'timer' | 'routine'
-export type HabitTypeLegacy = 'boolean' | 'count' | 'time' | 'quantity' | 'series'
-export type HabitFrequency = 'daily' | 'weekly'
-export type HabitSeriesPattern = 'manual' | 'rotating'
-export type HabitUnit = 'vezes' | 'min' | 'pag' | 'kg' | 'ml' | 'km' | 'rep' | 'cal' | string
-
-export interface HabitProgressiveTarget {
-  startValue: number
-  endValue: number
-  incrementPerWeek: number
-  startDate: string
-}
-
-export const HABIT_LEVEL_THRESHOLDS = [0, 100, 500, 1500, 3000] as const
-export const HABIT_LEVEL_NAMES = ['Iniciante', 'Regular', 'Consistente', 'Dedicado', 'Mestre'] as const
-export const HABIT_MILESTONES = [7, 30, 60, 100, 365] as const
-
-export interface HabitMilestone {
-  habitId: string
-  milestone: number
-  date: string
-}
-
-export interface Habit {
-  id: string
-  name: string
-  type: HabitType
-  target: number
-  frequency: HabitFrequency
-  weeklyTarget: number
-  weekDays: number[]
-  trigger: string
-  reason: string
-  minimumTarget: number
-  color: string
-  order: number
-  createdAt: string
-  category?: string
-  isArchived?: boolean
-  seriesLabels?: string[]
-  seriesPattern?: HabitSeriesPattern
-  seriesColors?: Record<string, string>
-  routineSchedule?: Record<string, number[]>
-  unit?: HabitUnit
-  progressiveTarget?: HabitProgressiveTarget
-  stackAfter?: string
-  pausedUntil?: string
-  reminderTime?: string
-  reminderEnabled?: boolean
-  xp?: number
-  level?: number
-  instructions?: string
-  videoUrl?: string
-  imageUrl?: string
-  externalUrl?: string
-  steps?: Array<{ id: string; text: string; done?: boolean }>
-  objectiveId?: string | null
-}
-
-export interface HabitEntry {
-  id: string
-  habitId: string
-  date: string
-  value: number
-  skipped: boolean
-  skipReason: string
-  note?: string
-  seriesLabel?: string
 }
 
 export interface ThemeSettings {
@@ -429,12 +358,12 @@ export type NavbarGroupId = 'organization' | 'work' | 'tools' | 'content' | 'per
 
 export type NavbarView =
   | 'agenda' | 'planner' | 'calendar' | 'crm' | 'playbook' | 'projects'
-  | 'colors' | 'shortcuts' | 'apps' | 'notes' | 'clipboard' | 'habits'
+  | 'colors' | 'shortcuts' | 'apps' | 'notes' | 'clipboard'
   | 'study' | 'financial' | 'audio' | 'transcripts' | 'workflows' | 'system-design'
 
 export type NavIconId =
   | 'agenda' | 'planner' | 'calendar' | 'shortcuts' | 'projects' | 'notes'
-  | 'clipboard' | 'apps' | 'habits' | 'study' | 'financial' | 'organization'
+  | 'clipboard' | 'apps' | 'study' | 'financial' | 'organization'
   | 'content' | 'tools' | 'personal' | 'crm' | 'playbook' | 'colors'
   | 'transcripts' | 'audio' | 'dashboard' | 'system-design'
 
@@ -533,8 +462,6 @@ export interface Store {
   appGroups?: AppGroup[]
   appLaunchLogs?: AppLaunchLog[]
   appTags?: AppTag[]
-  habits: Habit[]
-  habitEntries: HabitEntry[]
   bills: Bill[]
   expenses: Expense[]
   budgetCategories: BudgetCategory[]
@@ -628,18 +555,16 @@ export const DEFAULT_DASHBOARD_WIDGETS: DashboardWidget[] = [
   { id: 'w-hub-planner',      type: 'hub-planner',      colSpan: 1, order: 7,  visible: true },
   { id: 'w-hub-calendar',     type: 'hub-calendar',     colSpan: 1, order: 8,  visible: true },
   { id: 'w-hub-notes',        type: 'hub-notes',        colSpan: 1, order: 9,  visible: true },
-  { id: 'w-hub-habits',       type: 'hub-habits',       colSpan: 1, order: 10, visible: true },
-  { id: 'w-hub-study',        type: 'hub-study',        colSpan: 1, order: 11, visible: true },
-  { id: 'w-hub-financial',    type: 'hub-financial',    colSpan: 1, order: 12, visible: true },
-  { id: 'w-hub-crm',          type: 'hub-crm',          colSpan: 1, order: 13, visible: false },
-  { id: 'w-hub-projects',     type: 'hub-projects',     colSpan: 1, order: 14, visible: false },
-  { id: 'w-hub-playbook',     type: 'hub-playbook',     colSpan: 1, order: 15, visible: false },
-  { id: 'w-hub-shortcuts',    type: 'hub-shortcuts',    colSpan: 1, order: 16, visible: false },
-  { id: 'w-hub-apps',         type: 'hub-apps',         colSpan: 1, order: 17, visible: false },
-  { id: 'w-hub-clipboard',    type: 'hub-clipboard',    colSpan: 1, order: 18, visible: false },
-  { id: 'w-hub-colors',       type: 'hub-colors',       colSpan: 1, order: 19, visible: false },
-  { id: 'w-widget-search',    type: 'widget-search',    colSpan: 2, order: 20, visible: false },
-  { id: 'w-widget-datetime',  type: 'widget-datetime',  colSpan: 1, order: 21, visible: false },
+  { id: 'w-hub-study',        type: 'hub-study',        colSpan: 1, order: 10, visible: true },
+  { id: 'w-hub-financial',    type: 'hub-financial',    colSpan: 1, order: 11, visible: true },
+  { id: 'w-hub-projects',     type: 'hub-projects',     colSpan: 1, order: 12, visible: false },
+  { id: 'w-hub-playbook',     type: 'hub-playbook',     colSpan: 1, order: 13, visible: false },
+  { id: 'w-hub-shortcuts',    type: 'hub-shortcuts',    colSpan: 1, order: 14, visible: false },
+  { id: 'w-hub-apps',         type: 'hub-apps',         colSpan: 1, order: 15, visible: false },
+  { id: 'w-hub-clipboard',    type: 'hub-clipboard',    colSpan: 1, order: 16, visible: false },
+  { id: 'w-hub-colors',       type: 'hub-colors',       colSpan: 1, order: 17, visible: false },
+  { id: 'w-widget-search',    type: 'widget-search',    colSpan: 2, order: 18, visible: false },
+  { id: 'w-widget-datetime',  type: 'widget-datetime',  colSpan: 1, order: 19, visible: false },
 ]
 
 export const BUILTIN_DASHBOARD_TEMPLATES: DashboardTemplate[] = [

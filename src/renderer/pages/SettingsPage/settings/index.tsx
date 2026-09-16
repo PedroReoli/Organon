@@ -11,7 +11,6 @@ import { BackupSection }         from './sections/BackupSection'
 import { CloudSection }          from './sections/CloudSection'
 import { AccountSection }        from './sections/AccountSection'
 import { PlannerSection }        from './sections/PlannerSection'
-import { FinancialSection }      from './sections/FinancialSection'
 import { NotesSection }          from './sections/NotesSection'
 import { StudySection }          from './sections/StudySection'
 import { DebugSection }          from './sections/DebugSection'
@@ -104,14 +103,6 @@ export const SettingsView = (props: SettingsViewProps) => {
         <PlannerSection
           activeSection={v.activeSection}
           userLoggedIn={props.userLoggedIn}
-        />
-
-        <FinancialSection
-          activeSection={v.activeSection}
-          monthlyIncome={props.financialConfig?.monthlyIncome ?? 0}
-          monthlySpendingLimit={props.financialConfig?.monthlySpendingLimit ?? 0}
-          currency={props.financialConfig?.currency ?? 'BRL'}
-          onSave={props.onUpdateFinancialConfig ?? (() => {})}
         />
 
         <NotesSection

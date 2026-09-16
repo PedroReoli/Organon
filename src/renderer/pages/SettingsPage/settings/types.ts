@@ -6,12 +6,6 @@ export interface StoreSummary {
   recentNotes: { id: string; title: string; updatedAt: string }[]
 }
 
-export interface FinancialConfigSettings {
-  monthlyIncome: number
-  monthlySpendingLimit: number
-  currency: string
-}
-
 export interface NotesConfigSettings {
   trashRetentionDays: number
   dailyNotesEnabled: boolean
@@ -22,11 +16,6 @@ export interface NotesConfigSettings {
 export interface StudyConfigSettings {
   defaultPresetName: string
   muteSound: boolean
-}
-
-export interface CrmConfigSettings {
-  stages: string[]
-  priorities: string[]
 }
 
 export interface SettingsViewProps {
@@ -59,12 +48,8 @@ export interface SettingsViewProps {
   onUpdateProfilePhoto?: (dataUrl: string | null) => void
   storeSummary?:        StoreSummary
   // Modulos
-  financialConfig?:       FinancialConfigSettings
-  onUpdateFinancialConfig?: (data: FinancialConfigSettings) => void
   notesConfig?:           NotesConfigSettings
   onUpdateNotesConfig?:   (data: NotesConfigSettings) => void
   studyConfig?:           StudyConfigSettings
   onUpdateStudyConfig?:   (data: StudyConfigSettings) => void
-  crmConfig?:             CrmConfigSettings
-  onUpdateCrmConfig?:     (data: CrmConfigSettings) => void
 }

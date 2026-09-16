@@ -23,7 +23,6 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; electronO
     items: [
       { id: 'planner', label: 'Planejamento', icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="1.5" y1="6" x2="14.5" y2="6" /><line x1="5.5" y1="2.5" x2="5.5" y2="6" /><line x1="10.5" y1="2.5" x2="10.5" y2="6" /></svg> },
       { id: 'ides', label: 'IDEs & Editores', icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><polyline points="10.5 11.5 13.5 8 10.5 4.5" /><polyline points="5.5 4.5 2.5 8 5.5 11.5" /></svg> },
-      { id: 'financial', label: 'Financeiro', icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><path d="M8 1.5v13M5 4.5h4.5a2 2 0 0 1 0 4H5.5M5 8.5h5a2 2 0 0 1 0 4H5" /></svg> },
       { id: 'notes', label: 'Notas & Conhecimento', icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><path d="M3 2.5h10a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z" /><line x1="5" y1="5.5" x2="11" y2="5.5" /><line x1="5" y1="8" x2="11" y2="8" /><line x1="5" y1="10.5" x2="9" y2="10.5" /></svg> },
       { id: 'study', label: 'Modo Foco & Estudos', icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><circle cx="8" cy="8" r="5.5" /><polyline points="8 4.5 8 8 10.5 10" /></svg> },
     ],

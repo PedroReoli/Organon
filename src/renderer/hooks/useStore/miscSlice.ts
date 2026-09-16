@@ -38,7 +38,6 @@ export const createMiscSlice = (updateStore: UpdateStoreFn) => {
       cards: [],
       notes: [],
       projects: [],
-      habits: [],
       bills: [],
       expenses: [],
     }))

@@ -29,7 +29,6 @@ export interface AuthTokens {
 export interface DashboardData {
   tasks: Task[]
   events: CalendarEvent[]
-  habits: Habit[]
   finance: FinanceSummary
   goals: SavingsGoal[]
   fetchedAt: string
@@ -38,7 +37,6 @@ export interface DashboardData {
 export interface MobileHome {
   pendingTasks: number
   todayEvents: Array<{ id: string; title: string; time: string | null }>
-  habitsToday: number
   balance: { income: number; expenses: number }
 }
 
@@ -196,34 +194,6 @@ export interface SavingsGoal {
   deletedAt: string | null
 }
 
-// ============================================================
-// HABITS
-// ============================================================
-
-export interface Habit {
-  id: string
-  userId: string
-  name: string
-  description: string | null
-  frequency: string
-  targetValue: number
-  color: string
-  icon: string | null
-  isArchived: boolean
-  createdAt: string
-  updatedAt: string
-  deletedAt: string | null
-}
-
-export interface HabitEntry {
-  id: string
-  userId: string
-  habitId: string
-  entryDate: string
-  value: number
-  notes: string | null
-  createdAt: string
-}
 
 // ============================================================
 // SHORTCUTS

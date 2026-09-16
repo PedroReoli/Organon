@@ -166,47 +166,6 @@ export interface Settings {
   debugHudHover?: boolean
 }
 
-export interface Habit {
-  id: string
-  name: string
-  type: 'check' | 'measurable' | 'timer' | 'routine'
-  target: number
-  frequency: 'daily' | 'weekly'
-  weeklyTarget: number
-  weekDays: number[]
-  trigger: string
-  reason: string
-  minimumTarget: number
-  color: string
-  order: number
-  createdAt: string
-  category?: string
-  isArchived?: boolean
-  seriesLabels?: string[]
-  seriesPattern?: 'manual' | 'rotating'
-  seriesColors?: Record<string, string>
-  routineSchedule?: Record<string, number[]>
-  unit?: string
-  progressiveTarget?: { startValue: number; endValue: number; incrementPerWeek: number; startDate: string }
-  stackAfter?: string
-  pausedUntil?: string
-  reminderTime?: string
-  reminderEnabled?: boolean
-  xp?: number
-  level?: number
-}
-
-export interface HabitEntry {
-  id: string
-  habitId: string
-  date: string
-  value: number
-  skipped: boolean
-  skipReason: string
-  note?: string
-  seriesLabel?: string
-}
-
 export interface Bill {
   id: string
   name: string
@@ -411,8 +370,6 @@ export interface Store {
   clipboardItems: ClipboardItem[]
   apps: AppItem[]
   macros: AppMacro[]
-  habits: Habit[]
-  habitEntries: HabitEntry[]
   bills: Bill[]
   expenses: Expense[]
   budgetCategories: BudgetCategory[]
@@ -424,12 +381,6 @@ export interface Store {
   meetings: Meeting[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   playbooks: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  crmContacts: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  crmInteractions: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  crmTags: any[]
   study: StudyState
   canvases: Canvas[]
   settings: Settings
