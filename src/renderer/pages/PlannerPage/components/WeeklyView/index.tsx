@@ -13,7 +13,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlanningTask } from '../../types/planning.types';
 import { PlanningCardCompact } from '../Card/PlanningCardCompact';
-import { Plus, ChevronLeft, ChevronRight, Clock, FolderKanban } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, FolderKanban, Bell, Tag, Sparkles } from 'lucide-react';
 import type { Day, Period, Project } from '@types';
 
 interface WeeklyViewProps {
@@ -83,17 +83,19 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
       }}
       style={{
         background: isOver
-          ? 'color-mix(in srgb, var(--color-primary) 14%, #0f172a)'
+          ? 'color-mix(in srgb, var(--color-primary, #6366f1) 16%, #0f172a)'
           : isBacklog
           ? '#0c1220'
           : '#0e1526',
         borderColor: isOver
-          ? 'var(--color-primary)'
+          ? 'var(--color-primary, #6366f1)'
           : selectedTaskId
-          ? 'rgba(99,102,241,0.45)'
+          ? 'rgba(99,102,241,0.5)'
           : 'rgba(255,255,255,0.06)',
       }}
       className={`relative flex-1 min-h-[110px] rounded-lg border p-1.5 flex flex-col justify-between transition-all group/slot ${
+        isOver ? 'ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-950/30' : ''
+      } ${
         selectedTaskId ? 'cursor-pointer hover:border-indigo-400 hover:bg-[#141e34]' : ''
       }`}
     >
@@ -192,7 +194,12 @@ export const WeeklyView = ({
     title: string;
     projectId: string;
     priority: 'P1' | 'P2' | 'P3' | 'P4';
+    hasTime: boolean;
     time: string;
+    hasReminder: boolean;
+    reminderOffset: number; // minutes
+    storyPoints: number;
+    tagsInput: string;
   } | null>(null);
 
   // Keyboard navigation
@@ -280,9 +287,9 @@ export const WeeklyView = ({
     return map;
   }, [tasks, weekDays]);
 
-  // Sensors for DnD
+  // Sensors for DnD (constraint distance 6 to avoid false drag on click)
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -346,6 +353,7 @@ export const WeeklyView = ({
   };
 
   const openAddModal = (dayKey?: Day, shiftId?: Period, dateStr?: string, dayLabel?: string) => {
+    const defaultTime = shiftId === 'morning' ? '09:00' : shiftId === 'afternoon' ? '14:00' : shiftId === 'night' ? '19:00' : '';
     setQuickAddModal({
       isOpen: true,
       dayKey,
@@ -355,14 +363,44 @@ export const WeeklyView = ({
       title: '',
       projectId: '',
       priority: 'P3',
-      time: shiftId === 'morning' ? '09:00' : shiftId === 'afternoon' ? '14:00' : shiftId === 'night' ? '19:00' : '',
+      hasTime: !!shiftId,
+      time: defaultTime,
+      hasReminder: false,
+      reminderOffset: 15,
+      storyPoints: 0,
+      tagsInput: '',
     });
   };
 
   const submitQuickAddModal = () => {
     if (!quickAddModal || !quickAddModal.title.trim()) return;
 
-    const { dayKey, shiftId, dateStr, title, projectId, priority, time } = quickAddModal;
+    const {
+      dayKey,
+      shiftId,
+      dateStr,
+      title,
+      projectId,
+      priority,
+      hasTime,
+      time,
+      hasReminder,
+      reminderOffset,
+      storyPoints,
+      tagsInput,
+    } = quickAddModal;
+
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const reminder = hasReminder
+      ? {
+          enabled: true,
+          offsetMinutes: reminderOffset,
+        }
+      : null;
 
     if (dayKey && shiftId && dateStr) {
       onAddTask?.({
@@ -372,7 +410,10 @@ export const WeeklyView = ({
         location: { day: dayKey, period: shiftId },
         projectId: projectId || null,
         priority: priority || 'P3',
-        time: time.trim() || null,
+        time: hasTime && time.trim() ? time.trim() : null,
+        reminder,
+        storyPoints: storyPoints > 0 ? storyPoints : undefined,
+        tags,
         status: 'todo',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -386,6 +427,10 @@ export const WeeklyView = ({
         location: { day: null, period: null },
         projectId: projectId || null,
         priority: priority || 'P3',
+        time: hasTime && time.trim() ? time.trim() : null,
+        reminder,
+        storyPoints: storyPoints > 0 ? storyPoints : undefined,
+        tags,
         status: 'todo',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -421,14 +466,14 @@ export const WeeklyView = ({
 
   return (
     <div className="flex flex-col h-full w-full select-none bg-[#0a0f1d] text-slate-200 overflow-hidden">
-      {/* Top Navigator Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-[#0d1424] shrink-0">
+      {/* Top Navigator Bar with Legend & Date Range */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-[#0d1424] shrink-0 gap-3">
         {/* Navigation Buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setWeekOffset((w) => w - 1)}
-            title="Semana Anterior"
+            title="Semana Anterior (Alt + ←)"
             className="w-7 h-7 rounded border border-slate-700/60 bg-[#121b2f] text-slate-300 hover:text-white hover:border-slate-500 flex items-center justify-center transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -449,15 +494,32 @@ export const WeeklyView = ({
           <button
             type="button"
             onClick={() => setWeekOffset((w) => w + 1)}
-            title="Próxima Semana"
+            title="Próxima Semana (Alt + →)"
             className="w-7 h-7 rounded border border-slate-700/60 bg-[#121b2f] text-slate-300 hover:text-white hover:border-slate-500 flex items-center justify-center transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Legend Pills (Anti-AI Slop & Highly Informative) */}
+        <div className="hidden lg:flex items-center gap-3 px-3 py-1 rounded-full border border-white/5 bg-[#0b101e] text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-slate-300">Prioridade:</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> P1</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> P2</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> P3</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> P4</span>
+          </div>
+          <span className="w-px h-3 bg-white/10" />
+          <div className="flex items-center gap-2 text-slate-400">
+            <span className="flex items-center gap-1"><FolderKanban className="w-3 h-3 text-indigo-400" /> Projeto</span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> Horário</span>
+            <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-amber-400" /> Points</span>
+          </div>
+        </div>
+
         {/* Date Range Display */}
-        <div className="text-xs font-mono font-medium text-slate-400 tracking-wider">
+        <div className="text-xs font-mono font-medium text-slate-400 tracking-wider shrink-0">
           {rangeFormatted}
         </div>
       </div>
@@ -476,45 +538,48 @@ export const WeeklyView = ({
               isBacklogCollapsed ? 'w-11' : 'w-56 min-w-[210px]'
             }`}
           >
-            {/* Backlog Header */}
+            {/* Backlog Header (Ícone posicionado à ESQUERDA do título) */}
             <div className="flex items-center justify-between p-2.5 border-b border-white/5">
-              {!isBacklogCollapsed && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    BACKLOG
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-full bg-indigo-950/60 text-indigo-400 text-[10px] font-bold border border-indigo-800/40">
-                    {backlogTasks.length}
-                  </span>
-                </div>
-              )}
-              {/* Sidebar Toggle Icon Button */}
-              <button
-                type="button"
-                onClick={() => setIsBacklogCollapsed((prev) => !prev)}
-                className="w-7 h-7 rounded border border-slate-700/50 bg-[#121b2f] flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-500 transition-colors mx-auto cursor-pointer"
-                title={isBacklogCollapsed ? 'Expandir Sidebar Backlog' : 'Recolher Sidebar Backlog'}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`transition-transform duration-200 ${isBacklogCollapsed ? 'rotate-180' : ''}`}
+              <div className="flex items-center gap-2">
+                {/* Sidebar Toggle Icon Button (Divided Rectangle) à esquerda */}
+                <button
+                  type="button"
+                  onClick={() => setIsBacklogCollapsed((prev) => !prev)}
+                  className="w-6 h-6 rounded border border-slate-700/60 bg-[#121b2f] hover:bg-[#18233c] hover:border-slate-500 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  title={isBacklogCollapsed ? 'Expandir Backlog' : 'Recolher Backlog'}
                 >
-                  <rect width="18" height="18" x="3" y="3" rx="3" />
-                  <path d="M9 3v18" />
-                </svg>
-              </button>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-transform duration-200 ${isBacklogCollapsed ? 'rotate-180' : ''}`}
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="3" />
+                    <path d="M9 3v18" />
+                  </svg>
+                </button>
+
+                {!isBacklogCollapsed && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      BACKLOG
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-indigo-950/60 text-indigo-400 text-[10px] font-bold border border-indigo-800/40">
+                      {backlogTasks.length}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {!isBacklogCollapsed && (
               <div className="flex-1 flex flex-col p-2 gap-2 overflow-y-auto">
-                {/* Clean + Card Button (sem duplicacao) */}
+                {/* Clean + Card Button (sem duplicacao de '+') */}
                 <button
                   type="button"
                   onClick={() => openAddModal()}
@@ -616,33 +681,34 @@ export const WeeklyView = ({
           </div>
         </div>
 
-        {/* Drag Overlay */}
+        {/* Drag Overlay with Elevation */}
         <DragOverlay>
           {activeTask ? (
-            <div className="w-52 shadow-2xl rounded-lg border border-indigo-500/80 bg-[#151f33] p-1 scale-105 opacity-90">
+            <div className="w-56 shadow-2xl rounded-lg border border-indigo-500 bg-[#162138] p-1.5 scale-105 rotate-1 opacity-95">
               <PlanningCardCompact task={activeTask} project={activeTaskProject} onEdit={() => {}} />
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
 
-      {/* Quick Add Modal (Sem dependência de window.prompt) */}
+      {/* Quick Add Modal (Completo, com Horário On/Off, Lembretes e Projetos) */}
       {quickAddModal?.isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs"
           onClick={() => setQuickAddModal(null)}
         >
           <div
-            className="w-full max-w-md p-5 rounded-xl border border-white/10 bg-[#0e1628] shadow-2xl space-y-3.5 text-slate-100"
+            className="w-full max-w-md p-5 rounded-xl border border-white/10 bg-[#0e1628] shadow-2xl space-y-4 text-slate-100"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400">
                   <Plus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-white">Criar Novo Card</h3>
+                  <h3 className="text-xs font-bold text-white">Criar Novo Card de Planejamento</h3>
                   <p className="text-[11px] text-slate-400 font-medium">
                     Destino: {quickAddModal.dayLabel} {quickAddModal.shiftId ? `· ${quickAddModal.shiftId === 'morning' ? 'Manhã' : quickAddModal.shiftId === 'afternoon' ? 'Tarde' : 'Noite'}` : ''}
                   </p>
@@ -651,6 +717,7 @@ export const WeeklyView = ({
             </div>
 
             <div className="space-y-3">
+              {/* Title */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-300 block mb-1">
                   Título da Tarefa *
@@ -658,7 +725,7 @@ export const WeeklyView = ({
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Ex: Refatorar API ou Alinhar Sprint"
+                  placeholder="Ex: Entregar Módulo do Organon ou Alinhamento"
                   value={quickAddModal.title}
                   onChange={(e) => setQuickAddModal({ ...quickAddModal, title: e.target.value })}
                   onKeyDown={(e) => {
@@ -668,6 +735,7 @@ export const WeeklyView = ({
                 />
               </div>
 
+              {/* Project & Priority */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
@@ -705,22 +773,109 @@ export const WeeklyView = ({
                 </div>
               </div>
 
-              {quickAddModal.shiftId && (
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-indigo-400" />
-                    Horário (Opcional)
+              {/* Horário Toggle (On/Off) */}
+              <div className="p-2.5 rounded-lg border border-white/5 bg-[#121b2f] space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 cursor-pointer">
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    Definir Horário Específico
                   </label>
                   <input
-                    type="time"
-                    value={quickAddModal.time}
-                    onChange={(e) => setQuickAddModal({ ...quickAddModal, time: e.target.value })}
-                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/10 bg-[#131d33] text-white focus:border-indigo-500 outline-hidden"
+                    type="checkbox"
+                    checked={quickAddModal.hasTime}
+                    onChange={(e) => setQuickAddModal({ ...quickAddModal, hasTime: e.target.checked })}
+                    className="cursor-pointer accent-indigo-500"
                   />
                 </div>
-              )}
+
+                {quickAddModal.hasTime && (
+                  <div className="pt-1 flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={quickAddModal.time}
+                      onChange={(e) => setQuickAddModal({ ...quickAddModal, time: e.target.value })}
+                      className="px-2.5 py-1 text-xs rounded-md border border-white/10 bg-[#162138] text-white focus:border-indigo-500 outline-hidden"
+                    />
+                    <span className="text-[10px] text-slate-400">Exibido diretamente no turno do dia</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Lembrete Toggle (On/Off) */}
+              <div className="p-2.5 rounded-lg border border-white/5 bg-[#121b2f] space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 cursor-pointer">
+                    <Bell className="w-3.5 h-3.5 text-amber-400" />
+                    Ativar Lembrete / Notificação
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={quickAddModal.hasReminder}
+                    onChange={(e) => setQuickAddModal({ ...quickAddModal, hasReminder: e.target.checked })}
+                    className="cursor-pointer accent-amber-500"
+                  />
+                </div>
+
+                {quickAddModal.hasReminder && (
+                  <div className="pt-1 flex items-center gap-2">
+                    <select
+                      value={quickAddModal.reminderOffset}
+                      onChange={(e) => setQuickAddModal({ ...quickAddModal, reminderOffset: parseInt(e.target.value, 10) })}
+                      className="px-2.5 py-1 text-xs rounded-md border border-white/10 bg-[#162138] text-white focus:border-indigo-500 outline-hidden"
+                    >
+                      <option value={0}>No horário exato</option>
+                      <option value={10}>10 minutos antes</option>
+                      <option value={15}>15 minutos antes</option>
+                      <option value={30}>30 minutos antes</option>
+                      <option value={60}>1 hora antes</option>
+                    </select>
+                    <span className="text-[10px] text-slate-400">Notificação nativa no app</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Story Points & Tags */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                    Story Points
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 5, 8].map((pts) => (
+                      <button
+                        key={pts}
+                        type="button"
+                        onClick={() => setQuickAddModal({ ...quickAddModal, storyPoints: quickAddModal.storyPoints === pts ? 0 : pts })}
+                        className={`flex-1 py-1 text-[10px] font-mono font-bold rounded border cursor-pointer transition-colors ${
+                          quickAddModal.storyPoints === pts
+                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            : 'bg-[#131d33] border-white/10 text-slate-400 hover:border-slate-500 hover:text-white'
+                        }`}
+                      >
+                        {pts}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
+                    <Tag className="w-3 h-3 text-indigo-400" />
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="dev, sprint, ui"
+                    value={quickAddModal.tagsInput}
+                    onChange={(e) => setQuickAddModal({ ...quickAddModal, tagsInput: e.target.value })}
+                    className="w-full px-2.5 py-1 text-xs rounded-lg border border-white/10 bg-[#131d33] text-white focus:border-indigo-500 outline-hidden"
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
               <button
                 type="button"

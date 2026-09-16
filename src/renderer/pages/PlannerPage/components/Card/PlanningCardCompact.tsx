@@ -39,7 +39,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
   const checklistDone = task.checklist?.filter((c) => c.done).length || 0;
 
   const cardContent = (
-    <div className="flex items-center gap-2 w-full min-w-0">
+    <div className="flex items-center gap-2 w-full min-w-0 select-none">
       {/* Checkbox */}
       <button
         type="button"
@@ -68,9 +68,15 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
         title={`Prioridade: ${task.priority || 'P3'}`}
       />
 
-      {/* Title */}
+      {/* Title (Clique simples abre modal, Ctrl+Clique não abre) */}
       <span
-        onClick={onEdit}
+        onClick={(e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.stopPropagation();
+            return;
+          }
+          onEdit();
+        }}
         title={task.title}
         className={`flex-1 truncate text-xs font-medium cursor-pointer transition-colors ${
           isDone ? 'line-through text-slate-500' : 'text-slate-200 hover:text-indigo-300'
@@ -143,7 +149,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,
-      opacity: isDragging ? 0.35 : 1,
+      opacity: isDragging ? 0.3 : 1,
     };
 
     return (
