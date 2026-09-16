@@ -10,7 +10,6 @@ export type AppView =
   | 'agenda'
   | 'planner'
   | 'calendar'
-  | 'crm'
   | 'playbook'
   | 'colors'
   | 'shortcuts'
