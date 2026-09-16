@@ -286,6 +286,7 @@ export const App = () => {
   const {
     cards, calendarEvents,
     noteFolders, notes, colorPalettes, clipboardCategories, clipboardItems,
+    apps = [], appGroups, appLaunchLogs,
     study, settings, isLoading, error,
     addCard, addCardWithDate, editCard, removeCard, moveCardToCell, reorderInCell, getCardsForLocation,
     canvasFolders, canvasFolderAssignments, canvasVersions,
@@ -602,13 +603,13 @@ export const App = () => {
     if (targets.length === 0) return
     targets.forEach((app, idx) => {
       setTimeout(() => {
-        window.electronAPI.launchExe(app.exePath).catch(() => {})
-        recordAppLaunch?.(app.id, null)
+        window.electronAPI?.launchExe?.(app.exePath).catch(() => {})
       }, idx * 2000)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, apps])
 
+  const reminderFiredRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (calendarEvents.length === 0) return
 
@@ -640,8 +641,8 @@ export const App = () => {
         const reminderAt = dt.getTime() - (ev.reminder.offsetMinutes || 0) * 60 * 1000
         const key        = `${(ev as { sourceId?: string }).sourceId ?? ev.id}|${ev.date}|${ev.time}|${ev.reminder.offsetMinutes}`
         if (reminderAt <= nowMs && reminderAt > nowMs - windowMs) {
-          if (reminderFiredRef.has(key)) continue
-          reminderFiredRef.add(key)
+          if (reminderFiredRef.current.has(key)) continue
+          reminderFiredRef.current.add(key)
           const when = ev.reminder.offsetMinutes === 0 ? 'Agora'
             : ev.reminder.offsetMinutes === 60  ? 'Em 1 hora'
             : ev.reminder.offsetMinutes === 120 ? 'Em 2 horas'
@@ -658,7 +659,7 @@ export const App = () => {
     tick()
     const id = window.setInterval(tick, 30_000)
     return () => window.clearInterval(id)
-  }, [calendarEvents, reminderFiredRef])
+  }, [calendarEvents])
 
   // Atalhos globais (extraidos para hook useGlobalShortcuts no upgrade 07 sub-G)
   useGlobalShortcuts({
