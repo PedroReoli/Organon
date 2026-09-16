@@ -9,7 +9,7 @@ export function exportToMermaid(nodes: SystemNode[], edges: SystemEdge[]): strin
 
   // Declaração dos nós com ícones e labels
   nodes.forEach(node => {
-    const safeLabel = `${node.icon} ${node.label}${node.port ? ` (${node.port})` : ''}`
+    const safeLabel = `${node.label}${node.port ? ` (${node.port})` : ''}`
     mermaid += `  ${node.id}["${safeLabel}"]\n`
   })
 

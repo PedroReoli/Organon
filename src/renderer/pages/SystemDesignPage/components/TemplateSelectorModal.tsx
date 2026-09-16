@@ -1,5 +1,6 @@
 import React from 'react'
 import { BUILTIN_TEMPLATES, ArchitectureTemplate } from '../types/systemDesign.types'
+import { LayoutTemplate, X } from 'lucide-react'
 
 interface Props {
   isOpen: boolean
@@ -39,9 +40,25 @@ export const TemplateSelectorModal: React.FC<Props> = ({ isOpen, onClose, onSele
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>🏛️ Templates de Arquitetura de Referência</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '18px' }}>
-            ✕
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <LayoutTemplate size={18} style={{ color: 'var(--color-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600 }}>Templates de Arquitetura de Referência</h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+            }}
+          >
+            <X size={18} />
           </button>
         </div>
 

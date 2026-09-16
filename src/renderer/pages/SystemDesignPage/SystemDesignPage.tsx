@@ -10,6 +10,16 @@ import { PaletteSidebar } from './components/PaletteSidebar'
 import { TemplateSelectorModal } from './components/TemplateSelectorModal'
 import { SystemDesignReviewModal } from './components/SystemDesignReviewModal'
 import { exportToMermaid } from './utils/mermaidExporter'
+import { SystemComponentIcon } from './components/SystemComponentIcon'
+import {
+  LayoutTemplate,
+  Bot,
+  FileCode,
+  Trash2,
+  Link2,
+  X,
+  Boxes,
+} from 'lucide-react'
 
 export const SystemDesignPage: React.FC = () => {
   const [nodes, setNodes] = useState<SystemNode[]>(BUILTIN_TEMPLATES[0].nodes)
@@ -109,17 +119,25 @@ export const SystemDesignPage: React.FC = () => {
             justifyContent: 'space-between',
           }}
         >
-          <div>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🏛️ System Design Canvas</h3>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-              Modelador de Arquitetura 100% Offline & Client-Side
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'color-mix(in srgb, var(--color-primary) 15%, transparent)', color: 'var(--color-primary)' }}>
+              <Boxes size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>System Design Canvas</h3>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                Modelador de Arquitetura 100% Offline & Client-Side
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => setIsTemplateModalOpen(true)}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: '1px solid var(--color-border)',
@@ -130,12 +148,16 @@ export const SystemDesignPage: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              🏛️ Templates Prontos
+              <LayoutTemplate size={14} />
+              <span>Templates</span>
             </button>
 
             <button
               onClick={() => setIsReviewModalOpen(true)}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
@@ -146,12 +168,16 @@ export const SystemDesignPage: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              🤖 AI Reviewer
+              <Bot size={14} />
+              <span>AI Reviewer</span>
             </button>
 
             <button
               onClick={exportMermaidCode}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: '1px solid var(--color-border)',
@@ -162,12 +188,16 @@ export const SystemDesignPage: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              📋 Exportar Mermaid
+              <FileCode size={14} />
+              <span>Exportar Mermaid</span>
             </button>
 
             <button
               onClick={() => { setNodes([]); setEdges([]); }}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: '1px solid var(--color-border)',
@@ -178,7 +208,8 @@ export const SystemDesignPage: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              🗑️ Limpar
+              <Trash2 size={14} />
+              <span>Limpar</span>
             </button>
           </div>
         </div>
@@ -219,14 +250,16 @@ export const SystemDesignPage: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '20px' }}>{node.icon}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)', color: 'var(--color-primary)', flexShrink: 0 }}>
+                    <SystemComponentIcon type={node.type} size={15} />
+                  </div>
                   <div style={{ fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {node.label}
                   </div>
                 </div>
 
                 {node.port && (
-                  <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', paddingLeft: '32px' }}>
                     Porta: {node.port}
                   </div>
                 )}
@@ -236,7 +269,11 @@ export const SystemDesignPage: React.FC = () => {
                     onClick={(e) => { e.stopPropagation(); setConnectSourceId(node.id); }}
                     style={{
                       flex: 1,
-                      padding: '2px 4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      padding: '4px 6px',
                       fontSize: '10px',
                       borderRadius: '4px',
                       border: '1px solid var(--color-border)',
@@ -245,12 +282,16 @@ export const SystemDesignPage: React.FC = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    🔗 Conectar
+                    <Link2 size={11} />
+                    <span>Conectar</span>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteNode(node.id); }}
                     style={{
-                      padding: '2px 6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px 6px',
                       fontSize: '10px',
                       borderRadius: '4px',
                       border: 'none',
@@ -258,8 +299,9 @@ export const SystemDesignPage: React.FC = () => {
                       color: '#ef4444',
                       cursor: 'pointer',
                     }}
+                    title="Excluir componente"
                   >
-                    ✕
+                    <X size={12} />
                   </button>
                 </div>
               </div>

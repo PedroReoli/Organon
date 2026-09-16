@@ -1,5 +1,7 @@
 import React from 'react'
 import { COMPONENT_PALETTE, SystemComponentDefinition } from '../types/systemDesign.types'
+import { SystemComponentIcon } from './SystemComponentIcon'
+import { Boxes } from 'lucide-react'
 
 interface Props {
   onAddComponent: (component: SystemComponentDefinition) => void
@@ -31,8 +33,9 @@ export const PaletteSidebar: React.FC<Props> = ({ onAddComponent }) => {
       }}
     >
       <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
-        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
-          🧩 Componentes de Arquitetura
+        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Boxes size={16} style={{ color: 'var(--color-primary)' }} />
+          <span>Componentes de Arquitetura</span>
         </h4>
         <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--color-text-muted)' }}>
           Clique para adicionar ao canvas
@@ -78,7 +81,9 @@ export const PaletteSidebar: React.FC<Props> = ({ onAddComponent }) => {
                       e.currentTarget.style.background = 'var(--color-background)'
                     }}
                   >
-                    <span style={{ fontSize: '16px' }}>{item.icon}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: 'var(--color-surface)', color: 'var(--color-primary)', flexShrink: 0 }}>
+                      <SystemComponentIcon type={item.type} size={15} />
+                    </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.label}

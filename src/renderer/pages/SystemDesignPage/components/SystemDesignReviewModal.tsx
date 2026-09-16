@@ -1,5 +1,6 @@
 import React from 'react'
 import { SystemNode, SystemEdge, SystemDesignReviewResult } from '../types/systemDesign.types'
+import { Bot, X, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react'
 
 interface Props {
   isOpen: boolean
@@ -46,9 +47,25 @@ export const SystemDesignReviewModal: React.FC<Props> = ({ isOpen, onClose, node
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>🤖 AI System Design Reviewer</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '18px' }}>
-            ✕
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Bot size={20} style={{ color: 'var(--color-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>AI System Design Reviewer</h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+            }}
+          >
+            <X size={18} />
           </button>
         </div>
 
@@ -82,8 +99,9 @@ export const SystemDesignReviewModal: React.FC<Props> = ({ isOpen, onClose, node
           {/* SPOFs */}
           {reviewResult.spofs.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#ef4444', margin: '0 0 8px', textTransform: 'uppercase' }}>
-                ⚠️ SPOFs (Pontos Únicos de Falha)
+              <h4 style={{ fontSize: '12.5px', fontWeight: 700, color: '#ef4444', margin: '0 0 8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertTriangle size={15} />
+                <span>SPOFs (Pontos Únicos de Falha)</span>
               </h4>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--color-text)' }}>
                 {reviewResult.spofs.map((item, idx) => (
@@ -96,8 +114,9 @@ export const SystemDesignReviewModal: React.FC<Props> = ({ isOpen, onClose, node
           {/* Gargalos */}
           {reviewResult.bottlenecks.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#f97316', margin: '0 0 8px', textTransform: 'uppercase' }}>
-                🚀 Gargalos de Escalabilidade
+              <h4 style={{ fontSize: '12.5px', fontWeight: 700, color: '#f97316', margin: '0 0 8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <TrendingUp size={15} />
+                <span>Gargalos de Escalabilidade</span>
               </h4>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--color-text)' }}>
                 {reviewResult.bottlenecks.map((item, idx) => (
@@ -110,8 +129,9 @@ export const SystemDesignReviewModal: React.FC<Props> = ({ isOpen, onClose, node
           {/* Recomendações */}
           {reviewResult.recommendations.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 8px', textTransform: 'uppercase' }}>
-                💡 Recomendações de Resiliência
+              <h4 style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-primary)', margin: '0 0 8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Lightbulb size={15} />
+                <span>Recomendações de Resiliência</span>
               </h4>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--color-text)' }}>
                 {reviewResult.recommendations.map((item, idx) => (
