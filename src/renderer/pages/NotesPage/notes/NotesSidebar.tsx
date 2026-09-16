@@ -195,7 +195,8 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
       <div key={note.id} className="notes-tree-group">
         <div
           className={`notes-tree-row notes-tree-note${isActive ? ' is-active' : ''}${isSelected ? ' is-selected' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
-          style={{ paddingLeft: `${12 + depth * 16}px` }}
+          style={{ paddingLeft: `${10 + depth * 14}px`, paddingRight: '56px' }}
+          title={note.title || 'Sem título'}
           draggable
           data-tree-kind="note"
           data-tree-id={note.id}
@@ -222,7 +223,9 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
           ) : (
             <PageIcon />
           )}
-          <span className="notes-tree-label">{(cleanTitle && cleanTitle.trim()) || (note.title && note.title.trim()) || 'Sem título'}</span>
+          <span className="notes-tree-label" title={cleanTitle || note.title || 'Sem título'}>
+            {(cleanTitle && cleanTitle.trim()) || (note.title && note.title.trim()) || 'Sem título'}
+          </span>
           <span className="notes-tree-row-actions">
             {onDuplicateNote && (
               <button className="notes-tree-action-btn" title="Duplicar nota" disabled={note.isLocked} onClick={e => { e.stopPropagation(); onDuplicateNote(note.id) }}>
@@ -268,7 +271,8 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
       <div key={folder.id} className="notes-tree-group">
         <div
           className={`notes-tree-row notes-tree-folder${isActive ? ' is-active' : ''}${isSelected ? ' is-selected' : ''}${isDropTarget ? ' is-drop-target' : ''}`}
-          style={{ paddingLeft: `${12 + depth * 16}px` }}
+          style={{ paddingLeft: `${10 + depth * 14}px`, paddingRight: '56px' }}
+          title={folder.name || 'Sem nome'}
           draggable
           data-tree-kind="folder"
           data-tree-id={folder.id}

@@ -6,7 +6,6 @@ import {
   FileText,
   Kanban,
   FolderGit2,
-  LayoutGrid,
   Mic,
   History,
   Search,
@@ -54,12 +53,11 @@ export const TopNavbarShell: React.FC<Props> = ({
 }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false)
 
-  // Todos os módulos principais centralizados
+  // Módulos principais centralizados
   const mainNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
     { view: 'notes', label: 'NOTAS', icon: <FileText className="w-3.5 h-3.5" /> },
     { view: 'planner', label: 'PLANEJAMENTO', icon: <Kanban className="w-3.5 h-3.5" /> },
     { view: 'projects', label: 'PROJETOS', icon: <FolderGit2 className="w-3.5 h-3.5" /> },
-    { view: 'system-design', label: 'CANVAS', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
     { view: 'transcripts', label: 'WHISPER', icon: <Mic className="w-3.5 h-3.5" /> },
     { view: 'history', label: 'HISTÓRICO', icon: <History className="w-3.5 h-3.5" /> },
   ]
@@ -67,7 +65,7 @@ export const TopNavbarShell: React.FC<Props> = ({
   return (
     <header
       style={{
-        height: '58px',
+        height: '56px',
         background: 'color-mix(in srgb, var(--color-surface) 94%, var(--color-background))',
         borderBottom: '1px solid var(--color-border)',
         backdropFilter: 'blur(20px)',
@@ -78,9 +76,9 @@ export const TopNavbarShell: React.FC<Props> = ({
       className="w-full px-4 sm:px-6 flex items-center justify-between gap-4"
     >
       {/* ========================================================
-          ZONA ESQUERDA: LOGO ORGANON (TOTAL ESQUERDA)
+          FLANCO ESQUERDO: LOGO ORGANON
           ======================================================== */}
-      <div className="flex items-center">
+      <div className="flex items-center min-w-[140px]">
         <button
           type="button"
           onClick={onNavigateHome}
@@ -90,7 +88,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             border: 'none',
             cursor: 'pointer',
           }}
-          className="group relative flex items-center justify-center py-1 px-2 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+          className="group relative flex items-center justify-center py-1 px-1.5 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
         >
           {/* Ambient Glow no Hover */}
           <div
@@ -103,7 +101,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           <img
             src={logoNameImg}
             alt="Organon"
-            style={{ height: '36px', objectFit: 'contain' }}
+            style={{ height: '34px', objectFit: 'contain' }}
             className="relative z-10 drop-shadow-sm transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
             onError={(e) => {
               e.currentTarget.src = faviconImg
@@ -114,18 +112,18 @@ export const TopNavbarShell: React.FC<Props> = ({
           {activeView === 'today' && (
             <span
               style={{ background: 'var(--color-primary)' }}
-              className="absolute -bottom-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-primary)] animate-pulse"
+              className="absolute -bottom-1 w-1.5 h-1.5 rounded-full shadow-[0_0_6px_var(--color-primary)] animate-pulse"
             />
           )}
         </button>
       </div>
 
       {/* ========================================================
-          ZONA CENTRAL: LINKS DE NAVEGAÇÃO & FERRAMENTAS NO CENTRO
+          ZONA CENTRAL: MÓDULOS PRINCIPAIS DE NAVEGAÇÃO
           ======================================================== */}
-      <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-1 max-w-4xl">
+      <div className="flex items-center justify-center flex-1">
         {onNavigateView && (
-          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
+          <nav className="flex items-center gap-1 sm:gap-2">
             {mainNavItems.map((item) => {
               const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
               return (
@@ -160,74 +158,75 @@ export const TopNavbarShell: React.FC<Props> = ({
                 </button>
               )
             })}
-
-            {/* BOTÃO DE BUSCA (Elegante, centralizado junto aos links) */}
-            <button
-              type="button"
-              onClick={onOpenQuickSearch}
-              title="Buscar no Organon (Ctrl+K)"
-              style={{
-                color: 'var(--color-text-muted)',
-              }}
-              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
-            >
-              <Search className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-              <span>BUSCA</span>
-              <kbd
-                style={{
-                  background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-muted)',
-                }}
-                className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-semibold ml-0.5 group-hover:text-[var(--color-text)]"
-              >
-                ⌘K
-              </kbd>
-            </button>
-
-            {/* BOTÃO ASSISTENTE IA */}
-            {onToggleChat && (
-              <button
-                type="button"
-                onClick={onToggleChat}
-                title="Assistente IA Organon"
-                style={{
-                  background: isChatOpen
-                    ? 'var(--color-primary)'
-                    : 'transparent',
-                  borderColor: isChatOpen
-                    ? 'var(--color-primary)'
-                    : 'transparent',
-                  color: isChatOpen ? '#ffffff' : 'var(--color-text-muted)',
-                }}
-                className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
-              >
-                <Bot className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-                <span>IA</span>
-              </button>
-            )}
-
-            {/* BOTÃO WI-FI SYNC */}
-            <button
-              type="button"
-              onClick={onOpenSyncModal}
-              title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização Wi-Fi Local'}
-              style={{
-                color: 'var(--color-text-muted)',
-              }}
-              className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-transparent text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-[var(--color-border)]"
-            >
-              <Wifi className="w-3.5 h-3.5 opacity-75 group-hover:opacity-100" />
-              <span>SYNC</span>
-            </button>
           </nav>
         )}
       </div>
 
       {/* ========================================================
-          ZONA DIREITA: HERO CTA (+ NOVA TAREFA) + CONFIGS (TOTAL DIREITA)
+          FLANCO DIREITO: FERRAMENTAS (BUSCA, IA, SYNC) + HERO CTA + CONFIGS
           ======================================================== */}
-      <div className="flex items-center justify-end gap-2.5">
+      <div className="flex items-center justify-end gap-2 sm:gap-2.5 min-w-[140px]">
+        {/* BOTÃO DE BUSCA */}
+        <button
+          type="button"
+          onClick={onOpenQuickSearch}
+          title="Buscar no Organon (Ctrl+K)"
+          style={{
+            borderColor: 'var(--color-border)',
+            background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+            color: 'var(--color-text-muted)',
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer hover:text-[var(--color-text)] hover:border-[var(--color-primary)] transition-all"
+        >
+          <Search className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+          <span className="text-[11.5px] font-semibold">BUSCA</span>
+          <kbd
+            style={{
+              background: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+            className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-bold ml-0.5"
+          >
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* BOTÃO ASSISTENTE IA */}
+        {onToggleChat && (
+          <button
+            type="button"
+            onClick={onToggleChat}
+            title="Assistente IA Organon"
+            style={{
+              background: isChatOpen
+                ? 'var(--color-primary)'
+                : 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))',
+              borderColor: isChatOpen
+                ? 'var(--color-primary)'
+                : 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
+              color: isChatOpen ? '#ffffff' : 'var(--color-primary)',
+            }}
+            className="p-1.5 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center shadow-xs hover:scale-105"
+          >
+            <Bot className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* BOTÃO WI-FI SYNC */}
+        <button
+          type="button"
+          onClick={onOpenSyncModal}
+          title={lastSyncAt ? `Sincronizado: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização Wi-Fi'}
+          style={{
+            borderColor: 'var(--color-border)',
+            background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+            color: 'var(--color-text-muted)',
+          }}
+          className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
+        >
+          <Wifi className="w-4 h-4" />
+        </button>
+
         {/* Ditado de Voz */}
         {onOpenVoice && (
           <button
@@ -239,9 +238,9 @@ export const TopNavbarShell: React.FC<Props> = ({
               background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
               color: 'var(--color-text-muted)',
             }}
-            className="p-1.5 rounded-full border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
+            className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
           >
-            <Mic className="w-3.5 h-3.5" />
+            <Mic className="w-4 h-4" />
           </button>
         )}
 
@@ -256,7 +255,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                 color: 'var(--color-primary-text, #ffffff)',
                 boxShadow: '0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent)',
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wide uppercase transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-extrabold tracking-wide uppercase transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Nova Tarefa</span>
