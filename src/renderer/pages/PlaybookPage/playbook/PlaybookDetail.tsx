@@ -1,7 +1,6 @@
 
 import type { Playbook, PlaybookDialog } from '@types'
 import { WysiwygEditor } from '../../shared/WysiwygEditor'
-import { Button } from '@shared/components/primitives'
 import { PlaybookExportMenu } from './PlaybookExportMenu'
 import { VersionsPanel } from './versions/VersionsPanel'
 import { stripHtml } from './utils'
@@ -40,8 +39,8 @@ interface PlaybookDetailProps {
 
 export const PlaybookDetail = ({
   selectedPlaybook, sortedDialogs, selectedDialogId, isDetailEditing,
-  detailContentDraft, setDetailContentDraft,
-  goBackToCatalog, removePlaybookById, startDetailEdit, cancelDetailEdit, saveDetailContent,
+  detailContentDraft, setDetailContentDraft, updatePlaybookTitle,
+  goBackToCatalog, removePlaybookById, startDetailEdit, cancelDetailEdit: _cancelDetailEdit, saveDetailContent: _saveDetailContent,
   openCreateDialogModal, openDialogPreviewModal,
   showVersionsPanel, openVersionsPanel, closeVersionsPanel, restorePlaybookVersion,
   reorderDialogUp, reorderDialogDown, duplicateDialog, quickCopyDialog, quickCopiedId,

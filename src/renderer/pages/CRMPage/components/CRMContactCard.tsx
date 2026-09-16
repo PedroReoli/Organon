@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core'
+import { Calendar } from 'lucide-react'
 import type { CRMContact, CRMTag, CRMInteraction, CRMInteractionType } from '@types'
 import { formatDateShort } from '@utils'
 import { CRM_INTERACTION_TYPES } from '@types'
@@ -90,8 +91,8 @@ export const CRMContactCard = ({
 
       {/* Follow-up */}
       {contact.followUpDate && (
-        <div className="crm-card-followup">
-          <span className="crm-followup-icon">📅</span>
+        <div className="crm-card-followup" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Calendar size={12} />
           {formatDateShort(contact.followUpDate)}
         </div>
       )}
@@ -100,7 +101,7 @@ export const CRMContactCard = ({
       {lastInteraction && (
         <div className="crm-card-last-interaction">
           <span className="crm-interaction-icon">
-            {CRM_INTERACTION_TYPES[lastInteraction.type as keyof typeof CRM_INTERACTION_TYPES] || '📝'}
+            {CRM_INTERACTION_TYPES[lastInteraction.type as keyof typeof CRM_INTERACTION_TYPES] || 'Nota'}
           </span>
           <span className="crm-interaction-preview">
             {lastInteraction.content.slice(0, 30)}

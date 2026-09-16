@@ -203,7 +203,7 @@ export const AccountSection = ({
 
               {/* Contadores */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6, marginBottom: storeSummary.recentNotes.length > 0 ? 10 : 0 }}>
-                {storeSummary.counts.map(c => (
+                {storeSummary.counts.map((c: any) => (
                   <div key={c.label} style={{
                     background: 'var(--color-bg-secondary, rgba(255,255,255,.04))',
                     borderRadius: 6, padding: '7px 10px',
@@ -222,7 +222,7 @@ export const AccountSection = ({
                     Notas recentes
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {storeSummary.recentNotes.map(n => (
+                    {storeSummary.recentNotes.map((n: any) => (
                       <div key={n.id} style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '5px 8px',

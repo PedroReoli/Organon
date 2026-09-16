@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import type { KeyboardShortcut } from '@types'
 import { Kbd } from '@shared/components/display'
 
@@ -13,7 +13,7 @@ export const KeyboardShortcutCapture: React.FC<KeyboardShortcutCaptureProps> = (
   onSave,
   onCancel,
 }) => {
-  const [recordedKeys, setRecordedKeys] = useState<string[]>(shortcut.keys)
+  const [recordedKeys, setRecordedKeys] = useState<string[]>(Array.isArray(shortcut.keys) ? shortcut.keys : (shortcut.keys?.key ? [shortcut.keys.key] : []))
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -71,7 +71,12 @@ export const CanvasListView = ({
                 }}
               />
               <button type="button" className="cvl-btn-primary" onClick={handleCreate}>Criar</button>
-              <button type="button" className="cvl-btn-ghost" onClick={() => { setShowNewForm(false); setNewName('') }}>✕</button>
+              <button type="button" className="cvl-btn-ghost" onClick={() => { setShowNewForm(false); setNewName('') }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
           ) : (
             <button type="button" className="cvl-btn-primary" onClick={() => setShowNewForm(true)}>

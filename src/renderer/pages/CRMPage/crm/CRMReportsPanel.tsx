@@ -18,7 +18,7 @@ interface CRMReportsPanelProps {
 export const CRMReportsPanel: React.FC<CRMReportsPanelProps> = ({
   reports,
   onContactClick,
-  onClose,
+  onClose: _onClose,
 }) => {
   const {
     totalContacts,

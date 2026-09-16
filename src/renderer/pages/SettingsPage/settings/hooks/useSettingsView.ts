@@ -53,21 +53,21 @@ export const useSettingsView = (props: SettingsViewProps) => {
   const shortcuts = useMemo(() => {
     const defaults = DEFAULT_SETTINGS.keyboardShortcuts ?? []
     const saved    = settings.keyboardShortcuts ?? []
-    const byId     = new Map(saved.map(s => [s.id, s]))
-    return defaults.map(d => {
-      const c = byId.get(d.id)
+    const byId     = new Map(saved.map((s: any) => [s.id, s]))
+    return defaults.map((d: any) => {
+      const c = byId.get(d.id) as any
       return c ? { ...d, ...c, keys: c.keys } : d
     })
   }, [settings.keyboardShortcuts])
 
   const syncErrorLines = useMemo(
-    () => (syncError ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean),
+    () => (syncError ?? '').split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean),
     [syncError],
   )
   const syncErrorSummary = syncErrorLines[0] ?? ''
-  const syncErrorTime    = syncErrorLines.find(l => l.startsWith('Horário:')) ?? ''
+  const syncErrorTime    = syncErrorLines.find((l: string) => l.startsWith('Horário:')) ?? ''
   const syncErrorRows    = useMemo(
-    () => syncErrorLines.filter(l => l.startsWith('[')).map(line => {
+    () => syncErrorLines.filter((l: string) => l.startsWith('[')).map((line: string) => {
       const m = line.match(/\[([^\]]+)\]\s+lote\s+(\d+)\/(\d+)\s+\|\s+HTTP\s+(\S+)\s+\|\s+(\d+)\s+item.*?\|\s+(.+)/)
       if (!m) return { raw: line, resource: '', batchIdx: '', totalBatches: '', status: '', count: '', message: line }
       const [, resource, batchIdx, totalBatches, status, count, message] = m

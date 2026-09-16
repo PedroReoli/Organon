@@ -1,4 +1,4 @@
-import type { AppView } from './InternalNav'
+import type { AppView } from '@types'
 
 export interface ViewOption {
   view: AppView

@@ -13,6 +13,7 @@ interface ClipboardViewProps {
   onUpdateItem: (itemId: string, updates: Partial<Pick<ClipboardItem, 'title' | 'isPinned' | 'categoryId' | 'isSnippet'>>) => void
   onRemoveItem: (itemId: string) => void
   onMoveItemToCategory: (itemId: string, categoryId: string | null) => void
+  onIncrementCopyCount?: (itemId: string) => void
   /** Upgrade 18: toggle snippet flag (curado, nao expira). */
   onToggleSnippet?: (itemId: string) => void
 }

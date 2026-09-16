@@ -3,6 +3,7 @@ import type { CRMContact, CRMTag, CRMInteraction, CRMInteractionType, Note, Cale
 import { CRM_PRIORITY_LABELS, CRM_PRIORITY_COLORS, CRM_INTERACTION_TYPES } from '@types'
 import { formatDateFull } from '@utils'
 import { Button } from '@shared/components/primitives'
+import { MessageSquare } from 'lucide-react'
 import { InteractionFormModal } from '../crm/InteractionFormModal'
 import { TagFormModal } from '../crm/TagFormModal'
 import { EntityPickerModal, type EntityPickerItem } from '../crm/EntityPickerModal'
@@ -445,8 +446,8 @@ export const CRMContactModal = ({
                 ) : (
                   sortedInteractions.map(interaction => (
                     <div key={interaction.id} className="crm-timeline-item">
-                      <div className="crm-timeline-icon">
-                        {CRM_INTERACTION_TYPES[interaction.type as keyof typeof CRM_INTERACTION_TYPES]?.[0] || '📝'}
+                      <div className="crm-timeline-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MessageSquare size={13} />
                       </div>
                       <div className="crm-timeline-content">
                         <div className="crm-timeline-header">

@@ -4,7 +4,7 @@ import { CanvasEditor }   from './CanvasEditor'
 import { useCanvases }    from './useCanvases'
 import { CanvasFolderSidebar } from './CanvasFolderSidebar'
 import { CanvasVersionsModal } from './CanvasVersionsModal'
-import type { CanvasFull } from '../../../api/canvas'
+import type { CanvasFull } from '../../../../api/canvas'
 import type { CanvasFolder, CanvasVersionEntry } from '@types'
 
 interface CanvasViewProps {

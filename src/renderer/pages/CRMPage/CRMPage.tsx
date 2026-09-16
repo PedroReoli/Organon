@@ -68,7 +68,6 @@ export const CRMView = ({
   onRemoveLink,
 }: CRMViewProps) => {
   const [screen, setScreen] = useState<'pipeline' | 'reports'>('pipeline')
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban')
   const [activeContact, setActiveContact] = useState<CRMContact | null>(null)
   const [selectedContact, setSelectedContact] = useState<CRMContact | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)

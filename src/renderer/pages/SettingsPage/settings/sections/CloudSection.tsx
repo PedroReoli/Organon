@@ -1,6 +1,5 @@
-
 import type { Settings } from '@types'
-import type { PingDiagnostics } from '../../../../api/organon'
+import type { PingDiagnostics } from '../../../../../api/organon'
 import { Button } from '@shared/components/primitives'
 import { WebZeroKnowledgeGuide } from '../../components/WebZeroKnowledgeGuide'
 
@@ -79,7 +78,7 @@ export const CloudSection = ({
             </p>
             {pingReport.attempts.length > 0 && (
               <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {pingReport.attempts.map((attempt, idx: number) => (
+                {pingReport.attempts.map((attempt: any, idx: number) => (
                   <p key={`${attempt.path}-${idx}`} className="settings-help-text" style={{ margin: 0 }}>
                     - {attempt.path} [{attempt.withAuth ? 'auth' : 'publico'}]: {
                       attempt.skipped

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Check } from 'lucide-react'
 import type { ThemeName } from '@types'
 import { THEMES, THEME_LABELS } from '@types'
 import { applyTheme, isElectron } from '@utils'
@@ -50,7 +51,7 @@ const ThemeCard = ({ themeName, isSelected, onSelect }: ThemeCardProps) => {
         </div>
       </div>
       <div className="theme-card-label">{THEME_LABELS[themeName]}</div>
-      {isSelected && <div className="theme-card-check" aria-label="Tema selecionado">✓</div>}
+      {isSelected && <div className="theme-card-check" aria-label="Tema selecionado" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></div>}
     </button>
   )
 }
@@ -192,7 +193,7 @@ export const InstallerView = ({ onComplete }: InstallerViewProps) => {
 
         {step === 'complete' && (
           <div className="installer-step">
-            <div className="installer-success-mark">✓</div><div className="installer-kicker">Migração validada</div><h2>Seus dados estão protegidos</h2>
+            <div className="installer-success-mark" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={28} /></div><div className="installer-kicker">Migração validada</div><h2>Seus dados estão protegidos</h2>
             <p>{result?.markdownFiles ?? 0} notas foram materializadas como arquivos legíveis. {result?.recoveredFiles ? `${result.recoveredFiles} arquivo(s) adicional(is) foram preservados em _Recuperados.` : ''}</p>
             {!!result?.warnings?.length && <div className="installer-warning">{result.warnings.length} aviso(s) foram registrados, sem interromper a migração.</div>}
             <button className="btn btn-primary installer-btn" onClick={onComplete}>Abrir o Organon</button>
