@@ -3,13 +3,16 @@ import type { Editor } from '@tiptap/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { copyTextToClipboard, getShortcutTitleFromUrl, normalizeUrl, openExternalLink } from '@utils'
 import { markdownToHtml } from '../notes/utils'
-import { sanitizePastedHtml, looksLikeMarkdownPaste } from './sanitize'
+import { sanitizePastedHtml, looksLikeMarkdownPaste, looksLikeTabularData, tabularTextToHtmlTable } from './sanitize'
 import { getExtensions } from './getExtensions'
 import { SLASH_COMMANDS, TOOLBOX_SLASH_COMMAND } from './slashCommands'
 import type { SlashCommand } from '@types'
 import { FullToolbar } from './toolbars/FullToolbar'
 import { CompactToolbar } from './toolbars/CompactToolbar'
 import { SlashCommandMenu, type SlashMenuState } from './menus/SlashCommandMenu'
+import { TableFloatingMenu } from './menus/TableFloatingMenu'
+import { EditorBubbleMenu } from './menus/EditorBubbleMenu'
+import { AiAssistantMenu } from './menus/AiAssistantMenu'
 
 export interface WysiwygEditorProps {
   content: string
@@ -59,6 +62,7 @@ export const WysiwygEditor = ({
   const [linkCopied, setLinkCopied] = useState(false)
   const [_linkPasteMenu, setLinkPasteMenu] = useState<LinkPasteMenuState | null>(null)
   const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null)
+  const [isAiMenuOpen, setIsAiMenuOpen] = useState(false)
   const [toolboxVisible, setToolboxVisible] = useState(false)
   const [toolboxCollapsed, setToolboxCollapsed] = useState(false)
   const [toolboxPosition, setToolboxPosition] = useState<FloatingToolboxPosition>({ left: 16, top: 16 })
@@ -286,6 +290,18 @@ export const WysiwygEditor = ({
             editorInstance.chain().focus().insertContentAt(
               { from: editorInstance.state.selection.from, to: editorInstance.state.selection.to },
               sanitized,
+            ).run()
+            return true
+          }
+        }
+
+        if (looksLikeTabularData(rawText)) {
+          const tableHtml = tabularTextToHtmlTable(rawText)
+          if (tableHtml) {
+            event.preventDefault()
+            editorInstance.chain().focus().insertContentAt(
+              { from: editorInstance.state.selection.from, to: editorInstance.state.selection.to },
+              tableHtml,
             ).run()
             return true
           }
@@ -592,6 +608,16 @@ export const WysiwygEditor = ({
       {!readOnly && mode === 'compact' && (
         <CompactToolbar editor={editor} />
       )}
+      {!readOnly && mode === 'full' && (
+        <>
+          <EditorBubbleMenu editor={editor} onOpenAiMenu={() => setIsAiMenuOpen(true)} />
+          <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <TableFloatingMenu editor={editor} />
+            </div>
+          </div>
+        </>
+      )}
       <div ref={editorViewportRef} className="tiptap-editor">
         <EditorContent editor={editor} />
 
@@ -614,6 +640,12 @@ export const WysiwygEditor = ({
           </div>
         )}
       </div>
+
+      <AiAssistantMenu
+        isOpen={isAiMenuOpen}
+        onClose={() => setIsAiMenuOpen(false)}
+        editor={editor}
+      />
 
       {mode === 'full' && slashMenu?.open && (
         <SlashCommandMenu

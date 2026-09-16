@@ -1,4 +1,5 @@
 import React from 'react'
+import { FolderTree, Folder } from 'lucide-react'
 import type { Note, NoteFolder, BreadcrumbPart } from '@types'
 import { WysiwygEditor } from '../../shared/WysiwygEditor'
 import { FolderIcon, HomeFolderIcon, PageIcon } from './icons'
@@ -58,7 +59,7 @@ export const FolderEditorPane = ({
           {folderBreadcrumb.slice(0, -1).map((part, i) => (
             <span key={part.id} className="notes-bc-item-wrap">
               {i > 0 && <span className="notes-bc-sep">&gt;</span>}
-              <button className="notes-bc-item" onClick={() => onOpenFolder(part.id)}>
+              <button className="notes-bc-item" onClick={() => onOpenFolder(part.id || '')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}>
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
@@ -147,7 +148,8 @@ export const FolderEditorPane = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <span>🌳 Gerenciar Estrutura</span>
+                <FolderTree size={14} />
+                <span>Gerenciar Estrutura</span>
               </button>
             )}
 
@@ -442,7 +444,7 @@ export const FolderEditorPane = ({
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   gap: '12px',
                   padding: '14px 16px',
                   minWidth: 0,
@@ -518,10 +520,14 @@ export const FolderEditorPane = ({
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       maxWidth: '80%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                     title={item.location}
                   >
-                    📁 {item.location}
+                    <Folder size={11} style={{ flexShrink: 0 }} />
+                    <span>{item.location}</span>
                   </span>
                   {item.note.updatedAt && (
                     <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 500, flexShrink: 0 }}>

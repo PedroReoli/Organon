@@ -6,8 +6,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import type { Note, NoteFolder } from '../../../../types'
-import type { SidebarCtxMenu } from '@types'
+import type { Note, NoteFolder, SidebarCtxMenu } from '@types'
 
 const PAD = 8
 

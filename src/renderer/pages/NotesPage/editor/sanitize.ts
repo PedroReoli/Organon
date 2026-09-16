@@ -114,3 +114,70 @@ export function sanitizePastedHtml(rawHtml: string): string {
     return rawHtml
   }
 }
+
+/**
+ * Detects whether plain text looks like TSV (tab-separated, Excel/Google Sheets)
+ * or CSV data with multiple rows and columns.
+ */
+export function looksLikeTabularData(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed || !trimmed.includes('\n')) return false
+  const lines = trimmed.split(/\r?\n/).filter(l => l.trim().length > 0)
+  if (lines.length < 2) return false
+
+  // Check if at least 2 lines contain tabs
+  const tabLines = lines.filter(l => l.includes('\t'))
+  if (tabLines.length >= 2) return true
+
+  // Check if lines have consistent comma separation (at least 2 columns)
+  const firstCommaCount = (lines[0].match(/,/g) || []).length
+  if (firstCommaCount >= 1) {
+    const consistentCommas = lines.slice(1, 5).every(l => (l.match(/,/g) || []).length === firstCommaCount)
+    if (consistentCommas) return true
+  }
+
+  return false
+}
+
+/**
+ * Converts TSV / CSV text from Excel or Google Sheets into a clean HTML <table> string
+ */
+export function tabularTextToHtmlTable(text: string): string {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0)
+  if (lines.length === 0) return ''
+
+  const isTsv = lines.some(l => l.includes('\t'))
+
+  const rows = lines.map(line => {
+    if (isTsv) {
+      return line.split('\t').map(cell => cell.trim())
+    }
+    // Simple CSV parser supporting quotes
+    const pattern = /(?:^|,)(?:"([^"]*)"|([^",]*))/g
+    const cells: string[] = []
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(line)) !== null) {
+      cells.push((match[1] || match[2] || '').trim())
+    }
+    return cells
+  })
+
+  let html = '<table><tbody>'
+  rows.forEach((row, rowIdx) => {
+    html += '<tr>'
+    const isHeader = rowIdx === 0
+    row.forEach(cell => {
+      const tag = isHeader ? 'th' : 'td'
+      const escaped = cell
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+      html += `<${tag}><p>${escaped || '&nbsp;'}</p></${tag}>`
+    })
+    html += '</tr>'
+  })
+  html += '</tbody></table>'
+
+  return html
+}
+

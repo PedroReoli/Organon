@@ -1,4 +1,22 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
+import {
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  FolderTree,
+  FileText,
+  FilePlus,
+  Home,
+  Move,
+  Edit3,
+  Trash2,
+  Search,
+  X,
+  Star,
+  Pin,
+  Lock,
+  ChevronRight,
+} from 'lucide-react'
 import type { Note, NoteFolder } from '@types'
 import '../../../styles/features/notes/tree-manager.css'
 
@@ -12,50 +30,6 @@ interface NotesTreeManagerModalProps {
   onAddNote: (folderId?: string | null, parentNoteId?: string | null) => void
   onUpdateNote: (noteId: string, updates: Partial<Note>) => void
   onRemoveNote: (noteId: string) => void
-}
-
-// ── Categorias de Emojis Populares ─────────────────────────────────────────────
-const EMOJI_CATEGORIES = [
-  {
-    name: 'Pastas & Arquivos',
-    emojis: ['📁', '📂', '🗂️', '📦', '🗃️', '📥', '📤', '🏷️', '📑', '🔖', '💼', '🏢'],
-  },
-  {
-    name: 'Projetos & Metas',
-    emojis: ['🚀', '🎯', '⚡', '🔥', '🏆', '⭐', '📌', '💎', '🚩', '🏁', '🥇', '👑'],
-  },
-  {
-    name: 'Ideias & Criação',
-    emojis: ['💡', '🧠', '🎨', '✨', '🔮', '📝', '🔬', '💭', '✏️', '🖌️', '🪄', '🎬'],
-  },
-  {
-    name: 'Tech & Dev',
-    emojis: ['💻', '🛠️', '⚙️', '🧪', '📊', '🌐', '🔒', '🤖', '⚡', '🔋', '📡', '🕹️'],
-  },
-  {
-    name: 'Estudo, Finanças & Vida',
-    emojis: ['📚', '📖', '🎓', '💰', '💵', '🗓️', '⏰', '☕', '🌱', '🌿', '❤️', '🧘'],
-  },
-]
-
-// ── Utilitários para Emojis ───────────────────────────────────────────────────
-const EMOJI_REGEX = /^(\p{Extended_Pictographic}|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83E[\uDD00-\uDDFF]|\u2600-\u26FF|\u2700-\u27BF)\s*/u
-
-function extractEmoji(title: string): { emoji: string | null; cleanTitle: string } {
-  if (!title) return { emoji: null, cleanTitle: '' }
-  const match = title.match(EMOJI_REGEX)
-  if (match) {
-    const emoji = match[0].trim()
-    const cleanTitle = title.slice(match[0].length).trim()
-    return { emoji, cleanTitle: cleanTitle || title }
-  }
-  return { emoji: null, cleanTitle: title }
-}
-
-function applyEmoji(title: string, newEmoji: string | null): string {
-  const { cleanTitle } = extractEmoji(title)
-  if (!newEmoji) return cleanTitle
-  return `${newEmoji} ${cleanTitle}`.trim()
 }
 
 export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
@@ -78,27 +52,9 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
   const [targetMoveFolderId, setTargetMoveFolderId] = useState<string>('root')
   const [movingSingleItem, setMovingSingleItem] = useState<{ id: string; type: 'note' | 'folder'; title: string } | null>(null)
 
-  // Picker de Emoji
-  const [emojiPickerTarget, setEmojiPickerTarget] = useState<{ id: string; type: 'note' | 'folder'; currentTitle: string } | null>(null)
-  const emojiPickerRef = useRef<HTMLDivElement | null>(null)
-
   // Subpasta rápida
   const [creatingSubfolderParentId, setCreatingSubfolderParentId] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
-  const [newSubfolderEmoji, setNewSubfolderEmoji] = useState('📁')
-
-  // Fechar emoji picker ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
-        setEmojiPickerTarget(null)
-      }
-    }
-    if (emojiPickerTarget) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [emojiPickerTarget])
 
   // Expandir / Recolher Tudo
   const toggleExpandFolder = (id: string) => {
@@ -206,36 +162,20 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
     setEditingItemId(null)
   }
 
-  // Alteração de Emoji
-  const handleSelectEmoji = (emoji: string | null) => {
-    if (!emojiPickerTarget) return
-    const { id, type, currentTitle } = emojiPickerTarget
-    const updatedTitle = applyEmoji(currentTitle, emoji)
-
-    if (type === 'folder') {
-      onUpdateFolder(id, { name: updatedTitle })
-    } else {
-      onUpdateNote(id, { title: updatedTitle })
-    }
-    setEmojiPickerTarget(null)
-  }
-
   // Criar subpasta
   const handleCreateSubfolder = (parentId: string | null) => {
     if (!newSubfolderName.trim()) return
-    const fullName = `${newSubfolderEmoji} ${newSubfolderName.trim()}`.trim()
-    onAddFolder(fullName, parentId)
+    onAddFolder(newSubfolderName.trim(), parentId)
     if (parentId) {
       setExpandedFolders((prev) => new Set([...prev, parentId]))
     }
     setCreatingSubfolderParentId(null)
     setNewSubfolderName('')
-    setNewSubfolderEmoji('📁')
   }
 
   // Criar nova pasta raiz
   const handleCreateRootFolder = () => {
-    const name = window.prompt('Nome da nova pasta raiz:', '📁 Nova Pasta')
+    const name = window.prompt('Nome da nova pasta raiz:', 'Nova Pasta')
     if (name && name.trim()) {
       onAddFolder(name.trim(), null)
     }
@@ -290,7 +230,6 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
     const isExpanded = expandedFolders.has(folder.id)
     const isEditing = editingItemId === folder.id
     const isChecked = selectedFolderIds.has(folder.id)
-    const { emoji, cleanTitle } = extractEmoji(folder.name)
 
     // Filtragem de busca
     if (query) {
@@ -319,22 +258,22 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
               title={isExpanded ? 'Recolher pasta' : 'Expandir pasta'}
             >
               {subfolders.length > 0 || childNotes.length > 0 ? (
-                <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.15s ease' }}>
-                  ▶
-                </span>
+                <ChevronRight
+                  size={14}
+                  style={{
+                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                />
               ) : (
                 <span style={{ opacity: 0.3 }}>•</span>
               )}
             </button>
 
-            {/* Seletor Rápido de Emoji da Pasta */}
-            <button
-              className="tree-node-emoji-btn"
-              onClick={() => setEmojiPickerTarget({ id: folder.id, type: 'folder', currentTitle: folder.name })}
-              title="Clique para alterar o emoji da pasta"
-            >
-              {emoji || (folder.isHome ? '🏠' : isExpanded ? '📂' : '📁')}
-            </button>
+            {/* Ícone da Pasta */}
+            <div className="tree-node-icon" style={{ display: 'flex', alignItems: 'center', color: 'var(--color-primary)' }}>
+              {isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
+            </div>
 
             {isEditing ? (
               <input
@@ -355,7 +294,7 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                 onDoubleClick={() => startEditing(folder.id, folder.name)}
                 title="Duplo clique para renomear"
               >
-                {cleanTitle || folder.name}
+                {folder.name}
               </span>
             )}
           </div>
@@ -371,49 +310,41 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
             <div className="tree-node-actions">
               <button
                 className="tree-action-btn"
-                title="Alterar Emoji"
-                onClick={() => setEmojiPickerTarget({ id: folder.id, type: 'folder', currentTitle: folder.name })}
-              >
-                😀
-              </button>
-              <button
-                className="tree-action-btn"
                 title="Nova subpasta aqui"
                 onClick={() => {
                   setCreatingSubfolderParentId(folder.id)
                   setNewSubfolderName('')
-                  setNewSubfolderEmoji('📁')
                 }}
               >
-                +📂
+                <FolderPlus size={14} />
               </button>
               <button 
                 className="tree-action-btn" 
                 title="Nova nota nesta pasta" 
                 onClick={() => onAddNote(folder.id, null)}
               >
-                +📄
+                <FilePlus size={14} />
               </button>
               <button
                 className={`tree-action-btn ${folder.isHome ? 'tree-action-btn-active' : ''}`}
                 title={folder.isHome ? 'Remover status de Hub' : 'Definir como Hub Central'}
                 onClick={() => onUpdateFolder(folder.id, { isHome: !folder.isHome })}
               >
-                🏠
+                <Home size={14} />
               </button>
               <button
                 className="tree-action-btn"
                 title="Mover pasta de lugar"
                 onClick={() => setMovingSingleItem({ id: folder.id, type: 'folder', title: folder.name })}
               >
-                🚚
+                <Move size={14} />
               </button>
               <button 
                 className="tree-action-btn" 
                 title="Renomear pasta" 
                 onClick={() => startEditing(folder.id, folder.name)}
               >
-                ✏️
+                <Edit3 size={14} />
               </button>
               <button
                 className="tree-action-btn tree-action-btn-danger"
@@ -424,7 +355,7 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                   }
                 }}
               >
-                🗑️
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
@@ -434,21 +365,6 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
         {creatingSubfolderParentId === folder.id && (
           <div className="tree-subfolder-creator" style={{ paddingLeft: 34 }}>
             <span className="tree-subfolder-prefix">↳</span>
-            <select
-              className="tree-select-emoji-inline"
-              value={newSubfolderEmoji}
-              onChange={(e) => setNewSubfolderEmoji(e.target.value)}
-            >
-              <option value="📁">📁</option>
-              <option value="📂">📂</option>
-              <option value="🚀">🚀</option>
-              <option value="💡">💡</option>
-              <option value="🎯">🎯</option>
-              <option value="📚">📚</option>
-              <option value="🛠️">🛠️</option>
-              <option value="⭐">⭐</option>
-              <option value="🔒">🔒</option>
-            </select>
             <input
               type="text"
               className="tree-node-title-input"
@@ -485,7 +401,6 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
   const renderNoteNode = (note: Note, depth: number = 0) => {
     const isEditing = editingItemId === note.id
     const isChecked = selectedNoteIds.has(note.id)
-    const { emoji, cleanTitle } = extractEmoji(note.title)
 
     if (query && !note.title.toLowerCase().includes(query)) {
       return null
@@ -502,14 +417,10 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
               onChange={() => toggleSelectNote(note.id)}
             />
             
-            {/* Seletor Rápido de Emoji da Nota */}
-            <button
-              className="tree-node-emoji-btn tree-node-emoji-btn-note"
-              onClick={() => setEmojiPickerTarget({ id: note.id, type: 'note', currentTitle: note.title })}
-              title="Clique para alterar o emoji da nota"
-            >
-              {emoji || '📄'}
-            </button>
+            {/* Ícone da Nota */}
+            <div className="tree-node-icon" style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)' }}>
+              <FileText size={15} />
+            </div>
 
             {isEditing ? (
               <input
@@ -530,37 +441,30 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                 onDoubleClick={() => startEditing(note.id, note.title)}
                 title="Duplo clique para renomear"
               >
-                {cleanTitle || note.title || 'Sem título'}
+                {note.title || 'Sem título'}
               </span>
             )}
           </div>
 
           <div className="tree-node-meta">
-            {note.isFavorite && <span className="tree-badge" title="Favorita">⭐</span>}
-            {note.isPinned && <span className="tree-badge" title="Fixada">📌</span>}
-            {note.isLocked && <span className="tree-badge" title="Bloqueada">🔒</span>}
+            {note.isFavorite && <span className="tree-badge" title="Favorita"><Star size={12} fill="currentColor" color="#f59e0b" /></span>}
+            {note.isPinned && <span className="tree-badge" title="Fixada"><Pin size={12} color="var(--color-primary)" /></span>}
+            {note.isLocked && <span className="tree-badge" title="Bloqueada"><Lock size={12} color="#ef4444" /></span>}
 
             <div className="tree-node-actions">
-              <button
-                className="tree-action-btn"
-                title="Alterar Emoji"
-                onClick={() => setEmojiPickerTarget({ id: note.id, type: 'note', currentTitle: note.title })}
-              >
-                😀
-              </button>
               <button
                 className="tree-action-btn"
                 title="Mover nota de pasta"
                 onClick={() => setMovingSingleItem({ id: note.id, type: 'note', title: note.title })}
               >
-                🚚
+                <Move size={14} />
               </button>
               <button 
                 className="tree-action-btn" 
                 title="Renomear nota" 
                 onClick={() => startEditing(note.id, note.title)}
               >
-                ✏️
+                <Edit3 size={14} />
               </button>
               <button
                 className="tree-action-btn tree-action-btn-danger"
@@ -571,7 +475,7 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                   }
                 }}
               >
-                🗑️
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
@@ -591,36 +495,40 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
         {/* Header */}
         <div className="tree-manager-header">
           <div className="tree-manager-title-wrap">
-            <div className="tree-manager-title-icon">🌳</div>
+            <div className="tree-manager-title-icon" style={{ display: 'flex', alignItems: 'center' }}>
+              <FolderTree size={20} color="var(--color-primary)" />
+            </div>
             <div>
               <h2 className="tree-manager-title">Estrutura & Hierarquia de Conhecimento</h2>
-              <p className="tree-manager-subtitle">Organize pastas, gerencie subníveis, atribua emojis e execute ações em lote.</p>
+              <p className="tree-manager-subtitle">Organize pastas, gerencie subníveis e execute ações em lote.</p>
             </div>
           </div>
 
           <div className="tree-manager-header-stats">
-            <div className="tree-stat-pill" title="Total de pastas">
-              📁 <span>{stats.totalFolders}</span> pastas
+            <div className="tree-stat-pill" title="Total de pastas" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Folder size={13} /> <span>{stats.totalFolders}</span> pastas
             </div>
-            <div className="tree-stat-pill" title="Total de notas">
-              📄 <span>{stats.totalNotes}</span> notas
+            <div className="tree-stat-pill" title="Total de notas" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <FileText size={13} /> <span>{stats.totalNotes}</span> notas
             </div>
             {stats.hubs > 0 && (
-              <div className="tree-stat-pill tree-stat-pill-hub" title="Hubs centrais ativos">
-                🏠 <span>{stats.hubs}</span> hubs
+              <div className="tree-stat-pill tree-stat-pill-hub" title="Hubs centrais ativos" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Home size={13} /> <span>{stats.hubs}</span> hubs
               </div>
             )}
           </div>
 
           <button className="tree-manager-close-btn" onClick={onClose} title="Fechar modal (Esc)">
-            ✕
+            <X size={16} />
           </button>
         </div>
 
         {/* Toolbar & Ações Rápidas */}
         <div className="tree-manager-toolbar">
           <div className="tree-manager-search-wrap">
-            <span className="tree-manager-search-icon">🔍</span>
+            <span className="tree-manager-search-icon" style={{ display: 'flex', alignItems: 'center' }}>
+              <Search size={14} />
+            </span>
             <input
               type="text"
               className="tree-manager-search-input"
@@ -630,17 +538,17 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
             />
             {searchQuery && (
               <button className="tree-manager-search-clear" onClick={() => setSearchQuery('')}>
-                ✕
+                <X size={14} />
               </button>
             )}
           </div>
 
           <div className="tree-manager-quick-actions">
-            <button className="tree-btn tree-btn-primary" onClick={handleCreateRootFolder}>
-              <span>+📁</span> Nova Pasta Raiz
+            <button className="tree-btn tree-btn-primary" onClick={handleCreateRootFolder} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FolderPlus size={14} /> Nova Pasta Raiz
             </button>
-            <button className="tree-btn" onClick={() => onAddNote(null, null)}>
-              <span>+📄</span> Nova Nota
+            <button className="tree-btn" onClick={() => onAddNote(null, null)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FilePlus size={14} /> Nova Nota
             </button>
             <div className="tree-toolbar-divider" />
             <button className="tree-btn" onClick={expandAll} title="Expandir todas as pastas">
@@ -658,7 +566,9 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
           {looseNotes.length > 0 && (
             <div className="tree-loose-section">
               <div className="tree-section-header">
-                <span className="tree-section-title">📄 Notas Soltas na Raiz ({looseNotes.length})</span>
+                <span className="tree-section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={14} /> Notas Soltas na Raiz ({looseNotes.length})
+                </span>
                 <span className="tree-section-hint">Sem pasta vinculada</span>
               </div>
               <div className="tree-loose-list">
@@ -672,59 +582,24 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
 
           {rootFolders.length === 0 && looseNotes.length === 0 && (
             <div className="tree-empty-state">
-              <div className="tree-empty-icon">📂</div>
+              <div className="tree-empty-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                <FolderOpen size={36} color="var(--color-text-muted)" />
+              </div>
               <h3>Nenhuma pasta ou nota encontrada</h3>
               <p>Comece criando sua primeira pasta raiz para estruturar seu conhecimento.</p>
-              <button className="tree-btn tree-btn-primary" onClick={handleCreateRootFolder}>
-                + Criar Primeira Pasta
+              <button className="tree-btn tree-btn-primary" onClick={handleCreateRootFolder} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <FolderPlus size={14} /> Criar Primeira Pasta
               </button>
             </div>
           )}
         </div>
 
-        {/* Popover / Seletor Flutuante de Emojis */}
-        {emojiPickerTarget && (
-          <div className="tree-emoji-popover-overlay" onClick={() => setEmojiPickerTarget(null)}>
-            <div 
-              ref={emojiPickerRef} 
-              className="tree-emoji-popover" 
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="tree-emoji-popover-header">
-                <span>Escolher Emoji</span>
-                <button className="tree-emoji-remove-btn" onClick={() => handleSelectEmoji(null)}>
-                  Remover Emoji
-                </button>
-              </div>
-
-              <div className="tree-emoji-categories">
-                {EMOJI_CATEGORIES.map((cat) => (
-                  <div key={cat.name} className="tree-emoji-group">
-                    <span className="tree-emoji-group-title">{cat.name}</span>
-                    <div className="tree-emoji-grid">
-                      {cat.emojis.map((em) => (
-                        <button
-                          key={em}
-                          className="tree-emoji-item"
-                          onClick={() => handleSelectEmoji(em)}
-                          title={`Selecionar ${em}`}
-                        >
-                          {em}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal/Barra de Mover Item Individual */}
         {movingSingleItem && (
           <div className="tree-single-move-bar">
-            <div className="tree-single-move-info">
-              <span>🚚 Mover <strong>{movingSingleItem.title}</strong> para:</span>
+            <div className="tree-single-move-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Move size={14} />
+              <span>Mover <strong>{movingSingleItem.title}</strong> para:</span>
             </div>
             <div className="tree-single-move-controls">
               <select
@@ -735,12 +610,12 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                 <option value="" disabled>
                   Selecione a pasta destino...
                 </option>
-                <option value="root">📁 Raiz Principal (Sem Pasta)</option>
+                <option value="root">Raiz Principal (Sem Pasta)</option>
                 {visibleFolders
                   .filter((f) => f.id !== movingSingleItem.id)
                   .map((f) => (
                     <option key={f.id} value={f.id}>
-                      📁 {f.name}
+                      {f.name}
                     </option>
                   ))}
               </select>
@@ -769,18 +644,18 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
                 value={targetMoveFolderId}
                 onChange={(e) => setTargetMoveFolderId(e.target.value)}
               >
-                <option value="root">📁 Raiz (Sem Pasta)</option>
+                <option value="root">Raiz (Sem Pasta)</option>
                 {visibleFolders.map((f) => (
                   <option key={f.id} value={f.id}>
-                    📁 {f.name}
+                    {f.name}
                   </option>
                 ))}
               </select>
               <button className="tree-btn tree-btn-primary" onClick={handleBulkMove}>
                 Mover Selecionados
               </button>
-              <button className="tree-btn tree-btn-danger" onClick={handleBulkDelete}>
-                🗑️ Excluir Selecionados
+              <button className="tree-btn tree-btn-danger" onClick={handleBulkDelete} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Trash2 size={14} /> Excluir Selecionados
               </button>
             </div>
           </div>
@@ -789,3 +664,4 @@ export const NotesTreeManagerModal: React.FC<NotesTreeManagerModalProps> = ({
     </div>
   )
 }
+

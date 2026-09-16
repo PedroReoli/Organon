@@ -1,4 +1,5 @@
 import React from 'react'
+import { Settings, Trash2, X } from 'lucide-react'
 
 interface ChatbotHeaderProps {
   onClose?: () => void
@@ -48,9 +49,12 @@ export const ChatbotHeader: React.FC<ChatbotHeaderProps> = ({
             cursor: 'pointer',
             padding: '4px',
             borderRadius: '4px',
+            display: 'inline-flex',
+            alignItems: 'center',
           }}
+          aria-label="Configurações de IA"
         >
-          ⚙️
+          <Settings size={15} />
         </button>
         <button
           onClick={onClearHistory}
@@ -63,9 +67,12 @@ export const ChatbotHeader: React.FC<ChatbotHeaderProps> = ({
             cursor: 'pointer',
             padding: '4px',
             borderRadius: '4px',
+            display: 'inline-flex',
+            alignItems: 'center',
           }}
+          aria-label="Limpar histórico"
         >
-          🗑️
+          <Trash2 size={15} />
         </button>
         {onClose && (
           <button
@@ -79,9 +86,12 @@ export const ChatbotHeader: React.FC<ChatbotHeaderProps> = ({
               cursor: 'pointer',
               padding: '4px',
               borderRadius: '4px',
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
+            aria-label="Fechar chat"
           >
-            ✕
+            <X size={15} />
           </button>
         )}
       </div>

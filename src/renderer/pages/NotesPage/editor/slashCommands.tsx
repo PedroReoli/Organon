@@ -32,7 +32,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Cabeçalho grande',
     keywords: ['h1', 'heading', 'titulo'],
     icon: <span style={{ fontWeight: 800, fontSize: 14 }}>H1</span>,
-    action: (ed) => ed.chain().focus().toggleHeading({ level: 1 }).run(),
+    action: (ed: any) => ed.chain().focus().toggleHeading({ level: 1 }).run(),
   },
   {
     id: 'h2',
@@ -40,7 +40,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Cabeçalho médio',
     keywords: ['h2', 'heading', 'titulo'],
     icon: <span style={{ fontWeight: 700, fontSize: 13 }}>H2</span>,
-    action: (ed) => ed.chain().focus().toggleHeading({ level: 2 }).run(),
+    action: (ed: any) => ed.chain().focus().toggleHeading({ level: 2 }).run(),
   },
   {
     id: 'h3',
@@ -48,7 +48,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Cabeçalho pequeno',
     keywords: ['h3', 'heading', 'titulo'],
     icon: <span style={{ fontWeight: 600, fontSize: 12 }}>H3</span>,
-    action: (ed) => ed.chain().focus().toggleHeading({ level: 3 }).run(),
+    action: (ed: any) => ed.chain().focus().toggleHeading({ level: 3 }).run(),
   },
   {
     id: 'paragraph',
@@ -61,7 +61,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="5" y1="9" x2="5" y2="13" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().setParagraph().run(),
+    action: (ed: any) => ed.chain().focus().setParagraph().run(),
   },
   {
     id: 'bullet',
@@ -78,7 +78,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="6" y1="12" x2="14" y2="12" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().toggleBulletList().run(),
+    action: (ed: any) => ed.chain().focus().toggleBulletList().run(),
   },
   {
     id: 'ordered',
@@ -95,7 +95,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="7" y1="13" x2="14" y2="13" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().toggleOrderedList().run(),
+    action: (ed: any) => ed.chain().focus().toggleOrderedList().run(),
   },
   {
     id: 'task',
@@ -111,7 +111,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="9" y1="12.5" x2="14" y2="12.5" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().toggleTaskList().run(),
+    action: (ed: any) => ed.chain().focus().toggleTaskList().run(),
   },
   {
     id: 'blockquote',
@@ -123,7 +123,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <path d="M3 7.5C3 5.6 4.4 4 6.5 3L7 4c-1.7.9-2 2.1-2 2.6.2-.1.5-.1.8-.1.9 0 1.7.7 1.7 1.8C7.5 9.4 6.7 10 5.7 10 4.3 10 3 9 3 7.5zM9 7.5C9 5.6 10.4 4 12.5 3L13 4c-1.7.9-2 2.1-2 2.6.2-.1.5-.1.8-.1.9 0 1.7.7 1.7 1.8 0 1.1-.8 1.7-1.8 1.7C10.3 10 9 9 9 7.5z" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().toggleBlockquote().run(),
+    action: (ed: any) => ed.chain().focus().toggleBlockquote().run(),
   },
   {
     id: 'code',
@@ -136,7 +136,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <polyline points="5.5 4.5 2.5 8 5.5 11.5" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().toggleCodeBlock().run(),
+    action: (ed: any) => ed.chain().focus().toggleCodeBlock().run(),
   },
   {
     id: 'table',
@@ -151,7 +151,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="7" y1="2" x2="7" y2="14" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    action: (ed: any) => ed.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     id: 'divider',
@@ -163,7 +163,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="2" y1="8" x2="14" y2="8" />
       </svg>
     ),
-    action: (ed) => ed.chain().focus().setHorizontalRule().run(),
+    action: (ed: any) => ed.chain().focus().setHorizontalRule().run(),
   },
   {
     id: 'image',
@@ -177,7 +177,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <path d="m14 10-4-4L4 14" />
       </svg>
     ),
-    action: (_ed) => {
+    action: (_ed: any) => {
       document.dispatchEvent(new CustomEvent('slash-insert-image'))
     },
   },
@@ -192,7 +192,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <path d="M9 7a3 3 0 0 0-4.54-.33l-2 2a3 3 0 0 0 4.24 4.24L7.88 11.7" />
       </svg>
     ),
-    action: (_ed) => {
+    action: (_ed: any) => {
       document.dispatchEvent(new CustomEvent('slash-insert-link'))
     },
   },
@@ -207,7 +207,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <line x1="2" y1="8" x2="14" y2="8" strokeOpacity="0.3" />
       </svg>
     ),
-    action: (ed) => {
+    action: (ed: any) => {
       ed.chain().focus().insertContent({
         type: 'toggleBlock',
         attrs: { summary: 'Título do bloco' },
@@ -226,7 +226,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         <path d="M5 7V5a3 3 0 0 1 6 0v2" />
       </svg>
     ),
-    action: (ed) => {
+    action: (ed: any) => {
       ed.chain().focus().insertContent({
         type: 'passwordBlock',
         attrs: { text: '' },
@@ -234,18 +234,110 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     },
   },
   {
-    id: 'page',
-    label: 'Subpágina',
-    description: 'Criar uma nota dentro desta nota',
-    keywords: ['page', 'pagina', 'subpage', 'subpagina', 'nested'],
+    id: 'callout-note',
+    label: 'Callout / Nota',
+    description: 'Bloco de destaque azul informativo',
+    keywords: ['callout', 'nota', 'aviso', 'info', 'destaque'],
     icon: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
-        <path d="M3 14V4l3-3h7v13H3Z" /><path d="M6 1v3H3" />
-        <line x1="6" y1="8" x2="10" y2="8" /><line x1="8" y1="6" x2="8" y2="10" />
+        <circle cx="8" cy="8" r="6" />
+        <line x1="8" y1="7" x2="8" y2="11" />
+        <circle cx="8" cy="5" r="0.5" fill="currentColor" />
       </svg>
     ),
-    action: (_ed) => {
-      document.dispatchEvent(new CustomEvent('slash-create-subpage'))
+    action: (ed: any) => (ed.chain().focus() as any).setCallout({ type: 'note' }).run(),
+  },
+  {
+    id: 'callout-tip',
+    label: 'Callout / Dica',
+    description: 'Bloco de dica verde com lâmpada',
+    keywords: ['tip', 'dica', 'callout', 'ideia', 'truque'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <path d="M8 2a4 4 0 0 0-4 4c0 1.5.8 2.5 1.5 3.5.3.4.5.9.5 1.5h4c0-.6.2-1.1.5-1.5.7-1 1.5-2 1.5-3.5a4 4 0 0 0-4-4Z" />
+        <line x1="6" y1="13" x2="10" y2="13" />
+      </svg>
+    ),
+    action: (ed: any) => (ed.chain().focus() as any).setCallout({ type: 'tip' }).run(),
+  },
+  {
+    id: 'callout-warning',
+    label: 'Callout / Atenção',
+    description: 'Bloco de alerta amarelo',
+    keywords: ['warning', 'alerta', 'atencao', 'cuidado', 'callout'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <path d="M8 2 1.5 13.5h13L8 2Z" />
+        <line x1="8" y1="6" x2="8" y2="9.5" />
+        <circle cx="8" cy="11.5" r="0.5" fill="currentColor" />
+      </svg>
+    ),
+    action: (ed: any) => (ed.chain().focus() as any).setCallout({ type: 'warning' }).run(),
+  },
+  {
+    id: 'callout-important',
+    label: 'Callout / Importante',
+    description: 'Bloco de alerta vermelho crítico',
+    keywords: ['important', 'importante', 'urgente', 'erro', 'critico'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <circle cx="8" cy="8" r="6" />
+        <line x1="8" y1="4.5" x2="8" y2="8.5" />
+        <circle cx="8" cy="11" r="0.5" fill="currentColor" />
+      </svg>
+    ),
+    action: (ed: any) => (ed.chain().focus() as any).setCallout({ type: 'important' }).run(),
+  },
+  {
+    id: 'color-palette',
+    label: 'Paleta de Cores',
+    description: 'Inserir paleta de cores estilizada com códigos hexadecimais',
+    keywords: ['cor', 'cores', 'color', 'paleta', 'palette', 'hex', 'design'],
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
+        <circle cx="4" cy="5" r="2.5" fill="#6366f1" stroke="none" />
+        <circle cx="12" cy="5" r="2.5" fill="#ec4899" stroke="none" />
+        <circle cx="8" cy="11" r="2.5" fill="#10b981" stroke="none" />
+      </svg>
+    ),
+    action: (ed: any) => {
+      const paletteHtml = `<table>
+        <thead>
+          <tr>
+            <th><p>Tipo de Cor</p></th>
+            <th><p>Nome / Uso</p></th>
+            <th><p>Hex / Código</p></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><p><strong>Primária</strong></p></td>
+            <td><p>Marca & Ações Principais</p></td>
+            <td><p><code>#6366F1</code> (Indigo)</p></td>
+          </tr>
+          <tr>
+            <td><p><strong>Secundária</strong></p></td>
+            <td><p>Destaques & Gradientes</p></td>
+            <td><p><code>#8B5CF6</code> (Purple)</p></td>
+          </tr>
+          <tr>
+            <td><p><strong>Acento</strong></p></td>
+            <td><p>Chamadas & Badges</p></td>
+            <td><p><code>#06B6D4</code> (Cyan)</p></td>
+          </tr>
+          <tr>
+            <td><p><strong>Sucesso</strong></p></td>
+            <td><p>Confirmações & Positivos</p></td>
+            <td><p><code>#10B981</code> (Emerald)</p></td>
+          </tr>
+          <tr>
+            <td><p><strong>Fundo / Superfície</strong></p></td>
+            <td><p>Cards & Dark Mode</p></td>
+            <td><p><code>#09090B</code> (Zinc 950)</p></td>
+          </tr>
+        </tbody>
+      </table>`
+      ed.chain().focus().insertContent(paletteHtml).run()
     },
   },
 ]

@@ -28,6 +28,7 @@ import { ToggleBlock } from './nodeViews/ToggleBlock'
 import { PasswordBlock } from './nodeViews/PasswordBlock'
 import { SubpageBlock } from './nodeViews/SubpageBlock'
 import { LinkCard } from './nodeViews/LinkCard'
+import { CalloutExtension } from './extensions/calloutExtension'
 
 export const getExtensions = (
   mode: 'compact' | 'full',
@@ -71,6 +72,7 @@ export const getExtensions = (
       PasswordBlock,
       SubpageBlock,
       LinkCard,
+      CalloutExtension,
     ]
 
     if (noteTitlesById) {

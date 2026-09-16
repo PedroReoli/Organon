@@ -7,8 +7,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react'
-import type { Note, NoteFolder } from '../../../../types'
-import type { TreeItemKey, TreeItemKind } from '@types'
+import type { Note, NoteFolder, TreeItemKey, TreeItemKind } from '@types'
 import { folderTreeKey, noteTreeKey, parseTreeKey } from '../../utils'
 
 interface UseNotesDragDropParams {

@@ -16,6 +16,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { Note, NoteFolder } from '@types'
 import type { NotesLinkIndex } from './useNotesLinkIndex'
 import { Button } from '@shared/components/primitives'
+import { Folder, FileText, Network, Star, Pin, Link2 } from 'lucide-react'
 
 export type GraphLevel = 1 | 2 | 3
 
@@ -177,7 +178,7 @@ function buildLayout(
       outgoing.forEach((r) => r.targetNoteId && relatedIds.add(r.targetNoteId))
       incoming.forEach((r) => r.sourceNoteId && relatedIds.add(r.sourceNoteId))
 
-      const detailedNotes = notes.filter((n) => !n.deletedAt && (relatedIds.has(n.id) || n.parentId === focusNote.id))
+      const detailedNotes = notes.filter((n) => !n.deletedAt && (relatedIds.has(n.id) || n.parentNoteId === focusNote.id))
 
       for (const note of detailedNotes) {
         nodeMap.set(note.id, {
@@ -451,9 +452,13 @@ export const NotesGraphView = ({
               fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            🏢 Nível 1: Pastas
+            <Folder size={12} />
+            <span>Nível 1: Pastas</span>
           </button>
           <button
             onClick={() => setCurrentLevel(2)}
@@ -466,9 +471,13 @@ export const NotesGraphView = ({
               fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            📝 Nível 2: Notas
+            <FileText size={12} />
+            <span>Nível 2: Notas</span>
           </button>
           <button
             onClick={() => setCurrentLevel(3)}
@@ -481,9 +490,13 @@ export const NotesGraphView = ({
               fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            🕸️ Nível 3: Links
+            <Network size={12} />
+            <span>Nível 3: Links</span>
           </button>
         </div>
 
@@ -647,9 +660,9 @@ export const NotesGraphView = ({
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#818cf8' }}>● Pasta/Cluster</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b' }}>★ Favorita</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>📌 Fixada</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)' }}>📄 Nota</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b' }}><Star size={12} fill="#f59e0b" /> Favorita</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}><Pin size={12} /> Fixada</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)' }}><FileText size={12} /> Nota</span>
         </div>
 
         {/* ── Inspetor Lateral de Nós ──────────────────────────────────────── */}
@@ -675,10 +688,18 @@ export const NotesGraphView = ({
             <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '8px' }}>
               {selectedFolder ? selectedFolder.name : selectedNode?.title}
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '14px' }}>
-              {selectedFolder
-                ? `📁 Pasta contendo ${notes.filter((n) => n.folderId === selectedFolder.id).length} notas`
-                : `🔗 ${selectedNode?.degree || 0} conexões semânticas`}
+            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {selectedFolder ? (
+                <>
+                  <Folder size={13} />
+                  <span>Pasta contendo {notes.filter((n) => n.folderId === selectedFolder.id).length} notas</span>
+                </>
+              ) : (
+                <>
+                  <Link2 size={13} />
+                  <span>{selectedNode?.degree || 0} conexões semânticas</span>
+                </>
+              )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {selectedFolder && (

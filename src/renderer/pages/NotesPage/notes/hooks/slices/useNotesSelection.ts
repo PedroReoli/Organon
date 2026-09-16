@@ -6,8 +6,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
-import type { Note, NoteFolder } from '../../../../types'
-import type { TreeItemKey } from '@types'
+import type { Note, NoteFolder, TreeItemKey } from '@types'
 import { folderTreeKey, noteTreeKey } from '../../utils'
 
 interface UseNotesSelectionParams {

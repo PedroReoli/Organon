@@ -41,10 +41,10 @@ export const NotesView = ({
   const [isTreeManagerOpen, setIsTreeManagerOpen] = React.useState(false)
 
   // Notas e pastas excluindo lixeira (visivel na sidebar normal)
-  const visibleNotes = React.useMemo(() => notes.filter((n) => !n.deletedAt), [notes])
-  const visibleFolders = React.useMemo(() => folders.filter((f) => !f.deletedAt), [folders])
+  const visibleNotes = React.useMemo(() => (notes || []).filter((n: any) => !n.deletedAt), [notes])
+  const visibleFolders = React.useMemo(() => (folders || []).filter((f: any) => !f.deletedAt), [folders])
   const trashCount = React.useMemo(
-    () => notes.filter((n) => n.deletedAt).length + folders.filter((f) => f.deletedAt).length,
+    () => (notes || []).filter((n: any) => n.deletedAt).length + (folders || []).filter((f: any) => f.deletedAt).length,
     [notes, folders],
   )
 
@@ -389,7 +389,7 @@ export const NotesView = ({
       {showGraph && graphMode === 'notes' && (
         <NotesGraphView
           notes={visibleNotes}
-          folders={tree.folders}
+          folders={visibleFolders}
           index={linkIndex}
           onOpenNote={(id) => { tree.openNote(id); setShowGraph(false) }}
           onClose={() => setShowGraph(false)}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { FolderTree } from 'lucide-react'
 import type { Note, NoteFolder } from '@types'
 import { ChevronIcon, FolderIcon, HomeFolderIcon, PageIcon, SubFolderIcon } from './icons'
 import { folderTreeKey, noteTreeKey } from './utils'
@@ -98,12 +99,6 @@ interface NotesSidebarProps {
   isNoteDescendant:   (candidateId: string, ancestorId: string) => boolean
 }
 
-const CheckIcon = () => (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="9" height="9">
-    <polyline points="3 8 6.5 11.5 13 4.5" />
-  </svg>
-)
-
 interface SectionHeaderProps {
   label: string
   icon?: React.ReactNode
@@ -152,7 +147,7 @@ const SectionHeader = ({
 
 export const NotesSidebar = (props: NotesSidebarProps) => {
   const {
-    notes: _notes, activeView, onGoHome, showTrash = false, onOpenTrash, trashCount = 0, onOpenTreeManager, onRequestDeleteNote, onDuplicateNote,
+    notes: _notes, activeView, onGoHome, showTrash = false, onOpenTrash, trashCount = 0, onOpenTreeManager, onRequestDeleteNote: _onRequestDeleteNote, onDuplicateNote,
     selectedNoteId, selectedFolderId, selectedTreeItems,
     expandedFolders, expandedNotes, sidebarOpen, setSidebarOpen,
     searchQuery, setSearchQuery, setSearchVisible, searchResults, searchInputRef,
@@ -163,7 +158,7 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
     markdownImportRef,
     openNote, openFolder, handleAddNote, toggleFolder, toggleNote,
     startTreeDrag, handleDragEnd, handleDropOnFolder, handleDropOnNote, handleDropOnRoot,
-    handleTreeRowSelection, selectSingleTreeItem, toggleTreeItemSelection, clearSelection, onCollapseAll,
+    handleTreeRowSelection, selectSingleTreeItem, toggleTreeItemSelection: _toggleTreeItemSelection, clearSelection, onCollapseAll,
     openCtxMenu, handleMarkdownImport,
     isFolderDescendant, isNoteDescendant,
   } = props
@@ -174,16 +169,6 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
   const [privateCollapsed,   setPrivateCollapsed]   = useState(false)
 
   const hasSelection = selectedTreeItems.size > 0
-
-  const handleDeleteBatch = () => {
-    selectedTreeItems.forEach(key => {
-      if (key.startsWith('note:')) {
-        const noteId = key.replace('note:', '')
-        if (onRequestDeleteNote) onRequestDeleteNote(noteId)
-      }
-    })
-    clearSelection()
-  }
 
   // Recursive note count for a folder
   const countNotesInFolder = (folderId: string): number => {
@@ -388,8 +373,8 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0, opacity: 0.5 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                 <input ref={newFolderInputRef} className="notes-tree-new-folder-field" value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleAddFolder(folder.id); if (e.key === 'Escape') { setNewFolderParentId(undefined); setNewFolderName('') } }}
-                  onBlur={() => { if (newFolderName.trim()) handleAddFolder(folder.id); else { setNewFolderParentId(undefined); setNewFolderName('') } }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddFolder(); if (e.key === 'Escape') { setNewFolderParentId(undefined); setNewFolderName('') } }}
+                  onBlur={() => { if (newFolderName.trim()) handleAddFolder(); else { setNewFolderParentId(undefined); setNewFolderName('') } }}
                   placeholder="Nome da pasta..." />
               </div>
             )}
@@ -577,8 +562,8 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
             Pasta
           </button>
           {onOpenTreeManager && (
-            <button type="button" className="notes-sidebar-footer-btn" onClick={onOpenTreeManager} title="Central de Estrutura & Emojis">
-              <span>🌳</span>
+            <button type="button" className="notes-sidebar-footer-btn" onClick={onOpenTreeManager} title="Central de Estrutura">
+              <FolderTree size={14} style={{ flexShrink: 0 }} />
               Estrutura
             </button>
           )}

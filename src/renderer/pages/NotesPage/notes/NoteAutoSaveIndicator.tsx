@@ -10,6 +10,7 @@
  */
 
 import React from 'react'
+import { Check, AlertCircle } from 'lucide-react'
 
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -38,13 +39,13 @@ export const NoteAutoSaveIndicator: React.FC<NoteAutoSaveIndicatorProps> = ({ st
       )}
       {status === 'saved' && lastSavedAt && (
         <>
-          <span className="note-autosave-check">✓</span>
+          <Check size={12} className="note-autosave-check" />
           Salvo há {relativeTime(lastSavedAt)}
         </>
       )}
       {status === 'error' && (
         <>
-          <span className="note-autosave-error">!</span>
+          <AlertCircle size={12} className="note-autosave-error" />
           Erro ao salvar
         </>
       )}

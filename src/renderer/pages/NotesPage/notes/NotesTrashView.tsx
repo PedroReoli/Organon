@@ -10,6 +10,7 @@ import React, { useMemo, useState } from 'react'
 import type { Note, NoteFolder } from '@types'
 import { NOTE_TRASH_RETENTION_DAYS } from '@types'
 import { Button } from '@shared/components/primitives'
+import { X } from 'lucide-react'
 
 interface NotesTrashViewProps {
   notes: Note[]
@@ -162,8 +163,8 @@ export const NotesTrashView: React.FC<NotesTrashViewProps> = ({
                           >
                             Confirmar
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setConfirmPurgeId(null); setPurgeText('') }}>
-                            ✕
+                          <Button size="sm" variant="ghost" onClick={() => { setConfirmPurgeId(null); setPurgeText('') }} aria-label="Cancelar">
+                            <X size={14} />
                           </Button>
                         </div>
                       ) : (
@@ -217,8 +218,8 @@ export const NotesTrashView: React.FC<NotesTrashViewProps> = ({
                           >
                             Confirmar
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setConfirmPurgeId(null); setPurgeText('') }}>
-                            ✕
+                          <Button size="sm" variant="ghost" onClick={() => { setConfirmPurgeId(null); setPurgeText('') }} aria-label="Cancelar">
+                            <X size={14} />
                           </Button>
                         </div>
                       ) : (

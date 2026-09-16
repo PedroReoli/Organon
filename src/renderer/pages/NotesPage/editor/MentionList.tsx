@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import type { SuggestionProps } from '@tiptap/suggestion'
 
 export interface MentionListRef {

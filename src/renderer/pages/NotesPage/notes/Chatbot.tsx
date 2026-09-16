@@ -13,6 +13,7 @@ interface Message {
   action?: 'summarize' | 'expand' | 'rewrite' | 'ask' | 'diff'
   originalText?: string
   diffResult?: DiffResult
+  actionPayload?: any
 }
 
 interface NoteContext {
@@ -32,15 +33,6 @@ interface DiffResult {
 interface DiffChange {
   type: 'add' | 'remove' | 'equal'
   text: string
-}
-
-interface ChatAction {
-  id: string
-  label: string
-  icon: React.ReactNode
-  prompt: string
-  requiresSelection?: boolean
-  context?: 'notes' | 'habits' | 'cards' | 'calendar' | 'finance' | 'crm' | 'general'
 }
 
 interface ScreenContext {
@@ -89,94 +81,6 @@ function loadAiConfig(): AiConfig {
 
 function saveAiConfig(cfg: AiConfig) {
   localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(cfg))
-}
-
-// ============================================================
-// SAVE CONVERSATION TO FILE (Desktop)
-// ============================================================
-
-async function saveConversationToFile(messages: Message[], conversationId?: string): Promise<string | null> {
-  const id = conversationId || `chat-${new Date().toISOString().slice(0, 10)}-${Date.now()}`
-
-  try {
-    // Check if running in Electron
-    if (window.electronAPI?.saveConversation) {
-      const content = formatConversationForFile(messages, id)
-      const filePath = await window.electronAPI.saveConversation(id, content)
-      return filePath
-    } else {
-      // Fallback: save to localStorage with metadata
-      const conversation = {
-        id,
-        timestamp: new Date().toISOString(),
-        messages: messages.map(m => ({
-          ...m,
-          timestamp: m.timestamp.toISOString()
-        })),
-        context: 'notes'
-      }
-      const key = `organon-conversation-${id}`
-      localStorage.setItem(key, JSON.stringify(conversation))
-      return key
-    }
-  } catch (e) {
-    console.error('Failed to save conversation:', e)
-    return null
-  }
-}
-
-function formatConversationForFile(messages: Message[], id: string): string {
-  const date = new Date().toLocaleString('pt-BR')
-
-  let content = `# Conversa do Organon - ${date}\n`
-  content += `## ID: ${id}\n\n---\n\n`
-
-  for (const msg of messages) {
-    const time = new Date(msg.timestamp).toLocaleString('pt-BR')
-    const role = msg.role === 'user' ? '## 👤 Você' : '## 🤖 Assistente'
-
-    content += `${role}\n`
-    content += `*${time}*\n\n`
-    content += `${msg.content}\n\n`
-
-    if (msg.notes && msg.notes.length > 0) {
-      content += `### 📄 Notas consultadas:\n`
-      for (const note of msg.notes) {
-        content += `- "${note.title}" (${Math.round(note.similarity * 100)}% similar)\n`
-      }
-      content += '\n'
-    }
-
-    content += '---\n\n'
-  }
-
-  content += `\n*Conversa salva automaticamente pelo Organon*\n`
-  return content
-}
-
-// Load conversations from localStorage
-function loadAllConversations(): Array<{ id: string; timestamp: string; preview: string }> {
-  const conversations: Array<{ id: string; timestamp: string; preview: string }> = []
-
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('organon-conversation-')) {
-        const data = JSON.parse(localStorage.getItem(key) || '{}')
-        conversations.push({
-          id: data.id,
-          timestamp: data.timestamp,
-          preview: data.messages?.[0]?.content?.slice(0, 100) || 'Sem conteúdo'
-        })
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load conversations:', e)
-  }
-
-  return conversations.sort((a, b) =>
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
 }
 
 // ============================================================
@@ -265,19 +169,6 @@ const SUGGESTIONS_BY_CONTEXT: Record<string, string[]> = {
 }
 
 // ============================================================
-// PROMPT TEMPLATES
-// ============================================================
-
-const PROMPT_TEMPLATES = [
-  { id: 'bullet', label: 'Como bullet points', template: 'Resuma {content} como bullet points' },
-  { id: 'table', label: 'Como tabela', template: 'Resuma {content} como tabela' },
-  { id: 'action', label: 'Lista de ações', template: 'Extraia {content} como lista de ações' },
-  { id: 'expand', label: 'Mais detalhes', template: 'Expanda {content} com mais detalhes' },
-  { id: 'simplify', label: 'Simplificar', template: 'Simplifique {content} mantendo o essencial' },
-  { id: 'professional', label: 'Tom profissional', template: 'Reescreva {content} em tom profissional' },
-]
-
-// ============================================================
 // ICONS
 // ============================================================
 
@@ -306,18 +197,7 @@ const Icons = {
   gear: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
 }
 
-// ============================================================
-// UTILITIES
-// ============================================================
-
-function tokenCount(text: string): number {
-  return Math.ceil(text.length / 4)
-}
-
-function truncateText(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text
-  return text.slice(0, maxChars - 3) + '...'
-}
+const NOTE_SNIPPET_CHARS = 200
 
 function extractSnippet(content: string, query: string, maxChars: number = NOTE_SNIPPET_CHARS): string {
   const lowerContent = content.toLowerCase()
@@ -351,25 +231,6 @@ function calculateSimilarity(text1: string, text2: string): number {
   }
   const union = words1.size + words2.size - intersection
   return union > 0 ? intersection / union : 0
-}
-
-function computeDiff(original: string, rewritten: string): DiffChange[] {
-  const changes: DiffChange[] = []
-  const originalLines = original.split('\n')
-  const rewrittenLines = rewritten.split('\n')
-  const maxLines = Math.max(originalLines.length, rewrittenLines.length)
-
-  for (let i = 0; i < maxLines; i++) {
-    const origLine = originalLines[i] || ''
-    const newLine = rewrittenLines[i] || ''
-    if (origLine === newLine) {
-      if (origLine) changes.push({ type: 'equal', text: origLine })
-    } else {
-      if (origLine) changes.push({ type: 'remove', text: origLine })
-      if (newLine) changes.push({ type: 'add', text: newLine })
-    }
-  }
-  return changes
 }
 
 function generateId(): string {
@@ -421,192 +282,95 @@ const TypingIndicator = () => (
 )
 
 // ============================================================
-// DIFF VIEWER COMPONENT
-// ============================================================
-
-const DiffViewer: React.FC<{
-  diff: DiffResult
-  onApply: (text: string) => void
-  onCancel: () => void
-}> = ({ diff, onApply, onCancel }) => {
-  const [activeTab, setActiveTab] = useState<'side' | 'inline'>('side')
-
-  return (
-    <div className="chatbot-diff-viewer">
-      <div className="chatbot-diff-header">
-        <div className="chatbot-diff-tabs">
-          <button className={`chatbot-diff-tab ${activeTab === 'side' ? 'is-active' : ''}`} onClick={() => setActiveTab('side')}>
-            Lado a Lado
-          </button>
-          <button className={`chatbot-diff-tab ${activeTab === 'inline' ? 'is-active' : ''}`} onClick={() => setActiveTab('inline')}>
-            Inline
-          </button>
-        </div>
-        <div className="chatbot-diff-actions">
-          <button className="chatbot-diff-btn chatbot-diff-btn-apply" onClick={() => onApply(diff.rewritten)}>
-            {Icons.check} Aplicar
-          </button>
-          <button className="chatbot-diff-btn" onClick={onCancel}>
-            {Icons.close} Fechar
-          </button>
-        </div>
-      </div>
-
-      {activeTab === 'side' ? (
-        <div className="chatbot-diff-side">
-          <div className="chatbot-diff-pane">
-            <div className="chatbot-diff-pane-header">Original</div>
-            <div className="chatbot-diff-pane-content">
-              {diff.changes.map((change, i) => (
-                <div key={i} className={`chatbot-diff-line ${change.type !== 'remove' && change.type !== 'equal' ? 'chatbot-diff-hidden' : ''}`}>
-                  <span className="chatbot-diff-line-num">{i + 1}</span>
-                  <span className={`chatbot-diff-line-content ${change.type === 'remove' ? 'chatbot-diff-removed' : ''}`}>
-                    {change.text}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="chatbot-diff-pane">
-            <div className="chatbot-diff-pane-header">Novo</div>
-            <div className="chatbot-diff-pane-content">
-              {diff.changes.map((change, i) => (
-                <div key={i} className={`chatbot-diff-line ${change.type !== 'add' && change.type !== 'equal' ? 'chatbot-diff-hidden' : ''}`}>
-                  <span className="chatbot-diff-line-num">{i + 1}</span>
-                  <span className={`chatbot-diff-line-content ${change.type === 'add' ? 'chatbot-diff-added' : ''}`}>
-                    {change.text}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="chatbot-diff-inline">
-          {diff.changes.map((change, i) => (
-            <div key={i} className={`chatbot-diff-inline-line chatbot-diff-${change.type}`}>
-              <span className="chatbot-diff-marker">{change.type === 'remove' ? '-' : change.type === 'add' ? '+' : ' '}</span>
-              <span>{change.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ============================================================
 // NOTE REFERENCE
 // ============================================================
 
 const NoteReference: React.FC<{ note: NoteContext; onClick?: () => void }> = ({ note, onClick }) => (
   <button className="chatbot-note-ref" onClick={onClick} title={`Similaridade: ${Math.round(note.similarity * 100)}%`}>
-    <span className="chatbot-note-ref-icon">📄</span>
+    <span className="chatbot-note-ref-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+    </span>
     <span className="chatbot-note-ref-title">{note.title}</span>
     <span className="chatbot-note-ref-score">{Math.round(note.similarity * 100)}%</span>
   </button>
 )
 
 // ============================================================
-// TEMPLATE PICKER
+// LOCAL INTENT PARSER
 // ============================================================
 
-const TemplatePicker: React.FC<{
-  content: string
-  onSelect: (prompt: string) => void
-  onClose: () => void
-}> = ({ content, onSelect, onClose }) => (
-  <div className="chatbot-template-picker">
-    <div className="chatbot-template-picker-header">
-      <span>Formatar como:</span>
-      <button onClick={onClose}>{Icons.close}</button>
-    </div>
-    <div className="chatbot-template-picker-list">
-      {PROMPT_TEMPLATES.map(t => (
-        <button key={t.id} className="chatbot-template-option" onClick={() => onSelect(t.template.replace('{content}', content))}>
-          {t.label}
-        </button>
-      ))}
-    </div>
-  </div>
-)
-
-// ============================================================
-// LOCAL INTENT & ORCHESTRATION ENGINE
-// ============================================================
-
-function processLocalCommand(
+function parseLocalIntent(
   input: string,
-  notes: Array<{ id: string; title: string; content: string; folderId?: string | null }>,
-  folders: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }>
-): { message: string; action?: PendingAction } {
-  const text = input.trim()
-  const lower = text.toLowerCase()
+  folders: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }> = [],
+  notes: Array<{ id: string; title: string; content: string; folderId?: string | null }> = []
+): { message: string; action?: { id: string; type: string; [key: string]: any } } {
+  const trimmed = input.trim()
+  const lower = trimmed.toLowerCase()
 
-  // 1. Criar pasta
-  const createFolderMatch = lower.match(/(?:crie|criar|nova|adicione|adicionar)\s+(?:uma\s+)?pasta\s+(?:chamada\s+|com\s+nome\s+)?["'“]?([^"'\n”]+)["'”]?/i)
-  if (createFolderMatch) {
-    const folderName = createFolderMatch[1].trim()
-    const parentMatch = lower.match(/(?:dentro\s+de|na\s+pasta|no\s+hub)\s+["'“]?([^"'\n”]+)["'”]?/i)
-    let parentId: string | null = null
-    if (parentMatch) {
-      const parentName = parentMatch[1].trim()
-      const foundParent = folders.find(f => f.name.toLowerCase() === parentName.toLowerCase() || f.name.toLowerCase().includes(parentName.toLowerCase()))
-      if (foundParent) parentId = foundParent.id
-    }
+  // 1. Criar pasta: "crie a pasta PROMPTS", "criar pasta dev", "nova pasta X"
+  const folderMatch = lower.match(/(?:criar|crie|nova|adicionar|adicione)\s+(?:uma\s+)?pasta\s+(?:chamada\s+)?["']?([^"'\n\r]+)["']?/i)
+  if (folderMatch) {
+    const folderName = folderMatch[1].trim()
     return {
-      message: `Entendido! Preparei a criação da pasta "${folderName}"${parentId ? ` dentro da pasta selecionada` : ''}. Por favor, confirme no card abaixo:`,
-      action: { id: generateId(), type: 'create_folder', name: folderName, parentId }
+      message: `Entendido! Preparei a criação da pasta "${folderName}". Confirme no card abaixo para executar:`,
+      action: { id: generateId(), type: 'create_folder', name: folderName }
     }
   }
 
-  // 2. Mover nota
-  const moveMatch = lower.match(/(?:mova|mover|coloque|colocar|transfira|transferir)\s+(?:a\s+nota\s+)?["'“]?([^"'\n”]+)["'”]?\s+(?:para\s+a\s+pasta|para\s+o\s+hub|para)\s+["'“]?([^"'\n”]+)["'”]?/i)
+  // 2. Mover nota: "mova a nota X para a pasta Y", "mover nota A para B"
+  const moveMatch = lower.match(/(?:mover|mova)\s+(?:a\s+)?nota\s+["']?([^"'\n\r]+)["']?\s+para\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?/i)
   if (moveMatch) {
-    const noteQuery = moveMatch[1].trim()
-    const folderQuery = moveMatch[2].trim()
-    const foundNote = notes.find(n => n.title.toLowerCase().includes(noteQuery.toLowerCase()) || n.id === noteQuery)
-    const foundFolder = folders.find(f => f.name.toLowerCase().includes(folderQuery.toLowerCase()) || f.id === folderQuery)
+    const noteSearch = moveMatch[1].trim()
+    const folderSearch = moveMatch[2].trim()
 
-    if (foundNote && foundFolder) {
+    const targetNote = notes.find(n => n.title.toLowerCase().includes(noteSearch.toLowerCase()))
+    const targetFolder = folders.find(f => f.name.toLowerCase().includes(folderSearch.toLowerCase()))
+
+    if (targetNote && targetFolder) {
       return {
-        message: `Entendido! Preparei a movimentação da nota "${foundNote.title}" para a pasta "${foundFolder.name}". Confirme no card abaixo:`,
-        action: { id: generateId(), type: 'move_note', noteId: foundNote.id, noteTitle: foundNote.title, folderId: foundFolder.id, folderName: foundFolder.name }
+        message: `Localizei a nota "${targetNote.title}" e a pasta de destino "${targetFolder.name}". Confirme a mudança:`,
+        action: { id: generateId(), type: 'move_note', noteId: targetNote.id, noteTitle: targetNote.title, folderId: targetFolder.id, folderName: targetFolder.name }
       }
+    } else if (!targetNote) {
+      return { message: `Não encontrei nenhuma nota com o nome correspondente a "${noteSearch}".` }
+    } else {
+      return { message: `Não encontrei nenhuma pasta de destino com o nome correspondente a "${folderSearch}".` }
     }
   }
 
-  // 3. Ativar/Desativar Hub
-  const hubMatch = lower.match(/(?:transforme|transformar|ative|ativar|defina|definir)\s+(?:a\s+pasta\s+)?["'“]?([^"'\n”]+)["'”]?\s+(?:em\s+hub|como\s+hub|hub\s+central)/i)
+  // 3. Transformar pasta em Hub: "transforme a pasta X em hub", "tornar a pasta X um hub"
+  const hubMatch = lower.match(/(?:transforme|tornar|tornar a|definir|torne)\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?\s+(?:em|como|um)?\s*hub/i)
   if (hubMatch) {
-    const folderQuery = hubMatch[1].trim()
-    const foundFolder = folders.find(f => f.name.toLowerCase().includes(folderQuery.toLowerCase()) || f.id === folderQuery)
-    if (foundFolder) {
+    const folderSearch = hubMatch[1].trim()
+    const targetFolder = folders.find(f => f.name.toLowerCase().includes(folderSearch.toLowerCase()))
+    if (targetFolder) {
       return {
-        message: `Pronto! Preparei a ativação da pasta "${foundFolder.name}" como Hub Central. Confirme no card abaixo:`,
-        action: { id: generateId(), type: 'toggle_hub', folderId: foundFolder.id, folderName: foundFolder.name, isHome: true }
+        message: `Deseja alternar a pasta "${targetFolder.name}" para status de Hub Central?`,
+        action: { id: generateId(), type: 'toggle_hub', folderId: targetFolder.id, folderName: targetFolder.name, isHome: !targetFolder.isHome }
       }
     }
+    return { message: `Não encontrei a pasta "${folderSearch}" para transformar em Hub.` }
   }
 
-  // 4. Renomear pasta
-  const renameMatch = lower.match(/(?:renomeie|renomear|mude\s+o\s+nome\s+da\s+pasta)\s+["'“]?([^"'\n”]+)["'”]?\s+para\s+["'“]?([^"'\n”]+)["'”]?/i)
+  // 4. Renomear pasta: "renomear pasta X para Y", "renomeie a pasta X para Y"
+  const renameMatch = lower.match(/(?:renomear|renomeie)\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?\s+para\s+["']?([^"'\n\r]+)["']?/i)
   if (renameMatch) {
-    const oldQuery = renameMatch[1].trim()
+    const oldName = renameMatch[1].trim()
     const newName = renameMatch[2].trim()
-    const foundFolder = folders.find(f => f.name.toLowerCase().includes(oldQuery.toLowerCase()) || f.id === oldQuery)
-    if (foundFolder) {
+    const targetFolder = folders.find(f => f.name.toLowerCase().includes(oldName.toLowerCase()))
+    if (targetFolder) {
       return {
-        message: `Entendido! Preparei a renomeação da pasta "${foundFolder.name}" para "${newName}". Confirme abaixo:`,
-        action: { id: generateId(), type: 'rename_folder', folderId: foundFolder.id, folderName: foundFolder.name, newName }
+        message: `Preparei a renomeação da pasta "${targetFolder.name}" para "${newName}". Confirme:`,
+        action: { id: generateId(), type: 'rename_folder', folderId: targetFolder.id, folderName: targetFolder.name, newName }
       }
     }
+    return { message: `Não encontrei a pasta "${oldName}".` }
   }
 
-  // 5. Criar nota
-  const createNoteMatch = lower.match(/(?:crie|criar|nova|adicione|adicionar)\s+(?:uma\s+)?nota\s+(?:chamada\s+|com\s+titulo\s+)?["'“]?([^"'\n”]+)["'”]?/i)
-  if (createNoteMatch) {
-    const noteTitle = createNoteMatch[1].trim()
+  // 5. Criar nota: "criar nota X", "crie uma nota sobre Y"
+  const noteCreateMatch = lower.match(/(?:criar|crie|nova)\s+(?:uma\s+)?nota\s+(?:chamada|sobre|com o título)?\s*["']?([^"'\n\r]+)["']?/i)
+  if (noteCreateMatch) {
+    const noteTitle = noteCreateMatch[1].trim()
     return {
       message: `Entendido! Preparei a criação da nota "${noteTitle}". Confirme no card abaixo:`,
       action: { id: generateId(), type: 'create_note', title: noteTitle, content: `# ${noteTitle}\n\nNota criada pelo Assistente Organon.` }
@@ -615,7 +379,7 @@ function processLocalCommand(
 
   // Fallback assistente geral
   return {
-    message: `Olá! Sou o Orquestrador IA do Organon. 🤖\n\nPosso executar os seguintes comandos de organização:\n\n• **"Criar pasta [Nome]"** (ex: *crie a pasta PROMPTS*)\n• **"Mova a nota [Nome] para [Pasta]"** (ex: *mova a nota DevTools para a pasta Tools*)\n• **"Transforme a pasta [Nome] em Hub"**\n• **"Renomear pasta [Nome] para [NovoNome]"**\n• **"Criar nota [Título]"**\n\n*(Dica: Você também pode configurar sua chave de API nas configurações ⚙ para respostas avançadas de LLM!)*`
+    message: `Olá! Sou o Orquestrador IA do Organon.\n\nPosso executar os seguintes comandos de organização:\n\n• **"Criar pasta [Nome]"** (ex: *crie a pasta PROMPTS*)\n• **"Mova a nota [Nome] para [Pasta]"** (ex: *mova a nota DevTools para a pasta Tools*)\n• **"Transforme a pasta [Nome] em Hub"**\n• **"Renomear pasta [Nome] para [NovoNome]"**\n• **"Criar nota [Título]"**\n\n*(Dica: Você também pode configurar sua chave de API nas configurações de IA para respostas avançadas de LLM!)*`
   }
 }
 
@@ -676,11 +440,8 @@ export const Chatbot: React.FC<ChatbotProps> = ({
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showDiff, setShowDiff] = useState<DiffResult | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [selectedText, setSelectedText] = useState('')
 
   // Config do Assistente & Modal
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => loadAiConfig())
@@ -857,13 +618,13 @@ Regras para manipulação:
 
     // Se nao tiver API key configurada, executa o motor local de orquestracao diretamente!
     if (!aiConfig.apiKey && aiConfig.provider !== 'ollama') {
-      const localResult = processLocalCommand(content, notes, folders)
+      const localResult = parseLocalIntent(content, folders, notes as any)
       setMessages(prev => [
         ...prev,
         { id: generateId(), role: 'assistant', content: localResult.message, timestamp: new Date() }
       ])
       if (localResult.action) {
-        setPendingAction(localResult.action)
+        setPendingAction(localResult.action as any)
       }
       setInputValue('')
       setIsLoading(false)
@@ -1042,7 +803,7 @@ Regras para manipulação:
       const errorMessage = err instanceof Error ? err.message : 'Erro na comunicação'
       setError(errorMessage)
       setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessageId ? { ...msg, content: `❌ ${errorMessage}` } : msg
+        msg.id === assistantMessageId ? { ...msg, content: `Erro: ${errorMessage}` } : msg
       ))
     } finally {
       setIsLoading(false)
@@ -1063,7 +824,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Nota "${pendingAction.title}" criada com sucesso no Organon!`,
+        content: `Nota "${pendingAction.title}" criada com sucesso no Organon!`,
         timestamp: new Date(),
         actionPayload: {
           type: 'view_note',
@@ -1071,16 +832,15 @@ Regras para manipulação:
         }
       }])
     } else if (pendingAction.type === 'create_folder') {
-      let createdId: string | undefined = undefined
       if (onAddFolder) {
-        createdId = onAddFolder(pendingAction.name, pendingAction.parentId)
+        onAddFolder(pendingAction.name, pendingAction.parentId)
       }
       const parentFolder = folders.find(f => f.id === pendingAction.parentId)
       const parentInfo = parentFolder ? ` dentro de "${parentFolder.name}"` : ''
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Pasta "${pendingAction.name}" criada com sucesso${parentInfo}!`,
+        content: `Pasta "${pendingAction.name}" criada com sucesso${parentInfo}!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'move_note') {
@@ -1090,7 +850,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Nota "${pendingAction.noteTitle}" movida para a pasta "${pendingAction.folderName}" com sucesso!`,
+        content: `Nota "${pendingAction.noteTitle}" movida para a pasta "${pendingAction.folderName}" com sucesso!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'toggle_hub') {
@@ -1101,7 +861,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Pasta "${pendingAction.folderName}" ${statusLabel} com sucesso!`,
+        content: `Pasta "${pendingAction.folderName}" ${statusLabel} com sucesso!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'rename_folder') {
@@ -1111,7 +871,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Pasta renomeada de "${pendingAction.folderName}" para "${pendingAction.newName}" com sucesso!`,
+        content: `Pasta renomeada de "${pendingAction.folderName}" para "${pendingAction.newName}" com sucesso!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'update_note') {
@@ -1124,7 +884,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `✅ Conteúdo gravado com sucesso na nota atual!`,
+        content: `Conteúdo gravado com sucesso na nota atual!`,
         timestamp: new Date(),
       }])
     }
@@ -1192,7 +952,7 @@ Regras para manipulação:
       const title = prompt('Título da nova nota:')
       if (title && onCreateNote) {
         onCreateNote(title, '')
-        setMessages(prev => [...prev, { id: generateId(), role: 'assistant', content: `✅ Nota "${title}" criada!`, timestamp: new Date() }])
+        setMessages(prev => [...prev, { id: generateId(), role: 'assistant', content: `Nota "${title}" criada!`, timestamp: new Date() }])
       }
     } else {
       const relevantNotes = searchNotes(suggestion)
@@ -1243,7 +1003,7 @@ Regras para manipulação:
         {showAiSettings && (
           <div style={{ padding: '16px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>⚙ Configurações de IA & API</span>
+              <span>Configurações de IA & API</span>
               <button type="button" onClick={() => setShowAiSettings(false)} style={{ border: 'none', background: 'transparent', color: 'var(--color-text)', cursor: 'pointer' }}>×</button>
             </div>
 
@@ -1295,7 +1055,7 @@ Regras para manipulação:
                     opacity: aiConfig.apiKey ? 1 : 0.5,
                   }}
                 >
-                  {copiedKey ? '✓ Copiado' : 'Copiar'}
+                  {copiedKey ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
             </div>
@@ -1391,12 +1151,12 @@ Regras para manipulação:
                           marginTop: '6px',
                         }}
                       >
-                        👁️ Ver Nota
+                        Ver Nota
                       </button>
                     </div>
                   )}
 
-                  {msg.role === 'assistant' && msg.content && !msg.content.startsWith('❌') && (
+                  {msg.role === 'assistant' && msg.content && (
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                       <button
                         type="button"
@@ -1425,7 +1185,7 @@ Regras para manipulação:
                           cursor: 'pointer',
                         }}
                       >
-                        📝 Escrever nesta Nota
+                        Escrever nesta Nota
                       </button>
 
                       <button
@@ -1454,7 +1214,7 @@ Regras para manipulação:
                           cursor: 'pointer',
                         }}
                       >
-                        ➕ Salvar como Nova Nota
+                        Salvar como Nova Nota
                       </button>
                     </div>
                   )}
@@ -1476,30 +1236,30 @@ Regras para manipulação:
           {pendingAction && (
             <div style={{ margin: '8px 12px', padding: '12px 14px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.35)', borderRadius: '10px' }}>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--color-primary)', letterSpacing: '0.04em' }}>
-                {pendingAction.type === 'create_note' && '⚡ Ação Solicitada: Criar Nota'}
-                {pendingAction.type === 'create_folder' && '📂 Ação Solicitada: Criar Pasta'}
-                {pendingAction.type === 'move_note' && '🔄 Ação Solicitada: Mover Nota'}
-                {pendingAction.type === 'toggle_hub' && '🏠 Ação Solicitada: Alternar Hub'}
-                {pendingAction.type === 'rename_folder' && '✏️ Ação Solicitada: Renomear Pasta'}
-                {pendingAction.type === 'update_note' && '📝 Ação Solicitada: Atualizar Nota'}
+                {pendingAction.type === 'create_note' && 'Ação Solicitada: Criar Nota'}
+                {pendingAction.type === 'create_folder' && 'Ação Solicitada: Criar Pasta'}
+                {pendingAction.type === 'move_note' && 'Ação Solicitada: Mover Nota'}
+                {pendingAction.type === 'toggle_hub' && 'Ação Solicitada: Alternar Hub'}
+                {pendingAction.type === 'rename_folder' && 'Ação Solicitada: Renomear Pasta'}
+                {pendingAction.type === 'update_note' && 'Ação Solicitada: Atualizar Nota'}
               </div>
 
               <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '4px', color: 'var(--color-text)' }}>
-                {pendingAction.type === 'create_note' && `📄 ${pendingAction.title}`}
-                {pendingAction.type === 'create_folder' && `📂 ${pendingAction.name}`}
-                {pendingAction.type === 'move_note' && `📄 ${pendingAction.noteTitle}`}
-                {pendingAction.type === 'toggle_hub' && `📂 ${pendingAction.folderName}`}
-                {pendingAction.type === 'rename_folder' && `📂 ${pendingAction.folderName}`}
-                {pendingAction.type === 'update_note' && `📝 ${pendingAction.title}`}
+                {pendingAction.type === 'create_note' && pendingAction.title}
+                {pendingAction.type === 'create_folder' && pendingAction.name}
+                {pendingAction.type === 'move_note' && pendingAction.noteTitle}
+                {pendingAction.type === 'toggle_hub' && pendingAction.folderName}
+                {pendingAction.type === 'rename_folder' && pendingAction.folderName}
+                {pendingAction.type === 'update_note' && pendingAction.title}
               </div>
 
               {/* Subtitle / Details */}
               <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px', background: 'var(--color-surface)', padding: '6px 8px', borderRadius: '6px' }}>
                 {pendingAction.type === 'create_note' && (pendingAction.content ? pendingAction.content.slice(0, 100) + '...' : 'Nota vazia')}
                 {pendingAction.type === 'create_folder' && `Criar nova pasta no Organon`}
-                {pendingAction.type === 'move_note' && `Mover para a pasta "📂 ${pendingAction.folderName}"`}
+                {pendingAction.type === 'move_note' && `Mover para a pasta "${pendingAction.folderName}"`}
                 {pendingAction.type === 'toggle_hub' && (pendingAction.isHome ? 'Transformar em Hub Central de Navegação' : 'Remover modo Hub Central')}
-                {pendingAction.type === 'rename_folder' && `Renomear pasta para "📂 ${pendingAction.newName}"`}
+                {pendingAction.type === 'rename_folder' && `Renomear pasta para "${pendingAction.newName}"`}
                 {pendingAction.type === 'update_note' && `Aplicar alterações no conteúdo da nota`}
               </div>
 
@@ -1509,7 +1269,7 @@ Regras para manipulação:
                   onClick={handleConfirmPendingAction}
                   style={{ flex: 1, padding: '7px 12px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                 >
-                  ✓ Confirmar e Executar
+                  Confirmar e Executar
                 </button>
                 <button
                   type="button"
@@ -1535,7 +1295,7 @@ Regras para manipulação:
         {/* Banner de erro */}
         {error && (
           <div className="chatbot-error-banner" role="alert">
-            <span>⚠️ {error}</span>
+            <span>{error}</span>
             <button type="button" onClick={() => setError(null)} aria-label="Fechar erro">×</button>
           </div>
         )}

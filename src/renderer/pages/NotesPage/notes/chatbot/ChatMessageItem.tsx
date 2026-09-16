@@ -1,4 +1,5 @@
 import React from 'react'
+import { Copy, Volume2, Square } from 'lucide-react'
 import { Message } from './chatbot.types'
 
 interface ChatMessageItemProps {
@@ -56,17 +57,19 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             <button
               onClick={() => onCopy(message.content)}
               title="Copiar mensagem"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+              aria-label="Copiar mensagem"
             >
-              📋
+              <Copy size={13} />
             </button>
             {onSpeak && (
               <button
                 onClick={() => onSpeak(message.content)}
                 title={isSpeaking ? 'Parar leitura' : 'Ouvir mensagem'}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: isSpeaking ? 'var(--color-primary)' : 'inherit', padding: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: isSpeaking ? 'var(--color-primary)' : 'inherit', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                aria-label={isSpeaking ? 'Parar leitura' : 'Ouvir mensagem'}
               >
-                🔊
+                {isSpeaking ? <Square size={13} /> : <Volume2 size={13} />}
               </button>
             )}
           </>

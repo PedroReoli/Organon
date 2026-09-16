@@ -88,7 +88,7 @@ export function applyTransclusions(
     const [titlePart, sectionPart] = trimmed.split('#')
     const target = resolveNoteByTitle(notes, titlePart.trim())
     if (!target) {
-      return `<div class="note-transclusion is-broken">⚠ Transclusão não resolvida: ${escapeHtml(full)}</div>`
+      return `<div class="note-transclusion is-broken">Transclusão não resolvida: ${escapeHtml(full)}</div>`
     }
     const sourceHtml = contentByNoteId[target.id]
     if (!sourceHtml) {

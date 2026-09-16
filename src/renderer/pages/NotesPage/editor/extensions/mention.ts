@@ -109,7 +109,7 @@ export const Mention = Node.create<MentionOptions>({
       ),
       this.options.renderLabel({
         options: this.options,
-        node,
+        node: node as any,
       }),
     ]
   },
@@ -117,7 +117,7 @@ export const Mention = Node.create<MentionOptions>({
   renderText({ node }) {
     return this.options.renderLabel({
       options: this.options,
-      node,
+      node: node as any,
     })
   },
 
