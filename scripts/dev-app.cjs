@@ -2,16 +2,25 @@
 
 /**
  * Organon Dev Runner - Dashboard Limpo e Sem Ruídos
- * Orquestra Vite e Electron com logs filtrados e formatados em tempo real.
+ * Execução direta de binários (Node/Vite/Electron) sem batch .cmd, sem avisos de lote e sem warnings.
  */
 
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const rootDir = path.resolve(__dirname, '..');
 
-// Desabilitar avisos de depreciação do Node nos processos filhos
+// Silenciar warnings do Node
 process.env.NODE_NO_WARNINGS = '1';
+
+// Caminhos dos binários diretos em node_modules
+const nodeBin = process.execPath;
+const viteBin = path.join(rootDir, 'node_modules', 'vite', 'bin', 'vite.js');
+const tscBin = path.join(rootDir, 'node_modules', 'typescript', 'bin', 'tsc');
+const electronBin = process.platform === 'win32'
+  ? path.join(rootDir, 'node_modules', 'electron', 'dist', 'electron.exe')
+  : path.join(rootDir, 'node_modules', 'electron', 'dist', 'electron');
 
 const c = {
   reset: '\x1b[0m',
@@ -39,9 +48,9 @@ const c = {
   bgDark: '\x1b[100m',
 };
 
-// Estado da sessão dev
+// Estado em tempo real
 const state = {
-  viteStatus: 'Iniciando...',
+  viteStatus: 'Iniciando servidor Vite...',
   viteUrl: '',
   viteTime: '',
   electronStatus: 'Compilando TypeScript...',
@@ -50,7 +59,7 @@ const state = {
   logs: []
 };
 
-// Padrões de ruídos a serem completamente ignorados
+// Padrões de ruídos a ignorar
 const IGNORED_PATTERNS = [
   /DeprecationWarning/,
   /The CJS build of Vite's Node API is deprecated/,
@@ -61,6 +70,7 @@ const IGNORED_PATTERNS = [
   /> organon@/,
   /> vite/,
   /> tsc -p/,
+  /Deseja finalizar o arquivo em lotes/,
   /^\s*$/
 ];
 
@@ -89,7 +99,7 @@ function renderDashboard() {
   // Status do Electron
   console.log(` ${c.brightCyan}${c.bold}🖥️  Electron App:${c.reset}  ${state.electronStatus}`);
 
-  // Atalhos e Diretórios se detectados
+  // Atalhos e Diretórios
   if (state.shortcuts) {
     console.log(` ${c.brightMagenta}${c.bold}⌨️  Atalhos:${c.reset}      ${c.brightWhite}${state.shortcuts}${c.reset}`);
   }
@@ -101,9 +111,8 @@ function renderDashboard() {
   console.log(` ${c.dim}${c.bold}LOGS RECENTES:${c.reset}`);
 
   if (state.logs.length === 0) {
-    console.log(` ${c.dim}Aguardando eventos...${c.reset}`);
+    console.log(` ${c.dim}Aguardando inicialização dos módulos...${c.reset}`);
   } else {
-    // Mostrar os últimos 12 logs limpos
     state.logs.slice(-12).forEach(log => {
       console.log(` ${log}`);
     });
@@ -112,6 +121,7 @@ function renderDashboard() {
 }
 
 function addLog(formattedLine) {
+  if (!formattedLine) return;
   state.logs.push(formattedLine);
   if (state.logs.length > 50) {
     state.logs.shift();
@@ -123,7 +133,6 @@ function formatElectronLine(rawLine) {
   const line = rawLine.trim();
   if (shouldIgnoreLine(line)) return null;
 
-  // Extrair metadados importantes para o cabeçalho
   if (line.includes('Atalhos globais') && line.includes('registrados')) {
     const match = line.match(/\((.*?)\)/);
     if (match) state.shortcuts = match[1];
@@ -132,7 +141,6 @@ function formatElectronLine(rawLine) {
     state.conversationsDir = line.replace(/.*Diretório:\s*/, '');
   }
 
-  // Formatação de badges
   if (line.startsWith('[IPC]')) {
     return `${c.bgBlue}${c.white}${c.bold} IPC ${c.reset} ${c.brightWhite}${line.replace(/^\[IPC\]\s*/, '')}${c.reset}`;
   }
@@ -146,7 +154,6 @@ function formatElectronLine(rawLine) {
     return `${c.bgCyan}${c.white}${c.bold} WHISPER ${c.reset} ${c.brightWhite}${line.replace(/^\[Whisper\]\s*/, '')}${c.reset}`;
   }
 
-  // Erros ou warnings reais
   if (/error|erro|fail|exception/i.test(line)) {
     return `${c.brightRed}${c.bold}✖ ${line}${c.reset}`;
   }
@@ -174,7 +181,9 @@ function formatViteLine(rawLine) {
   }
 
   if (line.includes('page reload') || line.includes('hmr update')) {
-    return `${c.brightCyan}⚡ [Vite HMR] ${c.dim}${line}${c.reset}`;
+    // Extrai os arquivos atualizados pelo HMR para exibir de forma limpa
+    const updateFiles = line.replace(/.*hmr update\s*/i, '');
+    return `${c.brightCyan}⚡ [HMR]${c.reset} ${c.dim}${updateFiles}${c.reset}`;
   }
 
   return `${c.gray}› [Vite] ${line}${c.reset}`;
@@ -182,13 +191,17 @@ function formatViteLine(rawLine) {
 
 let viteProcess = null;
 let electronProcess = null;
+let isCleaningUp = false;
 
 function cleanup() {
+  if (isCleaningUp) return;
+  isCleaningUp = true;
+
   if (viteProcess) {
-    try { viteProcess.kill('SIGTERM'); } catch {}
+    try { viteProcess.kill(); } catch {}
   }
   if (electronProcess) {
-    try { electronProcess.kill('SIGTERM'); } catch {}
+    try { electronProcess.kill(); } catch {}
   }
 }
 
@@ -201,16 +214,13 @@ process.on('SIGINT', () => {
 
 process.on('exit', cleanup);
 
-// Início do fluxo
+// Início
 renderDashboard();
 
-// 1. Iniciar Vite Dev Server
-const isWin = process.platform === 'win32';
-const npxCmd = isWin ? 'npx.cmd' : 'npx';
-
-viteProcess = spawn(npxCmd, ['vite'], {
+// 1. Iniciar Vite Dev Server chamando node direto
+viteProcess = spawn(nodeBin, [viteBin], {
   cwd: rootDir,
-  env: { ...process.env, FORCE_COLOR: '1' }
+  env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
 });
 
 viteProcess.stdout.on('data', (data) => {
@@ -231,10 +241,14 @@ viteProcess.stderr.on('data', (data) => {
   });
 });
 
-// 2. Compilar TypeScript do Node e em seguida lançar o Electron
-const tscProcess = spawn(npxCmd, ['tsc', '-p', 'tsconfig.node.json'], {
+viteProcess.on('error', (err) => {
+  addLog(`${c.brightRed}Erro ao iniciar Vite: ${err.message}${c.reset}`);
+});
+
+// 2. Compilar TypeScript do Node e lançar Electron direto
+const tscProcess = spawn(nodeBin, [tscBin, '-p', 'tsconfig.node.json'], {
   cwd: rootDir,
-  env: { ...process.env, FORCE_COLOR: '1' }
+  env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
 });
 
 tscProcess.on('close', (code) => {
@@ -247,9 +261,14 @@ tscProcess.on('close', (code) => {
   state.electronStatus = `${c.brightGreen}${c.bold}Executando (Janela Ativa)${c.reset}`;
   renderDashboard();
 
-  electronProcess = spawn(npxCmd, ['electron', '.'], {
+  if (!fs.existsSync(electronBin)) {
+    addLog(`${c.brightRed}Executável do Electron não encontrado em: ${electronBin}${c.reset}`);
+    return;
+  }
+
+  electronProcess = spawn(electronBin, ['.'], {
     cwd: rootDir,
-    env: { ...process.env, FORCE_COLOR: '1' }
+    env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
   });
 
   electronProcess.stdout.on('data', (data) => {
@@ -268,12 +287,16 @@ tscProcess.on('close', (code) => {
     });
   });
 
+  electronProcess.on('error', (err) => {
+    addLog(`${c.brightRed}Erro ao iniciar Electron: ${err.message}${c.reset}`);
+  });
+
   electronProcess.on('close', (electronCode) => {
     state.electronStatus = `${c.gray}Encerrado (Código ${electronCode})${c.reset}`;
     renderDashboard();
     setTimeout(() => {
       cleanup();
       process.exit(electronCode || 0);
-    }, 500);
+    }, 400);
   });
 });

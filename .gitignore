@@ -49,3 +49,11 @@ tsc_output.txt
 *.tmp
 *.temp
 
+/.privado
+.privado/
+\!reoli/
+\!reoli
+.claude/skills/
+.claude/skills
+.claude/temp/
+temp_skills/

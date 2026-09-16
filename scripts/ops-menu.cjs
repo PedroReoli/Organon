@@ -214,11 +214,35 @@ function runScript(scriptName) {
     process.stdin.setRawMode(false);
   }
 
-  const child = spawn('npm', ['run', scriptName], {
-    stdio: 'inherit',
-    shell: true,
-    cwd: path.resolve(__dirname, '..')
-  });
+  const isWin = process.platform === 'win32';
+  let child;
+
+  if (scriptName === 'dev' || scriptName === 'full') {
+    child = spawn(process.execPath, [path.resolve(__dirname, 'dev-app.cjs')], {
+      stdio: 'inherit',
+      cwd: path.resolve(__dirname, '..'),
+      env: { ...process.env, NODE_NO_WARNINGS: '1' }
+    });
+  } else if (scriptName === 'install:all') {
+    child = spawn(process.execPath, [path.resolve(__dirname, 'install-all.cjs')], {
+      stdio: 'inherit',
+      cwd: path.resolve(__dirname, '..'),
+      env: { ...process.env, NODE_NO_WARNINGS: '1' }
+    });
+  } else if (scriptName === 'bump' || scriptName === 'bump:v') {
+    child = spawn(process.execPath, [path.resolve(__dirname, 'bump-version.js')], {
+      stdio: 'inherit',
+      cwd: path.resolve(__dirname, '..'),
+      env: { ...process.env, NODE_NO_WARNINGS: '1' }
+    });
+  } else {
+    const npmCmd = isWin ? 'npm.cmd' : 'npm';
+    child = spawn(npmCmd, ['run', scriptName], {
+      stdio: 'inherit',
+      cwd: path.resolve(__dirname, '..'),
+      env: { ...process.env, NODE_NO_WARNINGS: '1' }
+    });
+  }
 
   child.on('close', (code) => {
     console.log(`\n${c.gray}─────────────────────────────────────────────────────────────────${c.reset}`);
