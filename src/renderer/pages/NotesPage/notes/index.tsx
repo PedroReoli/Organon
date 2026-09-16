@@ -297,7 +297,6 @@ export const NotesView = ({
             onOpenFolder={tree.openFolder}
             onAddNote={() => tree.handleAddNote()}
             onShowSearch={() => { tree.setSearchVisible(true); setTimeout(() => tree.searchInputRef.current?.focus(), 50) }}
-            onOpenGraph={() => { setGraphMode('notes'); setShowGraph(true) }}
             onOpenTrash={() => setShowTrash(true)}
             trashCount={trashCount}
             onOpenTreeManager={() => setIsTreeManagerOpen(true)}

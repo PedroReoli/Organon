@@ -11,7 +11,6 @@ interface NotesHomePageProps {
   onOpenFolder:   (id: string) => void
   onAddNote:      () => void
   onShowSearch:   () => void
-  onOpenGraph?:   () => void
   onOpenTrash?:   () => void
   trashCount?:    number
   onOpenTreeManager?: () => void
@@ -54,12 +53,6 @@ const IconPlus = () => (
     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 )
-const IconGraph = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-  </svg>
-)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +74,7 @@ function fmtRelative(iso: string): string {
 
 export const NotesHomePage = ({
   notes, folders, recentNoteIds,
-  onOpenNote, onOpenFolder, onAddNote, onShowSearch, onOpenGraph, onOpenTrash, trashCount = 0, onOpenTreeManager,
+  onOpenNote, onOpenFolder, onAddNote, onShowSearch, onOpenTrash, trashCount = 0, onOpenTreeManager,
 }: NotesHomePageProps) => {
   const noteMap = useMemo(() => new Map(notes.map(n => [n.id, n])), [notes])
 
@@ -124,14 +117,6 @@ export const NotesHomePage = ({
       icon: <IconStar />,
       color: '#f59e0b',
       onClick: onShowSearch,
-    },
-    {
-      id: 'graph',
-      label: 'Grafo Mega Brain',
-      sublabel: 'Mapa Semântico',
-      icon: <IconGraph />,
-      color: '#818cf8',
-      onClick: () => { if (onOpenGraph) onOpenGraph(); else onShowSearch() },
     },
     {
       id: 'search',
@@ -178,15 +163,6 @@ export const NotesHomePage = ({
               <span>🌳 Gerenciar Estrutura</span>
             </button>
           )}
-          {onOpenGraph && (
-            <button 
-              className="projects-btn" 
-              style={{ background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', padding: '8px 14px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }} 
-              onClick={onOpenGraph}
-            >
-              <IconGraph /> Grafo Mega Brain
-            </button>
-          )}
           {onOpenTrash && (
             <button 
               className="projects-btn" 
@@ -210,8 +186,8 @@ export const NotesHomePage = ({
         </div>
       </div>
 
-      {/* Hubs / Atalhos Compactos em Grid 4 Colunas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+      {/* Hubs / Atalhos Compactos em Grid 3 Colunas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
         {hubs.map(hub => {
           return (
             <div
@@ -223,7 +199,7 @@ export const NotesHomePage = ({
                 height: '88px',
                 display: 'flex',
                 flexDirection: 'column',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 borderRadius: '12px',
@@ -245,7 +221,6 @@ export const NotesHomePage = ({
                 <div style={{ fontSize: '20px', fontWeight: 800, lineHeight: 1, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
                   {hub.id === 'recents' ? recentNotes.length : hub.id === 'favorites' ? stats.favorites : hub.id === 'pinned' ? stats.pinned : ''}
                   {hub.id === 'search' && <span style={{ fontSize: '13px', color: hub.color, fontWeight: 600 }}>Explorar &rarr;</span>}
-                  {hub.id === 'graph' && <span style={{ fontSize: '13px', color: hub.color, fontWeight: 600 }}>Abrir &rarr;</span>}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>{hub.sublabel}</div>
               </div>

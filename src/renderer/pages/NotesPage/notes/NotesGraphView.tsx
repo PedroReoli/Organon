@@ -422,7 +422,7 @@ export const NotesGraphView = ({
         {/* Título & Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text)', letterSpacing: '-0.01em' }}>
-            Grafo Mega Brain
+            Grafo de Conexões
           </span>
           <span
             style={{
