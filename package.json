@@ -3,7 +3,11 @@
   "version": "6.23.2",
   "description": "Organon - App desktop local com Electron",
   "main": "dist/main/index.js",
+  "bin": {
+    "organon": "./bin/organon.cjs"
+  },
   "scripts": {
+    "cli": "node bin/organon.cjs",
     "ops": "node scripts/ops-menu.cjs",
     "dev": "node scripts/dev-app.cjs",
     "full": "node scripts/dev-app.cjs",
