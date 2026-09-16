@@ -1,5 +1,5 @@
-import React from 'react'
-import { Rocket, Target, Calendar, ArrowRight, CheckCircle2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { Rocket, Target, Calendar, ArrowRight, CheckCircle2, Flame, Clock3, Sparkles } from 'lucide-react'
 
 interface ActiveSprintWidgetProps {
   sprintName?: string
@@ -20,33 +20,51 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
   totalPoints = 0,
   onNavigateToSprint
 }) => {
-  const rate = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0
+  const [isHovered, setIsHovered] = useState(false)
+  const [inspectMode, setInspectMode] = useState<'completed' | 'remaining' | null>(null)
+
+  const remainingPoints = Math.max(0, totalPoints - completedPoints)
+  const rate = totalPoints > 0 ? Math.min(100, Math.round((completedPoints / totalPoints) * 100)) : 0
 
   return (
     <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false)
+        setInspectMode(null)
+      }}
       style={{
         background: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
+        borderColor: isHovered ? 'var(--color-primary)' : 'var(--color-border)',
       }}
-      className="border p-3.5 rounded-xl shadow-xs flex flex-col justify-between h-full select-none"
+      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full select-none transition-all duration-300 relative group/sprint hover:shadow-md"
     >
-      <div>
+      {/* Ambient background glow when hovered */}
+      <div
+        style={{
+          background: 'radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 70%)',
+        }}
+        className="absolute inset-0 pointer-events-none rounded-xl transition-opacity duration-500 opacity-0 group-hover/sprint:opacity-100"
+      />
+
+      <div className="relative z-10">
         {/* Top Header */}
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <div
               style={{
-                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
                 color: 'var(--color-primary)',
               }}
-              className="p-1 rounded-md"
+              className="p-1.5 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/sprint:scale-105"
             >
-              <Rocket className="w-3.5 h-3.5" />
+              <Rocket className="w-4 h-4" />
             </div>
             <div>
-              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                 {sprintName}
               </h3>
+              <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Sprint & Entregas</p>
             </div>
           </div>
 
@@ -54,21 +72,21 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
             type="button"
             onClick={onNavigateToSprint}
             style={{ color: 'var(--color-primary)' }}
-            className="text-xs font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+            className="text-xs font-semibold flex items-center gap-1 hover:underline cursor-pointer group-hover/sprint:translate-x-0.5 transition-transform"
           >
             <span>Planejador</span>
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Goal Banner (If exists) */}
+        {/* Goal Banner */}
         {goal && (
           <div
             style={{
               background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
               borderColor: 'var(--color-border)',
             }}
-            className="p-2 rounded-lg border mb-2.5 flex items-start gap-1.5"
+            className="p-2.5 rounded-lg border mb-3 flex items-start gap-2"
           >
             <Target className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
             <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px] leading-snug line-clamp-2">
@@ -77,29 +95,77 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
           </div>
         )}
 
-        {/* Story Points / Progress */}
-        <div className="space-y-1.5 my-2">
+        {/* Progress & Metrics */}
+        <div className="space-y-2 my-2">
           <div className="flex items-center justify-between text-xs">
-            <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px] font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              Progresso da Sprint
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px] font-medium flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+              Ritmo de Entrega
             </span>
-            <span style={{ color: 'var(--color-text)' }} className="font-bold text-xs font-mono">
-              {completedPoints} / {totalPoints} pts ({rate}%)
+            <span style={{ color: 'var(--color-text)' }} className="font-bold text-xs font-mono flex items-center gap-1">
+              <span style={{ color: 'var(--color-primary)' }}>{rate}%</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>({completedPoints}/{totalPoints} pts)</span>
             </span>
           </div>
 
+          {/* Interactive Progress Bar with Spark Head */}
           <div
             style={{ background: 'color-mix(in srgb, var(--color-border) 60%, transparent)' }}
-            className="w-full h-1.5 rounded-full overflow-hidden"
+            className="w-full h-2.5 rounded-full overflow-hidden relative cursor-pointer"
           >
             <div
               style={{
                 width: `${rate}%`,
-                background: 'var(--color-primary)',
+                background: 'linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 70%, transparent), var(--color-primary))',
+                boxShadow: isHovered ? '0 0 10px var(--color-primary)' : 'none',
               }}
-              className="h-full rounded-full transition-all duration-300"
-            />
+              className="h-full rounded-full transition-all duration-500 relative"
+            >
+              {rate > 5 && (
+                <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/40 rounded-full animate-pulse" />
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Metric Pills */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div
+              onMouseEnter={() => setInspectMode('completed')}
+              onMouseLeave={() => setInspectMode(null)}
+              style={{
+                background: inspectMode === 'completed'
+                  ? 'color-mix(in srgb, #10b981 12%, var(--color-surface))'
+                  : 'color-mix(in srgb, var(--color-background) 50%, var(--color-surface))',
+                borderColor: inspectMode === 'completed' ? '#10b981' : 'var(--color-border)',
+              }}
+              className="p-2 rounded-lg border transition-all cursor-pointer text-center"
+            >
+              <div className="text-[10px] text-emerald-400 font-medium flex items-center justify-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Entregues
+              </div>
+              <div style={{ color: 'var(--color-text)' }} className="text-sm font-extrabold mt-0.5">
+                {completedPoints} <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px] font-normal">pts</span>
+              </div>
+            </div>
+
+            <div
+              onMouseEnter={() => setInspectMode('remaining')}
+              onMouseLeave={() => setInspectMode(null)}
+              style={{
+                background: inspectMode === 'remaining'
+                  ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))'
+                  : 'color-mix(in srgb, var(--color-background) 50%, var(--color-surface))',
+                borderColor: inspectMode === 'remaining' ? 'var(--color-primary)' : 'var(--color-border)',
+              }}
+              className="p-2 rounded-lg border transition-all cursor-pointer text-center"
+            >
+              <div className="text-[10px] font-medium flex items-center justify-center gap-1" style={{ color: 'var(--color-primary)' }}>
+                <Clock3 className="w-3 h-3" /> Em Aberto
+              </div>
+              <div style={{ color: 'var(--color-text)' }} className="text-sm font-extrabold mt-0.5">
+                {remainingPoints} <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px] font-normal">pts</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -110,7 +176,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
           borderColor: 'var(--color-border)',
           color: 'var(--color-text-muted)',
         }}
-        className="flex items-center justify-between pt-2 border-t mt-2 text-[11px]"
+        className="flex items-center justify-between pt-2.5 border-t mt-2 text-[11px] relative z-10"
       >
         <span className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
@@ -120,9 +186,10 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
           type="button"
           onClick={onNavigateToSprint}
           style={{ color: 'var(--color-primary)' }}
-          className="font-medium hover:underline cursor-pointer"
+          className="font-semibold hover:underline cursor-pointer flex items-center gap-1"
         >
-          Ver Backlog
+          <Sparkles className="w-3 h-3" />
+          <span>Ver Backlog</span>
         </button>
       </div>
     </div>

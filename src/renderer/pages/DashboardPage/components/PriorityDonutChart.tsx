@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { PieChart, AlertCircle } from 'lucide-react'
+import { PieChart, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 interface PriorityDonutChartProps {
   urgentCount: number
@@ -9,6 +9,14 @@ interface PriorityDonutChartProps {
   completedCount: number
 }
 
+interface SliceItem {
+  key: string
+  label: string
+  value: number
+  color: string
+  glowColor: string
+}
+
 export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
   urgentCount,
   highCount,
@@ -16,20 +24,23 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
   lowCount,
   completedCount
 }) => {
-  const [activeSlice, setActiveSlice] = useState<string | null>(null)
+  const [activeSliceKey, setActiveSliceKey] = useState<string | null>(null)
 
-  const data = [
-    { key: 'urgent', label: 'Urgente', value: urgentCount, color: '#f43f5e', bg: 'bg-rose-500' },
-    { key: 'high', label: 'Alta', value: highCount, color: '#f59e0b', bg: 'bg-amber-500' },
-    { key: 'medium', label: 'Média', value: mediumCount, color: 'var(--color-primary)', bg: 'bg-[var(--color-primary)]' },
-    { key: 'low', label: 'Baixa', value: lowCount, color: '#71717a', bg: 'bg-zinc-500' },
-    { key: 'done', label: 'Concluídas', value: completedCount, color: '#10b981', bg: 'bg-emerald-500' },
-  ].filter(d => d.value > 0)
+  const rawData: SliceItem[] = [
+    { key: 'urgent', label: 'Urgente', value: urgentCount, color: '#f43f5e', glowColor: 'rgba(244, 63, 94, 0.45)' },
+    { key: 'high', label: 'Alta', value: highCount, color: '#f59e0b', glowColor: 'rgba(245, 158, 11, 0.45)' },
+    { key: 'medium', label: 'Média', value: mediumCount, color: 'var(--color-primary)', glowColor: 'color-mix(in srgb, var(--color-primary) 45%, transparent)' },
+    { key: 'low', label: 'Baixa', value: lowCount, color: '#71717a', glowColor: 'rgba(113, 113, 122, 0.4)' },
+    { key: 'done', label: 'Concluídas', value: completedCount, color: '#10b981', glowColor: 'rgba(16, 185, 129, 0.45)' },
+  ]
 
+  const data = rawData.filter(d => d.value > 0)
   const total = data.reduce((acc, d) => acc + d.value, 0) || 1
 
-  // Calculate SVG stroke dashes for the donut slices
-  const radius = 38
+  const activeSlice = data.find(d => d.key === activeSliceKey) || null
+
+  // SVG parameters
+  const radius = 37
   const circumference = 2 * Math.PI * radius
   let accumulatedOffset = 0
 
@@ -39,8 +50,9 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full"
+      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full relative group/chart select-none transition-all duration-300 hover:shadow-md"
     >
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div
@@ -53,31 +65,53 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
             <PieChart className="w-4 h-4" />
           </div>
           <div>
-            <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold">Distribuição</h3>
-            <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Tarefas por prioridade</p>
+            <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold flex items-center gap-1.5">
+              Distribuição
+              <span className="text-[10px] font-normal px-1.5 py-0.2 rounded-full border border-neutral-700/30 text-neutral-400">
+                Prioridades
+              </span>
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Densidade e status de cards</p>
           </div>
         </div>
+
+        {activeSlice && (
+          <span
+            style={{
+              background: `color-mix(in srgb, ${activeSlice.color} 15%, transparent)`,
+              color: activeSlice.color,
+              borderColor: `color-mix(in srgb, ${activeSlice.color} 30%, transparent)`,
+            }}
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full border animate-in fade-in zoom-in-95 duration-150"
+          >
+            {activeSlice.label}: {Math.round((activeSlice.value / total) * 100)}%
+          </span>
+        )}
       </div>
 
-      <div className="flex items-center justify-center gap-4 my-2">
+      {/* Main Chart Body */}
+      <div className="flex items-center justify-center gap-3.5 my-2">
         {/* SVG Donut */}
         <div className="relative w-32 h-32 shrink-0 flex items-center justify-center">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            {/* Background circle */}
+          <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 100 100">
+            {/* Background base track */}
             <circle
               cx="50"
               cy="50"
               r={radius}
-              stroke="color-mix(in srgb, var(--color-border) 70%, transparent)"
-              strokeWidth="11"
+              stroke="color-mix(in srgb, var(--color-border) 60%, transparent)"
+              strokeWidth="9"
               fill="transparent"
             />
-            {data.map(slice => {
-              const strokeDasharray = `${(slice.value / total) * circumference} ${circumference}`
-              const strokeDashoffset = -accumulatedOffset
-              accumulatedOffset += (slice.value / total) * circumference
 
-              const isHighlighted = activeSlice === slice.key
+            {data.map(slice => {
+              const slicePct = slice.value / total
+              const strokeDasharray = `${slicePct * circumference} ${circumference}`
+              const strokeDashoffset = -accumulatedOffset
+              accumulatedOffset += slicePct * circumference
+
+              const isHighlighted = activeSliceKey === slice.key
+              const isOtherDimmed = activeSliceKey !== null && !isHighlighted
 
               return (
                 <circle
@@ -86,57 +120,124 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
                   cy="50"
                   r={radius}
                   stroke={slice.color}
-                  strokeWidth={isHighlighted ? 13 : 11}
+                  strokeWidth={isHighlighted ? 13 : 9}
                   strokeDasharray={strokeDasharray}
                   strokeDashoffset={strokeDashoffset}
                   fill="transparent"
                   strokeLinecap="round"
-                  onMouseEnter={() => setActiveSlice(slice.key)}
-                  onMouseLeave={() => setActiveSlice(null)}
+                  style={{
+                    opacity: isOtherDimmed ? 0.3 : 1,
+                    filter: isHighlighted ? `drop-shadow(0 0 6px ${slice.glowColor})` : 'none',
+                    transformOrigin: '50% 50%',
+                  }}
+                  onMouseEnter={() => setActiveSliceKey(slice.key)}
+                  onMouseLeave={() => setActiveSliceKey(null)}
                   className="transition-all duration-300 cursor-pointer"
                 />
               )
             })}
           </svg>
 
-          {/* Center text */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-            <span style={{ color: 'var(--color-text)' }} className="text-lg font-extrabold leading-none">
-              {total === 1 && data.length === 0 ? 0 : total}
-            </span>
-            <span style={{ color: 'var(--color-text-muted)' }} className="text-[9px] font-medium mt-0.5">Total</span>
+          {/* Dynamic Center Inspector */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-1">
+            {activeSlice ? (
+              <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+                <span
+                  style={{ color: activeSlice.color }}
+                  className="text-lg font-black leading-none tracking-tight"
+                >
+                  {activeSlice.value}
+                </span>
+                <span
+                  style={{ color: activeSlice.color }}
+                  className="text-[9px] font-bold uppercase tracking-wider mt-0.5 truncate max-w-[65px]"
+                >
+                  {activeSlice.label}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)' }} className="text-[8px] font-medium">
+                  {Math.round((activeSlice.value / total) * 100)}%
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center transition-all">
+                <span style={{ color: 'var(--color-text)' }} className="text-lg font-black leading-none tracking-tight">
+                  {total === 1 && data.length === 0 ? 0 : total}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)' }} className="text-[9px] font-medium mt-0.5">
+                  Cards
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex-1 space-y-1.5 text-xs">
+        {/* Legend with interactive mini-progress indicators */}
+        <div className="flex-1 space-y-1 text-xs">
           {data.length === 0 ? (
-            <div style={{ color: 'var(--color-text-muted)' }} className="text-xs py-4 text-center">Nenhuma tarefa</div>
+            <div style={{ color: 'var(--color-text-muted)' }} className="text-xs py-4 text-center">
+              Sem dados
+            </div>
           ) : (
             data.map(item => {
               const pct = Math.round((item.value / total) * 100)
-              const isHovered = activeSlice === item.key
+              const isHovered = activeSliceKey === item.key
 
               return (
                 <div
                   key={item.key}
-                  onMouseEnter={() => setActiveSlice(item.key)}
-                  onMouseLeave={() => setActiveSlice(null)}
+                  onMouseEnter={() => setActiveSliceKey(item.key)}
+                  onMouseLeave={() => setActiveSliceKey(null)}
                   style={{
-                    background: isHovered ? 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))' : 'transparent',
+                    background: isHovered
+                      ? `color-mix(in srgb, ${item.color} 12%, var(--color-surface))`
+                      : 'transparent',
+                    borderColor: isHovered
+                      ? `color-mix(in srgb, ${item.color} 30%, transparent)`
+                      : 'transparent',
                   }}
-                  className="flex items-center justify-between p-1 rounded-md transition-all cursor-pointer"
+                  className="flex flex-col p-1.5 rounded-lg border transition-all duration-200 cursor-pointer group"
                 >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span
-                      style={{ background: item.color }}
-                      className="w-2 h-2 rounded-full shrink-0"
-                    />
-                    <span style={{ color: 'var(--color-text)' }} className="truncate text-[11px] font-medium">{item.label}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span
+                        style={{
+                          background: item.color,
+                          boxShadow: isHovered ? `0 0 6px ${item.glowColor}` : 'none',
+                        }}
+                        className="w-2 h-2 rounded-full shrink-0 transition-shadow duration-200"
+                      />
+                      <span
+                        style={{
+                          color: isHovered ? item.color : 'var(--color-text)',
+                        }}
+                        className="truncate text-[11px] font-semibold transition-colors"
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 text-[11px]">
+                      <span style={{ color: 'var(--color-text)' }} className="font-bold">
+                        {item.value}
+                      </span>
+                      <span style={{ color: 'var(--color-text-muted)' }} className="text-[9px]">
+                        ({pct}%)
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
-                    <span style={{ color: 'var(--color-text)' }} className="font-bold">{item.value}</span>
-                    <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px]">({pct}%)</span>
+
+                  {/* Proportional Mini Bar */}
+                  <div
+                    style={{ background: 'color-mix(in srgb, var(--color-border) 40%, transparent)' }}
+                    className="w-full h-1 rounded-full mt-1 overflow-hidden"
+                  >
+                    <div
+                      style={{
+                        width: `${pct}%`,
+                        background: item.color,
+                        opacity: isHovered ? 1 : 0.6,
+                      }}
+                      className="h-full rounded-full transition-all duration-300"
+                    />
                   </div>
                 </div>
               )
@@ -145,18 +246,30 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
         </div>
       </div>
 
+      {/* Footer Info / Status Pills */}
       <div
         style={{
           borderColor: 'var(--color-border)',
           color: 'var(--color-text-muted)',
         }}
-        className="flex items-center justify-between pt-2 border-t text-[11px]"
+        className="flex items-center justify-between pt-2 border-t text-[11px] mt-1"
       >
-        <span className="flex items-center gap-1">
-          <AlertCircle className="w-3 h-3 text-rose-500" />
-          {urgentCount} urgentes no total
+        <span
+          onMouseEnter={() => setActiveSliceKey('urgent')}
+          onMouseLeave={() => setActiveSliceKey(null)}
+          className="flex items-center gap-1 cursor-pointer hover:text-rose-400 transition-colors"
+        >
+          <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+          <span><strong className="text-rose-500 font-bold">{urgentCount}</strong> urgentes</span>
         </span>
-        <span className="text-emerald-500 font-medium">{completedCount} entregues</span>
+        <span
+          onMouseEnter={() => setActiveSliceKey('done')}
+          onMouseLeave={() => setActiveSliceKey(null)}
+          className="flex items-center gap-1 cursor-pointer hover:text-emerald-400 transition-colors"
+        >
+          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+          <span><strong className="text-emerald-500 font-bold">{completedCount}</strong> entregues</span>
+        </span>
       </div>
     </div>
   )
