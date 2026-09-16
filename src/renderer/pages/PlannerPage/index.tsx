@@ -7,6 +7,7 @@ import { TaskEditModal } from './components/Modals/TaskEditModal';
 import { ReminderAlertModal } from './components/Modals/ReminderAlertModal';
 import { usePlanningTasks } from './hooks/usePlanningTasks';
 import { usePlanningSprints } from './hooks/usePlanningSprints';
+import { usePlanningReminders } from './hooks/usePlanningReminders';
 
 export type PlannerViewMode = 'daily' | 'weekly' | 'monthly' | 'sprint';
 
@@ -14,6 +15,9 @@ export const PlannerPage = () => {
     const [viewMode, setViewMode] = useState<PlannerViewMode>('daily');
     const { tasks, updateTask } = usePlanningTasks();
     const { sprints, activeSprint } = usePlanningSprints();
+
+    // Reminders Daemon
+    const { activeAlert, dismissAlert, snoozeAlert } = usePlanningReminders(tasks);
 
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
     const editingTask = useMemo(() => tasks.find(t => t.id === editingTaskId) || null, [tasks, editingTaskId]);
@@ -59,7 +63,12 @@ export const PlannerPage = () => {
                 onSave={(id, updates) => { updateTask(id, updates); setEditingTaskId(null); }}
             />
 
-            <ReminderAlertModal isOpen={false} message="" onClose={() => {}} />
+            <ReminderAlertModal
+                isOpen={!!activeAlert}
+                message={activeAlert?.message || ''}
+                onClose={dismissAlert}
+                onSnooze={() => snoozeAlert(15)}
+            />
         </div>
     )
 }
