@@ -16,7 +16,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlanningTask } from '../../types/planning.types';
 import { PlanningCardCompact } from '../Card/PlanningCardCompact';
-import { Plus, ChevronLeft, ChevronRight, Clock, FolderKanban, Bell, Tag, Sparkles } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, FolderKanban, Bell, Tag, Sparkles, Calendar, CalendarDays } from 'lucide-react';
 import type { Day, Period, Project } from '@types';
 
 interface WeeklyViewProps {
@@ -185,6 +185,74 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
   );
 };
 
+/**
+ * Droppable Slot para Semanas do Mês
+ */
+interface MonthWeekDroppableProps {
+  id: string;
+  weekLabel: string;
+  datesLabel: string;
+  taskCount: number;
+  isCurrentWeek: boolean;
+  activeTask?: PlanningTask | null;
+  onClick: () => void;
+}
+
+const MonthWeekDroppable: React.FC<MonthWeekDroppableProps> = ({
+  id,
+  weekLabel,
+  datesLabel,
+  taskCount,
+  isCurrentWeek,
+  activeTask,
+  onClick,
+}) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={onClick}
+      style={{
+        background: isOver
+          ? 'color-mix(in srgb, var(--color-primary, #6366f1) 22%, #0f172a)'
+          : isCurrentWeek
+          ? '#15213b'
+          : '#0d1424',
+        borderColor: isOver
+          ? 'var(--color-primary, #6366f1)'
+          : isCurrentWeek
+          ? 'rgba(99,102,241,0.5)'
+          : 'rgba(255,255,255,0.06)',
+      }}
+      className={`flex-1 min-w-[140px] p-2 rounded-lg border transition-all cursor-pointer flex flex-col justify-between group select-none ${
+        isOver ? 'ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-950/50 scale-[1.02]' : ''
+      } hover:border-indigo-500/40 hover:bg-[#121c32]`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${isCurrentWeek ? 'text-indigo-300' : 'text-slate-300'}`}>
+          {weekLabel}
+        </span>
+        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/5 text-slate-400 border border-white/5">
+          {taskCount} {taskCount === 1 ? 'tarefa' : 'tarefas'}
+        </span>
+      </div>
+
+      <div className="text-[10px] font-mono text-slate-400 mt-1">
+        {datesLabel}
+      </div>
+
+      {/* Ghost Drop Placeholder */}
+      {isOver && activeTask && (
+        <div className="mt-1.5 py-1 px-1.5 rounded border border-dashed border-indigo-400/80 bg-indigo-950/60 text-[10px] text-indigo-200 font-semibold flex items-center gap-1 animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+          <span className="truncate">Mover para esta semana</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const WeeklyView = ({
   tasks,
   projects = [],
@@ -195,6 +263,7 @@ export const WeeklyView = ({
 }: WeeklyViewProps) => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [isBacklogCollapsed, setIsBacklogCollapsed] = useState(false);
+  const [showMonthWeeks, setShowMonthWeeks] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -241,12 +310,15 @@ export const WeeklyView = ({
   }, []);
 
   // Compute Week Dates (Monday to Sunday)
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const currentDayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
   const diffToMonday = (currentDayOfWeek === 0 ? -6 : 1) - currentDayOfWeek;
 
-  const mondayDate = new Date(today);
-  mondayDate.setDate(today.getDate() + diffToMonday + weekOffset * 7);
+  const mondayDate = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + diffToMonday + weekOffset * 7);
+    return d;
+  }, [today, diffToMonday, weekOffset]);
 
   const weekDays = useMemo(() => {
     return DAYS_META.map((meta, idx) => {
@@ -264,6 +336,61 @@ export const WeeklyView = ({
       };
     });
   }, [mondayDate]);
+
+  // Month Name for Current View
+  const monthNameCapitalized = useMemo(() => {
+    const raw = mondayDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }, [mondayDate]);
+
+  // Compute Weeks for the Month of current view
+  const monthWeeks = useMemo(() => {
+    const year = mondayDate.getFullYear();
+    const month = mondayDate.getMonth();
+
+    const firstDayOfMonth = new Date(year, month, 1);
+    const firstDow = firstDayOfMonth.getDay();
+    const diffFirstMon = (firstDow === 0 ? -6 : 1) - firstDow;
+
+    const iterMonday = new Date(year, month, 1 + diffFirstMon);
+    const list = [];
+    const currentMondayStr = weekDays[0]?.dateStr;
+
+    const todayMonday = new Date(today);
+    todayMonday.setDate(today.getDate() + diffToMonday);
+
+    for (let i = 0; i < 6; i++) {
+      const m = new Date(iterMonday);
+      m.setDate(iterMonday.getDate() + i * 7);
+
+      const sun = new Date(m);
+      sun.setDate(m.getDate() + 6);
+
+      // Check if we passed the month bounds
+      if (m.getMonth() > month && m.getFullYear() >= year && i >= 4) {
+        break;
+      }
+
+      const mStr = m.toISOString().slice(0, 10);
+      const sunStr = sun.toISOString().slice(0, 10);
+
+      const count = tasks.filter((t) => t.hasDate && t.date && t.date >= mStr && t.date <= sunStr).length;
+      const offset = Math.round((m.getTime() - todayMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+      list.push({
+        weekIndex: i + 1,
+        mondayDateStr: mStr,
+        sundayDateStr: sunStr,
+        label: `Semana ${i + 1}`,
+        datesLabel: `${m.getDate().toString().padStart(2, '0')}/${(m.getMonth() + 1).toString().padStart(2, '0')} — ${sun.getDate().toString().padStart(2, '0')}/${(sun.getMonth() + 1).toString().padStart(2, '0')}`,
+        taskCount: count,
+        isCurrentWeek: mStr === currentMondayStr,
+        offsetFromToday: offset,
+      });
+    }
+
+    return list;
+  }, [mondayDate, tasks, weekDays, today, diffToMonday]);
 
   // Date range formatted as "2026-09-14 a 2026-09-20"
   const rangeFormatted = useMemo(() => {
@@ -354,6 +481,16 @@ export const WeeklyView = ({
       return;
     }
 
+    if (overId.startsWith('week-target:')) {
+      const targetMondayStr = overId.replace('week-target:', '');
+      onMoveTask?.(
+        draggedTaskId,
+        { day: 'mon', period: 'morning' },
+        targetMondayStr
+      );
+      return;
+    }
+
     if (overId.startsWith('cell:')) {
       const [, dayKey, shiftId] = overId.split(':');
       const targetDayObj = weekDays.find((d) => d.key === dayKey);
@@ -393,6 +530,13 @@ export const WeeklyView = ({
 
     if (slotId === 'backlog') {
       onMoveTask?.(selectedTaskId, 'backlog', null);
+    } else if (slotId.startsWith('week-target:')) {
+      const targetMondayStr = slotId.replace('week-target:', '');
+      onMoveTask?.(
+        selectedTaskId,
+        { day: 'mon', period: 'morning' },
+        targetMondayStr
+      );
     } else if (slotId.startsWith('cell:')) {
       const [, dayKey, shiftId] = slotId.split(':');
       const targetDayObj = weekDays.find((d) => d.key === dayKey);
@@ -553,6 +697,23 @@ export const WeeklyView = ({
           >
             <ChevronRight className="w-4 h-4" />
           </button>
+
+          <span className="w-px h-4 bg-white/10 mx-1" />
+
+          {/* Toggle Month Weeks */}
+          <button
+            type="button"
+            onClick={() => setShowMonthWeeks((prev) => !prev)}
+            className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1.5 transition-all cursor-pointer ${
+              showMonthWeeks || activeTaskId !== null
+                ? 'border-indigo-500/60 bg-indigo-950/50 text-indigo-300 shadow-xs'
+                : 'border-slate-700/60 bg-[#121b2f] text-slate-300 hover:border-slate-500 hover:text-white'
+            }`}
+            title="Visualizar e Mover entre as Semanas do Mês"
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Semanas do Mês</span>
+          </button>
         </div>
 
         {/* Legend Pills */}
@@ -590,6 +751,43 @@ export const WeeklyView = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        {/* Month Weeks Drop Bar */}
+        {(showMonthWeeks || activeTaskId !== null) && (
+          <div className="px-3 py-2 bg-[#090e1a] border-b border-white/5 shrink-0 transition-all">
+            <div className="flex items-center justify-between mb-1.5 px-1">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Semanas de {monthNameCapitalized}
+                </span>
+                {activeTaskId && (
+                  <span className="text-[10px] text-indigo-300 font-medium bg-indigo-950/80 border border-indigo-500/50 px-2 py-0.2 rounded-full animate-pulse">
+                    Solte aqui para mover o card para a semana selecionada
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-500 hidden sm:inline">
+                Arraste um card ou clique em uma semana para navegar
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {monthWeeks.map((week) => (
+                <MonthWeekDroppable
+                  key={week.mondayDateStr}
+                  id={`week-target:${week.mondayDateStr}`}
+                  weekLabel={week.label}
+                  datesLabel={week.datesLabel}
+                  taskCount={week.taskCount}
+                  isCurrentWeek={week.isCurrentWeek}
+                  activeTask={activeTask}
+                  onClick={() => setWeekOffset(week.offsetFromToday)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 flex overflow-hidden p-2.5 gap-2.5 min-h-0">
           {/* Backlog Column */}
           <div

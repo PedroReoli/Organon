@@ -1,64 +1,46 @@
+import React from 'react';
 import { PlannerViewMode } from '../index';
+import { LayoutGrid, CalendarClock } from 'lucide-react';
 
 interface PlannerNavbarProps {
   viewMode: PlannerViewMode;
   setViewMode: (v: PlannerViewMode) => void;
 }
 
-export const PlannerNavbar = ({ viewMode, setViewMode }: PlannerNavbarProps) => {
-  const navStyles = (isActive: boolean) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '6px 14px',
-    borderRadius: '8px',
-    border: '1px solid',
-    borderColor: isActive ? 'var(--color-primary)' : 'rgba(255,255,255,0.08)',
-    cursor: 'pointer',
-    background: isActive ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))' : 'var(--color-surface)',
-    color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
-    fontWeight: (isActive ? 600 : 500) as number,
-    boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
-    transition: 'all 150ms ease-out',
-    fontSize: '13px',
-  });
-
+export const PlannerNavbar: React.FC<PlannerNavbarProps> = ({ viewMode, setViewMode }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        background: 'var(--color-bg)',
-      }}
-    >
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+    <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 bg-[#0a0f1d] shrink-0">
+      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0e1628] border border-white/5">
         <button
           type="button"
           onClick={() => setViewMode('weekly')}
-          style={navStyles(viewMode === 'weekly')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            viewMode === 'weekly'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+          }`}
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <rect x="2" y="3" width="12" height="11" rx="2" />
-            <path d="M2 6h12" />
-            <path d="M5 2v2M11 2v2" />
-          </svg>
+          <LayoutGrid className="w-3.5 h-3.5" />
           <span>Visão Semanal</span>
         </button>
 
         <button
           type="button"
           onClick={() => setViewMode('daily')}
-          style={navStyles(viewMode === 'daily')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            viewMode === 'daily'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+          }`}
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <circle cx="8" cy="8" r="6" />
-            <path d="M8 4v4l2.5 2.5" />
-          </svg>
+          <CalendarClock className="w-3.5 h-3.5" />
           <span>Visão Diária</span>
         </button>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+        <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
+        <span>Planner Ativo</span>
       </div>
     </div>
   );
