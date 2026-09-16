@@ -12,7 +12,6 @@ import {
   pointerWithin,
   MeasuringStrategy,
   getClientRect,
-  defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlanningTask } from '../../types/planning.types';
@@ -54,6 +53,7 @@ interface MatrixSlotProps {
   tasks: PlanningTask[];
   projects?: Project[];
   selectedTaskId: string | null;
+  activeTask?: PlanningTask | null;
   onSelectTask: (taskId: string) => void;
   onSlotClick: (slotId: string) => void;
   onEdit: (id: string) => void;
@@ -68,6 +68,7 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
   tasks,
   projects = [],
   selectedTaskId,
+  activeTask,
   onSelectTask,
   onSlotClick,
   onEdit,
@@ -134,8 +135,17 @@ const MatrixSlot: React.FC<MatrixSlotProps> = ({
           })}
         </SortableContext>
 
+        {/* Ghost Drop Placeholder (Sombra do card onde ele vai cair) */}
+        {isOver && activeTask && !tasks.some((t) => t.id === activeTask.id) && (
+          <div className="w-full min-h-[32px] rounded-md border-2 border-dashed border-indigo-400/80 bg-indigo-950/40 p-1.5 flex items-center gap-2 text-xs text-indigo-300 animate-pulse select-none pointer-events-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+            <span className="truncate font-medium flex-1 text-slate-200">{activeTask.title}</span>
+            <span className="text-[9px] font-mono text-indigo-300/80 shrink-0 uppercase tracking-wider">Soltar aqui</span>
+          </div>
+        )}
+
         {/* Empty State Prompt */}
-        {tasks.length === 0 && (
+        {tasks.length === 0 && (!isOver || !activeTask) && (
           <div
             onClick={(e) => {
               if (!selectedTaskId) {
@@ -507,7 +517,6 @@ export const WeeklyView = ({
   };
 
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
-  const activeTaskProject = activeTask ? projects.find((p) => p.id === activeTask.projectId) : undefined;
 
   return (
     <div className="flex flex-col h-full w-full select-none bg-[#0a0f1d] text-slate-200 overflow-hidden">
@@ -645,6 +654,7 @@ export const WeeklyView = ({
                   tasks={backlogTasks}
                   projects={projects}
                   selectedTaskId={selectedTaskId}
+                  activeTask={activeTask}
                   onSelectTask={setSelectedTaskId}
                   onSlotClick={handleSlotClickToMove}
                   onEdit={onEdit}
@@ -714,6 +724,7 @@ export const WeeklyView = ({
                           tasks={slotTasks}
                           projects={projects}
                           selectedTaskId={selectedTaskId}
+                          activeTask={activeTask}
                           onSelectTask={setSelectedTaskId}
                           onSlotClick={handleSlotClickToMove}
                           onEdit={onEdit}
@@ -730,20 +741,9 @@ export const WeeklyView = ({
           </div>
         </div>
 
-        {/* Precise Drag Overlay with exact coordinate tracking */}
-        <DragOverlay
-          zIndex={9999}
-          dropAnimation={{
-            duration: 200,
-            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-            sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
-          }}
-        >
-          {activeTask ? (
-            <div className="w-[200px] shadow-2xl rounded-lg border border-indigo-500 bg-[#162138] p-1 opacity-95 pointer-events-none">
-              <PlanningCardCompact task={activeTask} project={activeTaskProject} onEdit={() => {}} />
-            </div>
-          ) : null}
+        {/* Drag Overlay intentionally null so no floating card tracks the mouse */}
+        <DragOverlay zIndex={9999}>
+          {null}
         </DragOverlay>
       </DndContext>
 
