@@ -1,5 +1,5 @@
 import React from 'react'
-import { Rocket, Target, Calendar, ArrowRight } from 'lucide-react'
+import { Rocket, Target, Calendar, ArrowRight, CheckCircle2 } from 'lucide-react'
 
 interface ActiveSprintWidgetProps {
   sprintName?: string
@@ -13,7 +13,7 @@ interface ActiveSprintWidgetProps {
 
 export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
   sprintName = 'Sprint Ativa',
-  goal = 'Nenhuma meta definida para esta sprint.',
+  goal,
   startDate,
   endDate,
   completedPoints = 0,
@@ -28,9 +28,10 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full"
+      className="border p-3.5 rounded-xl shadow-xs flex flex-col justify-between h-full select-none"
     >
       <div>
+        {/* Top Header */}
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <div
@@ -38,13 +39,14 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
                 background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
                 color: 'var(--color-primary)',
               }}
-              className="p-1.5 rounded-lg"
+              className="p-1 rounded-md"
             >
-              <Rocket className="w-4 h-4" />
+              <Rocket className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold">{sprintName}</h3>
-              <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Sprint & Backlog</p>
+              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+                {sprintName}
+              </h3>
             </div>
           </div>
 
@@ -52,69 +54,76 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
             type="button"
             onClick={onNavigateToSprint}
             style={{ color: 'var(--color-primary)' }}
-            className="text-xs font-medium flex items-center gap-0.5 hover:opacity-80 transition-opacity"
+            className="text-xs font-semibold flex items-center gap-1 hover:underline cursor-pointer"
           >
-            <span>Ver Sprint</span>
+            <span>Planejador</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </div>
 
-        <div
-          style={{
-            background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
-            borderColor: 'var(--color-border)',
-          }}
-          className="p-2.5 rounded-lg border mb-3"
-        >
-          <div className="flex items-center gap-1.5 text-xs font-semibold mb-1">
-            <Target className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
-            <span style={{ color: 'var(--color-text)' }}>Meta da Sprint:</span>
+        {/* Goal Banner (If exists) */}
+        {goal && (
+          <div
+            style={{
+              background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+              borderColor: 'var(--color-border)',
+            }}
+            className="p-2 rounded-lg border mb-2.5 flex items-start gap-1.5"
+          >
+            <Target className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
+            <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px] leading-snug line-clamp-2">
+              {goal}
+            </p>
           </div>
-          <p style={{ color: 'var(--color-text-muted)' }} className="text-xs leading-relaxed italic">
-            "{goal}"
-          </p>
-        </div>
+        )}
 
-        <div className="space-y-1.5">
+        {/* Story Points / Progress */}
+        <div className="space-y-1.5 my-2">
           <div className="flex items-center justify-between text-xs">
-            <span style={{ color: 'var(--color-text-muted)' }}>Progresso de Story Points</span>
-            <span style={{ color: 'var(--color-text)' }} className="font-bold">
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px] font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              Progresso da Sprint
+            </span>
+            <span style={{ color: 'var(--color-text)' }} className="font-bold text-xs font-mono">
               {completedPoints} / {totalPoints} pts ({rate}%)
             </span>
           </div>
+
           <div
             style={{ background: 'color-mix(in srgb, var(--color-border) 60%, transparent)' }}
-            className="w-full h-2 rounded-full overflow-hidden"
+            className="w-full h-1.5 rounded-full overflow-hidden"
           >
             <div
               style={{
                 width: `${rate}%`,
                 background: 'var(--color-primary)',
               }}
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full transition-all duration-300"
             />
           </div>
         </div>
       </div>
 
+      {/* Footer info */}
       <div
         style={{
           borderColor: 'var(--color-border)',
           color: 'var(--color-text-muted)',
         }}
-        className="flex items-center justify-between pt-2.5 border-t mt-3 text-[11px]"
+        className="flex items-center justify-between pt-2 border-t mt-2 text-[11px]"
       >
         <span className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
-          {startDate && endDate ? `${startDate} até ${endDate}` : 'Ciclo de 2 semanas'}
+          {startDate && endDate ? `${startDate} a ${endDate}` : 'Ciclo Atual'}
         </span>
-        <span
-          style={{ color: 'var(--color-primary)' }}
-          className="font-medium cursor-pointer hover:underline"
+        <button
+          type="button"
           onClick={onNavigateToSprint}
+          style={{ color: 'var(--color-primary)' }}
+          className="font-medium hover:underline cursor-pointer"
         >
-          Gerenciar Backlog
-        </span>
+          Ver Backlog
+        </button>
       </div>
     </div>
   )

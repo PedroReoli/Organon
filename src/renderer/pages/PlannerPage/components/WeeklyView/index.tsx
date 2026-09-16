@@ -1,17 +1,166 @@
-import { useState, useEffect } from 'react';
-import { DndContext, closestCorners, DragOverlay } from '@dnd-kit/core';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  DndContext,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  closestCorners,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlanningTask } from '../../types/planning.types';
-import { WeekDayColumn } from './WeekDayColumn';
-import { usePlanningDragDrop } from '../../hooks/usePlanningDragDrop';
 import { PlanningCardCompact } from '../Card/PlanningCardCompact';
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import type { Day, Period } from '@types';
 
 interface WeeklyViewProps {
   tasks: PlanningTask[];
   onEdit: (id: string) => void;
-  onMoveTask?: (taskId: string, targetDate: string) => void;
+  onMoveTask?: (taskId: string, targetLocation: any, targetDate?: string | null) => void;
   onUpdateTask?: (id: string, updates: Partial<PlanningTask>) => void;
   onAddTask?: (task: Partial<PlanningTask>) => void;
 }
+
+const SHIFTS: { id: Period; label: string }[] = [
+  { id: 'morning', label: 'MANHÃ' },
+  { id: 'afternoon', label: 'TARDE' },
+  { id: 'night', label: 'NOITE' },
+];
+
+const DAYS_META: { key: Day; label: string; shortName: string }[] = [
+  { key: 'mon', label: 'SEGUNDA', shortName: 'Seg' },
+  { key: 'tue', label: 'TERÇA', shortName: 'Ter' },
+  { key: 'wed', label: 'QUARTA', shortName: 'Qua' },
+  { key: 'thu', label: 'QUINTA', shortName: 'Qui' },
+  { key: 'fri', label: 'SEXTA', shortName: 'Sex' },
+  { key: 'sat', label: 'SÁBADO', shortName: 'Sáb' },
+  { key: 'sun', label: 'DOMINGO', shortName: 'Dom' },
+];
+
+/**
+ * Droppable Slot Component para Célula da Matriz ou Backlog
+ */
+interface MatrixSlotProps {
+  id: string;
+  isBacklog?: boolean;
+  tasks: PlanningTask[];
+  selectedTaskId: string | null;
+  onSelectTask: (taskId: string) => void;
+  onSlotClick: (slotId: string) => void;
+  onEdit: (id: string) => void;
+  onToggleStatus: (id: string) => void;
+  onPostponeWeek: (id: string) => void;
+  onQuickAdd: () => void;
+}
+
+const MatrixSlot: React.FC<MatrixSlotProps> = ({
+  id,
+  isBacklog,
+  tasks,
+  selectedTaskId,
+  onSelectTask,
+  onSlotClick,
+  onEdit,
+  onToggleStatus,
+  onPostponeWeek,
+  onQuickAdd,
+}) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={() => {
+        if (selectedTaskId) {
+          onSlotClick(id);
+        }
+      }}
+      style={{
+        background: isOver
+          ? 'color-mix(in srgb, var(--color-primary) 14%, #101726)'
+          : isBacklog
+          ? '#0c1220'
+          : '#101726',
+        borderColor: isOver
+          ? 'var(--color-primary)'
+          : selectedTaskId
+          ? 'rgba(99,102,241,0.4)'
+          : 'rgba(255,255,255,0.06)',
+      }}
+      className={`relative flex-1 min-h-[120px] rounded-lg border p-2 flex flex-col justify-between transition-all group/slot ${
+        selectedTaskId ? 'cursor-pointer hover:border-indigo-400/80 hover:bg-[#151f33]' : ''
+      }`}
+    >
+      {/* Task List */}
+      <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto">
+        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((task) => (
+            <div
+              key={task.id}
+              onClick={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.stopPropagation();
+                  onSelectTask(task.id);
+                }
+              }}
+              className={`transition-all rounded-md ${
+                selectedTaskId === task.id ? 'ring-2 ring-indigo-500 bg-indigo-950/40' : ''
+              }`}
+            >
+              <PlanningCardCompact
+                task={task}
+                isSortable
+                onEdit={() => onEdit(task.id)}
+                onToggleStatus={onToggleStatus}
+                onPostponeWeek={onPostponeWeek}
+              />
+            </div>
+          ))}
+        </SortableContext>
+
+        {/* Empty State Prompt */}
+        {tasks.length === 0 && (
+          <div
+            onClick={(e) => {
+              if (!selectedTaskId) {
+                e.stopPropagation();
+                onQuickAdd();
+              }
+            }}
+            className="flex-1 flex flex-col items-center justify-center text-center p-3 cursor-pointer select-none text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <div className="w-6 h-6 rounded-md border border-slate-700/60 flex items-center justify-center mb-1.5 text-slate-500 group-hover/slot:border-slate-500 group-hover/slot:text-slate-300 transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500/90 group-hover/slot:text-slate-400">
+              {selectedTaskId ? 'CLIQUE PARA MOVER' : 'ARRASTE OU CTRL+CLIQUE PARA MOVER'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Add Button at bottom of populated slot */}
+      {tasks.length > 0 && (
+        <div className="pt-1.5 mt-1 border-t border-white/5 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickAdd();
+            }}
+            className="w-full py-1 text-[10px] font-semibold flex items-center justify-center gap-1 rounded bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Adicionar</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const WeeklyView = ({
   tasks,
@@ -21,10 +170,16 @@ export const WeeklyView = ({
   onAddTask,
 }: WeeklyViewProps) => {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [isBacklogCollapsed, setIsBacklogCollapsed] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Keyboard navigation between weeks (Alt+Left, Alt+Right, Alt+Home)
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedTaskId(null);
+      }
       if (e.altKey && e.key === 'ArrowLeft') {
         e.preventDefault();
         setWeekOffset((w) => w - 1);
@@ -40,10 +195,7 @@ export const WeeklyView = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-
-  const daysNames = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
-
-  // Base date computation with offset
+  // Compute Week Dates (Monday to Sunday)
   const today = new Date();
   const currentDayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
   const diffToMonday = (currentDayOfWeek === 0 ? -6 : 1) - currentDayOfWeek;
@@ -51,26 +203,161 @@ export const WeeklyView = ({
   const mondayDate = new Date(today);
   mondayDate.setDate(today.getDate() + diffToMonday + weekOffset * 7);
 
-  const weekDays = daysNames.map((name, idx) => {
-    const d = new Date(mondayDate);
-    d.setDate(mondayDate.getDate() + idx);
-    const dateStr = d.toISOString().slice(0, 10);
-    const todayStr = new Date().toISOString().slice(0, 10);
-    return {
-      name,
-      dateStr,
-      isToday: dateStr === todayStr,
-      dateObj: d,
-    };
-  });
+  const weekDays = useMemo(() => {
+    return DAYS_META.map((meta, idx) => {
+      const d = new Date(mondayDate);
+      d.setDate(mondayDate.getDate() + idx);
+      const dateStr = d.toISOString().slice(0, 10);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      return {
+        key: meta.key,
+        label: meta.label,
+        shortName: meta.shortName,
+        dateStr,
+        dayNumber: d.getDate(),
+        isToday: dateStr === todayStr,
+      };
+    });
+  }, [mondayDate]);
 
-  const startDateStr = weekDays[0]?.dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  const endDateStr = weekDays[6]?.dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Date range formatted as "2026-09-14 a 2026-09-20"
+  const rangeFormatted = useMemo(() => {
+    if (!weekDays.length) return '';
+    const start = weekDays[0].dateStr;
+    const end = weekDays[6].dateStr;
+    return `${start} a ${end}`;
+  }, [weekDays]);
 
-  const handleTaskMove = (taskId: string, targetId: string) => {
-    if (onMoveTask) {
-      onMoveTask(taskId, targetId);
+  // Filter Backlog Tasks (tasks with location.day === null or no date or location='backlog')
+  const backlogTasks = useMemo(() => {
+    return tasks.filter((t) => !t.hasDate || !t.date || t.location?.day === null || (t.location as any) === 'backlog');
+  }, [tasks]);
+
+  // Map tasks to (Day x Shift)
+  const matrixTaskMap = useMemo(() => {
+    const map = new Map<string, PlanningTask[]>();
+    for (const day of weekDays) {
+      for (const shift of SHIFTS) {
+        const key = `${day.key}-${shift.id}`;
+        const matched = tasks.filter((t) => {
+          if (!t.hasDate || t.date !== day.dateStr) return false;
+          if (t.location?.period) {
+            return t.location.period === shift.id;
+          }
+          if (t.time) {
+            const hour = parseInt(t.time.slice(0, 2), 10);
+            if (hour < 12) return shift.id === 'morning';
+            if (hour < 18) return shift.id === 'afternoon';
+            return shift.id === 'night';
+          }
+          return shift.id === 'morning';
+        });
+        map.set(key, matched);
+      }
     }
+    return map;
+  }, [tasks, weekDays]);
+
+  // Sensors for DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTaskId(null);
+    if (!over) return;
+
+    const draggedTaskId = active.id as string;
+    const overId = over.id as string;
+
+    if (overId === 'backlog') {
+      onMoveTask?.(draggedTaskId, 'backlog', null);
+      return;
+    }
+
+    if (overId.startsWith('cell:')) {
+      const [, dayKey, shiftId] = overId.split(':');
+      const targetDayObj = weekDays.find((d) => d.key === dayKey);
+      if (targetDayObj) {
+        onMoveTask?.(
+          draggedTaskId,
+          { day: dayKey as any, period: shiftId as any },
+          targetDayObj.dateStr
+        );
+      }
+      return;
+    }
+
+    // Drop over another task
+    const targetTask = tasks.find((t) => t.id === overId);
+    if (targetTask) {
+      onMoveTask?.(
+        draggedTaskId,
+        targetTask.location || 'backlog',
+        targetTask.date
+      );
+    }
+  };
+
+  const handleSlotClickToMove = (slotId: string) => {
+    if (!selectedTaskId) return;
+
+    if (slotId === 'backlog') {
+      onMoveTask?.(selectedTaskId, 'backlog', null);
+    } else if (slotId.startsWith('cell:')) {
+      const [, dayKey, shiftId] = slotId.split(':');
+      const targetDayObj = weekDays.find((d) => d.key === dayKey);
+      if (targetDayObj) {
+        onMoveTask?.(
+          selectedTaskId,
+          { day: dayKey as any, period: shiftId as any },
+          targetDayObj.dateStr
+        );
+      }
+    }
+    setSelectedTaskId(null);
+  };
+
+  const handleQuickAdd = (dayKey?: Day, shiftId?: Period, dateStr?: string) => {
+    const title = window.prompt('Título da nova tarefa:');
+    if (!title || !title.trim()) return;
+
+    if (dayKey && shiftId && dateStr) {
+      onAddTask?.({
+        title: title.trim(),
+        date: dateStr,
+        hasDate: true,
+        location: { day: dayKey, period: shiftId },
+        status: 'todo',
+        priority: 'P3',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      // Add to backlog
+      onAddTask?.({
+        title: title.trim(),
+        hasDate: false,
+        date: null,
+        location: { day: null, period: null },
+        status: 'todo',
+        priority: 'P3',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleToggleStatus = (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const nextStatus = task.status === 'done' ? 'todo' : 'done';
+    onUpdateTask?.(taskId, { status: nextStatus, updatedAt: new Date().toISOString() });
   };
 
   const handlePostponeWeek = (taskId: string) => {
@@ -87,207 +374,202 @@ export const WeeklyView = ({
     }
   };
 
-  const handleToggleStatus = (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const nextStatus = task.status === 'done' ? 'todo' : 'done';
-    onUpdateTask?.(taskId, { status: nextStatus, updatedAt: new Date().toISOString() });
-  };
-
-  const handleQuickAdd = (date: string) => {
-    const title = window.prompt('Título da nova tarefa:');
-    if (!title || !title.trim()) return;
-    onAddTask?.({
-      title: title.trim(),
-      date,
-      hasDate: true,
-      status: 'todo',
-      priority: 'P3',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  };
-
-  const { activeId, handleDragStart, handleDragOver, handleDragEnd } = usePlanningDragDrop(handleTaskMove);
-  const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
+  const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Week Navigator Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'var(--color-surface)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="flex flex-col h-full w-full select-none bg-[#0a0f1d] text-slate-200">
+      {/* Top Navigator Bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#0d1424]">
+        {/* Navigation Buttons */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setWeekOffset((w) => w - 1)}
             title="Semana Anterior"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'var(--color-bg)',
-              color: 'var(--color-text)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className="w-7 h-7 rounded border border-slate-700/60 bg-[#121b2f] text-slate-300 hover:text-white hover:border-slate-500 flex items-center justify-center transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M10 12L6 8l4-4" />
-            </svg>
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
           <button
             type="button"
             onClick={() => setWeekOffset(0)}
-            title="Ir para a Semana Atual"
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: weekOffset === 0 ? 'var(--color-primary)' : 'var(--color-bg)',
-              color: weekOffset === 0 ? '#ffffff' : 'var(--color-text)',
-              fontSize: '12.5px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className={`px-3 py-1 rounded text-xs font-semibold border transition-all ${
+              weekOffset === 0
+                ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-300'
+                : 'border-slate-700/60 bg-[#121b2f] text-slate-300 hover:border-slate-500 hover:text-white'
+            }`}
           >
-            Hoje
+            Esta semana
           </button>
 
           <button
             type="button"
             onClick={() => setWeekOffset((w) => w + 1)}
             title="Próxima Semana"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'var(--color-bg)',
-              color: 'var(--color-text)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className="w-7 h-7 rounded border border-slate-700/60 bg-[#121b2f] text-slate-300 hover:text-white hover:border-slate-500 flex items-center justify-center transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 4l4 4-4 4" />
-            </svg>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 600 }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <rect x="2" y="3" width="12" height="11" rx="2" />
-            <path d="M2 6h12" />
-            <path d="M5 2v2M11 2v2" />
-          </svg>
-          <span style={{ color: 'var(--color-text)' }}>
-            {startDateStr} – {endDateStr}
-          </span>
-          {weekOffset !== 0 && (
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 500,
-                color: 'var(--color-text-muted)',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                background: 'rgba(255,255,255,0.06)',
-              }}
-            >
-              {weekOffset > 0 ? `+${weekOffset} sem` : `${weekOffset} sem`}
-            </span>
-          )}
-        </div>
-
-        <div>
-          <button
-            type="button"
-            onClick={() => handleQuickAdd(new Date().toISOString().slice(0, 10))}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'var(--color-primary)',
-              color: '#ffffff',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M8 2v12M2 8h12" />
-            </svg>
-            <span>Nova Tarefa</span>
-          </button>
+        {/* Date Range Display */}
+        <div className="text-xs font-mono font-medium text-slate-400 tracking-wider">
+          {rangeFormatted}
         </div>
       </div>
 
-      {/* Week Columns Grid */}
+      {/* Main Board (Backlog + Matrix Grid) */}
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px',
-            flex: 1,
-            overflowX: 'auto',
-            padding: '16px 20px',
-            alignItems: 'stretch',
-          }}
-        >
-          {weekDays.map((day) => {
-            const dayTasks = tasks.filter((t) => t.date === day.dateStr);
-            return (
-              <WeekDayColumn
-                key={day.dateStr}
-                date={day.dateStr}
-                dayName={day.name}
-                isToday={day.isToday}
-                tasks={dayTasks}
-                onEdit={onEdit}
-                onToggleStatus={handleToggleStatus}
-                onPostponeWeek={handlePostponeWeek}
-                onAddTask={handleQuickAdd}
-              />
-            );
-          })}
+        <div className="flex-1 flex overflow-hidden p-3 gap-3">
+          {/* Backlog Column */}
+          <div
+            className={`flex flex-col border border-white/5 rounded-xl bg-[#0c1220] transition-all duration-200 ${
+              isBacklogCollapsed ? 'w-12' : 'w-64 min-w-[240px]'
+            }`}
+          >
+            {/* Backlog Header */}
+            <div className="flex items-center justify-between p-3 border-b border-white/5">
+              {!isBacklogCollapsed && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    BACKLOG
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-indigo-950/60 text-indigo-400 text-[11px] font-bold border border-indigo-800/40">
+                    {backlogTasks.length}
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsBacklogCollapsed((prev) => !prev)}
+                className="w-6 h-6 rounded border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-500 transition-colors mx-auto"
+                title={isBacklogCollapsed ? 'Expandir Backlog' : 'Recolher Backlog'}
+              >
+                {isBacklogCollapsed ? (
+                  <ChevronRight className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+
+            {!isBacklogCollapsed && (
+              <div className="flex-1 flex flex-col p-2.5 gap-2.5 overflow-y-auto">
+                {/* + Card Button */}
+                <button
+                  type="button"
+                  onClick={() => handleQuickAdd()}
+                  className="w-full py-1.5 px-3 rounded-lg border border-slate-700/60 bg-[#121b2f] hover:bg-[#18243e] hover:border-slate-500 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Card</span>
+                </button>
+
+                {/* Backlog Slot Area */}
+                <MatrixSlot
+                  id="backlog"
+                  isBacklog
+                  tasks={backlogTasks}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={setSelectedTaskId}
+                  onSlotClick={handleSlotClickToMove}
+                  onEdit={onEdit}
+                  onToggleStatus={handleToggleStatus}
+                  onPostponeWeek={handlePostponeWeek}
+                  onQuickAdd={() => handleQuickAdd()}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 7 Days x 3 Shifts Matrix */}
+          <div className="flex-1 flex flex-col border border-white/5 rounded-xl bg-[#0c1220] overflow-auto">
+            {/* Header Row: 7 Day Columns */}
+            <div className="grid grid-cols-[80px_repeat(7,1fr)] sticky top-0 z-10 border-b border-white/5 bg-[#0e1526]">
+              <div className="p-2 border-r border-white/5" />
+              {weekDays.map((day) => (
+                <div
+                  key={day.key}
+                  className={`p-2.5 text-center border-r border-white/5 last:border-r-0 flex items-center justify-center gap-2 ${
+                    day.isToday ? 'bg-indigo-950/20' : ''
+                  }`}
+                >
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider ${
+                      day.isToday ? 'text-indigo-400' : 'text-slate-400'
+                    }`}
+                  >
+                    {day.label}
+                  </span>
+                  <span
+                    className={`text-xs font-extrabold px-1.5 py-0.5 rounded ${
+                      day.isToday
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-white/5 text-slate-200'
+                    }`}
+                  >
+                    {day.dayNumber}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* 3 Shift Rows: MANHÃ, TARDE, NOITE */}
+            <div className="flex-1 grid grid-rows-3 divide-y divide-white/5 min-h-[500px]">
+              {SHIFTS.map((shift) => (
+                <div key={shift.id} className="grid grid-cols-[80px_repeat(7,1fr)]">
+                  {/* Shift Label Column */}
+                  <div className="p-2 border-r border-white/5 flex items-center justify-center text-center bg-[#0d1424] select-none">
+                    <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                      {shift.label}
+                    </span>
+                  </div>
+
+                  {/* 7 Day Slots for this Shift */}
+                  {weekDays.map((day) => {
+                    const slotKey = `cell:${day.key}:${shift.id}`;
+                    const slotTasks = matrixTaskMap.get(`${day.key}-${shift.id}`) || [];
+
+                    return (
+                      <div
+                        key={slotKey}
+                        className="p-1.5 border-r border-white/5 last:border-r-0 flex flex-col overflow-hidden"
+                      >
+                        <MatrixSlot
+                          id={slotKey}
+                          tasks={slotTasks}
+                          selectedTaskId={selectedTaskId}
+                          onSelectTask={setSelectedTaskId}
+                          onSlotClick={handleSlotClickToMove}
+                          onEdit={onEdit}
+                          onToggleStatus={handleToggleStatus}
+                          onPostponeWeek={handlePostponeWeek}
+                          onQuickAdd={() => handleQuickAdd(day.key, shift.id, day.dateStr)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
+        {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <PlanningCardCompact
-              task={activeTask}
-              onEdit={() => {}}
-            />
+            <div className="w-56 shadow-2xl rounded-lg border border-indigo-500/80 bg-[#151f33] p-1 scale-105 opacity-90">
+              <PlanningCardCompact task={activeTask} onEdit={() => {}} />
+            </div>
           ) : null}
         </DragOverlay>
       </DndContext>
     </div>
   );
 };
-

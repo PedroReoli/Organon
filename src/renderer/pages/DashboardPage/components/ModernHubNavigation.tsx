@@ -19,57 +19,48 @@ interface ModernHubNavigationProps {
 export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavigate }) => {
   const hubs: Array<{
     label: string
-    desc: string
     view: AppView
     icon: React.ReactNode
   }> = [
     {
       label: 'Planejador',
-      desc: 'Sprints & Dia',
       view: 'planner',
-      icon: <Calendar className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Notas',
-      desc: 'Base de Conhecimento',
       view: 'notes',
-      icon: <FileText className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <FileText className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Projetos',
-      desc: 'Portfólio & Repos',
       view: 'projects',
-      icon: <FolderKanban className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <FolderKanban className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'CRM',
-      desc: 'Contatos & Deals',
       view: 'crm',
-      icon: <Users className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Users className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Modo Foco',
-      desc: 'Pomodoro & Som',
       view: 'study',
-      icon: <Headphones className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Headphones className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'System Design',
-      desc: 'Diagramas & Canvas',
       view: 'system-design',
-      icon: <Network className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Network className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Hábitos',
-      desc: 'Rotina & Streak',
       view: 'habits',
-      icon: <CheckSquare className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Configurações',
-      desc: 'Preferências & Sync',
       view: 'settings',
-      icon: <Settings className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Settings className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     }
   ]
 
@@ -79,57 +70,55 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-4 rounded-xl shadow-xs"
+      className="border p-3.5 rounded-xl shadow-xs flex flex-col justify-between h-full select-none"
     >
-      <div className="flex items-center gap-2 mb-3">
-        <div
-          style={{
-            background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-            color: 'var(--color-primary)',
-          }}
-          className="p-1.5 rounded-lg"
-        >
-          <LayoutGrid className="w-4 h-4" />
-        </div>
-        <div>
-          <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold">Acessos Rápidos</h3>
-          <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Módulos centrais do Organon</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {hubs.map(hub => (
-          <button
-            key={hub.view}
-            type="button"
-            onClick={() => onNavigate(hub.view)}
+      <div>
+        <div className="flex items-center gap-2 mb-2.5">
+          <div
             style={{
-              background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
-              borderColor: 'var(--color-border)',
+              background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+              color: 'var(--color-primary)',
             }}
-            className="flex items-center gap-2.5 p-2 rounded-lg border text-left transition-all group cursor-pointer hover:border-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]"
+            className="p-1 rounded-md"
           >
-            <div
+            <LayoutGrid className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">
+              Acessos Rápidos
+            </h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          {hubs.map(hub => (
+            <button
+              key={hub.view}
+              type="button"
+              onClick={() => onNavigate(hub.view)}
               style={{
-                background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+                background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+                borderColor: 'var(--color-border)',
               }}
-              className="p-1.5 rounded-md group-hover:scale-105 transition-transform shrink-0"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-all group cursor-pointer hover:border-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]"
             >
-              {hub.icon}
-            </div>
-            <div className="min-w-0 flex-1">
               <div
+                style={{
+                  background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                }}
+                className="p-1 rounded-md group-hover:scale-110 transition-transform shrink-0"
+              >
+                {hub.icon}
+              </div>
+              <span
                 style={{ color: 'var(--color-text)' }}
-                className="text-xs font-bold truncate group-hover:text-[var(--color-primary)]"
+                className="text-xs font-semibold truncate group-hover:text-[var(--color-primary)] transition-colors"
               >
                 {hub.label}
-              </div>
-              <div style={{ color: 'var(--color-text-muted)' }} className="text-[10px] truncate">
-                {hub.desc}
-              </div>
-            </div>
-          </button>
-        ))}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )

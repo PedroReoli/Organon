@@ -82,10 +82,57 @@ export const usePlanningTasks = () => {
   );
 
   const moveTask = useCallback(
-    (taskId: string, targetDate: string) => {
-      updateTask(taskId, { date: targetDate, hasDate: true });
+    (taskId: string, targetLocation: string | { day: string | null; period: string | null }, targetDate?: string | null) => {
+      setTasks((prev) => {
+        const newTasks = prev.map((t) => {
+          if (t.id !== taskId) return t;
+          
+          if (targetLocation === 'backlog' || (typeof targetLocation === 'object' && targetLocation.day === null)) {
+            return {
+              ...t,
+              location: { day: null, period: null },
+              hasDate: false,
+              date: null,
+              time: null,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+
+          if (typeof targetLocation === 'string' && targetLocation.startsWith('cell:')) {
+            const [, day, period] = targetLocation.split(':');
+            return {
+              ...t,
+              location: { day: day as any, period: period as any },
+              date: targetDate || t.date,
+              hasDate: !!(targetDate || t.date),
+              updatedAt: new Date().toISOString(),
+            };
+          }
+
+          if (typeof targetLocation === 'object') {
+            return {
+              ...t,
+              location: { day: targetLocation.day as any, period: targetLocation.period as any },
+              date: targetDate !== undefined ? targetDate : t.date,
+              hasDate: targetDate !== undefined ? !!targetDate : t.hasDate,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+
+          // Fallback se for apenas data string YYYY-MM-DD
+          return {
+            ...t,
+            date: targetLocation as string,
+            hasDate: true,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+
+        updateStore((p: any) => ({ ...p, cards: newTasks }));
+        return newTasks;
+      });
     },
-    [updateTask]
+    [updateStore]
   );
 
   const rescheduleOverdue = useCallback(() => {
