@@ -666,7 +666,7 @@ export const App = () => {
     activeView,
     keyboardShortcuts,
     setReduceModeSignal,
-    setShowShortcutSearch,
+    setShowShortcutSearch: setShowViewsNavigator,
     setShowViewsNavigator,
     setShowClipboardModal,
     setViewZoom,
