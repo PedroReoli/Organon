@@ -88,11 +88,11 @@ function createTrayIcon(): NativeImage {
 function createTrayMenu(): Menu {
   return Menu.buildFromTemplate([
     {
-      label: '🎤 Super Whisper',
+      label: 'Super Whisper',
       click: () => showSuperWhisperWindow(),
     },
     {
-      label: '⚡ Transcrição Rápida',
+      label: 'Transcrição Rápida',
       accelerator: 'CmdOrCtrl+Shift+V',
       click: () => {
         if (onQuickTranscribeCallback) {
@@ -104,7 +104,7 @@ function createTrayMenu(): Menu {
     },
     { type: 'separator' },
     {
-      label: '📂 Abrir Organon',
+      label: 'Abrir Organon',
       click: () => {
         if (onOpenAppCallback) {
           onOpenAppCallback()
@@ -118,7 +118,7 @@ function createTrayMenu(): Menu {
     },
     { type: 'separator' },
     {
-      label: '❌ Sair',
+      label: 'Sair',
       click: () => {
         app.quit()
       },

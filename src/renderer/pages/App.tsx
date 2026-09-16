@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { useStore, useAuth, useSync, useGlobalShortcuts, useClipboardExpiration, useRealtime } from './shared/hooks'
-import { RealtimeIndicator } from './shared/components/RealtimeIndicator'
 import { Chatbot } from './NotesPage/notes/Chatbot'
 import { deleteAllFromApi } from '../../api/sync'
 import { applyTheme, expandCalendarEvents, isElectron, getShortcutById as _getShortcutById, matchesShortcut as _matchesShortcut } from '@utils'
@@ -15,7 +14,6 @@ import { ClipboardQuickModal } from './ClipboardPage/clipboard/ClipboardQuickMod
 import { LocalSyncModal } from './shared/modals/LocalSyncModal'
 import { VoiceDictationModal } from './shared/modals/VoiceDictationModal'
 import { UpdateModal } from '../components/UpdateModal'
-import { HubPlanejamento } from './DashboardPage/hubs/HubPlanejamento'
 import { HubConhecimento } from './DashboardPage/hubs/HubConhecimento'
 import { HubEstudos }      from './DashboardPage/hubs/HubEstudos'
 import { HubTrabalho }     from './DashboardPage/hubs/HubTrabalho'
@@ -66,6 +64,11 @@ const APP_VIEW_LABELS: Record<AppView, string> = {
   'system-design': 'System Design',
   settings: 'Configurações',
   history: 'Histórico',
+  shortcuts: 'Atalhos',
+  apps: 'Aplicativos',
+  habits: 'Hábitos',
+  financial: 'Financeiro',
+  workflow: 'Workflows',
 }
 
 const APP_HUBS: AppHub[] = [
@@ -153,155 +156,18 @@ const SYNC_STATUS_LABELS: Record<DashboardSyncStatus, string> = {
 
 const DEBUG_SCREEN_EVENT = 'organon:debug-screen'
 
-const APP_VIEW_ICONS: Record<AppView, JSX.Element> = {
-  today: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M2.5 7.5 8 3l5.5 4.5" />
-      <path d="M4 6.7V13h8V6.7" />
-    </svg>
-  ),
-  agenda: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
-      <path d="M5 1.2v2.6M11 1.2v2.6M2 6h12" />
-      <circle cx="6" cy="9.5" r="1" fill="currentColor" stroke="none" />
-      <circle cx="10" cy="9.5" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  planner: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2.5" y="3" width="11" height="10.5" rx="1.5" />
-      <path d="M5 1.8v2.4M11 1.8v2.4M2.5 6h11" />
-    </svg>
-  ),
-  calendar: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2.5" y="3" width="11" height="10.5" rx="1.5" />
-      <path d="M5 1.8v2.4M11 1.8v2.4M2.5 6h11" />
-      <circle cx="8" cy="9.3" r="1.1" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  crm: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="5.5" r="2.2" />
-      <path d="M3.8 12.8a4.2 4.2 0 0 1 8.4 0" />
-    </svg>
-  ),
-  playbook: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M4 2.5h6.5a2 2 0 0 1 2 2V13H6a2 2 0 0 0-2 2Z" />
-      <path d="M4 2.5V13a2 2 0 0 1 2-2h6.5" />
-    </svg>
-  ),
-  colors: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="4.8" />
-      <path d="M8 3.2v9.6M3.2 8h9.6" />
-    </svg>
-  ),
-  canvas: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="2" width="12" height="12" rx="1.5" />
-      <path d="M5 8.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 5h2M5 11h6" strokeLinecap="round" />
-    </svg>
-  ),
-  shortcuts: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M9.5 1.5 3.5 9.2h4L6.5 14.5l6-7.7h-4L9.5 1.5Z" />
-    </svg>
-  ),
-  projects: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="m6.5 4-3.5 4 3.5 4M9.5 4l3.5 4-3.5 4" />
-    </svg>
-  ),
-  notes: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M5 1.8h4.5l3 3V13a1 1 0 0 1-1 1H5A1 1 0 0 1 4 13V2.8a1 1 0 0 1 1-1Z" />
-      <path d="M9.5 1.8v3h3" />
-    </svg>
-  ),
-  clipboard: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="5" y="2" width="6" height="2.5" rx="0.8" />
-      <rect x="3.5" y="4.2" width="9" height="9.8" rx="1.2" />
-    </svg>
-  ),
-  apps: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2.2" y="2.2" width="4.2" height="4.2" rx="0.8" />
-      <rect x="9.6" y="2.2" width="4.2" height="4.2" rx="0.8" />
-      <rect x="2.2" y="9.6" width="4.2" height="4.2" rx="0.8" />
-      <rect x="9.6" y="9.6" width="4.2" height="4.2" rx="0.8" />
-    </svg>
-  ),
-  habits: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="5.5" />
-      <path d="m5.5 8.1 1.5 1.5 3.5-3.5" />
-    </svg>
-  ),
-  study: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M2.5 5 8 2.8 13.5 5 8 7.2 2.5 5Z" />
-      <path d="M3.5 6.3v4.1L8 12.8l4.5-2.4V6.3" />
-    </svg>
-  ),
-  financial: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M8 1.8v12.4" />
-      <path d="M10.8 4.2H6.8a1.8 1.8 0 0 0 0 3.6h2.4a1.8 1.8 0 0 1 0 3.6H5.2" />
-    </svg>
-  ),
-  transcripts: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M8 1.5a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0v-4a3 3 0 0 0-3-3z" />
-      <path d="M3 8.5a5 5 0 0 0 10 0" />
-      <line x1="8" y1="13.5" x2="8" y2="15" />
-    </svg>
-  ),
-  audio: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M8 1.5a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0v-4a3 3 0 0 0-3-3z" />
-      <path d="M3 8.5a5 5 0 0 0 10 0" />
-      <line x1="8" y1="13.5" x2="8" y2="15" />
-    </svg>
-  ),
-  history: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="5.5" />
-      <path d="M8 5v3l2 1.5" />
-    </svg>
-  ),
-  settings: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M6.5 1.5h3l.5 2a5.5 5.5 0 0 1 1.7 1l2-.5 1.5 2.6-1.6 1.2c.1.3.1.7.1 1s0 .7-.1 1l1.6 1.2-1.5 2.6-2-.5a5.5 5.5 0 0 1-1.7 1l-.5 2h-3l-.5-2a5.5 5.5 0 0 1-1.7-1l-2 .5-1.5-2.6 1.6-1.2a4.8 4.8 0 0 1 0-2L1.2 6.6l1.5-2.6 2 .5a5.5 5.5 0 0 1 1.7-1l.5-2Z" />
-      <circle cx="8" cy="8" r="2.25" />
-    </svg>
-  ),
-}
-
 export const App = () => {
   const {
     cards, calendarEvents,
     noteFolders, notes, colorPalettes, clipboardCategories, clipboardItems,
-    apps = [], appGroups, appLaunchLogs,
+    apps = [],
     study, settings, isLoading, error,
-    addCard, addCardWithDate, editCard, removeCard, moveCardToCell, reorderInCell, getCardsForLocation,
+    addCard, editCard,
     canvasFolders, canvasFolderAssignments, canvasVersions,
     addCanvasFolder, renameCanvasFolder, removeCanvasFolder, moveCanvasToFolder,
     snapshotCanvasVersion, removeCanvasVersion,
-    sprintColumns: _sprintColumns, sprintColumnGroups: _sprintColumnGroups, sprintColumnSections, sprintSwimLanes: _sprintSwimLanes, sprintBoardConfig: _sprintBoardConfig, sprintMetadata,
-    addSprintColumn: _addSprintColumn, updateSprintColumn: _updateSprintColumn, removeSprintColumn: _removeSprintColumn,
-    addSprintColumnGroup: _addSprintColumnGroup, updateSprintColumnGroup: _updateSprintColumnGroup, removeSprintColumnGroup: _removeSprintColumnGroup,
-    addSprintColumnSection, removeSprintColumnSection,
-    addSprintSwimLane: _addSprintSwimLane, updateSprintSwimLane: _updateSprintSwimLane, removeSprintSwimLane: _removeSprintSwimLane,
-    updateSprintBoardConfig: _updateSprintBoardConfig, upsertSprintMetadata,
-    setCardSprint: _setCardSprint, setCardSprintColumn: _setCardSprintColumn, setCardSprintSection: _setCardSprintSection,
-    sprintCards, addSprintCard, editSprintCard, removeSprintCard, moveSprintCard,
-    addCalendarEvent, updateCalendarEvent, removeCalendarEvent,
-    calendarCategories, addCalendarCategory, removeCalendarCategory,
+    sprintColumns: _sprintColumns, sprintColumnGroups: _sprintColumnGroups, sprintSwimLanes: _sprintSwimLanes, sprintBoardConfig: _sprintBoardConfig,
+    addCalendarEvent,
     addClipboardCategory, renameClipboardCategory, removeClipboardCategory,
     addClipboardItem, updateClipboardItem, removeClipboardItem, moveClipboardItemToCategory,
     toggleClipboardSnippet, purgeExpiredClipboard,
@@ -411,7 +277,7 @@ export const App = () => {
     enabled: true,
     onWakeWordDetected: () => {
       setShowVoiceModal(true)
-      handleNavigate('transcripts')
+      setActiveView('transcripts')
     },
   })
 
@@ -434,8 +300,6 @@ export const App = () => {
   const [showViewsNavigator, setShowViewsNavigator] = useState(false)
   const [showClipboardModal, setShowClipboardModal] = useState(false)
   const [reduceModeSignal, setReduceModeSignal]   = useState(0)
-  const [pendingOpenCardId, setPendingOpenCardId] = useState<string | null>(null)
-  const [pendingCalendarDate, setPendingCalendarDate] = useState<string | null>(null)
   const [pendingNoteId, setPendingNoteId]         = useState<string | null>(null)
 
   const [viewZoom, setViewZoom] = useState<Record<string, number>>(() => {
@@ -520,25 +384,6 @@ export const App = () => {
     APP_HUBS.find(hub => hub.views.some(view => view.view === activeView)) ||
     (activeView === 'planner' ? APP_HUBS[0] : undefined)
   ), [activeView])
-
-  const viewBadges = useMemo((): Partial<Record<AppView, number>> => {
-    const todayISO = new Date().toISOString().slice(0, 10)
-    return {
-      planner:   cards.filter(c => c.date === todayISO && c.hasDate && c.status !== 'done').length || undefined,
-      calendar:  calendarEvents.filter(e => e.date === todayISO).length || undefined,
-      notes:     notes.length > 0 ? notes.length : undefined,
-      crm:       crmContacts.length > 0 ? crmContacts.length : undefined,
-    } as Partial<Record<AppView, number>>
-  }, [cards, calendarEvents, notes.length, crmContacts.length])
-
-  // Onboarding: mostra dica na primeira abertura de um hub
-  const [showHubOnboarding, setShowHubOnboarding] = useState(() => {
-    try { return !localStorage.getItem('hub-onboarding-shown') } catch { return false }
-  })
-  const dismissHubOnboarding = () => {
-    setShowHubOnboarding(false)
-    try { localStorage.setItem('hub-onboarding-shown', '1') } catch { /* ignore */ }
-  }
 
   // ── Effects ─────────────────────────────────────────────────────────────────
 
@@ -1045,15 +890,22 @@ export const App = () => {
           hubTitle={currentShellConfig.hubTitle}
           viewTitle={currentShellConfig.viewTitle}
           onNavigateHome={() => setActiveView('today')}
+          onNavigateView={(v) => setActiveView(v)}
           onOpenQuickSearch={() => setShowViewsNavigator(true)}
           onOpenSettings={() => setActiveView('settings')}
           onOpenSyncModal={() => setShowLocalSyncModal(true)}
           onOpenVoice={() => setShowVoiceModal(true)}
           onToggleChat={() => setIsChatOpen(prev => !prev)}
+          onNewTask={() => setActiveView('planner')}
+          onNewNote={() => {
+            addNote('Nova Nota', '')
+            setActiveView('notes')
+          }}
           isChatOpen={isChatOpen}
           lastSyncAt={lastSyncAt}
           syncStatus={sync.syncStatus}
         />
+
         <div className="app-body" style={{ flex: 1, overflow: 'hidden' }}>
           <div className="app-view">
           {activeView === 'today' && (
@@ -1079,8 +931,8 @@ export const App = () => {
               dashboardTemplates={settings.dashboardTemplates ?? []}
               onSaveTemplate={(name: string, widgets: DashboardWidget[]) => saveDashboardTemplate(name, 'custom', widgets)}
               onDeleteTemplate={deleteDashboardTemplate}
-              onGoToPlannerCard={(cardId: string) => { setPendingOpenCardId(cardId); setActiveView('planner') }}
-              onGoToCalendarDate={(dateISO: string) => { setPendingCalendarDate(dateISO); setActiveView('calendar') }}
+              onGoToPlannerCard={(_cardId: string) => { setActiveView('planner') }}
+              onGoToCalendarDate={(_dateISO: string) => { setActiveView('calendar') }}
               onOpenShortcut={handleOpenShortcut}
               onGoToNotes={() => setActiveView('notes')}
               onNavigate={(view: AppView) => setActiveView(view)}
@@ -1097,7 +949,7 @@ export const App = () => {
                     activeView={activeView}
                     notes={notes}
                     folders={noteFolders}
-                    onAddNote={(title, folderId, projectId, parentNoteId) => addNote(typeof title === 'string' ? title : 'Nova nota', folderId, projectId, parentNoteId)}
+                    onAddNote={(title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => addNote(typeof title === 'string' ? title : 'Nova nota', folderId, projectId, parentNoteId)}
                     onUpdateNote={updateNote}
                     onToggleFavorite={toggleNoteFavorite}
                     onTogglePinned={toggleNotePinned}
@@ -1272,6 +1124,7 @@ export const App = () => {
                     onAddCalendarEvent={addCalendarEvent}
                     syncStatus={sync.syncStatus}
                     syncError={sync.syncError}
+                    lastSyncAt={lastSyncAt}
                     onSync={() => { void sync.runSyncNow() }}
                     isConfigured={isConfigured}
                     userLoggedIn={userLoggedIn}
@@ -1290,6 +1143,7 @@ export const App = () => {
                     events={calendarEvents}
                     projects={projects}
                     meetings={meetings}
+                    apps={apps}
                     crmContacts={crmContacts}
                     colorPalettes={colorPalettes}
                   />
@@ -1309,7 +1163,7 @@ export const App = () => {
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onCreateCard={(title) => addCard(title)}
-        onCreateNote={(title, content) => addNote(title, content)}
+        onCreateNote={(title) => addNote(title)}
       />
 
       {showViewsNavigator && (
@@ -1337,7 +1191,7 @@ export const App = () => {
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         hideFloatingTrigger={true}
-        notes={notes.map(n => ({ id: n.id, title: n.title, content: n.content, folderId: n.folderId }))}
+        notes={notes.map(n => ({ id: n.id, title: n.title, content: n.content || '', folderId: n.folderId }))}
         folders={noteFolders.map(f => ({ id: f.id, name: f.name, parentId: f.parentId, isHome: f.isHome }))}
         habits={[]}
         cards={cards.map(c => ({ id: c.id, title: c.title, status: c.status }))}
@@ -1352,15 +1206,16 @@ export const App = () => {
         }}
         onApplyNote={(noteId, content) => {
           if (noteId) {
-            updateNote(noteId, { content })
+            updateNote(noteId, { content } as any)
           } else {
             const activeNoteId = notes[0]?.id
-            if (activeNoteId) updateNote(activeNoteId, { content })
+            if (activeNoteId) updateNote(activeNoteId, { content } as any)
           }
         }}
         onCreateNote={(title, content, folderId) => {
-          const created = addNote(title, content, undefined, folderId)
+          const created: any = addNote(title, folderId)
           if (created?.id) {
+            if (content) updateNote(created.id, { content } as any)
             setPendingNoteId(created.id)
             setActiveView('notes')
           }
@@ -1368,7 +1223,7 @@ export const App = () => {
         onAddFolder={(name, parentId) => addNoteFolder(name, parentId)}
         onUpdateFolder={(folderId, updates) => updateNoteFolder(folderId, updates)}
         onUpdateNote={(noteId, updates) => updateNote(noteId, updates)}
-        conversationsDir={settings.dataDir}
+        conversationsDir={settings.dataDir || undefined}
       />
       {showUpdateModal && (
         <UpdateModal onClose={() => setShowUpdateModal(false)} />

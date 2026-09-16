@@ -18,7 +18,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
   dynamicSlot,
   notificationCount,
   onToggleNotifications,
-  syncStatus = 'idle',
+  syncStatus: _syncStatus = 'idle',
   onOpenSyncModal,
   onNavigateView,
 }) => {
@@ -81,7 +81,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
       </div>
 
       {/* Zona Central: Slot Dinâmico ou Busca Global Pill com Dropdown */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingHorizontal: 16, position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 16px', position: 'relative' }}>
         {dynamicSlot || (
           <>
             <button
@@ -195,7 +195,7 @@ export const GlobalNavbar: React.FC<GlobalNavbarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingHorizontal: 2,
+                padding: '0 4px',
                 boxShadow: '0 2px 6px rgba(239, 68, 68, 0.5)',
               }}
             >

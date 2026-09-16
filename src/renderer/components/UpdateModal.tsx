@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 
 interface UpdateModalProps {
   onClose: () => void
@@ -223,9 +224,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
                   fontSize: '12px',
                   marginBottom: '16px',
                   lineHeight: '1.4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                ✓ <strong>Segurança Garantida</strong>: Um backup automático completo de todos os seus dados será criado antes da instalação.
+                <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+                <span><strong>Segurança Garantida</strong>: Um backup automático completo de todos os seus dados será criado antes da instalação.</span>
               </div>
 
               {updateInfo?.releaseNotes && (
@@ -297,7 +302,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
             padding: '16px 24px',
             borderTop: '1px solid var(--color-border, rgba(255, 255, 255, 0.08))',
             display: 'flex',
-            justify: 'flex-end',
+            justifyContent: 'flex-end',
             gap: '12px',
           }}
         >

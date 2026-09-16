@@ -16,7 +16,7 @@ interface Props {
 
 export const BottomFooterShell: React.FC<Props> = ({
   activeView,
-  hubTitle,
+  hubTitle: _hubTitle,
   hubViews = [],
   onNavigateView,
   onAddCard,

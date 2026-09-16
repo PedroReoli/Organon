@@ -8,11 +8,14 @@ interface Props {
   hubTitle?: string
   viewTitle: string
   onNavigateHome: () => void
+  onNavigateView?: (view: AppView) => void
   onOpenQuickSearch: () => void
   onOpenSettings?: () => void
   onOpenSyncModal?: () => void
   onOpenVoice?: () => void
   onToggleChat?: () => void
+  onNewTask?: () => void
+  onNewNote?: () => void
   isChatOpen?: boolean
   lastSyncAt?: string
   syncStatus?: string
@@ -20,18 +23,30 @@ interface Props {
 
 export const TopNavbarShell: React.FC<Props> = ({
   activeView,
-  hubTitle,
-  viewTitle,
+  hubTitle: _hubTitle,
+  viewTitle: _viewTitle,
   onNavigateHome,
+  onNavigateView,
   onOpenQuickSearch,
   onOpenSettings,
   onOpenSyncModal,
   onOpenVoice,
   onToggleChat,
+  onNewTask,
+  onNewNote,
   isChatOpen = false,
   lastSyncAt,
-  syncStatus = 'synced',
+  syncStatus: _syncStatus = 'synced',
 }) => {
+  const navItems: Array<{ view: AppView; label: string }> = [
+    { view: 'notes', label: 'Notas' },
+    { view: 'planner', label: 'Planejamento' },
+    { view: 'projects', label: 'Projetos' },
+    { view: 'playbook', label: 'Playbook' },
+    { view: 'transcripts', label: 'Whisper' },
+    { view: 'history', label: 'Histórico' },
+  ]
+
   return (
     <header
       style={{
@@ -41,13 +56,14 @@ export const TopNavbarShell: React.FC<Props> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 20px',
+        padding: '0 16px',
         zIndex: 100,
         userSelect: 'none',
+        gap: '12px',
       }}
     >
-      {/* Canto Esquerdo: Logo Name do Organon (Clicável -> Home) + Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Canto Esquerdo: Logo Name do Organon (Clicável -> Home) + Nav Tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           onClick={onNavigateHome}
           title="Voltar ao Dashboard Principal (Organon Home)"
@@ -68,40 +84,72 @@ export const TopNavbarShell: React.FC<Props> = ({
           <img
             src={logoNameImg}
             alt="Organon"
-            style={{ height: '28px', objectFit: 'contain' }}
+            style={{ height: '26px', objectFit: 'contain' }}
             onError={(e) => {
               e.currentTarget.src = faviconImg
             }}
           />
         </button>
 
-        <span style={{ color: 'var(--color-border)', fontSize: '14px' }}>/</span>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-          {hubTitle && (
-            <>
-              <span style={{ color: 'var(--color-text-muted)' }}>{hubTitle}</span>
-              <span style={{ color: 'var(--color-border)' }}>/</span>
-            </>
-          )}
-          <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{viewTitle}</span>
-        </div>
+        {/* Primary Module Navigation Tabs */}
+        {onNavigateView && (
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
+            {navItems.map((item) => {
+              const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
+              return (
+                <button
+                  key={item.view}
+                  type="button"
+                  onClick={() => onNavigateView(item.view)}
+                  style={{
+                    background: isActive
+                      ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))'
+                      : 'transparent',
+                    border: '1px solid',
+                    borderColor: isActive ? 'color-mix(in srgb, var(--color-primary) 30%, transparent)' : 'transparent',
+                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                    fontWeight: isActive ? 600 : 450,
+                    fontSize: '12.5px',
+                    padding: '5px 10px',
+                    borderRadius: '7px',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = 'var(--color-text)'
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = 'var(--color-text-muted)'
+                      e.currentTarget.style.background = 'transparent'
+                    }
+                  }}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
+          </nav>
+        )}
       </div>
 
       {/* Centro: Input de Busca Global Rápida (Ctrl+K) */}
-      <div style={{ flex: 1, maxWidth: '440px', margin: '0 20px' }}>
+      <div style={{ flex: 1, maxWidth: '320px' }}>
         <button
           onClick={onOpenQuickSearch}
           title="Buscar tarefas, notas, contatos e arquivos (Ctrl+K)"
           style={{
             width: '100%',
-            height: '36px',
-            padding: '0 14px',
-            borderRadius: '10px',
+            height: '32px',
+            padding: '0 12px',
+            borderRadius: '8px',
             border: '1px solid var(--color-border)',
             background: 'var(--color-background)',
             color: 'var(--color-text-muted)',
-            fontSize: '12.5px',
+            fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -112,7 +160,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -122,7 +170,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             style={{
               fontSize: '10px',
               fontFamily: 'monospace',
-              padding: '2px 5px',
+              padding: '1px 4px',
               borderRadius: '4px',
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -134,8 +182,69 @@ export const TopNavbarShell: React.FC<Props> = ({
         </button>
       </div>
 
-      {/* Canto Direito: Voz, Chat IA, WiFi Sync e Configurações */}
+      {/* Canto Direito: Ações Rápidas, Voz, Chat IA, WiFi Sync e Configurações */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {onNewTask && (
+          <button
+            type="button"
+            onClick={onNewTask}
+            title="Criar Nova Tarefa / Card"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              padding: '5px 11px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'var(--color-primary)',
+              color: 'var(--color-primary-text, #ffffff)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.1)')}
+            onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Nova Tarefa</span>
+          </button>
+        )}
+
+        {onNewNote && (
+          <button
+            type="button"
+            onClick={onNewNote}
+            title="Criar Nova Nota"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: '1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)',
+              background: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))',
+              color: 'var(--color-primary)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--color-primary) 18%, var(--color-surface))')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))')}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Nota</span>
+          </button>
+        )}
+
         {onOpenVoice && (
           <button
             onClick={onOpenVoice}

@@ -55,20 +55,20 @@ function safePath(filename: string): string | null {
 function formatConversation(messages: any[], id: string): string {
   const date = new Date().toLocaleString('pt-BR')
 
-  let content = `# 💬 Conversa do Organon - ${date}\n`
+  let content = `# Conversa do Organon - ${date}\n`
   content += `## ID: ${id}\n\n`
   content += `---\n\n`
 
   for (const msg of messages) {
     const time = new Date(msg.timestamp).toLocaleString('pt-BR')
-    const role = msg.role === 'user' ? '## 👤 **Você**' : '## 🤖 **Assistente**'
+    const role = msg.role === 'user' ? '## **Você**' : '## **Assistente**'
 
     content += `${role}\n`
     content += `*${time}*\n\n`
     content += `${msg.content}\n\n`
 
     if (msg.notes && msg.notes.length > 0) {
-      content += `### 📄 Notas consultadas:\n`
+      content += `### Notas consultadas:\n`
       for (const note of msg.notes) {
         content += `- "${note.title}" (${Math.round(note.similarity * 100)}% similar)\n`
       }
@@ -119,7 +119,7 @@ export function registerConversationIpc(): void {
           const content = fs.readFileSync(filepath, 'utf-8')
 
           // Extrai preview do primeiro conteúdo
-          const previewMatch = content.match(/## 👤.*?\n\n(.{0,100})/s)
+          const previewMatch = content.match(/## (?:👤 )?\*\*Você\*\*.*?\n\n(.{0,100})/s) || content.match(/## .*?\n\n(.{0,100})/s)
           const preview = previewMatch ? previewMatch[1].trim().slice(0, 80) + '...' : 'Sem conteúdo'
 
           return {
