@@ -111,11 +111,10 @@ const APP_HUBS: AppHub[] = [
   {
     id: 'operation',
     label: 'Operação',
-    description: 'CRM e relatórios de código dos seus repositórios Git.',
+    description: 'Relatórios de código e repositórios Git.',
     accent: '#f97316',
-    primaryView: 'crm',
+    primaryView: 'projects',
     views: [
-      { view: 'crm',      label: 'CRM'      },
       { view: 'projects', label: 'Projetos' },
     ],
   },
@@ -339,7 +338,6 @@ export const App = () => {
       {
         ...APP_HUBS[3],
         metrics: [
-          { label: 'Contatos', value: String(crmContacts.length) },
           { label: 'Projetos', value: String(projects.length) },
         ],
       },
@@ -363,7 +361,6 @@ export const App = () => {
     cards,
     clipboardItems.length,
     colorPalettes.length,
-    crmContacts.length,
     notes.length,
     playbooks.length,
     projects.length,
@@ -736,15 +733,6 @@ export const App = () => {
               { label: 'Ditado de Voz', onClick: () => setShowVoiceModal(true), variant: 'primary' as const },
             ],
           }
-        case 'crm':
-          return {
-            hubTitle: 'Operação',
-            viewTitle: 'CRM Contatos',
-            metricsText: `${crmContacts.length} contatos cadastrados no pipeline`,
-            actions: [
-              { label: '+ Novo Card', onClick: () => addCard('Novo lead CRM'), variant: 'primary' as const },
-            ],
-          }
         case 'playbook':
           return {
             hubTitle: 'Conhecimento',
@@ -797,7 +785,7 @@ export const App = () => {
       metricsText: cfg.metricsText,
       footerActions: [...cfg.actions, chatAction],
     }
-  }, [activeView, cards, projects, notes, crmContacts, playbooks, study, currentHub, lastSyncAt, addCard, addNote, isChatOpen])
+  }, [activeView, cards, projects, notes, playbooks, study, currentHub, lastSyncAt, addCard, addNote, isChatOpen])
 
   // ── Early returns ───────────────────────────────────────────────────────────
 
@@ -908,7 +896,6 @@ export const App = () => {
               notes={notes}
               study={study}
               hubCards={dashboardHubs}
-              crmContactsCount={crmContacts.length}
               projectsCount={projects.length}
               playbooksCount={playbooks.length}
               colorPalettesCount={colorPalettes.length}

@@ -31,7 +31,6 @@ interface DashboardHomeProps {
   notes: Note[]
   study?: StudyState
   hubCards?: DashboardHubCard[]
-  crmContactsCount?: number
   projectsCount?: number
   playbooksCount?: number
   colorPalettesCount?: number
