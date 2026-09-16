@@ -23,7 +23,7 @@ export const createColorPaletteSlice = (updateStore: UpdateStoreFn) => {
   const updateColorPalette = (paletteId: string, updates: Partial<Pick<ColorPalette, 'name' | 'colors'>>) => {
     updateStore(prev => ({
       ...prev,
-      colorPalettes: prev.colorPalettes.map(palette => {
+      colorPalettes: prev.colorPalettes.map((palette: any) => {
         if (palette.id !== paletteId) return palette
         return { ...palette, ...updates, updatedAt: new Date().toISOString() }
       }),
@@ -33,7 +33,7 @@ export const createColorPaletteSlice = (updateStore: UpdateStoreFn) => {
   const removeColorPalette = (paletteId: string) => {
     updateStore(prev => ({
       ...prev,
-      colorPalettes: prev.colorPalettes.filter(p => p.id !== paletteId),
+      colorPalettes: prev.colorPalettes.filter((p: any) => p.id !== paletteId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'color_palettes', id: paletteId }],
     }))
   }

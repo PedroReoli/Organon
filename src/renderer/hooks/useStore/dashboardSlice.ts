@@ -34,7 +34,7 @@ export const createDashboardSlice = (updateStore: UpdateStoreFn) => {
       ...prev,
       settings: {
         ...prev.settings,
-        dashboardTemplates: (prev.settings.dashboardTemplates ?? []).filter(t => t.id !== templateId),
+        dashboardTemplates: (prev.settings.dashboardTemplates ?? []).filter((t: any) => t.id !== templateId),
       },
     }))
   }, [updateStore])

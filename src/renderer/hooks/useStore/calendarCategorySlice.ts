@@ -16,7 +16,7 @@ export const createCalendarCategorySlice = (updateStore: UpdateStoreFn) => {
   const updateCalendarCategory = (catId: string, updates: Partial<Omit<AgendaCategory, 'id'>>) => {
     updateStore(prev => ({
       ...prev,
-      calendarCategories: (prev.calendarCategories ?? []).map(c =>
+      calendarCategories: (prev.calendarCategories ?? []).map((c: any) =>
         c.id === catId ? { ...c, ...updates } : c
       ),
     }))
@@ -25,8 +25,8 @@ export const createCalendarCategorySlice = (updateStore: UpdateStoreFn) => {
   const removeCalendarCategory = (catId: string) => {
     updateStore(prev => ({
       ...prev,
-      calendarCategories: (prev.calendarCategories ?? []).filter(c => c.id !== catId),
-      calendarEvents: prev.calendarEvents.map(e =>
+      calendarCategories: (prev.calendarCategories ?? []).filter((c: any) => c.id !== catId),
+      calendarEvents: prev.calendarEvents.map((e: any) =>
         e.categoryId === catId ? { ...e, categoryId: null } : e
       ),
     }))

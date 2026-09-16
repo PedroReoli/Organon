@@ -29,7 +29,7 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const updateCRMInteraction = (interactionId: string, updates: Partial<Pick<CRMInteraction, 'type' | 'content' | 'date' | 'time'>>) => {
     updateStore(prev => ({
       ...prev,
-      crmInteractions: prev.crmInteractions.map(interaction =>
+      crmInteractions: prev.crmInteractions.map((interaction: any) =>
         interaction.id === interactionId
           ? { ...interaction, ...updates }
           : interaction
@@ -40,7 +40,7 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const removeCRMInteraction = (interactionId: string) => {
     updateStore(prev => ({
       ...prev,
-      crmInteractions: prev.crmInteractions.filter(i => i.id !== interactionId),
+      crmInteractions: prev.crmInteractions.filter((i: any) => i.id !== interactionId),
     }))
   }
 
@@ -61,7 +61,7 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const updateCRMTag = (tagId: string, updates: Partial<Pick<CRMTag, 'name' | 'color'>>) => {
     updateStore(prev => ({
       ...prev,
-      crmTags: prev.crmTags.map(tag =>
+      crmTags: prev.crmTags.map((tag: any) =>
         tag.id === tagId ? { ...tag, ...updates } : tag
       ),
     }))
@@ -70,10 +70,10 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const removeCRMTag = (tagId: string) => {
     updateStore(prev => ({
       ...prev,
-      crmTags: prev.crmTags.filter(t => t.id !== tagId),
-      crmContacts: prev.crmContacts.map(c => ({
+      crmTags: prev.crmTags.filter((t: any) => t.id !== tagId),
+      crmContacts: prev.crmContacts.map((c: any) => ({
         ...c,
-        tags: c.tags.filter(t => t !== tagId),
+        tags: (c.tags || []).filter((t: any) => t !== tagId),
       })),
     }))
   }
@@ -81,7 +81,7 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const addCRMContactLink = (contactId: string, linkType: keyof CRMContactLinks, entityId: string) => {
     updateStore(prev => ({
       ...prev,
-      crmContacts: prev.crmContacts.map(contact => {
+      crmContacts: prev.crmContacts.map((contact: any) => {
         if (contact.id !== contactId) return contact
         const currentLinks = contact.links[linkType]
         if (currentLinks.includes(entityId)) return contact
@@ -100,13 +100,13 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const removeCRMContactLink = (contactId: string, linkType: keyof CRMContactLinks, entityId: string) => {
     updateStore(prev => ({
       ...prev,
-      crmContacts: prev.crmContacts.map(contact => {
+      crmContacts: prev.crmContacts.map((contact: any) => {
         if (contact.id !== contactId) return contact
         return {
           ...contact,
           links: {
             ...contact.links,
-            [linkType]: contact.links[linkType].filter(id => id !== entityId),
+            [linkType]: contact.links[linkType].filter((id: any) => id !== entityId),
           },
           updatedAt: new Date().toISOString(),
         }
@@ -117,7 +117,7 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
   const moveCRMContactToStage = (contactId: string, stageId: string) => {
     updateStore(prev => ({
       ...prev,
-      crmContacts: prev.crmContacts.map(contact =>
+      crmContacts: prev.crmContacts.map((contact: any) =>
         contact.id === contactId
           ? { ...contact, stageId: stageId as any, updatedAt: new Date().toISOString() }
           : contact
@@ -127,10 +127,10 @@ export const createCRMExtrasSlice = (updateStore: UpdateStoreFn) => {
 
   const reorderCRMContacts = (stageId: any, orderedIds: string[]) => {
     updateStore(prev => {
-      const otherContacts = prev.crmContacts.filter(c => c.stageId !== stageId)
-      const stageContacts = prev.crmContacts.filter(c => c.stageId === stageId)
+      const otherContacts = prev.crmContacts.filter((c: any) => c.stageId !== stageId)
+      const stageContacts = prev.crmContacts.filter((c: any) => c.stageId === stageId)
       const reorderedStageContacts = orderedIds.map((id, idx) => {
-        const contact = stageContacts.find(c => c.id === id)
+        const contact = stageContacts.find((c: any) => c.id === id)
         return contact ? { ...contact, order: idx } : null
       }).filter((c): c is any => c !== null)
       return {

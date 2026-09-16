@@ -28,14 +28,14 @@ export const createQuickAccessSlice = (updateStore: UpdateStoreFn, getStore: () 
   const removeQuickAccess = (id: string) => {
     updateStore(prev => ({
       ...prev,
-      quickAccess: prev.quickAccess.filter(qa => qa.id !== id),
+      quickAccess: (prev.quickAccess || []).filter((qa: any) => qa.id !== id),
     }))
   }
 
   const reorderQuickAccess = (orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      quickAccess: prev.quickAccess.map(qa => {
+      quickAccess: (prev.quickAccess || []).map((qa: any) => {
         const idx = orderedIds.indexOf(qa.id)
         if (idx === -1) return qa
         return { ...qa, order: idx }

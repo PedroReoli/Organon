@@ -13,7 +13,7 @@ export const createMiscSlice = (updateStore: UpdateStoreFn) => {
   const removeQuickAccess = useCallback((itemId: string) => {
     updateStore(prev => ({
       ...prev,
-      quickAccess: prev.quickAccess.filter(i => i.id !== itemId),
+      quickAccess: prev.quickAccess.filter((i: any) => i.id !== itemId),
     }))
   }, [updateStore])
 
@@ -21,7 +21,7 @@ export const createMiscSlice = (updateStore: UpdateStoreFn) => {
     updateStore(prev => ({
       ...prev,
       quickAccess: orderedIds.map((id, idx) => {
-        const item = prev.quickAccess.find(i => i.id === id)
+        const item = prev.quickAccess.find((i: any) => i.id === id)
         return item ? { ...item, order: idx } : null
       }).filter(Boolean) as any[],
     }))

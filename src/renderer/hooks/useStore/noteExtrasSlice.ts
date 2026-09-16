@@ -7,7 +7,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
     if (note && !note.isLocked) {
       updateStore(prev => ({
         ...prev,
-        notes: prev.notes.map(n =>
+        notes: prev.notes.map((n: any) =>
           n.id === noteId ? { ...n, isFavorite: !n.isFavorite } : n
         ),
       }))
@@ -20,7 +20,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
     if (note && !note.isLocked) {
       updateStore(prev => ({
         ...prev,
-        notes: prev.notes.map(n =>
+        notes: prev.notes.map((n: any) =>
           n.id === noteId ? { ...n, isPinned: !n.isPinned } : n
         ),
       }))
@@ -30,7 +30,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const toggleNoteLock = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(n =>
+      notes: prev.notes.map((n: any) =>
         n.id === noteId ? { ...n, isLocked: !n.isLocked } : n
       ),
     }))
@@ -39,7 +39,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const reorderNotes = (orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(note => {
+      notes: prev.notes.map((note: any) => {
         const idx = orderedIds.indexOf(note.id)
         if (idx === -1) return note
         return { ...note, order: idx }
@@ -50,7 +50,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const softDeleteNote = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(n =>
+      notes: prev.notes.map((n: any) =>
         n.id === noteId ? { ...n, deletedAt: new Date().toISOString() } : n
       ),
     }))
@@ -60,10 +60,10 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.map(f =>
+      noteFolders: prev.noteFolders.map((f: any) =>
         f.id === folderId ? { ...f, deletedAt: now } : f
       ),
-      notes: prev.notes.map(n =>
+      notes: prev.notes.map((n: any) =>
         n.folderId === folderId ? { ...n, deletedAt: now } : n
       ),
     }))
@@ -72,7 +72,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const restoreNote = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(n =>
+      notes: prev.notes.map((n: any) =>
         n.id === noteId ? { ...n, deletedAt: undefined } : n
       ),
     }))
@@ -81,7 +81,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const restoreNoteFolder = (folderId: string) => {
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.map(f =>
+      noteFolders: prev.noteFolders.map((f: any) =>
         f.id === folderId ? { ...f, deletedAt: undefined } : f
       ),
     }))
@@ -90,7 +90,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const purgeNote = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.filter(n => n.id !== noteId),
+      notes: prev.notes.filter((n: any) => n.id !== noteId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'notes', id: noteId }],
     }))
   }
@@ -98,7 +98,7 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
   const purgeNoteFolder = (folderId: string) => {
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.filter(f => f.id !== folderId),
+      noteFolders: prev.noteFolders.filter((f: any) => f.id !== folderId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'note_folders', id: folderId }],
     }))
   }
@@ -109,19 +109,19 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
     const cutoffISO = cutoff.toISOString()
     updateStore(prev => {
       const expiredNoteIds = prev.notes
-        .filter(n => n.deletedAt && n.deletedAt < cutoffISO)
-        .map(n => n.id)
+        .filter((n: any) => n.deletedAt && n.deletedAt < cutoffISO)
+        .map((n: any) => n.id)
       const expiredFolderIds = prev.noteFolders
-        .filter(f => f.deletedAt && f.deletedAt < cutoffISO)
-        .map(f => f.id)
+        .filter((f: any) => f.deletedAt && f.deletedAt < cutoffISO)
+        .map((f: any) => f.id)
       return {
         ...prev,
-        notes: prev.notes.filter(n => !expiredNoteIds.includes(n.id)),
-        noteFolders: prev.noteFolders.filter(f => !expiredFolderIds.includes(f.id)),
+        notes: prev.notes.filter((n: any) => !expiredNoteIds.includes(n.id)),
+        noteFolders: prev.noteFolders.filter((f: any) => !expiredFolderIds.includes(f.id)),
         pendingDeletes: [
           ...(prev.pendingDeletes ?? []),
-          ...expiredNoteIds.map(id => ({ resource: 'notes', id })),
-          ...expiredFolderIds.map(id => ({ resource: 'note_folders', id })),
+          ...expiredNoteIds.map((id: any) => ({ resource: 'notes', id })),
+          ...expiredFolderIds.map((id: any) => ({ resource: 'note_folders', id })),
         ],
       }
     })

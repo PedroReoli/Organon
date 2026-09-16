@@ -24,7 +24,7 @@ export const createNoteTemplatesSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      noteTemplates: (prev.noteTemplates ?? []).map(t =>
+      noteTemplates: (prev.noteTemplates ?? []).map((t: any) =>
         t.id === templateId ? { ...t, ...updates, updatedAt: now } : t,
       ),
     }))
@@ -33,14 +33,14 @@ export const createNoteTemplatesSlice = (updateStore: UpdateStoreFn) => {
   const removeNoteTemplate = (templateId: string) => {
     updateStore(prev => ({
       ...prev,
-      noteTemplates: (prev.noteTemplates ?? []).filter(t => t.id !== templateId),
+      noteTemplates: (prev.noteTemplates ?? []).filter((t: any) => t.id !== templateId),
     }))
   }
 
   const setNoteBookmarks = (noteId: string, bookmarks: NoteBookmark[]) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(n => (n.id === noteId ? { ...n, bookmarks } : n)),
+      notes: prev.notes.map((n: any) => (n.id === noteId ? { ...n, bookmarks } : n)),
     }))
   }
 

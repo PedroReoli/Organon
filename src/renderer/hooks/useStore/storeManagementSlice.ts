@@ -2,7 +2,7 @@ import type { Store } from '../../types'
 
 export const createStoreManagementSlice = (
   setStore: (updater: (prev: Store) => Store) => void,
-  saveStore: (store: Store) => void,
+  _saveStore: (store: Store) => void,
   isElectron: () => boolean,
   getDefaultStore: () => Store
 ) => {

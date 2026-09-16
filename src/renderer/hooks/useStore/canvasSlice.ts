@@ -25,7 +25,7 @@ export const createCanvasSlice = (updateStore: UpdateStoreFn) => {
     if (!name.trim()) return
     updateStore(prev => ({
       ...prev,
-      canvasFolders: (prev.canvasFolders ?? []).map(f =>
+      canvasFolders: (prev.canvasFolders ?? []).map((f: any) =>
         f.id === folderId ? { ...f, name: name.trim() } : f,
       ),
     }))
@@ -39,7 +39,7 @@ export const createCanvasSlice = (updateStore: UpdateStoreFn) => {
       }
       return {
         ...prev,
-        canvasFolders: (prev.canvasFolders ?? []).filter(f => f.id !== folderId),
+        canvasFolders: (prev.canvasFolders ?? []).filter((f: any) => f.id !== folderId),
         canvasFolderAssignments: assignments,
       }
     })
@@ -72,7 +72,7 @@ export const createCanvasSlice = (updateStore: UpdateStoreFn) => {
     updateStore(prev => {
       const allVersions = { ...(prev.canvasVersions ?? {}) }
       const versions = allVersions[canvasId] ?? []
-      const version = versions.find(v => v.id === versionId)
+      const version = versions.find((v: any) => v.id === versionId)
       if (!version) return prev
       return { ...prev, canvasVersions: allVersions }
     })
@@ -83,7 +83,7 @@ export const createCanvasSlice = (updateStore: UpdateStoreFn) => {
     updateStore(prev => {
       const allVersions = { ...(prev.canvasVersions ?? {}) }
       const versions = allVersions[canvasId] ?? []
-      allVersions[canvasId] = versions.filter(v => v.id !== versionId)
+      allVersions[canvasId] = versions.filter((v: any) => v.id !== versionId)
       return { ...prev, canvasVersions: allVersions }
     })
   }

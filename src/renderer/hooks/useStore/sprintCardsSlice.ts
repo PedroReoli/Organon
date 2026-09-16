@@ -35,7 +35,7 @@ export const createSprintCardsSlice = (updateStore: UpdateStoreFn) => {
   const editSprintCard = (cardId: string, updates: Partial<Omit<SprintCard, 'id' | 'createdAt'>>) => {
     updateStore(prev => ({
       ...prev,
-      sprintCards: (prev.sprintCards ?? []).map(c =>
+      sprintCards: (prev.sprintCards ?? []).map((c: any) =>
         c.id === cardId ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
       ),
     }))
@@ -44,7 +44,7 @@ export const createSprintCardsSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintCard = (cardId: string) => {
     updateStore(prev => ({
       ...prev,
-      sprintCards: (prev.sprintCards ?? []).filter(c => c.id !== cardId),
+      sprintCards: (prev.sprintCards ?? []).filter((c: any) => c.id !== cardId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'sprint_cards', id: cardId }],
     }))
   }
@@ -52,7 +52,7 @@ export const createSprintCardsSlice = (updateStore: UpdateStoreFn) => {
   const moveSprintCard = (cardId: string, columnId: string | null, sectionId: string | null = null) => {
     updateStore(prev => ({
       ...prev,
-      sprintCards: (prev.sprintCards ?? []).map(c =>
+      sprintCards: (prev.sprintCards ?? []).map((c: any) =>
         c.id === cardId ? { ...c, columnId, sectionId, updatedAt: new Date().toISOString() } : c
       ),
     }))

@@ -6,7 +6,7 @@ export const createPlaybookExtrasSlice = (updateStore: UpdateStoreFn) => {
   const togglePlaybookFavorite = (playbookId: string) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb =>
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.id !== playbookId ? pb : { ...pb, isFavorite: !pb.isFavorite },
       ),
     }))
@@ -15,7 +15,7 @@ export const createPlaybookExtrasSlice = (updateStore: UpdateStoreFn) => {
   const togglePlaybookArchived = (playbookId: string) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb =>
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.id !== playbookId ? pb : { ...pb, isArchived: !pb.isArchived },
       ),
     }))
@@ -24,7 +24,7 @@ export const createPlaybookExtrasSlice = (updateStore: UpdateStoreFn) => {
   const movePlaybookToFolder = (playbookId: string, folderId: string | null) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb =>
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.id !== playbookId ? pb : { ...pb, folderId },
       ),
     }))
@@ -74,12 +74,13 @@ export const createPlaybookExtrasSlice = (updateStore: UpdateStoreFn) => {
     }
 
     updateStore(prev => {
-      const maxOrder = prev.playbooks.length > 0
-        ? Math.max(...prev.playbooks.map(p => p.order))
+      const playbooks = prev.playbooks || []
+      const maxOrder = playbooks.length > 0
+        ? Math.max(...playbooks.map((p: any) => p.order))
         : -1
       return {
         ...prev,
-        playbooks: [...prev.playbooks, { ...newPlaybook, order: maxOrder + 1 }],
+        playbooks: [...playbooks, { ...newPlaybook, order: maxOrder + 1 }],
       }
     })
 

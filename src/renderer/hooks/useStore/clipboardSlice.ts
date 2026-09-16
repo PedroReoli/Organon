@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import type { ClipboardItem, ClipboardCategory } from '../../types'
+import type { ClipboardItem } from '../../types'
 import { generateId, createClipboardCategory } from '../../utils'
 import { classifyClipboardContent } from '@Clipboard/clipboard/clipboardClassifier'
 import type { UpdateStoreFn } from './types'
@@ -26,7 +26,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
     if (!name.trim()) return
     updateStore(prev => ({
       ...prev,
-      clipboardCategories: prev.clipboardCategories.map(cat =>
+      clipboardCategories: prev.clipboardCategories.map((cat: any) =>
         cat.id === categoryId ? { ...cat, name: name.trim() } : cat
       ),
     }))
@@ -35,8 +35,8 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const removeClipboardCategory = useCallback((categoryId: string) => {
     updateStore(prev => ({
       ...prev,
-      clipboardCategories: prev.clipboardCategories.filter(cat => cat.id !== categoryId),
-      clipboardItems: prev.clipboardItems.map(item =>
+      clipboardCategories: prev.clipboardCategories.filter((cat: any) => cat.id !== categoryId),
+      clipboardItems: prev.clipboardItems.map((item: any) =>
         item.categoryId === categoryId ? { ...item, categoryId: null } : item
       ),
     }))
@@ -45,7 +45,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const reorderClipboardCategories = useCallback((orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      clipboardCategories: prev.clipboardCategories.map(cat => {
+      clipboardCategories: prev.clipboardCategories.map((cat: any) => {
         const idx = orderedIds.indexOf(cat.id)
         if (idx === -1) return cat
         return { ...cat, order: idx }
@@ -57,11 +57,11 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     const hash = hashClipboardContent(content)
     updateStore(prev => {
-      const existing = prev.clipboardItems.find(i => i.contentHash === hash)
+      const existing = prev.clipboardItems.find((i: any) => i.contentHash === hash)
       if (existing) {
         return {
           ...prev,
-          clipboardItems: prev.clipboardItems.map(i =>
+          clipboardItems: prev.clipboardItems.map((i: any) =>
             i.id === existing.id
               ? { ...i, copyCount: (i.copyCount ?? 0) + 1, order: Date.now(), updatedAt: now }
               : i,
@@ -89,7 +89,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const toggleClipboardSnippet = useCallback((itemId: string) => {
     updateStore(prev => ({
       ...prev,
-      clipboardItems: prev.clipboardItems.map(i =>
+      clipboardItems: prev.clipboardItems.map((i: any) =>
         i.id === itemId ? { ...i, isSnippet: !i.isSnippet, updatedAt: new Date().toISOString() } : i,
       ),
     }))
@@ -100,7 +100,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
     const cutoff = Date.now() - retentionDays * 86_400_000
     let removed = 0
     updateStore(prev => {
-      const next = prev.clipboardItems.filter(i => {
+      const next = prev.clipboardItems.filter((i: any) => {
         if (i.isSnippet || i.isPinned) return true
         const created = new Date(i.createdAt).getTime()
         if (created < cutoff) {
@@ -118,7 +118,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const updateClipboardItem = useCallback((itemId: string, updates: Partial<Pick<ClipboardItem, 'title' | 'isPinned' | 'categoryId'>>) => {
     updateStore(prev => ({
       ...prev,
-      clipboardItems: prev.clipboardItems.map(item => {
+      clipboardItems: prev.clipboardItems.map((item: any) => {
         if (item.id !== itemId) return item
         return { ...item, ...updates, updatedAt: new Date().toISOString() }
       }),
@@ -128,14 +128,14 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const removeClipboardItem = useCallback((itemId: string) => {
     updateStore(prev => ({
       ...prev,
-      clipboardItems: prev.clipboardItems.filter(item => item.id !== itemId),
+      clipboardItems: prev.clipboardItems.filter((item: any) => item.id !== itemId),
     }))
   }, [updateStore])
 
   const moveClipboardItemToCategory = useCallback((itemId: string, categoryId: string | null) => {
     updateStore(prev => ({
       ...prev,
-      clipboardItems: prev.clipboardItems.map(item =>
+      clipboardItems: prev.clipboardItems.map((item: any) =>
         item.id === itemId ? { ...item, categoryId, updatedAt: new Date().toISOString() } : item
       ),
     }))
@@ -144,7 +144,7 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
   const incrementClipboardCopyCount = useCallback((itemId: string) => {
     updateStore(prev => ({
       ...prev,
-      clipboardItems: prev.clipboardItems.map(item =>
+      clipboardItems: prev.clipboardItems.map((item: any) =>
         item.id === itemId ? { ...item, copyCount: (item.copyCount ?? 0) + 1 } : item
       ),
     }))
@@ -157,11 +157,11 @@ export const createClipboardSlice = (updateStore: UpdateStoreFn) => {
         if (!text?.trim()) return
         updateStore(prev => {
           const hash = hashClipboardContent(text)
-          const existing = prev.clipboardItems.find(i => i.contentHash === hash)
+          const existing = prev.clipboardItems.find((i: any) => i.contentHash === hash)
           if (existing) {
             return {
               ...prev,
-              clipboardItems: prev.clipboardItems.map(i =>
+              clipboardItems: prev.clipboardItems.map((i: any) =>
                 i.id === existing.id
                   ? { ...i, copyCount: (i.copyCount ?? 0) + 1, order: Date.now() }
                   : i,

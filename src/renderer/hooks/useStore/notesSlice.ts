@@ -49,7 +49,7 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const updateNoteFolder = (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId' | 'isHome'>>) => {
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.map(folder => {
+      noteFolders: prev.noteFolders.map((folder: any) => {
         if (folder.id !== folderId) return folder
         return { ...folder, ...updates }
       }),
@@ -59,9 +59,9 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const removeNoteFolder = (folderId: string) => {
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.filter(folder => folder.id !== folderId),
+      noteFolders: prev.noteFolders.filter((folder: any) => folder.id !== folderId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'note_folders', id: folderId }],
-      notes: prev.notes.map(note => (
+      notes: prev.notes.map((note: any) => (
         note.folderId === folderId ? { ...note, folderId: null } : note
       )),
     }))
@@ -70,7 +70,7 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const reorderNoteFolders = (orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      noteFolders: prev.noteFolders.map(folder => {
+      noteFolders: prev.noteFolders.map((folder: any) => {
         const idx = orderedIds.indexOf(folder.id)
         if (idx === -1) return folder
         return { ...folder, order: idx }
@@ -113,19 +113,20 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
         updatedAt: now,
         order: prev.notes.length,
       }
-      return { ...prev, notes: [...prev.notes, newNote] }
+      return { ...prev, notes: [...prev.notes, newNote!] }
     })
     if (!newNote) throw new Error('Não foi possível criar a nota.')
+    const createdNote: Note = newNote
     if (rawContent && isElectron()) {
-      window.electronAPI.writeNote(newNote.mdPath, String(rawContent)).catch(() => {})
+      window.electronAPI.writeNote(createdNote.mdPath, String(rawContent)).catch(() => {})
     }
-    return newNote
+    return createdNote
   }
 
   const updateNote = (noteId: string, updates: Partial<Pick<Note, 'title' | 'content' | 'folderId' | 'projectId' | 'parentNoteId' | 'isPinned' | 'isFavorite' | 'isLocked'>>) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.map(note => {
+      notes: prev.notes.map((note: any) => {
         if (note.id !== noteId) return note
         return { ...note, ...updates, updatedAt: new Date().toISOString() }
       }),
@@ -135,7 +136,7 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const removeNote = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.filter(note => note.id !== noteId),
+      notes: prev.notes.filter((note: any) => note.id !== noteId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'notes', id: noteId }],
     }))
   }
@@ -145,11 +146,11 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const softDeleteNote = (noteId: string) => {
     const now = new Date().toISOString()
     updateStore(prev => {
-      const target = prev.notes.find(n => n.id === noteId)
+      const target = prev.notes.find((n: any) => n.id === noteId)
       if (target?.isLocked) return prev
       return {
         ...prev,
-        notes: prev.notes.map(n =>
+        notes: prev.notes.map((n: any) =>
           n.id === noteId
             ? { ...n, deletedAt: now, deletedFromFolderId: n.folderId, folderId: null }
             : n,
@@ -172,12 +173,12 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
           }
         }
       }
-      const noteFolders = prev.noteFolders.map(f =>
+      const noteFolders = prev.noteFolders.map((f: any) =>
         childFolderIds.has(f.id)
           ? { ...f, deletedAt: now, deletedFromParentId: f.parentId, parentId: null }
           : f,
       )
-      const notes = prev.notes.map(n =>
+      const notes = prev.notes.map((n: any) =>
         n.folderId && childFolderIds.has(n.folderId)
           ? { ...n, deletedAt: now, deletedFromFolderId: n.folderId, folderId: null }
           : n,
@@ -188,11 +189,11 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
 
   const restoreNote = (noteId: string) => {
     updateStore(prev => {
-      const target = prev.notes.find(n => n.id === noteId)
+      const target = prev.notes.find((n: any) => n.id === noteId)
       if (!target?.deletedAt) return prev
       return {
         ...prev,
-        notes: prev.notes.map(n =>
+        notes: prev.notes.map((n: any) =>
           n.id === noteId
             ? { ...n, deletedAt: undefined, folderId: n.deletedFromFolderId ?? null, deletedFromFolderId: undefined }
             : n,
@@ -203,11 +204,11 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
 
   const restoreNoteFolder = (folderId: string) => {
     updateStore(prev => {
-      const target = prev.noteFolders.find(f => f.id === folderId)
+      const target = prev.noteFolders.find((f: any) => f.id === folderId)
       if (!target?.deletedAt) return prev
       return {
         ...prev,
-        noteFolders: prev.noteFolders.map(f =>
+        noteFolders: prev.noteFolders.map((f: any) =>
           f.id === folderId
             ? { ...f, deletedAt: undefined, parentId: f.deletedFromParentId ?? null, deletedFromParentId: undefined }
             : f,
@@ -219,7 +220,7 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
   const permanentDeleteNote = (noteId: string) => {
     updateStore(prev => ({
       ...prev,
-      notes: prev.notes.filter(n => n.id !== noteId),
+      notes: prev.notes.filter((n: any) => n.id !== noteId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'notes', id: noteId }],
     }))
   }
@@ -237,11 +238,11 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
           }
         }
       }
-      const noteFolders = prev.noteFolders.filter(f => !childFolderIds.has(f.id))
-      const notes = prev.notes.filter(n => !(n.folderId && childFolderIds.has(n.folderId)))
+      const noteFolders = prev.noteFolders.filter((f: any) => !childFolderIds.has(f.id))
+      const notes = prev.notes.filter((n: any) => !(n.folderId && childFolderIds.has(n.folderId)))
       const pendingDeletes = [
         ...(prev.pendingDeletes ?? []),
-        ...Array.from(childFolderIds).map(id => ({ resource: 'note_folders' as const, id })),
+        ...Array.from(childFolderIds).map((id: any) => ({ resource: 'note_folders' as const, id })),
       ]
       return { ...prev, noteFolders, notes, pendingDeletes }
     })
@@ -249,16 +250,16 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
 
   const emptyNotesTrash = () => {
     updateStore(prev => {
-      const deletedNoteIds = prev.notes.filter(n => n.deletedAt).map(n => n.id)
-      const deletedFolderIds = prev.noteFolders.filter(f => f.deletedAt).map(f => f.id)
+      const deletedNoteIds = prev.notes.filter((n: any) => n.deletedAt).map((n: any) => n.id)
+      const deletedFolderIds = prev.noteFolders.filter((f: any) => f.deletedAt).map((f: any) => f.id)
       return {
         ...prev,
-        notes: prev.notes.filter(n => !n.deletedAt),
-        noteFolders: prev.noteFolders.filter(f => !f.deletedAt),
+        notes: prev.notes.filter((n: any) => !n.deletedAt),
+        noteFolders: prev.noteFolders.filter((f: any) => !f.deletedAt),
         pendingDeletes: [
           ...(prev.pendingDeletes ?? []),
-          ...deletedNoteIds.map(id => ({ resource: 'notes' as const, id })),
-          ...deletedFolderIds.map(id => ({ resource: 'note_folders' as const, id })),
+          ...deletedNoteIds.map((id: any) => ({ resource: 'notes' as const, id })),
+          ...deletedFolderIds.map((id: any) => ({ resource: 'note_folders' as const, id })),
         ],
       }
     })

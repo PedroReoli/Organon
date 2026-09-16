@@ -24,7 +24,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const updateSprintColumn = (columnId: string, updates: Partial<Pick<SprintColumn, 'name' | 'color' | 'groupId' | 'autoStatus'>>) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumns: ensureSprintColumns(prev).map(c =>
+      sprintColumns: ensureSprintColumns(prev).map((c: any) =>
         c.id === columnId ? { ...c, ...updates } : c
       ),
     }))
@@ -33,9 +33,9 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintColumn = (columnId: string) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumns: ensureSprintColumns(prev).filter(c => c.id !== columnId),
-      sprintColumnSections: (prev.sprintColumnSections ?? []).filter(s => s.columnId !== columnId),
-      cards: prev.cards.map(c =>
+      sprintColumns: ensureSprintColumns(prev).filter((c: any) => c.id !== columnId),
+      sprintColumnSections: (prev.sprintColumnSections ?? []).filter((s: any) => s.columnId !== columnId),
+      cards: (prev.cards || []).map((c: any) =>
         c.sprintColumnId === columnId ? { ...c, sprintColumnId: null } : c
       ),
     }))
@@ -44,7 +44,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const reorderSprintColumns = (orderedIds: string[]) => {
     updateStore(prev => {
       const cols = ensureSprintColumns(prev)
-      const map = new Map(cols.map(c => [c.id, c]))
+      const map = new Map(cols.map((c: any) => [c.id, c]))
       const reordered = orderedIds
         .map((id, idx) => {
           const col = map.get(id)
@@ -72,7 +72,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const updateSprintColumnGroup = (groupId: string, updates: Partial<Pick<SprintColumnGroup, 'name' | 'color'>>) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumnGroups: (prev.sprintColumnGroups ?? []).map(g =>
+      sprintColumnGroups: (prev.sprintColumnGroups ?? []).map((g: any) =>
         g.id === groupId ? { ...g, ...updates } : g
       ),
     }))
@@ -81,8 +81,8 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintColumnGroup = (groupId: string) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumnGroups: (prev.sprintColumnGroups ?? []).filter(g => g.id !== groupId),
-      sprintColumns: ensureSprintColumns(prev).map(c =>
+      sprintColumnGroups: (prev.sprintColumnGroups ?? []).filter((g: any) => g.id !== groupId),
+      sprintColumns: ensureSprintColumns(prev).map((c: any) =>
         c.groupId === groupId ? { ...c, groupId: null } : c
       ),
     }))
@@ -92,7 +92,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
     if (!name.trim()) return
     updateStore(prev => {
       const sections = prev.sprintColumnSections ?? []
-      const sameColumn = sections.filter(s => s.columnId === columnId)
+      const sameColumn = sections.filter((s: any) => s.columnId === columnId)
       const newSection: SprintColumnSection = {
         id: generateId(),
         columnId,
@@ -106,7 +106,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const updateSprintColumnSection = (sectionId: string, updates: Partial<Pick<SprintColumnSection, 'name'>>) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumnSections: (prev.sprintColumnSections ?? []).map(s =>
+      sprintColumnSections: (prev.sprintColumnSections ?? []).map((s: any) =>
         s.id === sectionId ? { ...s, ...updates } : s
       ),
     }))
@@ -115,7 +115,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintColumnSection = (sectionId: string) => {
     updateStore(prev => ({
       ...prev,
-      sprintColumnSections: (prev.sprintColumnSections ?? []).filter(s => s.id !== sectionId),
+      sprintColumnSections: (prev.sprintColumnSections ?? []).filter((s: any) => s.id !== sectionId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'sprint_column_sections', id: sectionId }],
     }))
   }
@@ -137,7 +137,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const updateSprintSwimLane = (laneId: string, updates: Partial<Pick<SprintSwimLane, 'name' | 'color'>>) => {
     updateStore(prev => ({
       ...prev,
-      sprintSwimLanes: (prev.sprintSwimLanes ?? []).map(l =>
+      sprintSwimLanes: (prev.sprintSwimLanes ?? []).map((l: any) =>
         l.id === laneId ? { ...l, ...updates } : l
       ),
     }))
@@ -146,8 +146,8 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintSwimLane = (laneId: string) => {
     updateStore(prev => ({
       ...prev,
-      sprintSwimLanes: (prev.sprintSwimLanes ?? []).filter(l => l.id !== laneId),
-      cards: prev.cards.map(c =>
+      sprintSwimLanes: (prev.sprintSwimLanes ?? []).filter((l: any) => l.id !== laneId),
+      cards: (prev.cards || []).map((c: any) =>
         c.swimLaneId === laneId ? { ...c, swimLaneId: null } : c
       ),
     }))
@@ -167,7 +167,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const upsertSprintMetadata = (metadata: SprintMetadata) => {
     updateStore(prev => {
       const existing = prev.sprintMetadata ?? []
-      const idx = existing.findIndex(m => m.id === metadata.id)
+      const idx = existing.findIndex((m: any) => m.id === metadata.id)
       if (idx === -1) {
         return { ...prev, sprintMetadata: [...existing, metadata] }
       }
@@ -180,7 +180,6 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const removeSprintMetadata = (sprintId: string) => {
     updateStore(prev => {
       const existing = prev.sprintMetadata ?? []
-      // Se estamos removendo a sprint ativa, limpamos o activeSprintId
       const isRemovingActive = prev.sprintBoardConfig?.activeSprintId === sprintId
       const newConfig = isRemovingActive 
         ? { ...prev.sprintBoardConfig, activeSprintId: null } as SprintBoardConfig
@@ -188,8 +187,8 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
       
       return { 
         ...prev, 
-        sprintMetadata: existing.filter(m => m.id !== sprintId),
-        sprintCards: (prev.sprintCards ?? []).filter(c => c.sprintId !== sprintId),
+        sprintMetadata: existing.filter((m: any) => m.id !== sprintId),
+        sprintCards: (prev.sprintCards ?? []).filter((c: any) => c.sprintId !== sprintId),
         sprintBoardConfig: newConfig
       }
     })
@@ -209,7 +208,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const setCardSprint = (cardId: string, inSprint: boolean) => {
     updateStore(prev => ({
       ...prev,
-      cards: prev.cards.map(c =>
+      cards: (prev.cards || []).map((c: any) =>
         c.id === cardId ? { ...c, inSprint } : c
       ),
     }))
@@ -218,7 +217,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const setCardSprintColumn = (cardId: string, columnId: string | null) => {
     updateStore(prev => ({
       ...prev,
-      cards: prev.cards.map(c =>
+      cards: (prev.cards || []).map((c: any) =>
         c.id === cardId ? { ...c, sprintColumnId: columnId, inSprint: columnId !== null ? true : c.inSprint } : c
       ),
     }))
@@ -227,7 +226,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const setCardSprintSection = (cardId: string, sectionId: string | null) => {
     updateStore(prev => ({
       ...prev,
-      cards: prev.cards.map(c =>
+      cards: (prev.cards || []).map((c: any) =>
         c.id === cardId ? { ...c, sprintSectionId: sectionId } : c
       ),
     }))
@@ -236,7 +235,7 @@ export const createSprintSlice = (updateStore: UpdateStoreFn) => {
   const setCardSwimLane = (cardId: string, laneId: string | null) => {
     updateStore(prev => ({
       ...prev,
-      cards: prev.cards.map(c =>
+      cards: (prev.cards || []).map((c: any) =>
         c.id === cardId ? { ...c, swimLaneId: laneId } : c
       ),
     }))

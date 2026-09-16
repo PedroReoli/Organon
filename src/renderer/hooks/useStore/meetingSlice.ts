@@ -12,7 +12,7 @@ export const createMeetingSlice = (updateStore: UpdateStoreFn) => {
   const updateMeeting = (meetingId: string, updates: Partial<Pick<Meeting, 'title' | 'transcription'>>) => {
     updateStore(prev => ({
       ...prev,
-      meetings: prev.meetings.map(m =>
+      meetings: prev.meetings.map((m: any) =>
         m.id !== meetingId ? m : { ...m, ...updates, updatedAt: new Date().toISOString() },
       ),
     }))
@@ -21,7 +21,7 @@ export const createMeetingSlice = (updateStore: UpdateStoreFn) => {
   const removeMeeting = (meetingId: string) => {
     updateStore(prev => ({
       ...prev,
-      meetings: prev.meetings.filter(m => m.id !== meetingId),
+      meetings: prev.meetings.filter((m: any) => m.id !== meetingId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'meetings', id: meetingId }],
     }))
   }

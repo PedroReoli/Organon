@@ -15,7 +15,7 @@ export const createProjectsSlice = (updateStore: UpdateStoreFn) => {
     const newIDE = createRegisteredIDE(input)
     updateStore(prev => ({
       ...prev,
-      registeredIDEs: [...prev.registeredIDEs, newIDE],
+      registeredIDEs: [...(prev.registeredIDEs || []), newIDE],
     }))
     return newIDE.id
   }, [updateStore])
@@ -23,7 +23,7 @@ export const createProjectsSlice = (updateStore: UpdateStoreFn) => {
   const updateRegisteredIDE = useCallback((ideId: string, updates: Partial<Pick<RegisteredIDE, 'name' | 'exePath' | 'iconDataUrl' | 'args'>>) => {
     updateStore(prev => ({
       ...prev,
-      registeredIDEs: prev.registeredIDEs.map(ide =>
+      registeredIDEs: (prev.registeredIDEs || []).map((ide: any) =>
         ide.id !== ideId ? ide : { ...ide, ...updates }
       ),
     }))
@@ -32,7 +32,7 @@ export const createProjectsSlice = (updateStore: UpdateStoreFn) => {
   const removeRegisteredIDE = useCallback((ideId: string) => {
     updateStore(prev => ({
       ...prev,
-      registeredIDEs: prev.registeredIDEs.filter(ide => ide.id !== ideId),
+      registeredIDEs: (prev.registeredIDEs || []).filter((ide: any) => ide.id !== ideId),
     }))
   }, [updateStore])
 

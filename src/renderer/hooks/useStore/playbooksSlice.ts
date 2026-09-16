@@ -8,13 +8,13 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         const snapshot: PlaybookVersion = {
           id: generateId(),
           createdAt: now,
           content: pb.content,
-          dialogs: pb.dialogs.map(d => ({ ...d })),
+          dialogs: (pb.dialogs || []).map((d: any) => ({ ...d })),
         }
         const prevVersions = Array.isArray(pb.versions) ? pb.versions : []
         const nextVersions = [snapshot, ...prevVersions].slice(0, PLAYBOOK_VERSIONS_LIMIT)
@@ -27,24 +27,24 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
-        const version = (pb.versions ?? []).find(v => v.id === versionId)
+        const version = (pb.versions ?? []).find((v: any) => v.id === versionId)
         if (!version) return pb
         const currentSnapshot: PlaybookVersion = {
           id: generateId(),
           createdAt: now,
           content: pb.content,
-          dialogs: pb.dialogs.map(d => ({ ...d })),
+          dialogs: (pb.dialogs || []).map((d: any) => ({ ...d })),
         }
         const nextVersions = [
           currentSnapshot,
-          ...(pb.versions ?? []).filter(v => v.id !== versionId),
+          ...(pb.versions ?? []).filter((v: any) => v.id !== versionId),
         ].slice(0, PLAYBOOK_VERSIONS_LIMIT)
         return {
           ...pb,
           content: version.content,
-          dialogs: version.dialogs.map(d => ({ ...d })),
+          dialogs: (version.dialogs || []).map((d: any) => ({ ...d })),
           versions: nextVersions,
           updatedAt: now,
         }
@@ -70,7 +70,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     }
     updateStore(prev => ({
       ...prev,
-      playbooks: [...prev.playbooks, newPlaybook],
+      playbooks: [...(prev.playbooks || []), newPlaybook],
     }))
     return id
   }
@@ -79,7 +79,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb =>
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.id === playbookId ? { ...pb, ...updates, updatedAt: now } : pb
       ),
     }))
@@ -88,7 +88,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const removePlaybook = (playbookId: string) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.filter(pb => pb.id !== playbookId),
+      playbooks: (prev.playbooks || []).filter((pb: any) => pb.id !== playbookId),
       pendingDeletes: [...(prev.pendingDeletes ?? []), { resource: 'playbooks', id: playbookId }],
     }))
   }
@@ -96,7 +96,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const reorderPlaybooks = (orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         const idx = orderedIds.indexOf(pb.id)
         if (idx === -1) return pb
         return { ...pb, order: idx }
@@ -107,7 +107,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const incrementPlaybookViewCount = (playbookId: string) => {
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb =>
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.id === playbookId ? { ...pb, viewCount: (pb.viewCount ?? 0) + 1 } : pb
       ),
     }))
@@ -118,7 +118,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const id = generateId()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         const newDialog: PlaybookDialog = {
           ...input,
@@ -137,11 +137,11 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         return {
           ...pb,
-          dialogs: pb.dialogs.map(d =>
+          dialogs: (pb.dialogs || []).map((d: any) =>
             d.id === dialogId ? { ...d, ...updates, updatedAt: now } : d
           ),
           updatedAt: now,
@@ -154,11 +154,11 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         return {
           ...pb,
-          dialogs: pb.dialogs.filter(d => d.id !== dialogId),
+          dialogs: (pb.dialogs || []).filter((d: any) => d.id !== dialogId),
           updatedAt: now,
         }
       }),
@@ -169,11 +169,11 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const now = new Date().toISOString()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         return {
           ...pb,
-          dialogs: pb.dialogs.map(d => {
+          dialogs: (pb.dialogs || []).map((d: any) => {
             const idx = orderedIds.indexOf(d.id)
             if (idx === -1) return d
             return { ...d, order: idx }
@@ -189,9 +189,9 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const newId = generateId()
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
-        const source = pb.dialogs.find(d => d.id === dialogId)
+        const source = (pb.dialogs || []).find((d: any) => d.id === dialogId)
         if (!source) return pb
         const copy: PlaybookDialog = {
           ...source,
@@ -214,11 +214,11 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
     const monthKey = now.slice(0, 7)
     updateStore(prev => ({
       ...prev,
-      playbooks: prev.playbooks.map(pb => {
+      playbooks: (prev.playbooks || []).map((pb: any) => {
         if (pb.id !== playbookId) return pb
         return {
           ...pb,
-          dialogs: pb.dialogs.map(d => {
+          dialogs: (pb.dialogs || []).map((d: any) => {
             if (d.id !== dialogId) return d
             const copyCountByMonth = d.copyCountByMonth ?? {}
             return {
@@ -255,7 +255,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const updatePlaybookFolder = (folderId: string, updates: Partial<Pick<PlaybookFolder, 'name' | 'color'>>) => {
     updateStore(prev => ({
       ...prev,
-      playbookFolders: (prev.playbookFolders ?? []).map(f =>
+      playbookFolders: (prev.playbookFolders ?? []).map((f: any) =>
         f.id === folderId ? { ...f, ...updates } : f
       ),
     }))
@@ -264,8 +264,8 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const removePlaybookFolder = (folderId: string) => {
     updateStore(prev => ({
       ...prev,
-      playbookFolders: (prev.playbookFolders ?? []).filter(f => f.id !== folderId),
-      playbooks: prev.playbooks.map(pb =>
+      playbookFolders: (prev.playbookFolders ?? []).filter((f: any) => f.id !== folderId),
+      playbooks: (prev.playbooks || []).map((pb: any) =>
         pb.folderId === folderId ? { ...pb, folderId: null } : pb
       ),
     }))
@@ -274,7 +274,7 @@ export const createPlaybooksSlice = (updateStore: UpdateStoreFn) => {
   const reorderPlaybookFolders = (orderedIds: string[]) => {
     updateStore(prev => ({
       ...prev,
-      playbookFolders: (prev.playbookFolders ?? []).map(f => {
+      playbookFolders: (prev.playbookFolders ?? []).map((f: any) => {
         const idx = orderedIds.indexOf(f.id)
         if (idx === -1) return f
         return { ...f, order: idx }
