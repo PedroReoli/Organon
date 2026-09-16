@@ -22,7 +22,6 @@ import { HubTrabalho }     from './DashboardPage/hubs/HubTrabalho'
 import { HubFerramentas }  from './DashboardPage/hubs/HubFerramentas'
 import { HubSistema }      from './DashboardPage/hubs/HubSistema'
 import { TopNavbarShell } from '../components/layout/TopNavbarShell'
-import { BottomFooterShell } from '../components/layout/BottomFooterShell'
 import { GlobalShellLayout } from '../components/layout/GlobalShellLayout'
 import { useWakeWordListener } from '../hooks/useWakeWordListener'
 import { ViewLoadingSkeleton } from './shared/components/display/ViewLoadingSkeleton'
@@ -1048,6 +1047,9 @@ export const App = () => {
           onOpenQuickSearch={() => setShowViewsNavigator(true)}
           onOpenSettings={() => setActiveView('settings')}
           onOpenSyncModal={() => setShowLocalSyncModal(true)}
+          onOpenVoice={() => setShowVoiceModal(true)}
+          onToggleChat={() => setIsChatOpen(prev => !prev)}
+          isChatOpen={isChatOpen}
           lastSyncAt={lastSyncAt}
           syncStatus={sync.syncStatus}
         />
@@ -1329,18 +1331,6 @@ export const App = () => {
           )}
           </div>
         </div>
-        <BottomFooterShell
-          activeView={activeView}
-          hubTitle={currentShellConfig.hubTitle}
-          hubViews={currentHub?.views}
-          onNavigateView={(view: AppView) => setActiveView(view)}
-          onAddCard={() => addCard('Novo Card')}
-          onOpenVoice={() => setShowVoiceModal(true)}
-          onToggleChat={() => setIsChatOpen(prev => !prev)}
-          isChatOpen={isChatOpen}
-          cardsCount={cards.length}
-          notesCount={notes.length}
-        />
       </GlobalShellLayout>
 
       <LocalSyncModal

@@ -10,7 +10,6 @@ import { FocusCard } from './dashboard/FocusCard'
 import { WeekOverviewCard } from './dashboard/WeekOverviewCard'
 import { ProjectsSummaryCard } from './dashboard/ProjectsSummaryCard'
 import { HubGroupCard } from './dashboard/HubGroupCard'
-import { SystemSummaryCard } from './dashboard/SystemSummaryCard'
 
 export type DashboardSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 
@@ -78,8 +77,8 @@ import img16Configuracoes from '../../images/organon_icons/16_configuracoes.png'
 import img17Historico from '../../images/organon_icons/17_historico.png'
 
 const imgStyle: React.CSSProperties = {
-  width: 22,
-  height: 22,
+  width: 20,
+  height: 20,
   objectFit: 'contain',
   display: 'inline-block',
   verticalAlign: 'middle',
@@ -110,14 +109,6 @@ const HUB_VIEW_ICONS: Record<AppView, JSX.Element> = {
   history: <img src={img17Historico} alt="Histórico" style={imgStyle} />,
   library: <img src={img06Playbook} alt="Biblioteca" style={imgStyle} />,
   okrs: <img src={img08Projetos} alt="OKRs" style={imgStyle} />,
-}
-
-const SYNC_STATUS_LABELS: Record<DashboardSyncStatus, string> = {
-  idle: 'Local',
-  pending: 'Pendente',
-  syncing: 'Sincronizando',
-  synced: 'Sincronizado',
-  error: 'Erro',
 }
 
 export const DashboardPage = ({
@@ -151,7 +142,6 @@ export const DashboardPage = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isQrSyncOpen, setIsQrSyncOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [activeTab, setActiveTab] = useState<'geral' | 'navegacao' | 'resumos'>('geral')
 
   if (dashboardLayout === 'custom' && dashboardWidgets && onDashboardWidgetsChange) {
     return (
@@ -251,148 +241,124 @@ export const DashboardPage = ({
   const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
   const formattedTime = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`
   const fullDateText = `${dayNames[currentTime.getDay()]}, ${currentTime.getDate()} de ${monthNames[currentTime.getMonth()]} • ${formattedTime}`
-  const lastSyncLabel = lastSyncAt
-    ? new Date(lastSyncAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    : 'Nunca'
+  const plannedCardsCount = cards.filter(card => card.location.day || card.hasDate).length
 
   return (
     <div className="today-outer">
-    <div className="today-layout">
-      {/* Modal de busca global ativado por atalho (Ctrl+K) */}
-      {isSearchOpen && (
-        <QuickSearchModal
-          cards={cards}
-          events={calendarEvents}
-          shortcuts={[]}
-          notes={notes}
-          onClose={() => setIsSearchOpen(false)}
-          onGoToPlannerCard={(cardId) => {
-            setIsSearchOpen(false)
-            onGoToPlannerCard(cardId)
-          }}
-          onGoToCalendarDate={(dateISO) => {
-            setIsSearchOpen(false)
-            onGoToCalendarDate(dateISO)
-          }}
-          onOpenShortcut={(url) => {
-            setIsSearchOpen(false)
-            onOpenShortcut?.(url)
-          }}
-          onGoToNotes={() => {
-            setIsSearchOpen(false)
-            onGoToNotes()
-          }}
-          onNavigate={(view) => {
-            setIsSearchOpen(false)
-            onNavigate(view)
-          }}
-        />
-      )}
+      <div className="today-layout" style={{ maxWidth: 1600, margin: '0 auto', width: '100%', padding: '20px 28px', gap: '24px' }}>
+        {/* Modal de busca global ativado por atalho (Ctrl+K) */}
+        {isSearchOpen && (
+          <QuickSearchModal
+            cards={cards}
+            events={calendarEvents}
+            shortcuts={[]}
+            notes={notes}
+            onClose={() => setIsSearchOpen(false)}
+            onGoToPlannerCard={(cardId) => {
+              setIsSearchOpen(false)
+              onGoToPlannerCard(cardId)
+            }}
+            onGoToCalendarDate={(dateISO) => {
+              setIsSearchOpen(false)
+              onGoToCalendarDate(dateISO)
+            }}
+            onOpenShortcut={(url) => {
+              setIsSearchOpen(false)
+              onOpenShortcut?.(url)
+            }}
+            onGoToNotes={() => {
+              setIsSearchOpen(false)
+              onGoToNotes()
+            }}
+            onNavigate={(view) => {
+              setIsSearchOpen(false)
+              onNavigate(view)
+            }}
+          />
+        )}
 
-      {/* Modal QR Code Sync */}
-      {isQrSyncOpen && (
-        <LocalSyncModal
-          isOpen={isQrSyncOpen}
-          onClose={() => setIsQrSyncOpen(false)}
-        />
-      )}
+        {/* Modal QR Code Sync */}
+        {isQrSyncOpen && (
+          <LocalSyncModal
+            isOpen={isQrSyncOpen}
+            onClose={() => setIsQrSyncOpen(false)}
+          />
+        )}
 
-      {/* Top Bar Consolidada do Dashboard */}
-      <div className="today-top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-primary, #6366f1)', background: 'rgba(99,102,241,0.15)', padding: '5px 10px', borderRadius: 99, border: '1px solid rgba(99,102,241,0.25)' }}>
-            Painel Central
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary, #6366f1)" strokeWidth="2" width="18" height="18">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span>{fullDateText}</span>
+        {/* Header Consolidado Único */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-primary, #6366f1)', background: 'rgba(99,102,241,0.15)', padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(99,102,241,0.25)' }}>
+              Painel Central
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary, #6366f1)" strokeWidth="2.2" width="20" height="20">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{fullDateText}</span>
+            </div>
+          </div>
+
+          {/* Quick Metrics Badges no Topo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
+              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{plannedCardsCount}</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>cards ativos</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
+              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{todayEvents.length}</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>eventos hoje</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
+              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{notes.length}</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>notas</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
+              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{projectsCount}</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>projetos</span>
+            </div>
           </div>
         </div>
 
-        {/* Control Segmented de Abas */}
-        <div className="today-tabs-container" style={{ margin: 0 }}>
-          <div className="today-tabs">
-            <button type="button" className={`today-tab ${activeTab === 'geral' ? 'is-active' : ''}`} onClick={() => setActiveTab('geral')}>
-              Visão Geral
-            </button>
-            <button type="button" className={`today-tab ${activeTab === 'navegacao' ? 'is-active' : ''}`} onClick={() => setActiveTab('navegacao')}>
-              Navegação Rápida
-            </button>
-            <button type="button" className={`today-tab ${activeTab === 'resumos' ? 'is-active' : ''}`} onClick={() => setActiveTab('resumos')}>
-              Resumos & Sistema
-            </button>
+        {/* ── SEÇÃO 1: HUBS DE NAVEGAÇÃO & ACESSO DIRETO (TUDO NA TELA PRINCIPAL) ── */}
+        <section className="today-hub-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-text-muted)' }}>
+              Áreas do Sistema & Hubs
+            </h2>
           </div>
-        </div>
-      </div>
-
-      {activeTab === 'navegacao' && (
-        <section className="today-hub-section">
-          <div className="today-hubs-grid">
+          <div className="today-hubs-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
             {hubCards.map(hub => (
               <HubGroupCard key={hub.id} hub={hub} icons={HUB_VIEW_ICONS} onNavigate={onNavigate} />
             ))}
           </div>
         </section>
-      )}
 
-      {(activeTab === 'geral' || activeTab === 'resumos') && (
-        <section className="today-reports-section">
-          <div className="today-report-grid">
-            {activeTab === 'geral' && (
-              <>
-                <AgendaCard todayEvents={todayEvents} onGoToCalendarDate={onGoToCalendarDate} onNavigate={onNavigate} />
-                <FocusCard allTodayCards={allTodayCards} onGoToPlannerCard={onGoToPlannerCard} onNavigate={onNavigate} />
-                <ProjectsSummaryCard projectsCount={projectsCount} onNavigate={onNavigate} />
-                <WeekOverviewCard weeklyOverview={weeklyOverview} weekTotalItems={weekTotalItems} weekEventCount={weekEventCount} weekCardsCount={weekCardsCount} />
-              </>
-            )}
-
-            {activeTab === 'resumos' && (
-              <>
-                <SystemSummaryCard
-                  title="Operação & Projetos"
-                  metrics={[
-                    { label: 'Contatos CRM', value: crmContactsCount },
-                    { label: 'Projetos & Relatórios', value: projectsCount },
-                    { label: 'Cards de Tarefas', value: cards.length },
-                  ]}
-                />
-                <SystemSummaryCard
-                  title="Conhecimento & Foco"
-                  metrics={[
-                    { label: 'Notas', value: notes.length },
-                    { label: 'Playbooks', value: playbooksCount },
-                    { label: 'Metas de foco', value: study.goals.length },
-                    { label: 'Sessões concluídas', value: study.sessions.length }
-                  ]}
-                />
-                <SystemSummaryCard
-                  title="Ferramentas e Design"
-                  metrics={[
-                    { label: 'Categorias de clipboard', value: clipboardCategoriesCount },
-                    { label: 'Itens de clipboard', value: clipboardItemsCount },
-                    { label: 'Paletas de cores', value: colorPalettesCount }
-                  ]}
-                />
-                <SystemSummaryCard
-                  title="Sistema"
-                  metrics={[
-                    { label: 'Status de sync', value: SYNC_STATUS_LABELS[syncStatus] },
-                    { label: 'Último sync', value: lastSyncLabel },
-                    { label: 'Modo atual', value: userLoggedIn ? 'Conta conectada' : 'Local' }
-                  ]}
-                  action={{ label: 'Abrir sistema', onClick: () => onNavigate('settings') }}
-                />
-              </>
-            )}
+        {/* ── SEÇÃO 2: AGENDA, FOCO E PROJETOS DIÁRIOS ── */}
+        <section className="today-reports-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-text-muted)' }}>
+              Rotina & Foco de Hoje
+            </h2>
+          </div>
+          <div className="today-report-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
+            <AgendaCard todayEvents={todayEvents} onGoToCalendarDate={onGoToCalendarDate} onNavigate={onNavigate} />
+            <FocusCard allTodayCards={allTodayCards} onGoToPlannerCard={onGoToPlannerCard} onNavigate={onNavigate} />
+            <ProjectsSummaryCard projectsCount={projectsCount} onNavigate={onNavigate} />
           </div>
         </section>
-      )}
-      <LocalSyncModal isOpen={isQrSyncOpen} onClose={() => setIsQrSyncOpen(false)} />
-    </div>
+
+        {/* ── SEÇÃO 3: VISÃO DA SEMANA INTEGRADA ── */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <WeekOverviewCard
+            weeklyOverview={weeklyOverview}
+            weekTotalItems={weekTotalItems}
+            weekEventCount={weekEventCount}
+            weekCardsCount={weekCardsCount}
+          />
+        </section>
+      </div>
     </div>
   )
 }

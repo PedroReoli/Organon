@@ -11,6 +11,9 @@ interface Props {
   onOpenQuickSearch: () => void
   onOpenSettings?: () => void
   onOpenSyncModal?: () => void
+  onOpenVoice?: () => void
+  onToggleChat?: () => void
+  isChatOpen?: boolean
   lastSyncAt?: string
   syncStatus?: string
 }
@@ -23,6 +26,9 @@ export const TopNavbarShell: React.FC<Props> = ({
   onOpenQuickSearch,
   onOpenSettings,
   onOpenSyncModal,
+  onOpenVoice,
+  onToggleChat,
+  isChatOpen = false,
   lastSyncAt,
   syncStatus = 'synced',
 }) => {
@@ -128,8 +134,62 @@ export const TopNavbarShell: React.FC<Props> = ({
         </button>
       </div>
 
-      {/* Canto Direito: WiFi Sync Status, Notificações e Configurações */}
+      {/* Canto Direito: Voz, Chat IA, WiFi Sync e Configurações */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {onOpenVoice && (
+          <button
+            onClick={onOpenVoice}
+            title="Ditado de Voz / Super Whisper (Ctrl+Shift+V)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              padding: '5px 11px',
+              borderRadius: '10px',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-background)',
+              color: 'var(--color-text)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
+            <span>Voz</span>
+          </button>
+        )}
+
+        {onToggleChat && (
+          <button
+            onClick={onToggleChat}
+            title="Assistente IA Organon"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              padding: '5px 12px',
+              borderRadius: '10px',
+              border: 'none',
+              background: isChatOpen ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))',
+              color: isChatOpen ? '#ffffff' : 'var(--color-primary)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>IA</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenSyncModal}
           title={lastSyncAt ? `Última sincronização: ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Sincronização ativa'}
@@ -138,8 +198,8 @@ export const TopNavbarShell: React.FC<Props> = ({
             alignItems: 'center',
             gap: '6px',
             fontSize: '11px',
-            padding: '4px 10px',
-            borderRadius: '12px',
+            padding: '5px 10px',
+            borderRadius: '10px',
             border: '1px solid var(--color-border)',
             background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
             color: 'var(--color-primary)',
@@ -166,13 +226,14 @@ export const TopNavbarShell: React.FC<Props> = ({
               color: 'var(--color-text-muted)',
               cursor: 'pointer',
               padding: '6px',
-              borderRadius: '6px',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              transition: 'background 0.15s ease',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
