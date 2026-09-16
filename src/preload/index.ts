@@ -350,6 +350,13 @@ const electronAPI = {
 
   // Screen Share Stealth Protection
   setContentProtection: (enabled: boolean) => ipcRenderer.invoke('window:setContentProtection', enabled),
+
+  // Planning CLI Sync
+  onPlanningSync: (cb: () => void) => {
+    const listener = () => cb()
+    ipcRenderer.on('planning:sync-cli', listener)
+    return () => ipcRenderer.removeListener('planning:sync-cli', listener)
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

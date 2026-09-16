@@ -19,6 +19,26 @@ import type { Canvas, Store, ThemeName } from './types'
 import { getMainWindow, openDirectoryPicker, openFolderPicker } from './window'
 
 export const registerCoreIpcHandlers = (): void => {
+  // Start CLI Watcher for planning sync
+  const startPlanningCliWatcher = () => {
+    try {
+      const dataDir = getDataPath()
+      const syncFlag = path.join(dataDir, 'store', '.cli-sync-flag')
+      if (fs.existsSync(path.dirname(syncFlag))) {
+        fs.watch(path.dirname(syncFlag), (eventType, filename) => {
+          if (filename === '.cli-sync-flag') {
+             getMainWindow()?.webContents.send('planning:sync-cli')
+          }
+        })
+      }
+    } catch (e) {
+      console.error("Could not start CLI watcher", e)
+    }
+  }
+
+  // Start the watcher on boot
+  setTimeout(startPlanningCliWatcher, 2000)
+
   ipcMain.handle('window:setContentProtection', (_event, enabled: boolean) => {
     const win = getMainWindow()
     if (win && !win.isDestroyed()) {

@@ -137,6 +137,7 @@ export const getDefaultStore = (): Store => ({
   crmTags: [],
   pendingDeletes: [],
   canvases: [],
+  projectSprints: [],
   study: { ...DEFAULT_STUDY_STATE },
   settings: {
     themeName: 'dark-default',
@@ -277,6 +278,7 @@ export const normalizeStore = (input: Partial<Store> | null): Store => {
     crmTags: Array.isArray(input.crmTags) ? input.crmTags : base.crmTags,
     pendingDeletes: Array.isArray(input.pendingDeletes) ? input.pendingDeletes : [],
     canvases: Array.isArray(input.canvases) ? input.canvases : base.canvases,
+    projectSprints: Array.isArray(input.projectSprints) ? input.projectSprints : base.projectSprints,
     lastSyncAt: (input as Partial<Store>).lastSyncAt,
     lastSyncError: (input as Partial<Store>).lastSyncError ?? null,
     storeUpdatedAt: (input as Partial<Store>).storeUpdatedAt,

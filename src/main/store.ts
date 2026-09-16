@@ -22,7 +22,7 @@ export { DEFAULT_STUDY_STATE, getDefaultStore, normalizeStore, normalizeStudySta
 
 export const STORE_SECTIONS: Array<{ fileName: string; keys: Array<keyof Store> }> = [
   { fileName: 'meta.json', keys: ['version'] },
-  { fileName: 'planning.json', keys: ['cards'] },
+  { fileName: 'planning.json', keys: ['cards', 'projectSprints'] },
   { fileName: 'calendar.json', keys: ['calendarEvents'] },
   { fileName: 'shortcuts.json', keys: ['shortcutFolders', 'shortcuts'] },
   { fileName: 'projects.json', keys: ['projects', 'registeredIDEs'] },

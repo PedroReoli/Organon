@@ -21,6 +21,7 @@ import { HubEstudos }      from './DashboardPage/hubs/HubEstudos'
 import { HubTrabalho }     from './DashboardPage/hubs/HubTrabalho'
 import { HubFerramentas }  from './DashboardPage/hubs/HubFerramentas'
 import { HubSistema }      from './DashboardPage/hubs/HubSistema'
+import { PlannerPage }     from './PlannerPage'
 import { TopNavbarShell } from '../components/layout/TopNavbarShell'
 import { GlobalShellLayout } from '../components/layout/GlobalShellLayout'
 import { useWakeWordListener } from '../hooks/useWakeWordListener'
@@ -1088,41 +1089,7 @@ export const App = () => {
           {activeView !== 'today' && (
             <div className="app-view-content app-view-content-enter" style={activeZoom !== 1 ? { zoom: activeZoom } : undefined}>
                 {(activeView === 'agenda' || activeView === 'planner' || activeView === 'calendar') && (
-                  <HubPlanejamento
-                    activeView={activeView}
-                    cards={cards}
-                    calendarEvents={calendarEvents}
-                    projects={projects}
-                    reduceModeSignal={reduceModeSignal}
-                    getCardsForLocation={getCardsForLocation}
-                    onAddCard={addCard}
-                    onAddCardWithDate={addCardWithDate}
-                    onEditCard={editCard}
-                    onRemoveCard={removeCard}
-                    onMoveCard={moveCardToCell}
-                    onReorderCard={reorderInCell}
-                    onEditEvent={updateCalendarEvent}
-                    onRemoveEvent={removeCalendarEvent}
-                    onAddEvent={addCalendarEvent}
-                    calendarCategories={calendarCategories}
-                    onAddCalendarCategory={addCalendarCategory}
-                    onRemoveCalendarCategory={removeCalendarCategory}
-                    openCardId={pendingOpenCardId}
-                    onOpenCardHandled={() => setPendingOpenCardId(null)}
-                    isLoggedIn={userLoggedIn}
-                    pendingCalendarDate={pendingCalendarDate}
-                    onFocusDateHandled={() => setPendingCalendarDate(null)}
-                    sprintCards={sprintCards}
-                    sprintColumnSections={sprintColumnSections}
-                    sprintMetadata={sprintMetadata}
-                    onAddSprintCard={addSprintCard}
-                    onEditSprintCard={editSprintCard}
-                    onRemoveSprintCard={removeSprintCard}
-                    onMoveSprintCard={moveSprintCard}
-                    onAddSprintColumnSection={addSprintColumnSection}
-                    onRemoveSprintColumnSection={removeSprintColumnSection}
-                    onUpsertSprintMetadata={upsertSprintMetadata}
-                  />
+                  <PlannerPage />
                 )}
 
                 {(activeView === 'notes' || activeView === 'playbook') && (
