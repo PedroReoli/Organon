@@ -57,7 +57,6 @@ const APP_VIEW_LABELS: Record<AppView, string> = {
   canvas: 'Canvas',
   transcripts: 'Whisper Transcrições',
   audio: 'Áudio & Gravações',
-  crm: 'CRM Contatos',
   projects: 'Projetos & Git',
   clipboard: 'Clipboard Manager',
   colors: 'Paletas de Cores',
@@ -1008,33 +1007,12 @@ export const App = () => {
                   />
                 )}
 
-                {(activeView === 'crm' || activeView === 'projects') && (
+                {activeView === 'projects' && (
                   <HubTrabalho
                     activeView={activeView}
                     reportsDir={settings.reportsDir}
                     dataDir={settings.dataDir}
                     onUpdateReportsDir={(dir: string) => updateSettings({ reportsDir: dir })}
-                    contacts={crmContacts}
-                    interactions={crmInteractions}
-                    tags={crmTags}
-                    notes={notes}
-                    calendarEvents={calendarEvents}
-                    onAddContact={addCRMContact}
-                    onUpdateContact={updateCRMContact}
-                    onRemoveContact={removeCRMContact}
-                    onMoveContactToStage={moveCRMContactToStage}
-                    onReorderContacts={reorderCRMContacts}
-                    onAddInteraction={addCRMInteraction}
-                    onRemoveInteraction={removeCRMInteraction}
-                    onAddTag={addCRMTag}
-                    onRemoveTag={removeCRMTag}
-                    onAddLink={addCRMContactLink}
-                    onRemoveLink={removeCRMContactLink}
-                    snapshots={crmSnapshots}
-                    onUpsertSnapshot={upsertCRMSnapshot}
-                    onAddEvent={addCalendarEvent}
-                    onMigrateCRMStages={migrateCRMContactStages}
-                    projects={projects}
                   />
                 )}
 
@@ -1144,7 +1122,6 @@ export const App = () => {
                     projects={projects}
                     meetings={meetings}
                     apps={apps}
-                    crmContacts={crmContacts}
                     colorPalettes={colorPalettes}
                   />
                 )}

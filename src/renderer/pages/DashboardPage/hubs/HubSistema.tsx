@@ -13,7 +13,6 @@ type HubSistemaProps = {
   syncStatus: SyncStatus
   syncError: string | null
   lastSyncAt: string | null | undefined
-  crmContacts?: { length: number }
   colorPalettes?: { length: number }
 } & Omit<SettingsProps, 'isSyncing' | 'storeSummary' | 'syncStatus' | 'syncError'>
   & HistoryProps
@@ -32,7 +31,7 @@ export const HubSistema = ({
   // history + summary data
   notes, cards, events, projects, meetings, apps,
   lastSyncAt,
-  crmContacts, colorPalettes,
+  colorPalettes,
 }: HubSistemaProps) => {
   const storeSummary = useMemo(() => ({
     lastSyncAt: lastSyncAt ?? undefined,
@@ -42,14 +41,13 @@ export const HubSistema = ({
       { label: 'Eventos',      n: events?.length       ?? 0 },
       { label: 'Projetos',     n: projects?.length     ?? 0 },
       { label: 'Reuniões',     n: meetings?.length     ?? 0 },
-      { label: 'Contatos CRM', n: crmContacts?.length  ?? 0 },
       { label: 'Paletas',      n: colorPalettes?.length ?? 0 },
     ],
     recentNotes: [...(notes ?? [])]
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, 5)
       .map(n => ({ id: n.id, title: n.title, updatedAt: n.updatedAt })),
-  }), [lastSyncAt, notes, cards, events, projects, meetings, crmContacts, colorPalettes])
+  }), [lastSyncAt, notes, cards, events, projects, meetings, colorPalettes])
 
 
   if (activeView === 'settings') {

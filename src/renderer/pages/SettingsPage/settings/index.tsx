@@ -14,7 +14,6 @@ import { PlannerSection }        from './sections/PlannerSection'
 import { FinancialSection }      from './sections/FinancialSection'
 import { NotesSection }          from './sections/NotesSection'
 import { StudySection }          from './sections/StudySection'
-import { CrmSection }            from './sections/CrmSection'
 import { DebugSection }          from './sections/DebugSection'
 
 export const SettingsView = (props: SettingsViewProps) => {
@@ -129,13 +128,6 @@ export const SettingsView = (props: SettingsViewProps) => {
           defaultPresetName={props.studyConfig?.defaultPresetName ?? 'Classic'}
           muteSound={props.studyConfig?.muteSound ?? false}
           onSave={props.onUpdateStudyConfig ?? (() => {})}
-        />
-
-        <CrmSection
-          activeSection={v.activeSection}
-          stages={props.crmConfig?.stages ?? ['Lead', 'Contato', 'Proposta', 'Negociacao', 'Fechado']}
-          priorities={props.crmConfig?.priorities ?? ['Baixa', 'Media', 'Alta', 'Urgente']}
-          onSave={props.onUpdateCrmConfig ?? (() => {})}
         />
 
         <DebugSection

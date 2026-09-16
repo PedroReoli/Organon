@@ -4,7 +4,7 @@ import {
   Calendar,
   FileText,
   FolderKanban,
-  Users,
+  BookOpen,
   Headphones,
   Network,
   CheckSquare,
@@ -38,9 +38,9 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
       icon: <FolderKanban className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
-      label: 'CRM',
-      view: 'crm',
-      icon: <Users className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      label: 'Biblioteca',
+      view: 'library',
+      icon: <BookOpen className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Modo Foco',

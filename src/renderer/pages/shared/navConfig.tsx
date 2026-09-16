@@ -21,7 +21,6 @@ export const NAV_ICON_OPTIONS: NavIconOption[] = [
   { id: 'agenda', label: 'Agenda' },
   { id: 'planner', label: 'Planejamento' },
   { id: 'calendar', label: 'Calendario' },
-  { id: 'crm', label: 'CRM' },
   { id: 'playbook', label: 'Playbook' },
   { id: 'projects', label: 'Projetos' },
   { id: 'colors', label: 'Cores' },
