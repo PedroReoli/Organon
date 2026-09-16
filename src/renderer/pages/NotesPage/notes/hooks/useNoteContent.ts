@@ -62,10 +62,46 @@ export function useNoteContent({
 
     if (isElectron() && selectedNote.mdPath) {
       window.electronAPI.readNote(selectedNote.mdPath)
-        .then(c => { if (currentNoteIdRef.current === selectedNote.id) { setNoteContent(c); setIsNoteLoading(false) } })
-        .catch(() => { if (currentNoteIdRef.current === selectedNote.id) { setNoteContent(''); setIsNoteLoading(false) } })
+        .then(c => {
+          if (currentNoteIdRef.current === selectedNote.id) {
+            // Se o conteúdo do disco estiver vazio, verifica se há backup local mais recente
+            if (!c && typeof localStorage !== 'undefined') {
+              const backup = localStorage.getItem(`organon:note-backup:${selectedNote.id}`)
+              if (backup) {
+                setNoteContent(backup)
+                setIsNoteLoading(false)
+                return
+              }
+            }
+            setNoteContent(c)
+            setIsNoteLoading(false)
+          }
+        })
+        .catch(() => {
+          if (currentNoteIdRef.current === selectedNote.id) {
+            if (typeof localStorage !== 'undefined') {
+              const backup = localStorage.getItem(`organon:note-backup:${selectedNote.id}`)
+              if (backup) {
+                setNoteContent(backup)
+                setIsNoteLoading(false)
+                return
+              }
+            }
+            setNoteContent('')
+            setIsNoteLoading(false)
+          }
+        })
     } else {
-      setNoteContent(''); setIsNoteLoading(false)
+      if (typeof localStorage !== 'undefined') {
+        const backup = localStorage.getItem(`organon:note-backup:${selectedNote.id}`)
+        if (backup) {
+          setNoteContent(backup)
+          setIsNoteLoading(false)
+          return
+        }
+      }
+      setNoteContent('')
+      setIsNoteLoading(false)
     }
   }, [selectedNoteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -101,14 +137,30 @@ export function useNoteContent({
 
   const handleContentChange = useCallback((noteId: string, html: string) => {
     if (currentNoteIdRef.current !== noteId) return
+    
+    // Backup instantâneo em memória/localStorage para prevenir perda por fechamento súbito
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`organon:note-backup:${noteId}`, html)
+      } catch {
+        // quota limit fallback
+      }
+    }
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       if (currentNoteIdRef.current !== noteId) return
       const note = notes.find(n => n.id === noteId)
       if (!note || note.isLocked) return
-      if (isElectron() && note.mdPath) window.electronAPI.writeNote(note.mdPath, html).catch(() => {})
+      if (isElectron() && note.mdPath) {
+        window.electronAPI.writeNote(note.mdPath, html)
+          .then(() => {
+            // Sucesso na escrita no disco
+          })
+          .catch(() => {})
+      }
       onUpdateNote(note.id, { title: note.title })
-    }, 600)
+    }, 450)
   }, [notes, onUpdateNote])
 
   const handleTitleBlur = useCallback(() => {

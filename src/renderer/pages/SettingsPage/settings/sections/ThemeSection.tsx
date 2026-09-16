@@ -19,8 +19,8 @@ export const ThemeSection = ({
   return (
     <section className="settings-section">
       <div className="settings-section-header">
-        <h3>Aparencia</h3>
-        <p className="settings-hint">Selecione o tema visual do aplicativo.</p>
+        <h3>Aparência & Temas</h3>
+        <p className="settings-hint">Selecione o tema visual e a paleta do aplicativo.</p>
       </div>
 
       <div className="theme-grid">

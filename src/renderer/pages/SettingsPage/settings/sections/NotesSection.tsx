@@ -44,15 +44,15 @@ export const NotesSection = ({
   return (
     <section className="settings-section">
       <div className="settings-section-header">
-        <h3>Notas</h3>
-        <p className="settings-hint">Lixeira, daily notes e busca.</p>
+        <h3>Notas & Conhecimento</h3>
+        <p className="settings-hint">Lixeira, notas diárias (Daily Notes) e retenção.</p>
       </div>
 
       <div className="settings-grid">
         <div className="settings-field">
-          <label className="settings-field-label">Retencao da lixeira (dias)</label>
+          <label className="settings-field-label">Retenção da lixeira (dias)</label>
           <span className="settings-field-help">
-            Itens na lixeira sao removidos permanentemente apos este periodo. 0 = nunca.
+            Itens na lixeira são removidos permanentemente após este período. 0 = nunca.
           </span>
           <input
             className="settings-input"
@@ -64,21 +64,21 @@ export const NotesSection = ({
         </div>
 
         <div className="settings-field">
-          <label className="settings-field-label">Daily notes</label>
+          <label className="settings-field-label">Notas Diárias (Daily Notes)</label>
           <label className="settings-checkbox-label">
             <input
               type="checkbox"
               checked={dailyEnabled}
               onChange={e => setDailyEnabled(e.target.checked)}
             />
-            Criar nota diaria automaticamente
+            Criar nota diária automaticamente ao abrir o app
           </label>
         </div>
 
         {dailyEnabled && (
           <>
             <div className="settings-field">
-              <label className="settings-field-label">Pasta destino</label>
+              <label className="settings-field-label">Pasta Destino</label>
               <input
                 className="settings-input"
                 type="text"
@@ -89,9 +89,9 @@ export const NotesSection = ({
             </div>
 
             <div className="settings-field">
-              <label className="settings-field-label">Formato do titulo</label>
+              <label className="settings-field-label">Formato do Título</label>
               <span className="settings-field-help">
-                Variaveis: {'{{date}}'}, {'{{day}}'}, {'{{month}}'}, {'{{year}}'}
+                Variáveis: {'{{date}}'}, {'{{day}}'}, {'{{month}}'}, {'{{year}}'}
               </span>
               <input
                 className="settings-input"
@@ -107,7 +107,7 @@ export const NotesSection = ({
 
       <div className="settings-section-actions">
         <button className="settings-btn-primary" onClick={handleSave}>
-          {saved ? 'Salvo' : 'Salvar'}
+          {saved ? 'Salvo!' : 'Salvar Alterações'}
         </button>
       </div>
     </section>

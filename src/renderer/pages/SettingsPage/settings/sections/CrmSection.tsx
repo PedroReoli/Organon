@@ -60,14 +60,14 @@ export const CrmSection = ({
   return (
     <section className="settings-section">
       <div className="settings-section-header">
-        <h3>CRM</h3>
-        <p className="settings-hint">Stages do pipeline e prioridades.</p>
+        <h3>CRM & Pipeline</h3>
+        <p className="settings-hint">Etapas do pipeline e níveis de prioridade.</p>
       </div>
 
       <div className="settings-module-cols">
         {/* Stages */}
         <div className="settings-module-col">
-          <div className="settings-field-label">Stages do pipeline</div>
+          <div className="settings-field-label">Etapas do Pipeline</div>
           <span className="settings-field-help">Use as setas para reordenar.</span>
 
           <div className="settings-list">
@@ -100,7 +100,7 @@ export const CrmSection = ({
               className="settings-input"
               value={newStage}
               onChange={e => setNewStage(e.target.value)}
-              placeholder="Novo stage..."
+              placeholder="Nova etapa..."
               onKeyDown={e => e.key === 'Enter' && addStage()}
             />
             <button className="settings-btn-primary" onClick={addStage}>Adicionar</button>
@@ -138,7 +138,7 @@ export const CrmSection = ({
 
       <div className="settings-section-actions">
         <button className="settings-btn-primary" onClick={handleSave}>
-          {saved ? 'Salvo' : 'Salvar'}
+          {saved ? 'Salvo!' : 'Salvar Alterações'}
         </button>
       </div>
 
@@ -146,9 +146,9 @@ export const CrmSection = ({
       {confirmRemove && (
         <div className="settings-confirm-overlay" onClick={() => setConfirmRemove(null)}>
           <div className="settings-confirm-modal" onClick={e => e.stopPropagation()}>
-            <div className="settings-confirm-title">Confirmar remocao</div>
+            <div className="settings-confirm-title">Confirmar Remoção</div>
             <p className="settings-confirm-text">
-              Remover {confirmRemove.type === 'stage' ? 'o stage' : 'a prioridade'}{' '}
+              Remover {confirmRemove.type === 'stage' ? 'a etapa' : 'a prioridade'}{' '}
               <strong>{confirmRemove.value}</strong>?
             </p>
             <div className="settings-confirm-actions">

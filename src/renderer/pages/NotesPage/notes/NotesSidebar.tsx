@@ -4,6 +4,19 @@ import { ChevronIcon, FolderIcon, HomeFolderIcon, PageIcon, SubFolderIcon } from
 import { folderTreeKey, noteTreeKey } from './utils'
 import type { TreeItemKey, TreeItemKind } from '@types'
 
+const EMOJI_REGEX = /^(\p{Extended_Pictographic}|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83E[\uDD00-\uDDFF]|\u2600-\u26FF|\u2700-\u27BF)\s*/u
+
+function extractEmoji(title: string): { emoji: string | null; cleanTitle: string } {
+  if (!title) return { emoji: null, cleanTitle: '' }
+  const match = title.match(EMOJI_REGEX)
+  if (match) {
+    const emoji = match[0].trim()
+    const cleanTitle = title.slice(match[0].length).trim()
+    return { emoji, cleanTitle: cleanTitle || title }
+  }
+  return { emoji: null, cleanTitle: title }
+}
+
 interface NotesSidebarProps {
   notes:   Note[]
   folders: NoteFolder[]
@@ -13,6 +26,7 @@ interface NotesSidebarProps {
   showTrash?:  boolean
   onOpenTrash?: () => void
   trashCount?:  number
+  onOpenTreeManager?: () => void
   onRequestDeleteNote?: (id: string) => void
   onDuplicateNote?: (id: string) => void
   // Selection
@@ -138,7 +152,7 @@ const SectionHeader = ({
 
 export const NotesSidebar = (props: NotesSidebarProps) => {
   const {
-    notes: _notes, activeView, onGoHome, showTrash = false, onOpenTrash, trashCount = 0, onRequestDeleteNote, onDuplicateNote,
+    notes: _notes, activeView, onGoHome, showTrash = false, onOpenTrash, trashCount = 0, onOpenTreeManager, onRequestDeleteNote, onDuplicateNote,
     selectedNoteId, selectedFolderId, selectedTreeItems,
     expandedFolders, expandedNotes, sidebarOpen, setSidebarOpen,
     searchQuery, setSearchQuery, setSearchVisible, searchResults, searchInputRef,
@@ -190,6 +204,7 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
     const treeKey     = noteTreeKey(note.id)
     const isSelected  = selectedTreeItems.has(treeKey)
     const isDropTarget = dropTargetId === note.id
+    const { emoji, cleanTitle } = extractEmoji(note.title)
 
     return (
       <div key={note.id} className="notes-tree-group">
@@ -217,8 +232,12 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
           <button className={`notes-tree-chevron${children.length > 0 ? ' visible' : ''}${isExpanded ? ' open' : ''}`} onClick={e => children.length > 0 ? toggleNote(note.id, e) : undefined} tabIndex={-1}>
             <ChevronIcon open={isExpanded} />
           </button>
-          <PageIcon />
-          <span className="notes-tree-label">{(note.title && note.title.trim()) || 'Sem titulo'}</span>
+          {emoji ? (
+            <span style={{ fontSize: '13px', marginRight: '2px', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{emoji}</span>
+          ) : (
+            <PageIcon />
+          )}
+          <span className="notes-tree-label">{(cleanTitle && cleanTitle.trim()) || (note.title && note.title.trim()) || 'Sem título'}</span>
           <span className="notes-tree-row-actions">
             {onDuplicateNote && (
               <button className="notes-tree-action-btn" title="Duplicar nota" disabled={note.isLocked} onClick={e => { e.stopPropagation(); onDuplicateNote(note.id) }}>
@@ -254,6 +273,7 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
     const isActive      = selectedFolderId === folder.id
     const isDropTarget  = dropTargetId === folder.id
     const noteCount     = countNotesInFolder(folder.id)
+    const { emoji, cleanTitle } = extractEmoji(folder.name)
 
     const isHub = depth === 0 || !folder.parentId || folder.isHome
     const isSub = depth >= 2
@@ -296,7 +316,11 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
           <button className="notes-tree-chevron visible" onClick={e => { e.stopPropagation(); toggleFolder(folder.id) }} tabIndex={-1} style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
             <ChevronIcon open={isExpanded} />
           </button>
-          {isHub ? <HomeFolderIcon /> : isSub ? <SubFolderIcon open={isExpanded} /> : <FolderIcon open={isExpanded} />}
+          {emoji ? (
+            <span style={{ fontSize: '13px', marginRight: '2px', display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{emoji}</span>
+          ) : (
+            isHub ? <HomeFolderIcon /> : isSub ? <SubFolderIcon open={isExpanded} /> : <FolderIcon open={isExpanded} />
+          )}
 
           {renamingFolderId === folder.id ? (
             <input
@@ -312,7 +336,7 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
             />
           ) : (
             <span className="notes-tree-label">
-              {folder.name}
+              {cleanTitle || folder.name}
               {isHub && <span className="notes-tree-hub-badge">Hub</span>}
               {isSub && <span className="notes-tree-sub-badge" style={{ fontSize: '9px', background: 'rgba(168,85,247,0.15)', color: '#a855f7', padding: '1px 4px', borderRadius: '3px', marginLeft: '4px', fontWeight: 700 }}>Sub</span>}
             </span>
@@ -552,8 +576,26 @@ export const NotesSidebar = (props: NotesSidebarProps) => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15" style={{ flexShrink: 0 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>
             Pasta
           </button>
+          {onOpenTreeManager && (
+            <button type="button" className="notes-sidebar-footer-btn" onClick={onOpenTreeManager} title="Central de Estrutura & Emojis">
+              <span>🌳</span>
+              Estrutura
+            </button>
+          )}
+          {onOpenTrash && (
+            <button 
+              type="button" 
+              className={`notes-sidebar-footer-btn ${showTrash ? 'is-active' : ''}`} 
+              onClick={onOpenTrash} 
+              title="Abrir lixeira"
+              style={{ color: trashCount > 0 ? '#ef4444' : undefined }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" style={{ flexShrink: 0 }}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+              {trashCount > 0 ? `(${trashCount})` : 'Lixo'}
+            </button>
+          )}
           <button type="button" className="notes-sidebar-footer-btn" onClick={(e) => { e.preventDefault(); markdownImportRef.current?.click() }} title="Importar arquivo markdown">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
             Importar
           </button>
         </div>

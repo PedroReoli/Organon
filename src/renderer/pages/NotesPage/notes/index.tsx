@@ -221,6 +221,7 @@ export const NotesView = ({
         showTrash={showTrash}
         onOpenTrash={() => setShowTrash(true)}
         trashCount={trashCount}
+        onOpenTreeManager={() => setIsTreeManagerOpen(true)}
         onRequestDeleteNote={tree.requestDeleteNote}
         onDuplicateNote={tree.handleDuplicateNote}
         handleAddNote={tree.handleAddNote}

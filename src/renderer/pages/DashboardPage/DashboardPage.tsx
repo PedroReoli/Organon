@@ -285,10 +285,10 @@ export const DashboardPage = ({
           />
         )}
 
-        {/* Header Consolidado Único */}
+        {/* Header Consolidado com KPIs Luminosos */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-primary, #6366f1)', background: 'rgba(99,102,241,0.15)', padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(99,102,241,0.25)' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-primary, #6366f1)', background: 'rgba(99,102,241,0.15)', padding: '6px 14px', borderRadius: 99, border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 2px 10px rgba(99,102,241,0.2)' }}>
               Painel Central
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 800, color: 'var(--color-text)', letterSpacing: -0.3 }}>
@@ -301,22 +301,22 @@ export const DashboardPage = ({
           </div>
 
           {/* Quick Metrics Badges no Topo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
-              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{plannedCardsCount}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>cards ativos</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-primary, #818cf8)' }}>{plannedCardsCount}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>cards ativos</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
-              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{todayEvents.length}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>eventos hoje</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#10b981' }}>{todayEvents.length}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>eventos hoje</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
-              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{notes.length}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>notas</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#f59e0b' }}>{notes.length}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>notas</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: 12 }}>
-              <span style={{ fontWeight: 800, color: 'var(--color-primary)' }}>{projectsCount}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>projetos</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', fontSize: 12, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#ec4899' }}>{projectsCount}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>projetos</span>
             </div>
           </div>
         </div>
@@ -324,11 +324,11 @@ export const DashboardPage = ({
         {/* ── SEÇÃO 1: HUBS DE NAVEGAÇÃO & ACESSO DIRETO (TUDO NA TELA PRINCIPAL) ── */}
         <section className="today-hub-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-text-muted)' }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
               Áreas do Sistema & Hubs
             </h2>
           </div>
-          <div className="today-hubs-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
+          <div className="today-hubs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, alignItems: 'stretch' }}>
             {hubCards.map(hub => (
               <HubGroupCard key={hub.id} hub={hub} icons={HUB_VIEW_ICONS} onNavigate={onNavigate} />
             ))}
@@ -338,11 +338,11 @@ export const DashboardPage = ({
         {/* ── SEÇÃO 2: AGENDA, FOCO E PROJETOS DIÁRIOS ── */}
         <section className="today-reports-section" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--color-text-muted)' }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
               Rotina & Foco de Hoje
             </h2>
           </div>
-          <div className="today-report-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
+          <div className="today-report-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'stretch' }}>
             <AgendaCard todayEvents={todayEvents} onGoToCalendarDate={onGoToCalendarDate} onNavigate={onNavigate} />
             <FocusCard allTodayCards={allTodayCards} onGoToPlannerCard={onGoToPlannerCard} onNavigate={onNavigate} />
             <ProjectsSummaryCard projectsCount={projectsCount} onNavigate={onNavigate} />
