@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { isElectron } from '@utils'
-import { FolderPlus, FolderOpen, Trash2, Plus, Folder, Check, AlertCircle, RefreshCw } from 'lucide-react'
+import { FolderPlus, FolderOpen, Trash2, Plus, Folder, Check } from 'lucide-react'
 
 function sep(dir: string): string {
   return dir.includes('/') && !dir.includes('\\') ? '/' : '\\'

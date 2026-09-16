@@ -17,8 +17,6 @@ function fmtDaysAgo(d: number): string {
 
 export const RepoCard: React.FC<RepoCardProps> = ({ repo, onClick }) => {
   const isStopped = repo.status === 'parado'
-  const maxVelocity = 2.0
-  const velocityColor = repo.velocity > 1.5 ? 'var(--accent-green)' : repo.velocity < 0.5 ? 'var(--accent-red)' : 'var(--text-secondary)'
 
   return (
     <div className="projects-repo-card" onClick={onClick} style={{ cursor: 'pointer' }}>
@@ -54,7 +52,7 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, onClick }) => {
         <div style={{ display: 'flex', gap: '2px', height: '16px', alignItems: 'flex-end', marginTop: '8px' }}>
           {(() => {
             const max = Math.max(1, ...repo.commitsByWeek)
-            return repo.commitsByWeek.slice(0, 12).reverse().map((v, i) => (
+            return repo.commitsByWeek.slice(0, 12).reverse().map((v: any, i: number) => (
               <div
                 key={i}
                 style={{

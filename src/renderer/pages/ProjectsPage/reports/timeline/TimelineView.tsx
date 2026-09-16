@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import type { WeekReport } from '@types'
 
 interface TimelineViewProps {
@@ -225,7 +226,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
                   <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{fmtDate(selectedDay)}</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '12px' }}>{selectedDayCommits.length} commits</span>
                 </div>
-                <button type="button" className="projects-btn" style={{ padding: '4px 8px', border: 'none', background: 'transparent' }} onClick={() => setSelectedDay(null)}>✕</button>
+                <button type="button" className="projects-btn" style={{ padding: '4px 8px', border: 'none', background: 'transparent' }} onClick={() => setSelectedDay(null)} aria-label="Fechar"><X size={14} /></button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
                 {selectedDayCommits.sort((a, b) => (b.time ?? '').localeCompare(a.time ?? '')).map((c, i) => (

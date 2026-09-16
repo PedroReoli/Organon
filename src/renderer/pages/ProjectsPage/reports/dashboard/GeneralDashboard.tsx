@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import type { GeneralReport, WeekReport } from '@types'
 import { StatsBar } from '../StatsBar'
 import { CompactLineChart } from '../CompactLineChart'
@@ -38,18 +39,18 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
   const [fixingHash, setFixingHash] = useState<string | null>(null)
 
   const activeRepos = useMemo(() =>
-    general.repos.filter(r => r.status !== 'parado').sort((a, b) => b.weeklyAverage - a.weeklyAverage),
+    (general.repos ?? []).filter((r: any) => r.status !== 'parado').sort((a: any, b: any) => (b.weeklyAverage || 0) - (a.weeklyAverage || 0)),
     [general.repos]
   )
   
   const stoppedRepos = useMemo(() =>
-    general.repos.filter(r => r.status === 'parado').sort((a, b) => b.daysAgo - a.daysAgo),
+    (general.repos ?? []).filter((r: any) => r.status === 'parado').sort((a: any, b: any) => (b.daysAgo || 0) - (a.daysAgo || 0)),
     [general.repos]
   )
 
   const allBadCommits = useMemo(() => {
     const list: { repoName: string; repoPath: string; hash: string; msg: string; date: string; suggestedMsg: string }[] = []
-    for (const repo of general.repos) {
+    for (const repo of (general.repos ?? [])) {
       if (repo.badCommits) {
         for (const b of repo.badCommits) {
           list.push({
@@ -140,9 +141,9 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
 
   // Dados para Top Projetos
   const topProjectsData = useMemo(() =>
-    activeRepos.slice(0, 5).map(r => ({
+    activeRepos.slice(0, 5).map((r: any) => ({
       repo: r.name,
-      commits: r.weeklyAverage,
+      commits: r.weeklyAverage || 0,
       color: 'var(--color-primary)',
     })),
     [activeRepos]
@@ -151,18 +152,18 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
   // Dados para Gráfico de Pizza (Tipos)
   const pieData = useMemo(() =>
     Object.entries(general.commitTypesTotals ?? {})
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([id, value]) => ({ id, label: id, value, color: TYPE_COLORS[id] ?? '#64748b' })),
+      .filter(([, v]) => Number(v) > 0)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .map(([id, value]) => ({ id, label: id, value: Number(value), color: TYPE_COLORS[id] ?? '#64748b' })),
     [general.commitTypesTotals]
   )
 
   const stats = {
-    totalRepos: general.totalRepos,
+    totalRepos: general.totalRepos || 0,
     activeRepos: activeRepos.length,
     stoppedRepos: stoppedRepos.length,
-    totalCommits: general.totalCommitsAllTime,
-    topStreak: general.repos.length > 0 ? [...general.repos].sort((a, b) => b.streak - a.streak)[0] : null
+    totalCommits: general.totalCommitsAllTime || 0,
+    topStreak: (general.repos && general.repos.length > 0) ? [...general.repos].sort((a: any, b: any) => (b.streak || 0) - (a.streak || 0))[0] : null
   }
 
   const tabOptions = [
@@ -224,8 +225,9 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
         {activeTab === 'badcommits' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
             {allBadCommits.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                ✓ Todos os commits do projeto estão formatados corretamente!
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <CheckCircle2 size={16} style={{ color: 'var(--accent-green)' }} />
+                <span>Todos os commits do projeto estão formatados corretamente!</span>
               </div>
             ) : (
               allBadCommits.map((item, i) => (

@@ -36,7 +36,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({ stats }) => {
         <span className="projects-stat-label">Commits Totais</span>
       </div>
 
-      {stats.topStreak && stats.topStreak.streak > 0 && (
+      {stats.topStreak && typeof stats.topStreak.streak === 'number' && stats.topStreak.streak > 0 && (
         <div className="projects-stat-card stat-yellow">
           <span className="projects-stat-value">{stats.topStreak.streak}d</span>
           <span className="projects-stat-label">Maior Streak ({stats.topStreak.name})</span>

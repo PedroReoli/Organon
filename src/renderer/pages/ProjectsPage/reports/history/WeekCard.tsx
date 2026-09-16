@@ -1,4 +1,5 @@
 import React from 'react'
+import { Trophy } from 'lucide-react'
 import type { WeekReport } from '@types'
 
 interface WeekCardProps {
@@ -26,8 +27,9 @@ export const WeekCard: React.FC<WeekCardProps> = ({ report, onSelect }) => {
         </div>
       </div>
       {topRepo && (
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '4px' }}>
-          🏆 {topRepo.name} ({topRepo.commitCount})
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '4px' }}>
+          <Trophy size={13} style={{ color: 'var(--accent-yellow)' }} />
+          <span>{topRepo.name} ({topRepo.commitCount})</span>
         </div>
       )}
     </button>

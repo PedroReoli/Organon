@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { AlertTriangle, Zap } from 'lucide-react'
 import type { WeekReport, GeneralReport } from '@types'
 
 interface GoalsViewProps {
@@ -13,32 +14,32 @@ interface RepoGoal {
 }
 
 export const GoalsView: React.FC<GoalsViewProps> = ({ reports, general }) => {
-  const [goals, setGoals] = useState<RepoGoal[]>([])
+  const [goals] = useState<RepoGoal[]>([])
   const [globalTarget, setGlobalTarget] = useState(10)
 
   const repoStatus = useMemo(() => {
     if (!reports.length) return []
     const latest = reports[0]
-    const repos = general?.repos ?? latest.repos.map(r => ({
+    const repos = (general?.repos ?? (latest.repos || []).map((r: any) => ({
       group: r.group, name: r.name, status: r.status,
       weeklyAverage: r.commitCount, daysAgo: r.daysAgo,
       streak: 0, velocity: 0, lastCommitMsg: r.lastCommitMsg,
       lastCommitDate: r.lastCommitDate, commitsByWeek: [], totalCommits: r.commitCount,
-    }))
+    }))) as any[]
 
-    return repos.map(r => {
-      const goal = goals.find(g => g.group === r.group && g.name === r.name)
+    return repos.map((r: any) => {
+      const goal = goals.find((g: any) => g.group === r.group && g.name === r.name)
       const target = goal?.weeklyTarget ?? globalTarget
-      const current = latest.repos.find(lr => lr.group === r.group && lr.name === r.name)?.commitCount ?? 0
+      const current = (latest.repos || []).find((lr: any) => lr.group === r.group && lr.name === r.name)?.commitCount ?? 0
       const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
       const status = pct >= 100 ? 'achieved' : pct >= 50 ? 'progress' : 'behind'
       return { group: r.group, name: r.name, current, target, pct, status, daysAgo: r.daysAgo }
-    }).sort((a, b) => b.pct - a.pct)
+    }).sort((a: any, b: any) => b.pct - a.pct)
   }, [reports, general, goals, globalTarget])
 
-  const achieved = repoStatus.filter(r => r.status === 'achieved').length
-  const inProgress = repoStatus.filter(r => r.status === 'progress').length
-  const behind = repoStatus.filter(r => r.status === 'behind').length
+  const achieved = repoStatus.filter((r: any) => r.status === 'achieved').length
+  const inProgress = repoStatus.filter((r: any) => r.status === 'progress').length
+  const behind = repoStatus.filter((r: any) => r.status === 'behind').length
 
   const alerts = useMemo(() => {
     const list: { type: 'danger' | 'warning'; msg: string }[] = []
@@ -93,7 +94,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ reports, general }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {alerts.map((a, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: a.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)', border: `1px solid ${a.type === 'danger' ? 'var(--accent-red)' : 'var(--accent-yellow)'}`, borderRadius: '6px' }}>
-                  <span style={{ fontSize: '16px', color: a.type === 'danger' ? 'var(--accent-red)' : 'var(--accent-yellow)' }}>{a.type === 'danger' ? '⚠' : '⚡'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', color: a.type === 'danger' ? 'var(--accent-red)' : 'var(--accent-yellow)' }}>
+                    {a.type === 'danger' ? <AlertTriangle size={16} /> : <Zap size={16} />}
+                  </span>
                   <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{a.msg}</span>
                 </div>
               ))}
@@ -104,7 +107,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ reports, general }) => {
         <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h2 className="projects-card-title">Progresso por repositório</h2>
           <div className="projects-top-list" style={{ gap: '16px' }}>
-            {repoStatus.map(r => {
+            {repoStatus.map((r: any) => {
               const barColor = r.status === 'achieved' ? 'var(--accent-green)' : r.status === 'progress' ? 'var(--accent-yellow)' : 'var(--accent-red)'
               return (
                 <div key={`${r.group}/${r.name}`} style={{ display: 'grid', gridTemplateColumns: '140px 100px 1fr 60px 80px', gap: '16px', alignItems: 'center' }}>

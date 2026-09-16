@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CheckCircle2, Check, ChevronUp, ChevronDown, Wrench, X } from 'lucide-react'
 import type { WeekReport } from '@types'
 import { isElectron } from '@utils'
 
@@ -18,7 +19,7 @@ interface FixModal {
 type FixState = 'idle' | 'running' | 'ok' | 'error'
 
 export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackageJson }) => {
-  const { repos } = report
+  const repos: any[] = report.repos || []
   const [expandedCommit, setExpandedCommit] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [fixModal, setFixModal] = useState<FixModal | null>(null)
@@ -26,10 +27,10 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackag
   const [fixState, setFixState] = useState<FixState>('idle')
   const [fixError, setFixError] = useState('')
 
-  const badCommits = repos.flatMap(r =>
-    (r.badCommits ?? []).map(b => ({ ...b, repoName: `${r.group}/${r.name}` }))
+  const badCommits = repos.flatMap((r: any) =>
+    (r.badCommits ?? []).map((b: any) => ({ ...b, repoName: `${r.group || ''}/${r.name || ''}` }))
   )
-  const packageRepos = repos.filter(r => r.packageJsonChanged && r.packageJsonDiff)
+  const packageRepos = repos.filter((r: any) => r.packageJsonChanged && r.packageJsonDiff)
 
   // autofit: mais itens = fonte menor
   const count = badCommits.length
@@ -82,7 +83,10 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackag
       </div>
 
       {!hasAlerts && (
-        <span style={{ color: 'var(--accent-green)' }}>✓ Nenhum alerta</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-green)', fontSize: '13px' }}>
+          <CheckCircle2 size={14} />
+          <span>Nenhum alerta</span>
+        </div>
       )}
 
       {badCommits.length > 0 && (
@@ -98,7 +102,7 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackag
                   <code style={{ fontSize: fsSm, color: 'var(--accent-red)', fontFamily: 'monospace' }}>{b.hash.slice(0, 7)}</code>
                   <span style={{ fontSize: fsSm, color: 'var(--text-muted)', whiteSpace: 'nowrap' }} title={b.repoName}>{b.repoName.split('/')[1]}</span>
                   <span style={{ fontSize: fs, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={b.msg}>"{b.msg}"</span>
-                  <span style={{ color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
+                  <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>{isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
                 </button>
                 {isOpen && (
                   <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)' }}>
@@ -111,13 +115,13 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackag
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="button"
                         className="projects-btn"
-                        style={{ padding: '4px 12px', fontSize: '12px', color: copiedKey === key ? 'var(--accent-green)' : 'inherit', borderColor: copiedKey === key ? 'var(--accent-green)' : 'var(--border)' }}
+                        style={{ padding: '4px 12px', fontSize: '12px', color: copiedKey === key ? 'var(--accent-green)' : 'inherit', borderColor: copiedKey === key ? 'var(--accent-green)' : 'var(--border)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         onClick={() => copyText(b.fixCommand, key)}>
-                        {copiedKey === key ? '✓ Copiado' : 'Copiar Comando'}
+                        {copiedKey === key ? <><Check size={13} /> Copiado</> : 'Copiar Comando'}
                       </button>
                       {isElectron() && (
-                        <button type="button" className="projects-btn" style={{ padding: '4px 12px', fontSize: '12px', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
-                          onClick={() => openFixModal(b)}>✎ Auto-Fix</button>
+                        <button type="button" className="projects-btn" style={{ padding: '4px 12px', fontSize: '12px', borderColor: 'var(--accent-red)', color: 'var(--accent-red)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => openFixModal(b)}><Wrench size={13} /> Auto-Fix</button>
                       )}
                     </div>
                   </div>
@@ -134,7 +138,7 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ report, onGoPackag
         <div className="projects-dashboard-card" style={{ width: '100%', maxWidth: '400px', padding: '24px' }} onClick={e => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h3 className="projects-card-title" style={{ margin: 0 }}>Corrigir commit</h3>
-            <button type="button" className="projects-btn" style={{ padding: '4px 8px', border: 'none' }} onClick={() => setFixModal(null)} disabled={fixState === 'running'}>✕</button>
+            <button type="button" className="projects-btn" style={{ padding: '4px 8px', border: 'none', display: 'flex', alignItems: 'center' }} onClick={() => setFixModal(null)} disabled={fixState === 'running'} aria-label="Fechar"><X size={14} /></button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { TrendingUp, TrendingDown, Sparkles, PauseCircle } from 'lucide-react'
 import type { WeekReport } from '@types'
 
 interface CompareViewProps {
@@ -12,8 +13,11 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
     const current = reports[0]
     const previous = reports[1]
 
-    const currentMap = new Map(current.repos.map(r => [`${r.group}/${r.name}`, r]))
-    const previousMap = new Map(previous.repos.map(r => [`${r.group}/${r.name}`, r]))
+    const currentRepos: any[] = current.repos || []
+    const previousRepos: any[] = previous.repos || []
+
+    const currentMap = new Map<string, any>(currentRepos.map((r: any) => [`${r.group || ''}/${r.name || ''}`, r]))
+    const previousMap = new Map<string, any>(previousRepos.map((r: any) => [`${r.group || ''}/${r.name || ''}`, r]))
 
     const accelerated: { key: string; group: string; name: string; current: number; previous: number; diff: number }[] = []
     const decelerated: { key: string; group: string; name: string; current: number; previous: number; diff: number }[] = []
@@ -22,27 +26,34 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
 
     for (const [key, repo] of currentMap) {
       const prev = previousMap.get(key)
+      const repoCommits = repo.commitCount || 0
       if (!prev) {
-        if (repo.commitCount > 0) newRepos.push({ key, group: repo.group, name: repo.name, commits: repo.commitCount })
+        if (repoCommits > 0) newRepos.push({ key, group: repo.group || '', name: repo.name || '', commits: repoCommits })
         continue
       }
-      const diff = repo.commitCount - prev.commitCount
-      if (diff > 0) accelerated.push({ key, group: repo.group, name: repo.name, current: repo.commitCount, previous: prev.commitCount, diff })
-      else if (diff < 0) decelerated.push({ key, group: repo.group, name: repo.name, current: repo.commitCount, previous: prev.commitCount, diff })
+      const prevCommits = prev.commitCount || 0
+      const diff = repoCommits - prevCommits
+      if (diff > 0) accelerated.push({ key, group: repo.group || '', name: repo.name || '', current: repoCommits, previous: prevCommits, diff })
+      else if (diff < 0) decelerated.push({ key, group: repo.group || '', name: repo.name || '', current: repoCommits, previous: prevCommits, diff })
     }
 
     for (const [key, repo] of previousMap) {
-      if (!currentMap.has(key) || (currentMap.get(key)!.commitCount === 0 && repo.commitCount > 0)) {
-        stoppedRepos.push({ key, group: repo.group, name: repo.name, lastWeek: repo.commitCount })
+      const prevCommits = repo.commitCount || 0
+      const currentRepo = currentMap.get(key)
+      if (!currentMap.has(key) || ((currentRepo?.commitCount || 0) === 0 && prevCommits > 0)) {
+        stoppedRepos.push({ key, group: repo.group || '', name: repo.name || '', lastWeek: prevCommits })
       }
     }
 
     accelerated.sort((a, b) => b.diff - a.diff)
     decelerated.sort((a, b) => a.diff - b.diff)
 
+    const currTotal = current.summary?.totalCommits || 0
+    const prevTotal = previous.summary?.totalCommits || 0
+
     return {
       current, previous, accelerated, decelerated, newRepos, stoppedRepos,
-      totalDiff: current.summary.totalCommits - previous.summary.totalCommits,
+      totalDiff: currTotal - prevTotal,
     }
   }, [reports])
 
@@ -94,11 +105,11 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
 
       <div className="projects-stats-bar" style={{ marginBottom: '32px' }}>
         <div className="projects-stat-card">
-          <span className="projects-stat-value">{previous.summary.totalCommits}</span>
+          <span className="projects-stat-value">{previous.summary?.totalCommits || 0}</span>
           <span className="projects-stat-label">Semana anterior</span>
         </div>
         <div className="projects-stat-card">
-          <span className="projects-stat-value">{current.summary.totalCommits}</span>
+          <span className="projects-stat-value">{current.summary?.totalCommits || 0}</span>
           <span className="projects-stat-label">Semana atual</span>
         </div>
         <div className="projects-stat-card">
@@ -110,7 +121,9 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
       <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
         {accelerated.length > 0 && (
           <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 className="projects-card-title" style={{ color: 'var(--accent-green)' }}>▲ Aceleraram ({accelerated.length})</h2>
+            <h2 className="projects-card-title" style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <TrendingUp size={16} /> Aceleraram ({accelerated.length})
+            </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {accelerated.slice(0, 15).map(r => renderRow(r, <span style={{ color: 'var(--accent-green)' }}>+{r.diff}</span>))}
             </div>
@@ -119,7 +132,9 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
 
         {decelerated.length > 0 && (
           <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 className="projects-card-title" style={{ color: 'var(--accent-red)' }}>▼ Desaceleraram ({decelerated.length})</h2>
+            <h2 className="projects-card-title" style={{ color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <TrendingDown size={16} /> Desaceleraram ({decelerated.length})
+            </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {decelerated.slice(0, 15).map(r => renderRow(r, <span style={{ color: 'var(--accent-red)' }}>{r.diff}</span>))}
             </div>
@@ -128,7 +143,9 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
 
         {newRepos.length > 0 && (
           <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 className="projects-card-title" style={{ color: 'var(--accent-primary)' }}>★ Novos esta semana ({newRepos.length})</h2>
+            <h2 className="projects-card-title" style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={16} /> Novos esta semana ({newRepos.length})
+            </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {newRepos.map(r => renderRow(r, <span style={{ color: 'var(--accent-primary)' }}>{r.commits} commits</span>))}
             </div>
@@ -137,7 +154,9 @@ export const CompareView: React.FC<CompareViewProps> = ({ reports, onSelectRepo 
 
         {stoppedRepos.length > 0 && (
           <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 className="projects-card-title" style={{ color: 'var(--accent-yellow)' }}>⏸ Pararam esta semana ({stoppedRepos.length})</h2>
+            <h2 className="projects-card-title" style={{ color: 'var(--accent-yellow)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <PauseCircle size={16} /> Pararam esta semana ({stoppedRepos.length})
+            </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {stoppedRepos.map(r => renderRow(r, <span style={{ color: 'var(--accent-yellow)' }}>era {r.lastWeek}/sem</span>))}
             </div>

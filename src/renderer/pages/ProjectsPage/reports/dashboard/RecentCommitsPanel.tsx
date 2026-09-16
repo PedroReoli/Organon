@@ -33,8 +33,8 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({ repos, o
 
   const allCommits = useMemo(() =>
     repos
-      .flatMap(r => (r.commits ?? []).map(c => ({ ...c, repo: r })))
-      .sort((a, b) => {
+      .flatMap(r => (r.commits ?? []).map((c: any) => ({ ...c, repo: r })))
+      .sort((a: any, b: any) => {
         const da = `${a.date}${String(a.hour ?? 0).padStart(2, '0')}`
         const db = `${b.date}${String(b.hour ?? 0).padStart(2, '0')}`
         return db.localeCompare(da)
@@ -44,11 +44,6 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({ repos, o
 
   const maxPages = Math.ceil(allCommits.length / ITEMS_PER_PAGE)
   const commits = allCommits.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE)
-
-  const legendRepos = useMemo(() =>
-    repos.filter(r => (r.commits?.length ?? 0) > 0),
-    [repos]
-  )
 
   return (
     <div className="projects-dashboard-card" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

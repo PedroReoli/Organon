@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { isElectron } from '@utils'
 import type { WeekReport, GeneralReport } from '@types'
 
@@ -43,7 +43,7 @@ export const useReports = (reportsDir?: string | null): UseReportsResult => {
         }
       }
 
-      parsed.sort((a, b) => b.date.localeCompare(a.date))
+      parsed.sort((a: any, b: any) => (b.date || b.startDate || '').localeCompare(a.date || a.startDate || ''))
       setReports(parsed)
 
       // Carregar general.json

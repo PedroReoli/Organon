@@ -10,7 +10,7 @@ import { StreakPanel } from './StreakPanel'
 import { RecentCommitsPanel } from './RecentCommitsPanel'
 import { StoppedBubble } from './StoppedBubble'
 import { AllWeeksPanel } from './AllWeeksPanel'
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, Trophy, RotateCcw } from 'lucide-react'
 
 interface DashboardViewProps {
   report: WeekReport
@@ -29,7 +29,7 @@ interface DashboardViewProps {
 const COMMIT_TYPES = ['feat', 'fix', 'refactor', 'chore', 'docs', 'perf', 'other', 'revert']
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
-  report, reportIndex, totalReports, reports, onPrev, onNext, onSelectRepo, onSelectWeek, onGoHistory, onGoOverview, onGoPackageJson,
+  report, reportIndex, totalReports, reports, onPrev, onNext, onSelectRepo, onSelectWeek, onGoHistory: _onGoHistory, onGoOverview: _onGoOverview, onGoPackageJson,
 }) => {
   const [showAllWeeks, setShowAllWeeks] = useState(false)
   const groups = useMemo(() => {
@@ -122,12 +122,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               title="Semana seguinte"
             >Próx ›</button>
           </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
             {topRepo?.commitCount > 0 && (
-              <span style={{ fontSize: '12px', color: 'var(--accent-yellow)' }}>🏆 <strong>{topRepo.name}</strong> {topRepo.commitCount}c</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--accent-yellow)' }}>
+                <Trophy size={13} />
+                <strong>{topRepo.name}</strong> {topRepo.commitCount}c
+              </span>
             )}
             {(report.reactivated?.length ?? 0) > 0 && (
-              <span style={{ fontSize: '12px', color: 'var(--accent-green)' }}>↩ {report.reactivated.join(', ')}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--accent-green)' }}>
+                <RotateCcw size={13} />
+                {report.reactivated.join(', ')}
+              </span>
             )}
           </div>
         </div>

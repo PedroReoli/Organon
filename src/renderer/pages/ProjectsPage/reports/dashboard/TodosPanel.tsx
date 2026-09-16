@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import type { RepoReport, TodoEntry } from '@types'
 
 interface TodosPanelProps {
@@ -8,7 +8,7 @@ interface TodosPanelProps {
 
 export const TodosPanel: React.FC<TodosPanelProps> = ({ repos, onSelect }) => {
   const items = repos.flatMap(r =>
-    (r.todos ?? []).map(t => {
+    (r.todos ?? []).map((t: any) => {
       const text = typeof t === 'string' ? t : t.text
       const implemented = typeof t === 'string' ? false : (t as TodoEntry).implemented ?? false
       return { text, implemented, repo: r }

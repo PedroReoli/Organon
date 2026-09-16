@@ -101,7 +101,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
       for (const repo of r.repos) {
         if ((repo.badCommits?.length ?? 0) > 0) {
           const key = `${repo.group}/${repo.name}`
-          map.set(key, (map.get(key) ?? 0) + repo.badCommits.length)
+          map.set(key, (map.get(key) ?? 0) + (repo.badCommits?.length ?? 0))
         }
       }
     }

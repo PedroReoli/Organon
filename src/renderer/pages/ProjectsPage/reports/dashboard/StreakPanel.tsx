@@ -1,4 +1,5 @@
 import React from 'react'
+import { Flame } from 'lucide-react'
 import type { RepoReport } from '@types'
 
 interface StreakPanelProps {
@@ -16,14 +17,18 @@ export const StreakPanel: React.FC<StreakPanelProps> = ({ repos, onSelect }) => 
 
   if (ranked.length === 0) return (
     <div className="projects-dashboard-card">
-      <h3 className="projects-card-title">🔥 Streak</h3>
+      <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <Flame size={16} style={{ color: 'var(--accent-yellow)' }} /> Streak
+      </h3>
       <span style={{ color: 'var(--text-muted)' }}>Sem streaks ativos</span>
     </div>
   )
 
   return (
     <div className="projects-dashboard-card">
-      <h3 className="projects-card-title">🔥 Streak</h3>
+      <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <Flame size={16} style={{ color: 'var(--accent-yellow)' }} /> Streak
+      </h3>
       <div className="projects-top-list" style={{ gap: '12px' }}>
         {ranked.map((r, i) => {
           const s = r.streak ?? 0

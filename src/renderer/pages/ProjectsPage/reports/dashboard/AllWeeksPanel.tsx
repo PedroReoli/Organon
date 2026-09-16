@@ -1,4 +1,5 @@
 import React from 'react'
+import { X, Trophy } from 'lucide-react'
 import type { WeekReport } from '@types'
 
 interface AllWeeksPanelProps {
@@ -18,7 +19,7 @@ export const AllWeeksPanel: React.FC<AllWeeksPanelProps> = ({ reports, onSelectW
       <div className="projects-dashboard-card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 className="projects-title" style={{ margin: 0, fontSize: '20px' }}>Todas as Semanas</h2>
-          <button type="button" className="projects-btn" onClick={onClose} style={{ border: 'none', background: 'transparent' }}>✕ Fechar</button>
+          <button type="button" className="projects-btn" onClick={onClose} style={{ border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} /> Fechar</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', overflowY: 'auto', paddingRight: '8px' }}>
           {reports.map((report, idx) => {
@@ -57,8 +58,9 @@ export const AllWeeksPanel: React.FC<AllWeeksPanelProps> = ({ reports, onSelectW
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{activeRepos} repos</span>
                 </div>
                 {topRepo && topRepo.commitCount > 0 && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '4px' }}>
-                    🏆 {topRepo.name} ({topRepo.commitCount})
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '4px' }}>
+                    <Trophy size={13} style={{ color: 'var(--accent-yellow)' }} />
+                    <span>{topRepo.name} ({topRepo.commitCount})</span>
                   </div>
                 )}
                 {topTypes.length > 0 && (

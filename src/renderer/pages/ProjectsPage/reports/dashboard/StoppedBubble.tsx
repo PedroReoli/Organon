@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import type { RepoReport } from '@types'
 
 interface StoppedBubbleProps {
@@ -21,7 +22,10 @@ export const StoppedBubble: React.FC<StoppedBubbleProps> = ({ repos }) => {
   if (allStopped.length === 0) return (
     <div className="projects-dashboard-card">
       <h3 className="projects-card-title">Parados</h3>
-      <span style={{ color: 'var(--accent-green)' }}>✓ Nenhum parado há mais de 30 dias</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-green)', fontSize: '13px' }}>
+        <CheckCircle2 size={14} />
+        <span>Nenhum parado há mais de 30 dias</span>
+      </div>
     </div>
   )
 

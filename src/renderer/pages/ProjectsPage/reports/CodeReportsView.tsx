@@ -342,7 +342,7 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
       <ProjectsSidebar 
         navItems={NAV_ITEMS}
         activeScreen={activeScreen}
-        onSelectScreen={setScreen}
+        onSelectScreen={(id) => setScreen(id as Screen)}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
       />
