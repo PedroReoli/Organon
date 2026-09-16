@@ -23,7 +23,6 @@ export type AppView =
   | 'canvas'
   | 'transcripts'
   | 'audio'
-  | 'library'
   | 'okrs'
   | 'workflow'
   | 'system-design'

@@ -5,10 +5,10 @@
 import { organonApi, SyncOperation, SyncChange } from './organon'
 import type {
   Store, Card, Note, NoteFolder, CalendarEvent, Project,
-  Habit, HabitEntry, CRMContact, CRMTag, CRMInteraction, Bill, Expense, IncomeEntry,
+  Habit, HabitEntry, Bill, Expense, IncomeEntry,
   SavingsGoal, Investment, Meeting, Playbook, StudyGoal, StudyMediaItem,
   FinancialConfig, ColorPalette, BudgetCategory,
-  ChecklistItem, CardPriority, CardStatus, CRMPriority, CRMStageId,
+  ChecklistItem, CardPriority, CardStatus,
   ProjectLink, CalendarRecurrence, CalendarReminder,
   ShortcutFolder, ShortcutItem,
   SprintCard, SprintColumnSection, AgendaCategory,
@@ -27,9 +27,6 @@ export interface PartialSyncedStore {
   projects: Project[]
   habits: Habit[]
   habitEntries: HabitEntry[]
-  crmContacts: CRMContact[]
-  crmTags: CRMTag[]
-  crmInteractions: CRMInteraction[]
   bills: Bill[]
   expenses: Expense[]
   incomes: IncomeEntry[]
@@ -189,27 +186,6 @@ function habitEntryToApi(e: HabitEntry): Payload {
   }
 }
 
-function crmContactToApi(c: CRMContact): Payload {
-  // tags e links são gerenciados via endpoints separados — não vão no payload
-  return {
-    name: c.name,
-    company: c.company ?? null,
-    role: c.role ?? null,
-    phone: c.phone ?? null,
-    email: c.email ?? null,
-    social_media: c.socialMedia ?? null,
-    context: c.context ?? null,
-    interests: c.interests ?? null,
-    priority: c.priority ?? 'media',
-    stage_id: c.stageId ?? 'prospeccao',
-    description: c.description ?? '',
-    follow_up_date: c.followUpDate ?? null,
-    sort_order: i32(c.order, 0),
-    created_at: c.createdAt,
-    updated_at: c.updatedAt,
-  }
-}
-
 function billToApi(bill: Bill): Payload {
   return {
     name: bill.name,
@@ -327,10 +303,6 @@ function studyMediaItemToApi(m: StudyMediaItem): Payload {
   }
 }
 
-function crmTagToApi(t: CRMTag): Payload {
-  return { name: t.name, color: t.color ?? '#6366f1', created_at: t.createdAt }
-}
-
 function colorPaletteToApi(p: ColorPalette): Payload {
   return {
     name: p.name,
@@ -366,19 +338,6 @@ function sprintColumnSectionToApi(s: SprintColumnSection): Payload {
 
 function calendarCategoryToApi(c: AgendaCategory): Payload {
   return { name: c.name, color: c.color ?? '#6366f1' }
-}
-
-function crmInteractionToApi(i: CRMInteraction): Payload {
-  const occurredAt = i.date
-    ? `${i.date}T${i.time && i.time.length >= 5 ? i.time : '00:00'}:00Z`
-    : new Date().toISOString()
-  return {
-    contact_id: i.contactId,
-    type: i.type,
-    content: i.content ?? '',
-    occurred_at: occurredAt,
-    created_at: i.createdAt,
-  }
 }
 
 // ── fromApi: payload → local ──────────────────────────────────────────────────
@@ -496,29 +455,6 @@ export function habitEntryFromApi(id: string, p: Payload): HabitEntry {
     value: n(p.value),
     skipped: b(p.skipped),
     skipReason: s(p.skip_reason),
-  }
-}
-
-export function crmContactFromApi(id: string, p: Payload): CRMContact {
-  return {
-    id,
-    name: s(p.name),
-    company: p.company ? s(p.company) : null,
-    role: p.role ? s(p.role) : null,
-    phone: p.phone ? s(p.phone) : null,
-    email: p.email ? s(p.email) : null,
-    socialMedia: p.social_media ? s(p.social_media) : null,
-    context: p.context ? s(p.context) : null,
-    interests: p.interests ? s(p.interests) : null,
-    priority: (p.priority as CRMPriority) ?? 'media',
-    tags: [],    // tags são via endpoint separado — reconstruídas via pull de /crm/contacts/:id/tags
-    stageId: (p.stage_id as CRMStageId) ?? 'prospeccao',
-    description: s(p.description),
-    followUpDate: p.follow_up_date ? s(p.follow_up_date) : null,
-    links: { noteIds: [], calendarEventIds: [], fileIds: [], cardIds: [], projectIds: [] },
-    order: n(p.sort_order),
-    createdAt: s(p.created_at) || now(),
-    updatedAt: s(p.updated_at) || now(),
   }
 }
 
@@ -658,10 +594,6 @@ export function studyMediaItemFromApi(id: string, p: Payload): StudyMediaItem {
   }
 }
 
-export function crmTagFromApi(id: string, p: Payload): CRMTag {
-  return { id, name: s(p.name), color: s(p.color) || '#6366f1', createdAt: s(p.created_at) || now() }
-}
-
 export function colorPaletteFromApi(id: string, p: Payload): ColorPalette {
   return {
     id,
@@ -724,19 +656,6 @@ export function shortcutItemFromApi(id: string, p: Payload): ShortcutItem {
   }
 }
 
-export function crmInteractionFromApi(id: string, p: Payload): CRMInteraction {
-  const occurredAt = s(p.occurred_at)
-  return {
-    id,
-    contactId: s(p.contact_id),
-    type: (p.type as CRMInteraction['type']) ?? 'nota',
-    content: s(p.content),
-    date: occurredAt.slice(0, 10),
-    time: occurredAt.length >= 16 ? occurredAt.slice(11, 16) : '00:00',
-    createdAt: s(p.created_at) || now(),
-  }
-}
-
 export function financeConfigFromApi(p: Payload): FinancialConfig {
   return { monthlyIncome: n(p.monthly_income), monthlySpendingLimit: n(p.monthly_spending_limit) }
 }
@@ -785,9 +704,6 @@ function applyChange(
     case 'projects':           result.projects.push(projectFromApi(id, p)); break
     case 'habits':             result.habits.push(habitFromApi(id, p)); break
     case 'habit_entries':      result.habitEntries.push(habitEntryFromApi(id, p)); break
-    case 'crm_contacts':       result.crmContacts.push(crmContactFromApi(id, p)); break
-    case 'crm_tags':           result.crmTags.push(crmTagFromApi(id, p)); break
-    case 'crm_interactions':   result.crmInteractions.push(crmInteractionFromApi(id, p)); break
     case 'finance_bills':      result.bills.push(billFromApi(id, p)); break
     case 'finance_expenses':   result.expenses.push(expenseFromApi(id, p)); break
     case 'finance_incomes':    result.incomes.push(incomeFromApi(id, p)); break
@@ -881,9 +797,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   const cards        = arr<Card>(safeStore.cards)
   const studyMedia   = arr<StudyMediaItem>(safeStudy.mediaItems)
   const studyGoals   = arr<StudyGoal>(safeStudy.goals)
-  const crmContacts    = arr<CRMContact>(safeStore.crmContacts)
-  const crmTags        = arr<CRMTag>(safeStore.crmTags)
-  const crmInteractions = arr<CRMInteraction>(safeStore.crmInteractions)
   const playbooks    = arr<Playbook>(safeStore.playbooks)
   const noteFolders  = arr<NoteFolder>(safeStore.noteFolders)
   const habits       = arr<Habit>(safeStore.habits)
@@ -925,9 +838,6 @@ export async function deleteAllFromApi(store: Store): Promise<SyncReport> {
   addGroup('cards',                cards.map(c => c.id))
   addGroup('study_media_items',    studyMedia.map(m => m.id))
   addGroup('study_goals',          studyGoals.map(g => g.id))
-  addGroup('crm_interactions',     crmInteractions.map(i => i.id))
-  addGroup('crm_contacts',         crmContacts.map(c => c.id))
-  addGroup('crm_tags',             crmTags.map(t => t.id))
   addGroup('playbooks',            playbooks.map(p => p.id))
   // note_folders: folhas → raízes (reverso do push)
   for (let i = noteFolderLevels.length - 1; i >= 0; i--) {
@@ -1033,9 +943,6 @@ export async function pushAllToApi(
   const projects = arr<Project>(safeStore.projects)
   const habits = arr<Habit>(safeStore.habits)
   const habitEntries = arr<HabitEntry>(safeStore.habitEntries)
-  const crmContacts = arr<CRMContact>(safeStore.crmContacts)
-  const crmTags = arr<CRMTag>(safeStore.crmTags)
-  const crmInteractions = arr<CRMInteraction>(safeStore.crmInteractions)
   const bills = arr<Bill>(safeStore.bills)
   const expenses = arr<Expense>(safeStore.expenses)
   const incomes = arr<IncomeEntry>(safeStore.incomes)
@@ -1094,9 +1001,6 @@ export async function pushAllToApi(
   addGroup('playbooks',             makeOps('playbooks',             playbooks,      playbookToApi as (i: never) => Payload))
   addGroup('study_goals',           makeOps('study_goals',           studyGoals,     studyGoalToApi as (i: never) => Payload))
   addGroup('study_media_items',     makeOps('study_media_items',     studyMediaItems,studyMediaItemToApi as (i: never) => Payload))
-  addGroup('crm_contacts',          makeOps('crm_contacts',          crmContacts,    crmContactToApi as (i: never) => Payload))
-  addGroup('crm_tags',              makeOps('crm_tags',              crmTags,        crmTagToApi as (i: never) => Payload))
-  addGroup('crm_interactions',      makeOps('crm_interactions',      crmInteractions, crmInteractionToApi as (i: never) => Payload))
 
   // color_palettes
   addGroup('color_palettes', makeOps('color_palettes', colorPalettes, colorPaletteToApi as (i: never) => Payload))
@@ -1395,7 +1299,7 @@ export async function pullFromApi(since?: string): Promise<PullResult> {
 
   const store: PartialSyncedStore = {
     cards: [], notes: [], noteFolders: [], calendarEvents: [],
-    projects: [], habits: [], habitEntries: [], crmContacts: [], crmTags: [], crmInteractions: [],
+    projects: [], habits: [], habitEntries: [],
     bills: [], expenses: [], incomes: [], savingsGoals: [], investments: [], meetings: [],
     playbooks: [], studyGoals: [], studyMediaItems: [],
     financeConfig: null, financeConfigBudgetCategories: null, studyConfig: null,

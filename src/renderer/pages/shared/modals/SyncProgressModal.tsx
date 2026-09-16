@@ -81,7 +81,6 @@ export function SyncProgressModal({ settings }: Props) {
           projects: mergeById(rawStore.projects, pulled.projects),
           habits: mergeById(rawStore.habits, pulled.habits),
           habitEntries: mergeById(rawStore.habitEntries, pulled.habitEntries),
-          crmContacts: mergeById(rawStore.crmContacts, pulled.crmContacts),
           bills: mergeById(rawStore.bills, pulled.bills),
           expenses: mergeById(rawStore.expenses, pulled.expenses),
           incomes: mergeById(rawStore.incomes, pulled.incomes),

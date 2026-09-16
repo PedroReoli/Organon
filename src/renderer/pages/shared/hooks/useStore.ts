@@ -29,14 +29,6 @@ import type {
   PlaybookDialog,
   PlaybookFolder,
   PlaybookVariable,
-  CRMContact,
-  CRMInteraction,
-  CRMTag,
-  CRMPriority,
-  CRMStageId,
-  CRMInteractionType,
-  CRMContactLinks,
-  CRMSnapshot,
   AgendaCategory,
   SprintCard,
   SprintColumn,
@@ -78,7 +70,6 @@ import {
   createNotesSlice,
   createSprintSlice,
   createPlaybooksSlice,
-  createCRMSlice,
   createCanvasSlice,
   createColorPaletteSlice,
   createQuickAccessSlice,
@@ -86,7 +77,6 @@ import {
   createSprintCardsSlice,
   createCalendarCategorySlice,
   createNoteTemplatesSlice,
-  createCRMExtrasSlice,
   createPlaybookExtrasSlice,
   createStoreManagementSlice,
   createNoteExtrasSlice,
@@ -238,9 +228,6 @@ const getDefaultStore = (): Store => ({
   meetings: [],
   playbooks: [],
   playbookFolders: [],
-  crmContacts: [],
-  crmInteractions: [],
-  crmTags: [],
   sprintCards: [],
   sprintColumnSections: [],
   calendarCategories: [],
@@ -454,15 +441,6 @@ const normalizeStore = (input: Partial<Store> | null | undefined): Store => {
     meetings: Array.isArray(input.meetings) ? input.meetings : base.meetings,
     playbooks: normalizedPlaybooks,
     playbookFolders: normalizedPlaybookFolders,
-    crmContacts: Array.isArray((input as Partial<Store> & { crmContacts?: CRMContact[] }).crmContacts)
-      ? (input as Partial<Store> & { crmContacts?: CRMContact[] }).crmContacts as CRMContact[]
-      : base.crmContacts,
-    crmInteractions: Array.isArray((input as Partial<Store> & { crmInteractions?: CRMInteraction[] }).crmInteractions)
-      ? (input as Partial<Store> & { crmInteractions?: CRMInteraction[] }).crmInteractions as CRMInteraction[]
-      : base.crmInteractions,
-    crmTags: Array.isArray((input as Partial<Store> & { crmTags?: CRMTag[] }).crmTags)
-      ? (input as Partial<Store> & { crmTags?: CRMTag[] }).crmTags as CRMTag[]
-      : base.crmTags,
     study: normalizeStudyState((input as Partial<Store> & { study?: Partial<StudyState> }).study),
     settings: {
       themeName,
@@ -638,7 +616,6 @@ export const useStore = () => {
   const notesSlice = createNotesSlice(updateStore)
   const sprintSlice = createSprintSlice(updateStore)
   const playbooksSlice = createPlaybooksSlice(updateStore)
-  const crmSlice = createCRMSlice(updateStore)
   const canvasSlice = createCanvasSlice(updateStore)
   const colorPaletteSlice = createColorPaletteSlice(updateStore)
   const quickAccessSlice = createQuickAccessSlice(updateStore, () => ({ quickAccess: store.quickAccess }))
@@ -646,7 +623,6 @@ export const useStore = () => {
   const sprintCardsSlice = createSprintCardsSlice(updateStore)
   const calendarCategorySlice = createCalendarCategorySlice(updateStore)
   const noteTemplatesSlice = createNoteTemplatesSlice(updateStore)
-  const crmExtrasSlice = createCRMExtrasSlice(updateStore)
   const playbookExtrasSlice = createPlaybookExtrasSlice(updateStore)
   const storeManagementSlice = createStoreManagementSlice(setStore, saveStore, isElectron, getDefaultStore)
   const noteExtrasSlice = createNoteExtrasSlice(updateStore, () => store)
@@ -1186,99 +1162,6 @@ export const useStore = () => {
     }
   }, [])
 
-  // ========================================
-  // CRM METHODS
-  // ========================================
-
-  const addCRMContact = useCallback((input: {
-    name: string
-    company?: string | null
-    role?: string | null
-    phone?: string | null
-    email?: string | null
-    socialMedia?: string | null
-    context?: string | null
-    interests?: string | null
-    priority?: CRMPriority
-    description?: string
-  }) => {
-    return crmSlice.addCRMContact(input)
-  }, [crmSlice])
-
-  const updateCRMContact = useCallback((contactId: string, updates: Partial<Pick<CRMContact,
-    | 'name'
-    | 'company'
-    | 'role'
-    | 'phone'
-    | 'email'
-    | 'socialMedia'
-    | 'context'
-    | 'interests'
-    | 'priority'
-    | 'description'
-    | 'followUpDate'
-  >>) => {
-    crmSlice.updateCRMContact(contactId, updates)
-  }, [crmSlice])
-
-  const removeCRMContact = useCallback((contactId: string) => {
-    crmSlice.removeCRMContact(contactId)
-  }, [crmSlice])
-
-  const moveCRMContactToStage = useCallback((contactId: string, stageId: string) => {
-    crmExtrasSlice.moveCRMContactToStage(contactId, stageId)
-  }, [crmExtrasSlice])
-
-  const reorderCRMContacts = useCallback((stageId: CRMStageId, orderedIds: string[]) => {
-    crmExtrasSlice.reorderCRMContacts(stageId, orderedIds)
-  }, [crmExtrasSlice])
-
-  const addCRMInteraction = useCallback((input: {
-    contactId: string
-    type: CRMInteractionType
-    content: string
-    date: string
-    time: string
-  }) => {
-    return crmExtrasSlice.addCRMInteraction(input)
-  }, [crmExtrasSlice])
-
-  const updateCRMInteraction = useCallback((interactionId: string, updates: Partial<Pick<CRMInteraction, 'type' | 'content' | 'date' | 'time'>>) => {
-    crmExtrasSlice.updateCRMInteraction(interactionId, updates)
-  }, [crmExtrasSlice])
-
-  const removeCRMInteraction = useCallback((interactionId: string) => {
-    crmExtrasSlice.removeCRMInteraction(interactionId)
-  }, [crmExtrasSlice])
-
-  const addCRMTag = useCallback((name: string, color?: string) => {
-    return crmExtrasSlice.addCRMTag(name, color)
-  }, [crmExtrasSlice])
-
-  const updateCRMTag = useCallback((tagId: string, updates: Partial<Pick<CRMTag, 'name' | 'color'>>) => {
-    crmExtrasSlice.updateCRMTag(tagId, updates)
-  }, [crmExtrasSlice])
-
-  const removeCRMTag = useCallback((tagId: string) => {
-    crmExtrasSlice.removeCRMTag(tagId)
-  }, [crmExtrasSlice])
-
-  const addCRMContactLink = useCallback((contactId: string, linkType: keyof CRMContactLinks, entityId: string) => {
-    crmExtrasSlice.addCRMContactLink(contactId, linkType, entityId)
-  }, [crmExtrasSlice])
-
-  const removeCRMContactLink = useCallback((contactId: string, linkType: keyof CRMContactLinks, entityId: string) => {
-    crmExtrasSlice.removeCRMContactLink(contactId, linkType, entityId)
-  }, [crmExtrasSlice])
-
-  const migrateCRMContactStages = useCallback(() => {
-    crmSlice.migrateCRMContactStages()
-  }, [crmSlice])
-
-  const upsertCRMSnapshot = useCallback((snapshot: CRMSnapshot) => {
-    crmSlice.upsertCRMSnapshot(snapshot)
-  }, [crmSlice])
-
   return {
     // Data
     cards: store.cards,
@@ -1307,10 +1190,6 @@ export const useStore = () => {
     quickAccess: store.quickAccess,
     playbooks: store.playbooks,
     playbookFolders: store.playbookFolders ?? [],
-    crmContacts: store.crmContacts,
-    crmInteractions: store.crmInteractions,
-    crmTags: store.crmTags,
-    crmSnapshots: store.crmSnapshots ?? [],
     study: store.study,
     settings: store.settings,
     lastSyncAt: store.lastSyncAt,
@@ -1443,22 +1322,6 @@ export const useStore = () => {
     addPlaybookFolder,
     updatePlaybookFolder,
     removePlaybookFolder,
-    // CRM methods
-    addCRMContact,
-    updateCRMContact,
-    removeCRMContact,
-    moveCRMContactToStage,
-    reorderCRMContacts,
-    addCRMInteraction,
-    updateCRMInteraction,
-    removeCRMInteraction,
-    addCRMTag,
-    updateCRMTag,
-    removeCRMTag,
-    addCRMContactLink,
-    removeCRMContactLink,
-    migrateCRMContactStages,
-    upsertCRMSnapshot,
     replaceStore,
     updateStore,
     // Quick Access

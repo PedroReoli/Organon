@@ -2,7 +2,6 @@ import { Card, SprintCard, SprintColumn, SprintColumnGroup, SprintColumnSection,
 import { NoteFolder, Note, NoteTemplate, CanvasFolder, CanvasVersionEntry } from './notes.types'
 import { Project, RegisteredIDE } from './projects.types'
 import { Bill, Expense, BudgetCategory, IncomeEntry, FinancialConfig, SavingsGoal, Investment } from './financial.types'
-import { CRMContact, CRMInteraction, CRMTag, CRMSnapshot } from './crm.types'
 import { StudyState } from './study.types'
 
 export type { PlannerPreferences } from './planner.types'
@@ -26,7 +25,6 @@ export type AppView =
   | 'canvas'
   | 'transcripts'
   | 'audio'
-  | 'library'
   | 'okrs'
   | 'workflow'
   | 'system-design'
@@ -548,10 +546,6 @@ export interface Store {
   meetings: Meeting[]
   playbooks: Playbook[]
   playbookFolders?: PlaybookFolder[]
-  crmContacts: CRMContact[]
-  crmInteractions: CRMInteraction[]
-  crmTags: CRMTag[]
-  crmSnapshots?: CRMSnapshot[]
   study: StudyState
   settings: Settings
   noteTemplates?: NoteTemplate[]

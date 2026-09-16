@@ -178,9 +178,6 @@ export function useSync({
       const remoteDelEvents        = new Set(deletedIds.get('calendar_events') ?? [])
       const remoteDelHabits        = new Set(deletedIds.get('habits') ?? [])
       const remoteDelHabitEntries  = new Set(deletedIds.get('habit_entries') ?? [])
-      const remoteDelCrm           = new Set(deletedIds.get('crm_contacts') ?? [])
-      const remoteDelCrmTags       = new Set(deletedIds.get('crm_tags') ?? [])
-      const remoteDelCrmInter      = new Set(deletedIds.get('crm_interactions') ?? [])
       const remoteDelBills         = new Set(deletedIds.get('finance_bills') ?? [])
       const remoteDelExpenses      = new Set(deletedIds.get('finance_expenses') ?? [])
       const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
@@ -222,9 +219,6 @@ export function useSync({
         projects:       pf.has('projects') ? rawStore.projects : mergeById(rawStore.projects.filter(p => !remoteDelProjects.has(p.id)), pulled.projects),
         habits:         pf.has('habits') ? rawStore.habits : mergeById(rawStore.habits.filter(h => !remoteDelHabits.has(h.id)), pulled.habits),
         habitEntries:   pf.has('habit_entries') ? rawStore.habitEntries : mergeById(rawStore.habitEntries.filter(e => !remoteDelHabitEntries.has(e.id) && !remoteDelHabits.has(e.habitId)), pulled.habitEntries),
-        crmContacts:    pf.has('crm_contacts') ? rawStore.crmContacts : mergeById(rawStore.crmContacts.filter(c => !remoteDelCrm.has(c.id)), pulled.crmContacts),
-        crmTags:        mergeById((rawStore.crmTags ?? []).filter(t => !remoteDelCrmTags.has(t.id)), pulled.crmTags),
-        crmInteractions: mergeById((rawStore.crmInteractions ?? []).filter(i => !remoteDelCrmInter.has(i.id)), pulled.crmInteractions),
         bills:          pf.has('finance_bills') ? rawStore.bills : mergeById(rawStore.bills.filter(b => !remoteDelBills.has(b.id)), pulled.bills),
         expenses:       pf.has('finance_expenses') ? rawStore.expenses : mergeById(rawStore.expenses.filter(e => !remoteDelExpenses.has(e.id)), pulled.expenses),
         incomes:        pf.has('finance_incomes') ? rawStore.incomes : mergeById(rawStore.incomes.filter(i => !remoteDelIncomes.has(i.id)), pulled.incomes),
@@ -264,9 +258,6 @@ export function useSync({
           projects:       mergeById(freshStore.projects, merged.projects),
           habits:         mergeById(freshStore.habits, merged.habits),
           habitEntries:   mergeById(freshStore.habitEntries, merged.habitEntries),
-          crmContacts:    mergeById(freshStore.crmContacts, merged.crmContacts),
-          crmTags:        mergeById(freshStore.crmTags ?? [], merged.crmTags ?? []),
-          crmInteractions: mergeById(freshStore.crmInteractions ?? [], merged.crmInteractions ?? []),
           bills:          mergeById(freshStore.bills, merged.bills),
           expenses:       mergeById(freshStore.expenses, merged.expenses),
           incomes:        mergeById(freshStore.incomes, merged.incomes),
@@ -431,9 +422,6 @@ export function useSync({
         const remoteDelEvents        = new Set(deletedIds.get('calendar_events') ?? [])
         const remoteDelHabits        = new Set(deletedIds.get('habits') ?? [])
         const remoteDelHabitEntries  = new Set(deletedIds.get('habit_entries') ?? [])
-        const remoteDelCrm           = new Set(deletedIds.get('crm_contacts') ?? [])
-        const remoteDelCrmTags       = new Set(deletedIds.get('crm_tags') ?? [])
-        const remoteDelCrmInter      = new Set(deletedIds.get('crm_interactions') ?? [])
         const remoteDelBills         = new Set(deletedIds.get('finance_bills') ?? [])
         const remoteDelExpenses      = new Set(deletedIds.get('finance_expenses') ?? [])
         const remoteDelIncomes       = new Set(deletedIds.get('finance_incomes') ?? [])
@@ -471,9 +459,6 @@ export function useSync({
           projects:       mergeById(rawStore.projects.filter(p => !remoteDelProjects.has(p.id)), pulled.projects),
           habits:         mergeById(rawStore.habits.filter(h => !remoteDelHabits.has(h.id)), pulled.habits),
           habitEntries:   mergeById(rawStore.habitEntries.filter(e => !remoteDelHabitEntries.has(e.id) && !remoteDelHabits.has(e.habitId)), pulled.habitEntries),
-          crmContacts:    mergeById(rawStore.crmContacts.filter(c => !remoteDelCrm.has(c.id)), pulled.crmContacts),
-          crmTags:        mergeById((rawStore.crmTags ?? []).filter(t => !remoteDelCrmTags.has(t.id)), pulled.crmTags),
-          crmInteractions: mergeById((rawStore.crmInteractions ?? []).filter(i => !remoteDelCrmInter.has(i.id)), pulled.crmInteractions),
           bills:          mergeById(rawStore.bills.filter(b => !remoteDelBills.has(b.id)), pulled.bills),
           expenses:       mergeById(rawStore.expenses.filter(e => !remoteDelExpenses.has(e.id)), pulled.expenses),
           incomes:        mergeById(rawStore.incomes.filter(i => !remoteDelIncomes.has(i.id)), pulled.incomes),

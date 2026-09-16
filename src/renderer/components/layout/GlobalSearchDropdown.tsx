@@ -4,7 +4,7 @@ export interface SearchResultItem {
   id: string
   title: string
   subtitle?: string
-  category: 'planner' | 'projects' | 'notes' | 'library' | 'okrs' | 'shortcuts' | 'view'
+  category: 'planner' | 'projects' | 'notes' | 'okrs' | 'shortcuts' | 'view'
   actionView?: string
   cardId?: string
   url?: string
@@ -22,7 +22,6 @@ const DEFAULT_QUICK_ACTIONS: SearchResultItem[] = [
   { id: 'view-planner', title: 'Painel de Planejamento & Cards', subtitle: 'Ir para tarefas Kanban', category: 'view', actionView: 'planner' },
   { id: 'view-projects', title: 'Central de Projetos & Git Engine', subtitle: '47 repositórios monitorados', category: 'view', actionView: 'projects' },
   { id: 'view-notes', title: 'Bloco de Notas & Documentação', subtitle: 'Acessar anotações', category: 'view', actionView: 'notes' },
-  { id: 'view-library', title: 'Biblioteca de Documentos & Mídias', subtitle: 'Gestão de arquivos locais', category: 'view', actionView: 'library' },
   { id: 'view-okrs', title: 'OKRs & Metas de Longo Prazo', subtitle: 'Progresso de objetivos', category: 'view', actionView: 'okrs' },
   { id: 'view-workflow', title: 'Central de Automações (Workflows)', subtitle: 'Regras locais Se -> Então', category: 'view', actionView: 'workflow' },
 ]

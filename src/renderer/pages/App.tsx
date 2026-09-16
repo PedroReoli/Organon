@@ -30,7 +30,6 @@ import type { AppView } from './shared/InternalNav'
 const CanvasView = lazy(() => import('./CanvasPage/canvas').then(m => ({ default: m.CanvasView })))
 const WhisperPage = lazy(() => import('./WhisperPage/WhisperPage').then(m => ({ default: m.WhisperPage })))
 const AudioPage = lazy(() => import('./AudioPage/AudioPage').then(m => ({ default: m.AudioPage })))
-const LibraryPage = lazy(() => import('./LibraryPage/LibraryPage').then(m => ({ default: m.LibraryPage })))
 const OKRsPage = lazy(() => import('./OKRsPage/OKRsPage').then(m => ({ default: m.OKRsPage })))
 const SystemDesignPage = lazy(() => import('./SystemDesignPage/SystemDesignPage').then(m => ({ default: m.SystemDesignPage })))
 
@@ -53,7 +52,6 @@ const APP_VIEW_LABELS: Record<AppView, string> = {
   study: 'Modo Foco',
   notes: 'Notas',
   playbook: 'Playbook',
-  library: 'Biblioteca',
   canvas: 'Canvas',
   transcripts: 'Whisper Transcrições',
   audio: 'Áudio & Gravações',
@@ -96,13 +94,12 @@ const APP_HUBS: AppHub[] = [
   {
     id: 'content',
     label: 'Conhecimento',
-    description: 'Notas, playbooks, biblioteca, gravações e canvas.',
+    description: 'Notas, playbooks, gravações e canvas.',
     accent: 'var(--color-primary)',
     primaryView: 'notes',
     views: [
       { view: 'notes',       label: 'Notas'        },
       { view: 'playbook',    label: 'Playbook'     },
-      { view: 'library',     label: 'Biblioteca'   },
       { view: 'canvas',      label: 'Canvas'       },
       { view: 'transcripts', label: 'Whisper'      },
       { view: 'audio',       label: 'Áudio'        },
@@ -697,15 +694,6 @@ export const App = () => {
               { label: 'Varredura Git', onClick: () => { (window as any).electronAPI?.gitEngine?.scan?.() } },
             ],
           }
-        case 'library':
-          return {
-            hubTitle: 'Conhecimento',
-            viewTitle: 'Biblioteca & Mídias',
-            metricsText: 'Módulo Biblioteca · Documentos, PDFs e Arquivos Locais',
-            actions: [
-              { label: '+ Nova Nota', onClick: () => addNote('Documento', ''), variant: 'primary' as const },
-            ],
-          }
         case 'okrs':
           return {
             hubTitle: 'Planejamento',
@@ -1025,12 +1013,6 @@ export const App = () => {
                 {activeView === 'audio' && (
                   <Suspense fallback={<ViewLoadingSkeleton title="Carregando Áudio..." message="Preparando interface de gravações" />}>
                     <AudioPage />
-                  </Suspense>
-                )}
-
-                {activeView === 'library' && (
-                  <Suspense fallback={<ViewLoadingSkeleton title="Carregando Biblioteca..." message="Organizando documentos e mídias" />}>
-                    <LibraryPage />
                   </Suspense>
                 )}
 
