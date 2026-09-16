@@ -6,12 +6,48 @@ export interface CardLocation {
 export interface Card {
   id: string
   title: string
-  descriptionHtml: string
+  descriptionHtml?: string
   location: CardLocation
   order: number
   date: string | null
   hasDate: boolean
   isLocked: boolean
+  createdAt: string
+  updatedAt: string
+
+  // Next-Gen Planning Engine Properties (Backward Compatible)
+  status?: 'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'archived'
+  priority?: 'urgent' | 'high' | 'medium' | 'low'
+  time?: string | null // "HH:mm"
+  durationMinutes?: number
+  projectId?: string | null
+  sprintId?: string | null
+  coverColor?: string | null
+  iconEmoji?: string | null
+  tags?: string[]
+  storyPoints?: number
+  checklist?: Array<{
+    id: string
+    title: string
+    completed: boolean
+  }>
+  reminder?: {
+    triggerAt: string
+    preset: 'at_time' | '5m' | '15m' | '1h' | '1d'
+    hasFired: boolean
+    snoozedUntil?: string | null
+  } | null
+}
+
+export interface ProjectSprint {
+  id: string
+  name: string
+  goal: string
+  startDate: string
+  endDate: string
+  projectIds: string[]
+  status: 'planning' | 'active' | 'completed' | 'archived'
+  targetStoryPoints?: number
   createdAt: string
   updatedAt: string
 }
@@ -397,6 +433,9 @@ export interface Store {
   study: StudyState
   canvases: Canvas[]
   settings: Settings
+
+  // Next-Gen Planning Engine
+  projectSprints?: ProjectSprint[]
 }
 
 export interface AppConfig {
