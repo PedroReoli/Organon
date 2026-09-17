@@ -27,7 +27,9 @@ import {
   Bookmark,
   ChevronRight,
   Tag,
-  X
+  X,
+  AlignJustify,
+  ArrowLeftRight
 } from 'lucide-react'
 
 interface NoteRevision {
@@ -108,6 +110,17 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [splitViewOpen, setSplitViewOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [isFullWidth, setIsFullWidth] = useState<boolean>(() => {
+    return localStorage.getItem('organon_notes_fullwidth') === 'true'
+  })
+
+  const toggleFullWidth = useCallback(() => {
+    setIsFullWidth(prev => {
+      const next = !prev
+      localStorage.setItem('organon_notes_fullwidth', String(next))
+      return next
+    })
+  }, [])
 
   const handleAddTag = useCallback(() => {
     const tag = newTagInput.trim().replace(/^#/, '')
@@ -189,20 +202,20 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
   return (
     <div
       style={{
-        background: 'var(--color-background)',
+        background: 'transparent',
         color: 'var(--color-text)',
       }}
-      className={`w-full h-full flex flex-col overflow-hidden relative ${isFocusMode ? 'fixed inset-0 z-50 p-6' : ''}`}
+      className={`w-full h-full flex flex-col overflow-hidden relative ${isFocusMode ? 'fixed inset-0 z-50 p-6 bg-[var(--color-background)]' : ''}`}
     >
       {/* ========================================================
           STICKY TOP TOOLBAR & HEADER DA NOTA (COLADA NO TOPO)
           ======================================================== */}
       <div
         style={{
-          background: 'color-mix(in srgb, var(--color-surface) 96%, var(--color-background))',
-          borderColor: 'var(--color-border)',
+          background: 'color-mix(in srgb, var(--color-background) 80%, transparent)',
+          borderColor: 'color-mix(in srgb, var(--color-border) 40%, transparent)',
         }}
-        className="sticky top-0 z-20 border-b px-4 py-3 space-y-2.5 shadow-xs shrink-0 select-none backdrop-blur-md"
+        className="sticky top-0 z-20 border-b px-4 py-2.5 space-y-2 shrink-0 select-none backdrop-blur-md"
       >
         {/* LINHA 1: BREADCRUMBS & FERRAMENTAS DE ESTRUTURA */}
         <div className="flex items-center justify-between gap-3 text-xs">
@@ -419,6 +432,21 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
               <Download className="w-4 h-4" />
             </button>
 
+            {/* Alternar Largura: Centralizado vs Full Width (Notion) */}
+            <button
+              type="button"
+              onClick={toggleFullWidth}
+              title={isFullWidth ? 'Modo Centralizado (Notion)' : 'Modo Largura Total (Full Width)'}
+              style={{
+                color: isFullWidth ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                background: isFullWidth ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : 'transparent',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+            >
+              {isFullWidth ? <ArrowLeftRight className="w-4 h-4" /> : <AlignJustify className="w-4 h-4" />}
+              <span className="hidden sm:inline">{isFullWidth ? 'Full Width' : 'Centralizado'}</span>
+            </button>
+
             {/* Excluir Nota */}
             <button
               type="button"
@@ -553,47 +581,49 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
       )}
 
       {/* ========================================================
-          CORPO DO EDITOR PRINCIPAL
+          CORPO DO EDITOR PRINCIPAL (NOTION STYLE - TRANSPARENTE E CENTRALIZADO)
           ======================================================== */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-4xl w-full mx-auto">
-        <WysiwygEditor
-          content={noteContent}
-          onChange={(html) => onContentChange(selectedNote.id, html)}
-          readOnly={selectedNoteLocked}
-          placeholder="Comece a escrever sua nota... Digite / para comandos ou utilize as ferramentas acima."
-          mode="full"
-          currentNoteId={selectedNote.id}
-          noteTitlesById={noteTitlesById}
-          onNoteMentionClick={onOpenNote}
-        />
+      <div className="flex-1 overflow-y-auto">
+        <div className={`transition-all duration-200 py-6 ${isFullWidth ? 'w-full max-w-none px-6 sm:px-12' : 'max-w-3xl mx-auto w-full px-4 sm:px-8'}`}>
+          <WysiwygEditor
+            content={noteContent}
+            onChange={(html) => onContentChange(selectedNote.id, html)}
+            readOnly={selectedNoteLocked}
+            placeholder="Comece a escrever sua nota... Digite / para comandos ou selecione texto para formatar."
+            mode="full"
+            currentNoteId={selectedNote.id}
+            noteTitlesById={noteTitlesById}
+            onNoteMentionClick={onOpenNote}
+          />
 
-        {/* Subpáginas Vinculadas no Rodapé */}
-        {noteSubpages.length > 0 && (
-          <div className="mt-12 pt-6 border-t border-neutral-800/60 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              Subpáginas desta Nota ({noteSubpages.length})
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {noteSubpages.map(sub => (
-                <div
-                  key={sub.id}
-                  onClick={() => onOpenNote(sub.id)}
-                  style={{
-                    background: 'color-mix(in srgb, var(--color-surface) 60%, var(--color-background))',
-                    borderColor: 'var(--color-border)',
-                  }}
-                  className="p-2.5 rounded-lg border hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center gap-2 group"
-                >
-                  <FileText className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
-                  <span className="text-xs font-semibold text-[var(--color-text)] truncate group-hover:text-[var(--color-primary)] transition-colors">
-                    {sub.title || 'Sem título'}
-                  </span>
-                </div>
-              ))}
+          {/* Subpáginas Vinculadas no Rodapé */}
+          {noteSubpages.length > 0 && (
+            <div className="mt-12 pt-6 border-t border-neutral-800/40 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                Subpáginas desta Nota ({noteSubpages.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {noteSubpages.map(sub => (
+                  <div
+                    key={sub.id}
+                    onClick={() => onOpenNote(sub.id)}
+                    style={{
+                      background: 'color-mix(in srgb, var(--color-surface) 40%, transparent)',
+                      borderColor: 'var(--color-border)',
+                    }}
+                    className="p-2.5 rounded-lg border hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center gap-2 group"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+                    <span className="text-xs font-semibold text-[var(--color-text)] truncate group-hover:text-[var(--color-primary)] transition-colors">
+                      {sub.title || 'Sem título'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Modal de Exportação */}
