@@ -19,7 +19,6 @@ import {
   History,
   ListTree,
   Link2,
-  Share2,
   Bookmark,
   ChevronRight,
   Tag,
@@ -60,7 +59,6 @@ interface NoteEditorPaneProps {
   onToggleOutline?: () => void
   showBacklinks?: boolean
   onToggleBacklinksPanel?: () => void
-  onOpenGraph?: () => void
   onAddBookmark?: () => void
   autoSaveStatus?: AutoSaveStatus
   lastSavedAt?: string | null
@@ -97,7 +95,6 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
   onToggleOutline,
   showBacklinks = false,
   onToggleBacklinksPanel,
-  onOpenGraph,
   onAddBookmark,
   autoSaveStatus = 'saved',
   lastSavedAt = null,
@@ -264,17 +261,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
               </button>
             )}
 
-            {onOpenGraph && (
-              <button
-                type="button"
-                onClick={onOpenGraph}
-                title="Grafo Visual de Notas"
-                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Grafo</span>
-              </button>
-            )}
+
 
             {onAddBookmark && (
               <button

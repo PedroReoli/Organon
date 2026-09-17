@@ -298,7 +298,6 @@ export const NotesView = ({
             onToggleOutline={() => setShowOutline((v) => !v)}
             showBacklinks={showBacklinks}
             onToggleBacklinksPanel={() => setShowBacklinks((v) => !v)}
-            onOpenGraph={() => setShowGraph(true)}
             onAddBookmark={onSetNoteBookmarks ? addBookmark : undefined}
             autoSaveStatus={autoSaveStatus}
             lastSavedAt={lastSavedAt}
