@@ -22,6 +22,7 @@ interface ContextMenuProps {
   onToggleFavorite: (noteId: string) => void
   onTogglePinned:   (noteId: string) => void
   onUpdateFolder:   (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId' | 'isHome'>>) => void
+  onUpdateNote?:    (noteId: string, updates: Partial<Note>) => void
   onAddNote:        (folderId?: string | null, parentNoteId?: string | null) => void
   onDuplicateNote:  (noteId: string) => void
   onRequestDeleteNote:   (noteId: string) => void
@@ -31,7 +32,7 @@ interface ContextMenuProps {
 export const ContextMenu = ({
   ctxMenu, ctxNote, ctxFolder, contextMenuRef, titleInputRef, setCtxMenu,
   setRenamingFolderId, setRenamingFolderName, setNewFolderParentId, setExpandedFolders, newFolderInputRef,
-  onOpenNote, onOpenFolder, onToggleLock, onToggleFavorite, onTogglePinned, onUpdateFolder,
+  onOpenNote, onOpenFolder, onToggleLock, onToggleFavorite, onTogglePinned, onUpdateFolder, onUpdateNote,
   onAddNote, onDuplicateNote, onRequestDeleteNote, onRequestDeleteFolder,
 }: ContextMenuProps) => {
   const [pos, setPos] = React.useState({ x: 0, y: 0 })
@@ -121,6 +122,12 @@ export const ContextMenu = ({
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
                   {ctxNote.isPinned ? 'Desafixar' : 'Fixar no topo'}
                 </button>
+                {(ctxNote.folderId || ctxNote.parentNoteId) && (
+                  <button className="notes-ctx-item" disabled={locked} onClick={() => { onUpdateNote?.(ctxNote.id, { folderId: null, parentNoteId: null }); close() }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7" /></svg>
+                    Mover para a Raiz
+                  </button>
+                )}
                 <button className="notes-ctx-item" disabled={locked} onClick={() => { onAddNote(ctxNote.folderId, ctxNote.id); close() }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                   Subpágina
@@ -163,6 +170,12 @@ export const ContextMenu = ({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" /></svg>
                 {ctxFolder.isHome ? 'Tornar pasta' : 'Tornar Hub'}
               </button>
+              {ctxFolder.parentId && (
+                <button className="notes-ctx-item" onClick={() => { onUpdateFolder(ctxFolder.id, { parentId: null }); close() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7" /></svg>
+                  Mover para a Raiz
+                </button>
+              )}
             </div>
             <div className="notes-ctx-section">
               <span className="notes-ctx-section-label">Criar e excluir</span>

@@ -424,6 +424,7 @@ export const NotesView = ({
         onToggleFavorite={onToggleFavorite}
         onTogglePinned={onTogglePinned}
         onUpdateFolder={onUpdateFolder}
+        onUpdateNote={onUpdateNote}
         onAddNote={tree.handleAddNote}
         onDuplicateNote={tree.handleDuplicateNote}
         onRequestDeleteNote={tree.requestDeleteNote}

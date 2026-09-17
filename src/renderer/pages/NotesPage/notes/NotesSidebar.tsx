@@ -670,7 +670,53 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
       </div>
 
       {/* Main Tree Body */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2">
+      <div
+        className="flex-1 overflow-y-auto px-2 py-2 space-y-2 relative"
+        onDragOver={e => {
+          e.preventDefault()
+          if (!dropTargetId) setDropTargetId('root-zone')
+        }}
+        onDragLeave={e => {
+          if (e.target === e.currentTarget && dropTargetId === 'root-zone') {
+            setDropTargetId(null)
+          }
+        }}
+        onDrop={e => {
+          e.preventDefault()
+          handleDropOnRoot()
+        }}
+      >
+        {/* ZONA DE DROP EM DESTRO NA RAIZ (APARECE DURANTE O DRAG) */}
+        {(dragCount > 0 || dropTargetId === 'root-zone') && (
+          <div
+            onDragOver={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDropTargetId('root-zone')
+            }}
+            onDragLeave={e => {
+              e.stopPropagation()
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetId(null)
+            }}
+            onDrop={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleDropOnRoot()
+            }}
+            style={{
+              borderColor: dropTargetId === 'root-zone' ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
+              background: dropTargetId === 'root-zone' ? 'color-mix(in srgb, var(--color-primary) 22%, transparent)' : 'color-mix(in srgb, var(--color-primary) 8%, transparent)',
+              boxShadow: dropTargetId === 'root-zone' ? '0 0 14px color-mix(in srgb, var(--color-primary) 50%, transparent)' : 'none',
+            }}
+            className="p-2.5 my-1.5 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer select-none animate-pulse"
+          >
+            <FolderTree className="w-4 h-4 text-[var(--color-primary)]" />
+            <span style={{ color: 'var(--color-text)' }}>
+              {dropTargetId === 'root-zone' ? '⚡ Soltar para mover para a RAIZ!' : '📥 Solte aqui para colocar FORA de pastas (Raiz)'}
+            </span>
+          </div>
+        )}
+
         {/* Hubs / Visão Geral Button */}
         <button
           type="button"
