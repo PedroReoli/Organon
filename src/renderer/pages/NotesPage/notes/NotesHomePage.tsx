@@ -11,7 +11,7 @@ import {
   Pin,
   Lock,
   ArrowUpRight,
-  Sparkles,
+  BookOpen,
 } from 'lucide-react'
 import type { Note, NoteFolder } from '@types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -115,7 +115,7 @@ export const NotesHomePage: React.FC<NotesHomePageProps> = ({
               }}
               className="text-xs font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5"
             >
-              <Sparkles className="w-3 h-3" />
+              <BookOpen className="w-3 h-3" />
               Base de Conhecimento
             </span>
             <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium">

@@ -14,7 +14,7 @@ import {
   ChevronDown,
   GripVertical,
   MoreHorizontal,
-  Sparkles,
+  LayoutGrid,
   UploadCloud,
   X,
   PanelLeftClose,
@@ -606,39 +606,46 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
       className={`h-full border-r flex flex-col justify-between select-none relative transition-all duration-300 overflow-hidden ${isSidebarCollapsed ? 'w-0 border-none' : ''}`}
     >
       {/* Top Header & Search */}
-      <div className="p-3 border-b border-neutral-800/60 space-y-2.5 shrink-0">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onGoHome}
-            className="flex items-center gap-2 group cursor-pointer"
-          >
-            <div
+      <div className="p-2.5 border-b border-neutral-800/60 space-y-2 shrink-0">
+        <div className="flex items-center justify-between gap-1">
+          {/* Search Input Bar */}
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-[var(--color-text-muted)] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              ref={searchInputRef}
               style={{
-                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
-                color: 'var(--color-primary)',
+                background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
               }}
-              className="p-1.5 rounded-lg group-hover:scale-105 transition-transform"
-            >
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 style={{ color: 'var(--color-text)' }} className="text-xs font-bold leading-tight group-hover:text-[var(--color-primary)] transition-colors">
-                Caderno de Notas
-              </h2>
-              <p style={{ color: 'var(--color-text-muted)' }} className="text-[10px]">
-                {props.notes.length} documentos
-              </p>
-            </div>
-          </button>
+              className="w-full pl-8 pr-6 py-1.5 rounded-lg border text-xs outline-none focus:border-[var(--color-primary)] transition-colors"
+              placeholder="Buscar notas..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('')
+                }
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
 
           {/* Quick actions top icons */}
-          <div className="flex items-center gap-0.5 text-[var(--color-text-muted)]">
+          <div className="flex items-center gap-0.5 text-[var(--color-text-muted)] shrink-0">
             <button
               type="button"
               onClick={() => handleAddNote()}
               title="Nova nota rápida"
-              className="p-1 rounded-md hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
             </button>
@@ -646,7 +653,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
               type="button"
               onClick={onCollapseAll}
               title="Recolher todas as pastas"
-              className="p-1 rounded-md hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
             >
               <ChevronsDownUp className="w-3.5 h-3.5" />
             </button>
@@ -654,42 +661,11 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
               type="button"
               onClick={() => setSidebarOpen(false)}
               title="Recolher barra lateral"
-              className="p-1 rounded-md hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
             >
               <PanelLeftClose className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-
-        {/* Search Input Bar */}
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-[var(--color-text-muted)] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            ref={searchInputRef}
-            style={{
-              background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text)',
-            }}
-            className="w-full pl-8 pr-7 py-1.5 rounded-lg border text-xs outline-none focus:border-[var(--color-primary)] transition-colors"
-            placeholder="Buscar notas..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Escape') {
-                setSearchQuery('')
-              }
-            }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -701,17 +677,17 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
           onClick={onGoHome}
           style={{
             background: activeView === 'home'
-              ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))'
+              ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))'
               : 'transparent',
             borderColor: activeView === 'home'
               ? 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
               : 'transparent',
             color: activeView === 'home' ? 'var(--color-primary)' : 'var(--color-text)',
           }}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer hover:bg-white/[0.04]"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer hover:bg-white/[0.04]"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Visão Geral & Hubs</span>
+          <LayoutGrid className="w-3.5 h-3.5 shrink-0 opacity-80" />
+          <span>Visão Geral</span>
         </button>
 
         {searchQuery.trim() ? (
