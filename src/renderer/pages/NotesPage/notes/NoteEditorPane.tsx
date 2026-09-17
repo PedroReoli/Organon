@@ -4,14 +4,10 @@ import { WysiwygEditor } from '../../shared/WysiwygEditor'
 import type { BreadcrumbPart } from '@types'
 import { organonApi } from '../../../../api/organon'
 import { NoteExportModal } from './NoteExportModal'
-import { NotesSplitView } from './NotesSplitView'
 import { NoteAutoSaveIndicator } from './NoteAutoSaveIndicator'
 import type { AutoSaveStatus } from './NoteAutoSaveIndicator'
 import {
   Download,
-  Columns2,
-  Maximize2,
-  Minimize2,
   Folder,
   FileText,
   Star,
@@ -107,8 +103,6 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
   lastSavedAt = null,
 }) => {
   const [newTagInput, setNewTagInput] = useState('')
-  const [isFocusMode, setIsFocusMode] = useState(false)
-  const [splitViewOpen, setSplitViewOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [isFullWidth, setIsFullWidth] = useState<boolean>(() => {
     return localStorage.getItem('organon_notes_fullwidth') === 'true'
@@ -149,17 +143,6 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
     const words = text ? text.split(' ').filter(Boolean).length : 0
     return { wordCount: words, readingTime: Math.max(1, Math.ceil(words / 200)) }
   }, [noteContent])
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
-        e.preventDefault()
-        setIsFocusMode(prev => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   // ── Revision history ───────────────────────────────────────────────────────
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -205,7 +188,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
         background: 'transparent',
         color: 'var(--color-text)',
       }}
-      className={`w-full h-full flex flex-col overflow-hidden relative ${isFocusMode ? 'fixed inset-0 z-50 p-6 bg-[var(--color-background)]' : ''}`}
+      className="w-full h-full flex flex-col overflow-hidden relative"
     >
       {/* ========================================================
           STICKY TOP TOOLBAR & HEADER DA NOTA (COLADA NO TOPO)
@@ -394,32 +377,6 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
               disabled={selectedNoteLocked}
             >
               <Plus className="w-4 h-4" />
-            </button>
-
-            {/* Modo Foco ⛶ */}
-            <button
-              type="button"
-              onClick={() => setIsFocusMode(prev => !prev)}
-              title={isFocusMode ? 'Sair do Modo Foco (Ctrl+Shift+F)' : 'Modo Foco Zen (Ctrl+Shift+F)'}
-              style={{
-                color: isFocusMode ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer"
-            >
-              {isFocusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-
-            {/* Split View */}
-            <button
-              type="button"
-              onClick={() => setSplitViewOpen(prev => !prev)}
-              title="Visualização Dividida"
-              style={{
-                color: splitViewOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer"
-            >
-              <Columns2 className="w-4 h-4" />
             </button>
 
             {/* Exportar .md / PDF */}
@@ -633,17 +590,6 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
         noteTitle={noteTitle || selectedNote.title || 'Nota'}
         noteContent={noteContent}
       />
-
-      {/* Split View Lateral */}
-      {splitViewOpen && (
-        <NotesSplitView
-          primaryNote={selectedNote}
-          primaryContent={noteContent}
-          onPrimaryContentChange={onContentChange}
-          notes={notes}
-          onClose={() => setSplitViewOpen(false)}
-        />
-      )}
     </div>
   )
 }
