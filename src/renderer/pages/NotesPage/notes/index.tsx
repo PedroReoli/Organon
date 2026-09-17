@@ -10,7 +10,7 @@ import { DeleteModals }   from './DeleteModals'
 import { NotesTrashView } from './NotesTrashView'
 import { NotesOutlinePanel } from './NotesOutlinePanel'
 import { useNotesOutline } from './useNotesOutline'
-import { NoteAutoSaveIndicator, type AutoSaveStatus } from './NoteAutoSaveIndicator'
+import type { AutoSaveStatus } from './NoteAutoSaveIndicator'
 import { useNotesLinkIndex } from './useNotesLinkIndex'
 import { NotesBacklinksPanel } from './NotesBacklinksPanel'
 import { NotesGraphView } from './NotesGraphView'
@@ -248,27 +248,6 @@ export const NotesView = ({
       )}
 
       <div className="projects-content-wrapper" style={{ position: 'relative' }}>
-        {/* Quick toolbar integrada no topo do editor pane */}
-        {tree.activeView === 'note' && tree.selectedNote && !showTrash && (
-          <div className="notes-quick-toolbar" data-debug-name="notes/NotesView.QuickToolbar">
-            <button type="button" className={`notes-quick-btn ${showOutline ? 'is-active' : ''}`} onClick={() => setShowOutline((v) => !v)} title="Outline (Ctrl+Shift+O)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-            </button>
-            <button type="button" className={`notes-quick-btn ${showBacklinks ? 'is-active' : ''}`} onClick={() => setShowBacklinks((v) => !v)} title="Backlinks">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-            </button>
-            {onSetNoteBookmarks && (
-              <button type="button" className="notes-quick-btn" onClick={addBookmark} title="Bookmark">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
-              </button>
-            )}
-            <button type="button" className="notes-quick-btn" onClick={() => setShowGraph(true)} title="Graph view">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="6" cy="6" r="3" /><circle cx="18" cy="18" r="3" /><circle cx="18" cy="6" r="3" /><line x1="8.5" y1="7.5" x2="15.5" y2="16.5" /><line x1="15.5" y1="7.5" x2="8.5" y2="7.5" /></svg>
-            </button>
-            <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
-          </div>
-        )}
-
         {/* Lixeira View ou Home/Editor */}
         {showTrash ? (
           <NotesTrashView
@@ -315,6 +294,14 @@ export const NotesView = ({
             onOpenNote={tree.openNote}
             onOpenFolder={tree.openFolder}
             onUpdateNote={onUpdateNote}
+            showOutline={showOutline}
+            onToggleOutline={() => setShowOutline((v) => !v)}
+            showBacklinks={showBacklinks}
+            onToggleBacklinksPanel={() => setShowBacklinks((v) => !v)}
+            onOpenGraph={() => setShowGraph(true)}
+            onAddBookmark={onSetNoteBookmarks ? addBookmark : undefined}
+            autoSaveStatus={autoSaveStatus}
+            lastSavedAt={lastSavedAt}
           />
         ) : tree.activeView === 'folder' && tree.selectedFolder ? (
           <FolderEditorPane

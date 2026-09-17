@@ -838,7 +838,10 @@ export const App = () => {
           onToggleChat={() => setIsChatOpen(prev => !prev)}
           onNewTask={() => setActiveView('planner')}
           onNewNote={() => {
-            addNote('Nova Nota', '')
+            const newNote = addNote('Nova Nota', '')
+            if (newNote?.id) {
+              setPendingNoteId(newNote.id)
+            }
             setActiveView('notes')
           }}
           isChatOpen={isChatOpen}

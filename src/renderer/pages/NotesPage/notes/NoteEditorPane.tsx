@@ -1,12 +1,34 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Note } from '@types'
 import { WysiwygEditor } from '../../shared/WysiwygEditor'
 import type { BreadcrumbPart } from '@types'
 import { organonApi } from '../../../../api/organon'
-import { isElectron } from '@utils'
 import { NoteExportModal } from './NoteExportModal'
 import { NotesSplitView } from './NotesSplitView'
-import { Download, Columns2, Maximize2, Minimize2 } from 'lucide-react'
+import { NoteAutoSaveIndicator } from './NoteAutoSaveIndicator'
+import type { AutoSaveStatus } from './NoteAutoSaveIndicator'
+import {
+  Download,
+  Columns2,
+  Maximize2,
+  Minimize2,
+  Folder,
+  FileText,
+  Star,
+  Pin,
+  Lock,
+  Unlock,
+  Trash2,
+  Plus,
+  History,
+  ListTree,
+  Link2,
+  Share2,
+  Bookmark,
+  ChevronRight,
+  Tag,
+  X
+} from 'lucide-react'
 
 interface NoteRevision {
   id: string
@@ -16,28 +38,35 @@ interface NoteRevision {
 }
 
 interface NoteEditorPaneProps {
-  selectedNote:      Note
-  notes:             Note[]
-  noteContent:    string
-  noteTitle:      string
-  setNoteTitle:   (t: string) => void
+  selectedNote: Note
+  notes: Note[]
+  noteContent: string
+  noteTitle: string
+  setNoteTitle: (t: string) => void
   noteBreadcrumb: BreadcrumbPart[]
-  subNotes:          (parentNoteId: string) => Note[]
-  titleInputRef:     React.RefObject<HTMLInputElement>
+  subNotes: (parentNoteId: string) => Note[]
+  titleInputRef: React.RefObject<HTMLInputElement>
   selectedNoteLocked: boolean
-  onContentChange:   (noteId: string, html: string) => void
-  onTitleBlur:       () => void
-  onToggleLock:      (noteId: string) => void
-  onToggleFavorite:  (noteId: string) => void
-  onTogglePinned:    (noteId: string) => void
-  onAddNote:         (folderId?: string | null, parentNoteId?: string | null) => void
-  onRequestDelete:   (noteId: string) => void
-  onOpenNote:        (noteId: string) => void
-  onOpenFolder:      (folderId: string) => void
-  onUpdateNote?:     (id: string, updates: Partial<Note>) => void
+  onContentChange: (noteId: string, html: string) => void
+  onTitleBlur: () => void
+  onToggleLock: (noteId: string) => void
+  onToggleFavorite: (noteId: string) => void
+  onTogglePinned: (noteId: string) => void
+  onAddNote: (folderId?: string | null, parentNoteId?: string | null) => void
+  onRequestDelete: (noteId: string) => void
+  onOpenNote: (noteId: string) => void
+  onOpenFolder: (folderId: string) => void
+  onUpdateNote?: (id: string, updates: Partial<Note>) => void
+  // Integrated top tools
+  showOutline?: boolean
+  onToggleOutline?: () => void
+  showBacklinks?: boolean
+  onToggleBacklinksPanel?: () => void
+  onOpenGraph?: () => void
+  onAddBookmark?: () => void
+  autoSaveStatus?: AutoSaveStatus
+  lastSavedAt?: string | null
 }
-
-// ── History panel ────────────────────────────────────────────────────────────
 
 function fmtRevDate(iso: string) {
   try {
@@ -46,20 +75,39 @@ function fmtRevDate(iso: string) {
   } catch { return iso }
 }
 
-function stripHtml(html: string, maxLen = 120) {
-  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-  return text.length > maxLen ? text.slice(0, maxLen) + '…' : text
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-
-export const NoteEditorPane = ({
-  selectedNote, notes, noteContent, noteTitle, setNoteTitle, noteBreadcrumb, subNotes, titleInputRef, selectedNoteLocked,
-  onContentChange, onTitleBlur,
-  onToggleLock, onToggleFavorite, onTogglePinned, onAddNote, onRequestDelete,
-  onOpenNote, onOpenFolder, onUpdateNote,
-}: NoteEditorPaneProps) => {
+export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
+  selectedNote,
+  notes,
+  noteContent,
+  noteTitle,
+  setNoteTitle,
+  noteBreadcrumb,
+  subNotes,
+  titleInputRef,
+  selectedNoteLocked,
+  onContentChange,
+  onTitleBlur,
+  onToggleLock,
+  onToggleFavorite,
+  onTogglePinned,
+  onAddNote,
+  onRequestDelete,
+  onOpenNote,
+  onOpenFolder,
+  onUpdateNote,
+  showOutline = false,
+  onToggleOutline,
+  showBacklinks = false,
+  onToggleBacklinksPanel,
+  onOpenGraph,
+  onAddBookmark,
+  autoSaveStatus = 'saved',
+  lastSavedAt = null,
+}) => {
   const [newTagInput, setNewTagInput] = useState('')
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [splitViewOpen, setSplitViewOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   const handleAddTag = useCallback(() => {
     const tag = newTagInput.trim().replace(/^#/, '')
@@ -76,23 +124,18 @@ export const NoteEditorPane = ({
     const currentTags = selectedNote.tags || []
     onUpdateNote(selectedNote.id, { tags: currentTags.filter(t => t !== tagToRemove) })
   }, [onUpdateNote, selectedNote.id, selectedNote.tags])
+
   const noteSubpages = subNotes(selectedNote.id)
   const noteTitlesById = useMemo(
     () => Object.fromEntries(notes.map((note) => [note.id, note.title || 'Nova nota'])),
     [notes],
   )
 
-  // ── Word count ─────────────────────────────────────────────────────────────
   const { wordCount, readingTime } = useMemo(() => {
     const text = noteContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     const words = text ? text.split(' ').filter(Boolean).length : 0
     return { wordCount: words, readingTime: Math.max(1, Math.ceil(words / 200)) }
   }, [noteContent])
-
-  // ── Focus mode, Split view and Export modal ────────────────────────────────
-  const [isFocusMode, setIsFocusMode] = useState(false)
-  const [splitViewOpen, setSplitViewOpen] = useState(false)
-  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,11 +149,11 @@ export const NoteEditorPane = ({
   }, [])
 
   // ── Revision history ───────────────────────────────────────────────────────
-  const [historyOpen,      setHistoryOpen]      = useState(false)
-  const [revisions,        setRevisions]        = useState<NoteRevision[]>([])
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [revisions, setRevisions] = useState<NoteRevision[]>([])
   const [revisionsLoading, setRevisionsLoading] = useState(false)
-  const [revisionsError,   setRevisionsError]   = useState<string | null>(null)
-  const [previewRevision,  setPreviewRevision]  = useState<NoteRevision | null>(null)
+  const [revisionsError, setRevisionsError] = useState<string | null>(null)
+  const [previewRevision, setPreviewRevision] = useState<NoteRevision | null>(null)
 
   const loadRevisions = useCallback(async (noteId: string) => {
     setRevisionsLoading(true)
@@ -120,7 +163,7 @@ export const NoteEditorPane = ({
       const data = (res.data ?? []) as NoteRevision[]
       setRevisions(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
     } catch {
-      setRevisionsError('Não foi possível carregar o histórico. Verifique sua conexão.')
+      setRevisionsError('Não foi possível carregar o histórico.')
       setRevisions([])
     } finally {
       setRevisionsLoading(false)
@@ -136,7 +179,6 @@ export const NoteEditorPane = ({
     setPreviewRevision(null)
   }, [revisions.length, revisionsLoading, loadRevisions, selectedNote.id])
 
-  // Reset history when note changes
   useEffect(() => {
     setHistoryOpen(false)
     setRevisions([])
@@ -144,288 +186,434 @@ export const NoteEditorPane = ({
     setPreviewRevision(null)
   }, [selectedNote.id])
 
-  // ── Backlinks ──────────────────────────────────────────────────────────────
-  const [backlinksExpanded, setBacklinksExpanded] = useState(false)
-  const [backlinkNotes,     setBacklinkNotes]     = useState<Note[]>([])
-  const [backlinksLoaded,   setBacklinksLoaded]   = useState(false)
-  const [backlinksLoading,  setBacklinksLoading]  = useState(false)
-  const backlinksAbortRef = useRef(false)
-
-  const loadBacklinks = useCallback(async () => {
-    if (!isElectron() || backlinksLoaded) return
-    setBacklinksLoading(true)
-    backlinksAbortRef.current = false
-    const results: Note[] = []
-    const others = notes.filter(n => n.id !== selectedNote.id)
-    await Promise.all(
-      others.map(async n => {
-        try {
-          if (!n.mdPath) return
-          const content = await window.electronAPI.readNote(n.mdPath)
-          if (!backlinksAbortRef.current && content.includes(selectedNote.id)) {
-            results.push(n)
-          }
-        } catch { /* ignora */ }
-      })
-    )
-    if (!backlinksAbortRef.current) {
-      setBacklinkNotes(results)
-      setBacklinksLoaded(true)
-    }
-    setBacklinksLoading(false)
-  }, [notes, selectedNote.id, backlinksLoaded])
-
-  const handleToggleBacklinks = useCallback(() => {
-    setBacklinksExpanded(prev => {
-      if (!prev && !backlinksLoaded) loadBacklinks()
-      return !prev
-    })
-  }, [backlinksLoaded, loadBacklinks])
-
-  // Reset backlinks when note changes
-  useEffect(() => {
-    backlinksAbortRef.current = true
-    setBacklinksExpanded(false)
-    setBacklinkNotes([])
-    setBacklinksLoaded(false)
-    setBacklinksLoading(false)
-  }, [selectedNote.id])
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className={`notes-editor-inner${isFocusMode ? ' is-focus-mode fixed inset-0 z-50 bg-white dark:bg-zinc-950 p-8 overflow-y-auto' : ''}`}>
-      {!isFocusMode && noteBreadcrumb.length > 0 && (
-        <div className="notes-editor-breadcrumb">
-          {noteBreadcrumb.map((part: BreadcrumbPart, i: number) => (
-            <span key={part.id} className="notes-bc-item-wrap">
-              {i > 0 && <span className="notes-bc-sep">&gt;</span>}
-              <button className="notes-bc-item" onClick={() => part.kind === 'note' ? onOpenNote(part.id || '') : onOpenFolder(part.id || '')}>
-                {part.kind === 'folder' ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ marginRight: 3 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                )}
-                {part.label}
-              </button>
+    <div
+      style={{
+        background: 'var(--color-background)',
+        color: 'var(--color-text)',
+      }}
+      className={`w-full h-full flex flex-col overflow-hidden relative ${isFocusMode ? 'fixed inset-0 z-50 p-6' : ''}`}
+    >
+      {/* ========================================================
+          STICKY TOP TOOLBAR & HEADER DA NOTA (COLADA NO TOPO)
+          ======================================================== */}
+      <div
+        style={{
+          background: 'color-mix(in srgb, var(--color-surface) 96%, var(--color-background))',
+          borderColor: 'var(--color-border)',
+        }}
+        className="sticky top-0 z-20 border-b px-4 py-3 space-y-2.5 shadow-xs shrink-0 select-none backdrop-blur-md"
+      >
+        {/* LINHA 1: BREADCRUMBS & FERRAMENTAS DE ESTRUTURA */}
+        <div className="flex items-center justify-between gap-3 text-xs">
+          {/* Breadcrumb Path */}
+          <div className="flex items-center gap-1.5 text-[var(--color-text-muted)] truncate flex-1 min-w-0">
+            {noteBreadcrumb.map((part: BreadcrumbPart) => (
+              <React.Fragment key={part.id}>
+                <button
+                  type="button"
+                  onClick={() => part.kind === 'note' ? onOpenNote(part.id || '') : onOpenFolder(part.id || '')}
+                  className="flex items-center gap-1 hover:text-[var(--color-text)] transition-colors truncate max-w-[140px] cursor-pointer"
+                >
+                  {part.kind === 'folder' ? (
+                    <Folder className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span className="truncate">{part.label}</span>
+                </button>
+                <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
+              </React.Fragment>
+            ))}
+            <span className="font-semibold text-[var(--color-text)] truncate max-w-[200px]">
+              {selectedNote.title || 'Sem título'}
             </span>
-          ))}
-          <span className="notes-bc-sep">&gt;</span>
-          <span className="notes-bc-current">{selectedNote.title || 'Sem titulo'}</span>
-        </div>
-      )}
+          </div>
 
-      <div className="notes-editor-top-bar">
-        <div className="notes-editor-title-wrap">
-          <input
-            ref={titleInputRef}
-            className={`notes-editor-title-input${selectedNoteLocked ? ' is-locked' : ''}`}
-            value={noteTitle}
-            onChange={e => setNoteTitle(e.target.value)}
-            onBlur={onTitleBlur}
-            placeholder="Sem titulo"
-            readOnly={selectedNoteLocked}
-          />
-          {selectedNoteLocked && (
-            <span className="notes-editor-locked-icon" title="Nota trancada">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v1" /></svg>
-            </span>
-          )}
+          {/* Ferramentas de Conteúdo: Sumário, Backlinks, Grafo, Bookmarks, AutoSave */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
+
+            <div className="h-3.5 w-px bg-neutral-700/30 mx-1" />
+
+            {onToggleOutline && (
+              <button
+                type="button"
+                onClick={onToggleOutline}
+                title="Sumário de Tópicos / Outline (Ctrl+Shift+O)"
+                style={{
+                  background: showOutline ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
+                  color: showOutline ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                }}
+                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+              >
+                <ListTree className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sumário</span>
+              </button>
+            )}
+
+            {onToggleBacklinksPanel && (
+              <button
+                type="button"
+                onClick={onToggleBacklinksPanel}
+                title="Visualizar Backlinks / Conexões"
+                style={{
+                  background: showBacklinks ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
+                  color: showBacklinks ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                }}
+                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Backlinks</span>
+              </button>
+            )}
+
+            {onOpenGraph && (
+              <button
+                type="button"
+                onClick={onOpenGraph}
+                title="Grafo Visual de Notas"
+                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Grafo</span>
+              </button>
+            )}
+
+            {onAddBookmark && (
+              <button
+                type="button"
+                onClick={onAddBookmark}
+                title="Adicionar aos Bookmarks"
+                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
-        <div className="notes-editor-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Chips de Tags inline na barra direita */}
+
+        {/* LINHA 2: TÍTULO DA NOTA & AÇÕES PRINCIPAIS */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <input
+              ref={titleInputRef}
+              className={`w-full text-xl sm:text-2xl font-black tracking-tight text-[var(--color-text)] bg-transparent outline-none ${selectedNoteLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+              value={noteTitle}
+              onChange={e => setNoteTitle(e.target.value)}
+              onBlur={onTitleBlur}
+              placeholder="Título da nota..."
+              readOnly={selectedNoteLocked}
+            />
+            {selectedNoteLocked && (
+              <span className="text-rose-400 p-1 rounded bg-rose-500/10 shrink-0" title="Nota trancada">
+                <Lock className="w-4 h-4" />
+              </span>
+            )}
+          </div>
+
+          {/* Grupo de Ações da Nota */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Favorito ⭐ */}
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(selectedNote.id)}
+              title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Favoritar nota'}
+              style={{
+                color: selectedNote.isFavorite ? '#f59e0b' : 'var(--color-text-muted)',
+                background: selectedNote.isFavorite ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+              disabled={selectedNoteLocked}
+            >
+              <Star className={`w-4 h-4 ${selectedNote.isFavorite ? 'fill-amber-500' : ''}`} />
+            </button>
+
+            {/* Fixar 📌 */}
+            <button
+              type="button"
+              onClick={() => onTogglePinned(selectedNote.id)}
+              title={selectedNote.isPinned ? 'Desafixar nota' : 'Fixar nota'}
+              style={{
+                color: selectedNote.isPinned ? '#10b981' : 'var(--color-text-muted)',
+                background: selectedNote.isPinned ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+              disabled={selectedNoteLocked}
+            >
+              <Pin className="w-4 h-4" />
+            </button>
+
+            {/* Trancar 🔒 */}
+            <button
+              type="button"
+              onClick={() => onToggleLock(selectedNote.id)}
+              title={selectedNoteLocked ? 'Destrancar nota' : 'Proteger nota com trava'}
+              style={{
+                color: selectedNoteLocked ? '#f43f5e' : 'var(--color-text-muted)',
+                background: selectedNoteLocked ? 'rgba(244, 63, 94, 0.12)' : 'transparent',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+            >
+              {selectedNoteLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+            </button>
+
+            {/* Histórico 🕒 */}
+            <button
+              type="button"
+              onClick={toggleHistory}
+              title="Histórico de revisões"
+              style={{
+                color: historyOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                background: historyOpen ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : 'transparent',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+            >
+              <History className="w-4 h-4" />
+            </button>
+
+            {/* Nova Subpágina */}
+            <button
+              type="button"
+              onClick={() => onAddNote(selectedNote.folderId, selectedNote.id)}
+              title="Criar nova subpágina"
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+              disabled={selectedNoteLocked}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
+            {/* Modo Foco ⛶ */}
+            <button
+              type="button"
+              onClick={() => setIsFocusMode(prev => !prev)}
+              title={isFocusMode ? 'Sair do Modo Foco (Ctrl+Shift+F)' : 'Modo Foco Zen (Ctrl+Shift+F)'}
+              style={{
+                color: isFocusMode ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+            >
+              {isFocusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
+            {/* Split View */}
+            <button
+              type="button"
+              onClick={() => setSplitViewOpen(prev => !prev)}
+              title="Visualização Dividida"
+              style={{
+                color: splitViewOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+            >
+              <Columns2 className="w-4 h-4" />
+            </button>
+
+            {/* Exportar .md / PDF */}
+            <button
+              type="button"
+              onClick={() => setExportModalOpen(true)}
+              title="Exportar Nota (.md, PDF, Texto)"
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+
+            {/* Excluir Nota */}
+            <button
+              type="button"
+              onClick={() => onRequestDelete(selectedNote.id)}
+              title="Mover para Lixeira"
+              className="p-1.5 rounded-lg border border-transparent hover:border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+              disabled={selectedNoteLocked}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* LINHA 3: TAGS & METADADOS DA NOTA */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
+          <Tag className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0 opacity-70" />
+
+          {/* Chips de Tags */}
           {(selectedNote.tags || []).map((tag: string) => (
-            <span key={tag} style={{ fontSize: '11px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-              #{tag}
+            <span
+              key={tag}
+              style={{
+                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                color: 'var(--color-primary)',
+                borderColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold"
+            >
+              <span>#{tag}</span>
               {!selectedNoteLocked && (
                 <button
+                  type="button"
                   onClick={() => handleRemoveTag(tag)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '11px', padding: 0, lineHeight: 1 }}
+                  className="hover:text-rose-400 cursor-pointer text-xs ml-0.5"
                   title="Remover tag"
                 >
-                  &times;
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </span>
           ))}
+
+          {/* Input para adicionar nova tag */}
           {!selectedNoteLocked && (
-            <input
-              type="text"
-              value={newTagInput}
-              onChange={e => setNewTagInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAddTag() }}
-              placeholder="+ Tag..."
-              style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--color-border)', fontSize: '11px', color: 'var(--color-text-muted)', outline: 'none', width: '60px', padding: '1px 4px', marginRight: '6px' }}
-            />
+            <div className="flex items-center">
+              <input
+                type="text"
+                value={newTagInput}
+                onChange={e => setNewTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddTag() }}
+                placeholder="+ Tag..."
+                style={{
+                  background: 'color-mix(in srgb, var(--color-background) 80%, var(--color-surface))',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text)',
+                }}
+                className="px-2 py-0.5 rounded-full border text-[11px] outline-none w-20 focus:w-28 focus:border-[var(--color-primary)] transition-all font-medium"
+              />
+            </div>
           )}
 
-          <button className={`notes-editor-action${historyOpen ? ' active' : ''}`} onClick={toggleHistory} title="Histórico de revisões">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-          </button>
-          <button className={`notes-editor-action${selectedNoteLocked ? ' active' : ''}`} onClick={() => onToggleLock(selectedNote.id)} title={selectedNoteLocked ? 'Destrancar nota' : 'Trancar nota'}>
-            {selectedNoteLocked ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v1" /></svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            )}
-          </button>
-          <button className={`notes-editor-action${selectedNote.isFavorite ? ' active' : ''}`} onClick={() => onToggleFavorite(selectedNote.id)} title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} disabled={selectedNoteLocked}>
-            <svg viewBox="0 0 24 24" fill={selectedNote.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="15" height="15"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-          </button>
-          <button className={`notes-editor-action${selectedNote.isPinned ? ' active' : ''}`} onClick={() => onTogglePinned(selectedNote.id)} title={selectedNote.isPinned ? 'Desafixar' : 'Fixar'} disabled={selectedNoteLocked}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" /></svg>
-          </button>
-          <button className="notes-editor-action" onClick={() => onAddNote(selectedNote.folderId, selectedNote.id)} title="Nova subpagina" disabled={selectedNoteLocked}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="12" x2="12" y2="18" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
-          </button>
-          <button className={`notes-editor-action${isFocusMode ? ' active' : ''}`} onClick={() => setIsFocusMode(prev => !prev)} title={isFocusMode ? 'Sair do Modo Foco (Ctrl+Shift+F)' : 'Modo Foco Zen (Ctrl+Shift+F)'}>
-            {isFocusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
-          <button className={`notes-editor-action${splitViewOpen ? ' active' : ''}`} onClick={() => setSplitViewOpen(prev => !prev)} title="Visualização Dividida (Split View)">
-            <Columns2 className="w-3.5 h-3.5" />
-          </button>
-          <button className="notes-editor-action" onClick={() => setExportModalOpen(true)} title="Exportar & Copiar Nota (Markdown, Texto, Prompt IA, PDF)">
-            <Download className="w-3.5 h-3.5" />
-          </button>
-          <button className="notes-editor-action danger" onClick={() => onRequestDelete(selectedNote.id)} title="Excluir nota" disabled={selectedNoteLocked}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
-          </button>
+          {/* Word count & Reading time indicator */}
+          <div className="ml-auto text-[11px] text-[var(--color-text-muted)] font-medium">
+            {wordCount} palavras • ~{readingTime} min
+          </div>
         </div>
       </div>
 
-      {/* ── Revision history panel ─────────────────────────────────────────── */}
+      {/* ========================================================
+          HISTÓRICO DE REVISÕES (DRAWER / PANEL SE ABERTO)
+          ======================================================== */}
       {historyOpen && (
-        <div className="notes-history-panel">
-          <div className="notes-history-panel-header">
-            <span>Histórico de revisões</span>
-            <button className="notes-history-close" onClick={() => { setHistoryOpen(false); setPreviewRevision(null) }}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+        <div
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+          className="p-3 border-b space-y-2 text-xs"
+        >
+          <div className="flex items-center justify-between font-bold text-[var(--color-text)]">
+            <span>Histórico de Versões</span>
+            <button
+              type="button"
+              onClick={() => {
+                setHistoryOpen(false)
+                setPreviewRevision(null)
+              }}
+              className="text-[var(--color-text-muted)] hover:text-white"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {previewRevision ? (
-            <div className="notes-history-preview">
-              <div className="notes-history-preview-bar">
-                <span className="notes-history-preview-date">{fmtRevDate(previewRevision.createdAt)}</span>
-                <button className="notes-history-back" onClick={() => setPreviewRevision(null)}>
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11"><polyline points="10 4 6 8 10 12"/></svg>
-                  Voltar
+            <div className="space-y-2 p-2 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)]">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-emerald-400">{fmtRevDate(previewRevision.createdAt)}</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewRevision(null)}
+                  className="text-xs text-[var(--color-primary)] font-bold hover:underline"
+                >
+                  ← Voltar para lista
                 </button>
               </div>
               <div
-                className="notes-history-preview-content tiptap ProseMirror"
+                className="max-h-40 overflow-y-auto text-xs p-2 rounded bg-black/20"
                 dangerouslySetInnerHTML={{ __html: previewRevision.content }}
               />
             </div>
           ) : revisionsLoading ? (
-            <div className="notes-history-loading">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeDasharray="30 10" /></svg>
-              Carregando…
-            </div>
+            <div className="py-3 text-center text-[var(--color-text-muted)]">Carregando histórico...</div>
           ) : revisionsError ? (
-            <div className="notes-history-error">{revisionsError}</div>
+            <div className="py-2 text-rose-400">{revisionsError}</div>
           ) : revisions.length === 0 ? (
-            <div className="notes-history-empty">Nenhuma revisão salva ainda.</div>
+            <div className="py-2 text-[var(--color-text-muted)]">Nenhuma versão anterior registrada.</div>
           ) : (
-            <div className="notes-history-list">
+            <div className="space-y-1 max-h-36 overflow-y-auto">
               {revisions.map(rev => (
-                <button key={rev.id} className="notes-history-item" onClick={() => setPreviewRevision(rev)}>
-                  <span className="notes-history-item-date">{fmtRevDate(rev.createdAt)}</span>
-                  <span className="notes-history-item-preview">{stripHtml(rev.content)}</span>
-                </button>
+                <div
+                  key={rev.id}
+                  onClick={() => setPreviewRevision(rev)}
+                  className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/[0.05] cursor-pointer"
+                >
+                  <span className="font-medium text-[var(--color-text)]">{fmtRevDate(rev.createdAt)}</span>
+                  <span className="text-[10px] text-[var(--color-primary)] font-bold">Ver &rarr;</span>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {noteSubpages.length > 0 && (
-        <div className="notes-subpages-row">
-          {noteSubpages.map(sub => (
-            <button key={sub.id} className="notes-subpage-chip" onClick={() => onOpenNote(sub.id)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-              {sub.title || 'Sem titulo'}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ========================================================
+          CORPO DO EDITOR PRINCIPAL
+          ======================================================== */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-4xl w-full mx-auto">
+        <WysiwygEditor
+          content={noteContent}
+          onChange={(html) => onContentChange(selectedNote.id, html)}
+          readOnly={selectedNoteLocked}
+          placeholder="Comece a escrever sua nota... Digite / para comandos ou utilize as ferramentas acima."
+          mode="full"
+          currentNoteId={selectedNote.id}
+          noteTitlesById={noteTitlesById}
+          onNoteMentionClick={onOpenNote}
+        />
 
-      <div className="notes-editor-content">
-        {splitViewOpen ? (
-          <NotesSplitView
-            primaryNote={selectedNote}
-            primaryContent={noteContent}
-            onPrimaryContentChange={onContentChange}
-            notes={notes}
-            onClose={() => setSplitViewOpen(false)}
-          />
-        ) : (
-          <WysiwygEditor
-            key={selectedNote.id}
-            content={noteContent}
-            onChange={(html) => onContentChange(selectedNote.id, html)}
-            mode="full"
-            currentNoteId={selectedNote.id}
-            readOnly={selectedNoteLocked}
-            floatingToolbox
-            disableImages
-            noteTitlesById={noteTitlesById}
-          />
+        {/* Subpáginas Vinculadas no Rodapé */}
+        {noteSubpages.length > 0 && (
+          <div className="mt-12 pt-6 border-t border-neutral-800/60 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+              Subpáginas desta Nota ({noteSubpages.length})
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {noteSubpages.map(sub => (
+                <div
+                  key={sub.id}
+                  onClick={() => onOpenNote(sub.id)}
+                  style={{
+                    background: 'color-mix(in srgb, var(--color-surface) 60%, var(--color-background))',
+                    borderColor: 'var(--color-border)',
+                  }}
+                  className="p-2.5 rounded-lg border hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center gap-2 group"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+                  <span className="text-xs font-semibold text-[var(--color-text)] truncate group-hover:text-[var(--color-primary)] transition-colors">
+                    {sub.title || 'Sem título'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* ── Backlinks ─────────────────────────────────────────────────────── */}
-      {!isFocusMode && (
-        <div className="notes-backlinks-section">
-          <button className="notes-backlinks-toggle" onClick={handleToggleBacklinks}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"
-              style={{ transform: backlinksExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13" style={{ flexShrink: 0 }}>
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-            <span>Mencionado em</span>
-            {backlinksLoaded && (
-              <span className="notes-backlinks-count">{backlinkNotes.length}</span>
-            )}
-          </button>
-
-          {backlinksExpanded && (
-            <div className="notes-backlinks-body">
-              {backlinksLoading ? (
-                <span className="notes-backlinks-loading">Buscando menções…</span>
-              ) : backlinkNotes.length === 0 ? (
-                <span className="notes-backlinks-empty">Nenhuma nota menciona esta</span>
-              ) : (
-                backlinkNotes.map(n => (
-                  <button key={n.id} className="notes-backlink-item" onClick={() => onOpenNote(n.id)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    <span>{n.title || 'Sem titulo'}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <div className="notes-editor-footer">
-        <span className="notes-editor-wordcount">
-          {wordCount > 0 ? `${wordCount} palavras · ${readingTime} min de leitura` : 'Nota vazia'}
-        </span>
-      </div>
-
+      {/* Modal de Exportação */}
       <NoteExportModal
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        noteTitle={selectedNote.title}
+        noteTitle={noteTitle || selectedNote.title || 'Nota'}
         noteContent={noteContent}
       />
+
+      {/* Split View Lateral */}
+      {splitViewOpen && (
+        <NotesSplitView
+          primaryNote={selectedNote}
+          primaryContent={noteContent}
+          onPrimaryContentChange={onContentChange}
+          notes={notes}
+          onClose={() => setSplitViewOpen(false)}
+        />
+      )}
     </div>
   )
 }
