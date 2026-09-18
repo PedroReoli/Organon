@@ -11,6 +11,7 @@ import React, { useMemo, useState } from 'react'
 import type { NoteTemplate } from '@types'
 import { BUILTIN_NOTE_TEMPLATES } from '@types'
 import { Button } from '@shared/components/primitives'
+import { Modal } from '@/components/ui/Modal'
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
@@ -84,59 +85,54 @@ export const TemplatesPickerModal: React.FC<TemplatesPickerModalProps> = ({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal notes-templates-modal" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-header">
-          <h2>Nova nota a partir de template</h2>
-          <button type="button" className="modal-close-btn" onClick={onClose}>
-            &times;
-          </button>
-        </header>
-
-        <div className="modal-body notes-templates-body">
-          <div className="form-group">
-            <label className="form-label">Título</label>
-            <input
-              type="text"
-              className="form-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Nome da nota"
-              autoFocus
-            />
-          </div>
-
-          <div className="notes-templates-grid">
-            <button
-              type="button"
-              className={`notes-template-card ${selectedId === null ? 'is-active' : ''}`}
-              onClick={() => setSelectedId(null)}
-            >
-              <span className="notes-template-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></span>
-              <span className="notes-template-name">Em branco</span>
-              <span className="notes-template-desc">Nota vazia</span>
-            </button>
-            {allTemplates.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`notes-template-card ${selectedId === t.id ? 'is-active' : ''}`}
-                onClick={() => setSelectedId(t.id)}
-              >
-                <span className="notes-template-icon">{renderTemplateIcon(t.icon)}</span>
-                <span className="notes-template-name">{t.name}</span>
-                {t.description && <span className="notes-template-desc">{t.description}</span>}
-                {t.category && <span className="notes-template-category">{t.category}</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <footer className="modal-footer">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Nova nota a partir de template"
+      className="notes-templates-modal"
+      footer={
+        <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button variant="primary" onClick={handleConfirm}>Criar nota</Button>
-        </footer>
+        </>
+      }
+    >
+      <div className="form-group">
+        <label className="form-label">Título</label>
+        <input
+          type="text"
+          className="form-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Nome da nota"
+          autoFocus
+        />
       </div>
-    </div>
+
+      <div className="notes-templates-grid">
+        <button
+          type="button"
+          className={`notes-template-card ${selectedId === null ? 'is-active' : ''}`}
+          onClick={() => setSelectedId(null)}
+        >
+          <span className="notes-template-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></span>
+          <span className="notes-template-name">Em branco</span>
+          <span className="notes-template-desc">Nota vazia</span>
+        </button>
+        {allTemplates.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`notes-template-card ${selectedId === t.id ? 'is-active' : ''}`}
+            onClick={() => setSelectedId(t.id)}
+          >
+            <span className="notes-template-icon">{renderTemplateIcon(t.icon)}</span>
+            <span className="notes-template-name">{t.name}</span>
+            {t.description && <span className="notes-template-desc">{t.description}</span>}
+            {t.category && <span className="notes-template-category">{t.category}</span>}
+          </button>
+        ))}
+      </div>
+    </Modal>
   )
 }
