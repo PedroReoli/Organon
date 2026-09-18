@@ -11,20 +11,11 @@ import { PaletteSidebar } from './components/PaletteSidebar'
 import { TemplateSelectorModal } from './components/TemplateSelectorModal'
 import { SystemDesignReviewModal } from './components/SystemDesignReviewModal'
 import { NodePropertiesDrawer } from './components/NodePropertiesDrawer'
+import { SystemDesignHeader } from './components/SystemDesignHeader'
+import { SystemEdgeLayer } from './components/SystemEdgeLayer'
+import { SystemDesignNodeItem } from './components/SystemDesignNodeItem'
 import { exportToMermaid } from './utils/mermaidExporter'
-import { SystemComponentIcon } from './components/SystemComponentIcon'
-import {
-  LayoutTemplate,
-  FileCode,
-  Trash2,
-  Link2,
-  X,
-  Boxes,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Sparkles,
-} from 'lucide-react'
+import { Link2, X } from 'lucide-react'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 80
@@ -164,14 +155,12 @@ export const SystemDesignPage: React.FC = () => {
       y: coords.y - node.y,
     })
     setSelectedNodeId(nodeId)
-    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
   }
 
-  // Início do Pan no canvas
+  // Pan do Canvas com botão direito ou arrastar fundo com botão esquerdo
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    if (e.button === 1 || e.button === 0) {
-      setIsPanning(true)
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
+    // Desmarcar seleções se clicar no fundo
+    if (e.target === canvasRef.current || (e.target as HTMLElement).tagName === 'svg') {
       setSelectedNodeId(null)
       setSelectedEdgeId(null)
       if (connectSourceId) {
@@ -179,24 +168,42 @@ export const SystemDesignPage: React.FC = () => {
         setConnectingMousePos(null)
       }
     }
+
+    if (e.button === 0 || e.button === 1 || e.button === 2) {
+      setIsPanning(true)
+      setPanStart({
+        x: e.clientX - pan.x,
+        y: e.clientY - pan.y,
+      })
+    }
   }
 
-  // Movimento global no canvas
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    // Se estiver arrastando nó
+    if (draggingNodeId) {
+      const coords = screenToCanvasCoords(e.clientX, e.clientY)
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (n.id !== draggingNodeId) return n
+          return {
+            ...n,
+            x: Math.round(coords.x - dragOffset.x),
+            y: Math.round(coords.y - dragOffset.y),
+          }
+        })
+      )
+      return
+    }
+
+    // Se estiver conectando e movendo o mouse
     if (connectSourceId) {
       const coords = screenToCanvasCoords(e.clientX, e.clientY)
       setConnectingMousePos(coords)
+      return
     }
 
-    if (draggingNodeId) {
-      const coords = screenToCanvasCoords(e.clientX, e.clientY)
-      const newX = Math.round(coords.x - dragOffset.x)
-      const newY = Math.round(coords.y - dragOffset.y)
-
-      setNodes((prev) =>
-        prev.map((n) => (n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n))
-      )
-    } else if (isPanning) {
+    // Se estiver fazendo pan do canvas
+    if (isPanning) {
       setPan({
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y,
@@ -275,6 +282,18 @@ export const SystemDesignPage: React.FC = () => {
     setZoom(1)
   }
 
+  const handleZoomIn = () => setZoom((z) => Math.min(Number((z + 0.15).toFixed(2)), 2.2))
+  const handleZoomOut = () => setZoom((z) => Math.max(Number((z - 0.15).toFixed(2)), 0.35))
+
+  const handleClearCanvas = () => {
+    if (confirm('Deseja limpar todo o canvas de arquitetura?')) {
+      setNodes([])
+      setEdges([])
+      setSelectedNodeId(null)
+      setConnectSourceId(null)
+    }
+  }
+
   return (
     <div
       style={{
@@ -315,240 +334,19 @@ export const SystemDesignPage: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-        {/* Toolbar Superior */}
-        <div
-          style={{
-            height: '56px',
-            padding: '0 20px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            background: 'rgba(12, 18, 32, 0.95)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            zIndex: 10,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '34px',
-                height: '34px',
-                borderRadius: '8px',
-                background:
-                  'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
-                color: '#818cf8',
-              }}
-            >
-              <Boxes size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: '#f8fafc',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  System Design Canvas
-                </h3>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '2px 7px',
-                    borderRadius: '6px',
-                    background: 'rgba(99, 102, 241, 0.15)',
-                    color: '#a5b4fc',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Estudo & Arquitetura
-                </span>
-              </div>
-              <span style={{ fontSize: '11px', color: '#64748b' }}>
-                {nodes.length} nós · {edges.length} conexões · Arraste componentes da paleta para o
-                canvas
-              </span>
-            </div>
-          </div>
-
-          {/* Controles de Zoom e Ferramentas */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                background: 'rgba(255, 255, 255, 0.04)',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                padding: '2px',
-                marginRight: '6px',
-              }}
-            >
-              <button
-                onClick={() => setZoom((z) => Math.max(Number((z - 0.15).toFixed(2)), 0.35))}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                title="Diminuir Zoom"
-              >
-                <ZoomOut size={14} />
-              </button>
-              <span
-                onClick={resetView}
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#cbd5e1',
-                  padding: '0 8px',
-                  cursor: 'pointer',
-                  minWidth: '42px',
-                  textAlign: 'center',
-                }}
-                title="Clique para redefinir zoom"
-              >
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                onClick={() => setZoom((z) => Math.min(Number((z + 0.15).toFixed(2)), 2.2))}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                title="Aumentar Zoom"
-              >
-                <ZoomIn size={14} />
-              </button>
-              <button
-                onClick={resetView}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                title="Centralizar Visualização"
-              >
-                <RotateCcw size={13} />
-              </button>
-            </div>
-
-            <button
-              onClick={() => setIsTemplateModalOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
-                borderRadius: '7px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#e2e8f0',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <LayoutTemplate size={14} style={{ color: '#818cf8' }} />
-              <span>Templates</span>
-            </button>
-
-            <button
-              onClick={() => setIsReviewModalOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '7px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-              }}
-            >
-              <Sparkles size={14} />
-              <span>AI Reviewer</span>
-            </button>
-
-            <button
-              onClick={exportMermaidCode}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
-                borderRadius: '7px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#e2e8f0',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <FileCode size={14} />
-              <span>Mermaid</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (confirm('Deseja limpar todo o canvas de arquitetura?')) {
-                  setNodes([])
-                  setEdges([])
-                  setSelectedNodeId(null)
-                  setConnectSourceId(null)
-                }
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
-                borderRadius: '7px',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                background: 'rgba(239, 68, 68, 0.1)',
-                color: '#f87171',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <Trash2 size={14} />
-              <span>Limpar</span>
-            </button>
-          </div>
-        </div>
+        {/* Toolbar Superior Modularizada */}
+        <SystemDesignHeader
+          nodesCount={nodes.length}
+          edgesCount={edges.length}
+          zoom={zoom}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetZoom={resetView}
+          onOpenTemplates={() => setIsTemplateModalOpen(true)}
+          onOpenReview={() => setIsReviewModalOpen(true)}
+          onExportMermaid={exportMermaidCode}
+          onClearCanvas={handleClearCanvas}
+        />
 
         {/* Indicador de Conexão em Andamento */}
         {connectSourceId && (
@@ -632,317 +430,33 @@ export const SystemDesignPage: React.FC = () => {
             }}
           >
             {/* SVG para Conexões e Curvas Bezier */}
-            <svg
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '8000px',
-                height: '8000px',
-                overflow: 'visible',
-                pointerEvents: 'none',
-              }}
-            >
-              <defs>
-                <marker
-                  id="arrow"
-                  viewBox="0 0 10 10"
-                  refX="6"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#6366f1" />
-                </marker>
-                <marker
-                  id="arrow-selected"
-                  viewBox="0 0 10 10"
-                  refX="6"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
-                </marker>
-              </defs>
-
-              {/* Renderização de Conexões Existentes */}
-              {edges.map((edge) => {
-                const sourceNode = nodes.find((n) => n.id === edge.source)
-                const targetNode = nodes.find((n) => n.id === edge.target)
-                if (!sourceNode || !targetNode) return null
-
-                const x1 = sourceNode.x + NODE_WIDTH / 2
-                const y1 = sourceNode.y + NODE_HEIGHT / 2
-                const x2 = targetNode.x + NODE_WIDTH / 2
-                const y2 = targetNode.y + NODE_HEIGHT / 2
-
-                const dx = Math.abs(x2 - x1) * 0.5
-                const path = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
-                const midX = (x1 + x2) / 2
-                const midY = (y1 + y2) / 2
-                const isEdgeSelected = selectedEdgeId === edge.id
-                const protocolText = edge.protocol || 'HTTP/REST'
-
-                return (
-                  <g key={edge.id} style={{ pointerEvents: 'auto' }}>
-                    {/* Linha invisível mais grossa para facilitar o clique */}
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke="transparent"
-                      strokeWidth={18}
-                      onClick={() => setSelectedEdgeId(edge.id)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    {/* Linha visível */}
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke={isEdgeSelected ? '#38bdf8' : '#6366f1'}
-                      strokeWidth={isEdgeSelected ? 2.5 : 1.8}
-                      strokeDasharray={
-                        protocolText.includes('Topic') || protocolText.includes('Pub') || protocolText.includes('Event')
-                          ? '5,5'
-                          : 'none'
-                      }
-                      markerEnd={isEdgeSelected ? 'url(#arrow-selected)' : 'url(#arrow)'}
-                      style={{ transition: 'stroke 0.15s ease' }}
-                    />
-
-                    {/* Badge Interativo de Protocolo */}
-                    <foreignObject
-                      x={midX - 55}
-                      y={midY - 14}
-                      width={110}
-                      height={28}
-                      style={{ overflow: 'visible' }}
-                    >
-                      <div
-                        onClick={(e) => handleCycleProtocol(edge.id, e)}
-                        title="Clique para alternar protocolo ou clique no 'X' para remover"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          background: isEdgeSelected ? '#0369a1' : 'rgba(15, 23, 42, 0.9)',
-                          border: `1px solid ${
-                            isEdgeSelected ? '#38bdf8' : 'rgba(99, 102, 241, 0.4)'
-                          }`,
-                          color: '#e0e7ff',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <span>{protocolText}</span>
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteEdge(edge.id)
-                          }}
-                          style={{
-                            color: '#f87171',
-                            marginLeft: '2px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                          }}
-                          title="Remover conexão"
-                        >
-                          <X size={10} />
-                        </span>
-                      </div>
-                    </foreignObject>
-                  </g>
-                )
-              })}
-
-              {/* Linha Dinâmica enquanto está conectando */}
-              {connectSourceId && connectingMousePos && (
-                (() => {
-                  const sourceNode = nodes.find((n) => n.id === connectSourceId)
-                  if (!sourceNode) return null
-                  const x1 = sourceNode.x + NODE_WIDTH / 2
-                  const y1 = sourceNode.y + NODE_HEIGHT / 2
-                  const x2 = connectingMousePos.x
-                  const y2 = connectingMousePos.y
-                  const dx = Math.abs(x2 - x1) * 0.5
-                  const path = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
-
-                  return (
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth={2}
-                      strokeDasharray="4,4"
-                      markerEnd="url(#arrow)"
-                    />
-                  )
-                })()
-              )}
-            </svg>
+            <SystemEdgeLayer
+              nodes={nodes}
+              edges={edges}
+              selectedEdgeId={selectedEdgeId}
+              connectSourceId={connectSourceId}
+              connectingMousePos={connectingMousePos}
+              nodeWidth={NODE_WIDTH}
+              nodeHeight={NODE_HEIGHT}
+              onSelectEdge={(id) => setSelectedEdgeId(id)}
+              onCycleProtocol={handleCycleProtocol}
+              onDeleteEdge={handleDeleteEdge}
+            />
 
             {/* Renderização de Nós */}
-            {nodes.map((node) => {
-              const isSelected = selectedNodeId === node.id
-              const isConnecting = connectSourceId === node.id
-
-              return (
-                <div
-                  key={node.id}
-                  onPointerDown={(e) => handleNodePointerDown(e, node.id)}
-                  style={{
-                    position: 'absolute',
-                    left: `${node.x}px`,
-                    top: `${node.y}px`,
-                    width: `${NODE_WIDTH}px`,
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    background: isSelected
-                      ? 'linear-gradient(180deg, #1e293b, #0f172a)'
-                      : 'linear-gradient(180deg, #131b2e, #0c1220)',
-                    border: '1.5px solid',
-                    borderColor: isConnecting
-                      ? '#f97316'
-                      : isSelected
-                      ? '#818cf8'
-                      : 'rgba(255, 255, 255, 0.08)',
-                    boxShadow: isSelected
-                      ? '0 8px 24px -4px rgba(99, 102, 241, 0.35), 0 0 0 1px rgba(99, 102, 241, 0.4)'
-                      : '0 4px 12px -2px rgba(0, 0, 0, 0.4)',
-                    cursor: 'grab',
-                    pointerEvents: 'auto',
-                    transition:
-                      draggingNodeId === node.id
-                        ? 'none'
-                        : 'border-color 0.15s, box-shadow 0.15s',
-                    zIndex: isSelected ? 5 : 2,
-                  }}
-                >
-                  {/* Cabeçalho do Nó */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '6px',
-                          background: 'rgba(99, 102, 241, 0.15)',
-                          color: '#818cf8',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <SystemComponentIcon type={node.type} size={14} />
-                      </div>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          fontSize: '12px',
-                          color: '#f1f5f9',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {node.label}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteNode(node.id)
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        padding: '2px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-                      title="Excluir componente"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-
-                  {/* Sub-informações / Tags */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '10px',
-                      color: '#94a3b8',
-                    }}
-                  >
-                    <span style={{ color: '#64748b', textTransform: 'capitalize' }}>
-                      {node.category}
-                    </span>
-                    {node.port && <span style={{ color: '#38bdf8' }}>:{node.port}</span>}
-                    {node.scale && <span style={{ color: '#34d399' }}>{node.scale}</span>}
-                  </div>
-
-                  {/* Botão de Conectar Rápido */}
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      paddingTop: '6px',
-                      borderTop: '1px solid rgba(255,255,255,0.05)',
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                    }}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setConnectSourceId(node.id)
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
-                        fontSize: '9.5px',
-                        fontWeight: 600,
-                        borderRadius: '4px',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        background: 'rgba(99, 102, 241, 0.1)',
-                        color: '#a5b4fc',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Link2 size={10} />
-                      <span>Conectar</span>
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            {nodes.map((node) => (
+              <SystemDesignNodeItem
+                key={node.id}
+                node={node}
+                nodeWidth={NODE_WIDTH}
+                isSelected={selectedNodeId === node.id}
+                isConnecting={connectSourceId === node.id}
+                isDragging={draggingNodeId === node.id}
+                onPointerDown={(e) => handleNodePointerDown(e, node.id)}
+                onDeleteNode={handleDeleteNode}
+                onStartConnect={(id) => setConnectSourceId(id)}
+              />
+            ))}
           </div>
 
           {/* Dica Flutuante no Rodapé do Canvas */}
