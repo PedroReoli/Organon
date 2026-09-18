@@ -2,11 +2,18 @@ import { app, BrowserWindow } from 'electron'
 import * as path from 'path'
 
 import { startBackupTimer } from './backup'
-import { startClipboardMonitor } from './clipboardMonitor'
-import { registerIpcHandlers } from './ipc'
-import { loadStore } from './store'
-import { createWindow, focusMainWindow, getMainWindow, setAppQuitting } from './window'
-import { initTray, registerGlobalShortcuts } from './tray'
+import { startClipboardMonitor } from './services'
+import { registerIpcHandlers } from './ipc/index'
+import { loadStore } from './storage'
+import {
+  createWindow,
+  focusMainWindow,
+  getMainWindow,
+  setAppQuitting,
+  initTray,
+  registerGlobalShortcuts,
+  destroyTray,
+} from './core'
 
 // Flag para controlar quando o app está saindo de verdade
 let isQuitting = false
@@ -62,6 +69,8 @@ app.whenReady().then(() => {
     }
   } catch {
     // Ignora erros ao carregar configuracoes.
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -81,6 +90,5 @@ app.on('before-quit', () => {
   // Marca que está saindo de verdade
   setAppQuitting(true)
   // Limpa tray ao sair
-  const { destroyTray } = require('./tray')
   destroyTray()
 })
