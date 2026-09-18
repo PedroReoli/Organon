@@ -9,6 +9,7 @@ export interface Message {
   action?: 'summarize' | 'expand' | 'rewrite' | 'ask' | 'diff'
   originalText?: string
   diffResult?: DiffResult
+  actionPayload?: any
 }
 
 export interface NoteContext {
@@ -50,6 +51,31 @@ export interface AiConfig {
   provider: 'openrouter' | 'openai' | 'gemini' | 'groq' | 'ollama'
   model: string
   baseUrl: string
+}
+
+export type PendingAction =
+  | { id: string; type: 'create_note'; title: string; content: string; folderId?: string | null }
+  | { id: string; type: 'update_note'; title: string; content: string }
+  | { id: string; type: 'create_folder'; name: string; parentId?: string | null }
+  | { id: string; type: 'move_note'; noteId: string; noteTitle: string; folderId: string; folderName: string }
+  | { id: string; type: 'toggle_hub'; folderId: string; folderName: string; isHome: boolean }
+  | { id: string; type: 'rename_folder'; folderId: string; folderName: string; newName: string }
+
+export interface ChatbotProps {
+  notes?: Array<{ id: string; title: string; content: string; folderId?: string | null }>
+  folders?: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }>
+  cards?: Array<{ id: string; title: string; status?: string }>
+  screenContext?: ScreenContext
+  onApplyNote?: (noteId: string | undefined, content: string) => void
+  onNavigateToNote?: (noteId: string) => void
+  onCreateNote?: (title: string, content: string, folderId?: string | null) => void
+  onAddFolder?: (name: string, parentId?: string | null) => string
+  onUpdateFolder?: (folderId: string, updates: Partial<{ name: string; parentId: string | null; isHome: boolean }>) => void
+  onUpdateNote?: (noteId: string, updates: Partial<{ title: string; content: string; folderId: string | null; isPinned: boolean; isFavorite: boolean }>) => void
+  isOpen?: boolean
+  onClose?: () => void
+  hideFloatingTrigger?: boolean
+  conversationsDir?: string
 }
 
 export const DEFAULT_AI_CONFIG: AiConfig = {

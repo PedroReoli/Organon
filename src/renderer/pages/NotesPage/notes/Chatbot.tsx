@@ -1,396 +1,32 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import {
+  AiConfig,
+  ChatbotProps,
+  Message,
+  NoteContext,
+  PendingAction,
+  PROVIDER_PRESETS,
+} from './chatbot/chatbot.types'
+import { ChatbotActionCard } from './chatbot/ChatbotActionCard'
+import { ChatbotSettingsModal } from './chatbot/ChatbotSettingsModal'
+import { ChatMessageItem } from './chatbot/ChatMessageItem'
+import { calculateSimilarity, extractSnippet } from './chatbot/diffUtils'
+import { generateId, parseLocalIntent } from './chatbot/intentParser'
+import {
+  CONTEXT_TEMPLATES,
+  SUGGESTIONS_BY_CONTEXT,
+  Icons,
+  TypingIndicator,
+} from './chatbot/chatbot.constants'
+import {
+  loadAiConfig,
+  saveAiConfig,
+  loadHistory,
+  saveHistory,
+} from './chatbot/chatbotStorage'
+import { useChatbotVoice } from './chatbot/useChatbotVoice'
 
-// ============================================================
-// TYPES
-// ============================================================
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: Date
-  notes?: NoteContext[]
-  action?: 'summarize' | 'expand' | 'rewrite' | 'ask' | 'diff'
-  originalText?: string
-  diffResult?: DiffResult
-  actionPayload?: any
-}
-
-interface NoteContext {
-  id: string
-  title: string
-  content: string
-  similarity: number
-  snippet: string
-}
-
-interface DiffResult {
-  original: string
-  rewritten: string
-  changes: DiffChange[]
-}
-
-interface DiffChange {
-  type: 'add' | 'remove' | 'equal'
-  text: string
-}
-
-interface ScreenContext {
-  screen: string
-  title: string
-  items: Array<{ id: string; title: string; type: string }>
-}
-
-// ============================================================
-// CONFIG & PROVIDERS
-// ============================================================
-
-export interface AiConfig {
-  apiKey: string
-  provider: 'openrouter' | 'openai' | 'gemini' | 'groq' | 'ollama'
-  model: string
-  baseUrl: string
-}
-
-const STORAGE_KEY = 'organon-chatbot-history'
-const AI_CONFIG_KEY = 'organon-ai-config'
-const MAX_HISTORY_MESSAGES = 50
-
-const DEFAULT_AI_CONFIG: AiConfig = {
-  apiKey: import.meta.env?.VITE_OPENROUTER_API_KEY || '',
-  provider: 'openrouter',
-  model: 'openai/gpt-4o',
-  baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-}
-
-const PROVIDER_PRESETS: Record<string, { label: string; url: string; defaultModel: string }> = {
-  openrouter: { label: 'OpenRouter (OpenAI, Claude, etc)', url: 'https://openrouter.ai/api/v1/chat/completions', defaultModel: 'openai/gpt-4o' },
-  openai: { label: 'OpenAI (Oficial)', url: 'https://api.openai.com/v1/chat/completions', defaultModel: 'gpt-4o' },
-  gemini: { label: 'Google Gemini API', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', defaultModel: 'gemini-1.5-pro' },
-  groq: { label: 'Groq (Respostas Ultra-Rápidas)', url: 'https://api.groq.com/openai/v1/chat/completions', defaultModel: 'llama-3.3-70b-versatile' },
-  ollama: { label: 'Ollama Local (Offline / Grátis)', url: 'http://localhost:11434/v1/chat/completions', defaultModel: 'llama3' },
-}
-
-function loadAiConfig(): AiConfig {
-  try {
-    const saved = localStorage.getItem(AI_CONFIG_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return DEFAULT_AI_CONFIG
-}
-
-function saveAiConfig(cfg: AiConfig) {
-  localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(cfg))
-}
-
-// ============================================================
-// CONTEXT TEMPLATES
-// ============================================================
-
-const CONTEXT_TEMPLATES: Record<string, string> = {
-  notes: `Você está no módulo de Notas do Organon. O usuário está visualizando suas notas pessoais.
-Contexto: O usuário pode buscar, resumir, expandir e reescrever notas. Pode também criar novas notas.
-Formato preferido para resumos: bullet points com os pontos principais.
-Ao resumir, identifique os pontos mais importantes e agrupe por tema se aplicável.`,
-
-  cards: `Você está no módulo de Planejamento (Cards/Tarefas) do Organon. O usuário está gerenciando tarefas e projetos.
-Contexto: Cards podem ter prioridades, datas, checklists e status. O usuário quer organizarse melhor.
-Sugira formas práticas de priorizar e organizar tarefas.`,
-
-  calendar: `Você está no módulo de Calendário do Organon. O usuário está planejando eventos e agendamentos.
-Contexto: Eventos têm data, hora, categoria e podem ter lembretes.
-Ajud a otimizar a agenda e identificar conflitos.`,
-
-  finance: `Você está no módulo Financeiro do Organon. O usuário está gerenciando finanças pessoais.
-Contexto: Inclui despesas, receitas, investimentos, metas de economia e orçamento.
-Seja prático com dicas de economia e investimento.`,
-
-  general: `Você é um assistente pessoal inteligente do Organon, um sistema de produtividade pessoal completo.
-Módulos disponíveis: Notas, Planejamento (Cards), Calendário, Financeiro, Projetos, Estudos, Apps.
-O usuário pode perguntar sobre qualquer módulo e eu vou consultar os dados relevantes.
-Seja útil, conciso e proativo em sugerir ações.`
-}
-
-// ============================================================
-// SUGGESTIONS BY CONTEXT
-// ============================================================
-
-const SUGGESTIONS_BY_CONTEXT: Record<string, string[]> = {
-  notes: [
-    'Resuma minhas notas recentes',
-    'Que notas tenho sobre projetos?',
-    'Crie uma nota sobre...',
-    'Compare duas notas',
-  ],
-  cards: [
-    'Priorize minhas tarefas',
-    'O que devo fazer hoje?',
-    'Analise meu progresso semanal',
-    'Sugira como organizar projetos',
-  ],
-  calendar: [
-    'Analise minha agenda',
-    'Sugira otimizar meu tempo',
-    'Que eventos tenho esta semana?',
-    'Crie um lembrete para...',
-  ],
-  finance: [
-    'Analise minhas finanças',
-    'Estou dentro do orçamento?',
-    'Sugira metas de economia',
-    'Como melhorar minha situação?',
-  ],
-  general: [
-    'Dê um resumo do meu dia',
-    'O que tenho pendente?',
-    'Sugira melhorias para meu sistema',
-    'Resumo geral de tudo',
-  ],
-}
-
-// ============================================================
-// ICONS
-// ============================================================
-
-const Icons = {
-  chat: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
-  close: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>,
-  send: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>,
-  bot: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v4" /><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" /></svg>,
-  user: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
-  mic: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>,
-  micOff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" /><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>,
-  download: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
-  templates: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>,
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
-  summarize: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
-  expand: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>,
-  rewrite: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
-  diff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>,
-  copy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>,
-  plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>,
-  check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="20 6 9 17 4 12" /></svg>,
-  minimize: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><polyline points="6 9 12 15 18 9" /></svg>,
-  keyboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="2" y="4" width="20" height="16" rx="2" ry="2" /><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M6 16h8" /></svg>,
-  lightbulb: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M9 18h6M10 22h4M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" /></svg>,
-  gear: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-}
-
-const NOTE_SNIPPET_CHARS = 200
-
-function extractSnippet(content: string, query: string, maxChars: number = NOTE_SNIPPET_CHARS): string {
-  const lowerContent = content.toLowerCase()
-  const lowerQuery = query.toLowerCase()
-  const words = lowerQuery.split(/\s+/).filter(w => w.length > 2)
-  let bestIndex = 0
-  let bestScore = 0
-
-  for (const word of words) {
-    const idx = lowerContent.indexOf(word)
-    if (idx !== -1 && idx > bestScore) {
-      bestIndex = Math.max(0, idx - 100)
-      bestScore = idx
-    }
-  }
-
-  const start = bestIndex
-  const end = Math.min(start + maxChars, content.length)
-  let snippet = content.slice(start, end)
-  if (start > 0) snippet = '...' + snippet
-  if (end < content.length) snippet = snippet + '...'
-  return snippet
-}
-
-function calculateSimilarity(text1: string, text2: string): number {
-  const words1 = new Set(text1.toLowerCase().split(/\s+/).filter(w => w.length > 2))
-  const words2 = new Set(text2.toLowerCase().split(/\s+/).filter(w => w.length > 2))
-  let intersection = 0
-  for (const word of words1) {
-    if (words2.has(word)) intersection++
-  }
-  const union = words1.size + words2.size - intersection
-  return union > 0 ? intersection / union : 0
-}
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-}
-
-// ============================================================
-// LOCAL STORAGE
-// ============================================================
-
-function saveHistory(messages: Message[]) {
-  try {
-    const toSave = messages.slice(-MAX_HISTORY_MESSAGES).map(m => ({
-      ...m,
-      timestamp: m.timestamp.toISOString()
-    }))
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
-  } catch (e) {
-    console.error('Failed to save chat history:', e)
-  }
-}
-
-function loadHistory(): Message[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      return parsed.map((m: any) => ({
-        ...m,
-        timestamp: new Date(m.timestamp)
-      }))
-    }
-  } catch (e) {
-    console.error('Failed to load chat history:', e)
-  }
-  return []
-}
-
-// ============================================================
-// TYPING INDICATOR
-// ============================================================
-
-const TypingIndicator = () => (
-  <div className="chatbot-typing">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-)
-
-// ============================================================
-// NOTE REFERENCE
-// ============================================================
-
-const NoteReference: React.FC<{ note: NoteContext; onClick?: () => void }> = ({ note, onClick }) => (
-  <button className="chatbot-note-ref" onClick={onClick} title={`Similaridade: ${Math.round(note.similarity * 100)}%`}>
-    <span className="chatbot-note-ref-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-    </span>
-    <span className="chatbot-note-ref-title">{note.title}</span>
-    <span className="chatbot-note-ref-score">{Math.round(note.similarity * 100)}%</span>
-  </button>
-)
-
-// ============================================================
-// LOCAL INTENT PARSER
-// ============================================================
-
-function parseLocalIntent(
-  input: string,
-  folders: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }> = [],
-  notes: Array<{ id: string; title: string; content: string; folderId?: string | null }> = []
-): { message: string; action?: { id: string; type: string; [key: string]: any } } {
-  const trimmed = input.trim()
-  const lower = trimmed.toLowerCase()
-
-  // 1. Criar pasta: "crie a pasta PROMPTS", "criar pasta dev", "nova pasta X"
-  const folderMatch = lower.match(/(?:criar|crie|nova|adicionar|adicione)\s+(?:uma\s+)?pasta\s+(?:chamada\s+)?["']?([^"'\n\r]+)["']?/i)
-  if (folderMatch) {
-    const folderName = folderMatch[1].trim()
-    return {
-      message: `Entendido! Preparei a criação da pasta "${folderName}". Confirme no card abaixo para executar:`,
-      action: { id: generateId(), type: 'create_folder', name: folderName }
-    }
-  }
-
-  // 2. Mover nota: "mova a nota X para a pasta Y", "mover nota A para B"
-  const moveMatch = lower.match(/(?:mover|mova)\s+(?:a\s+)?nota\s+["']?([^"'\n\r]+)["']?\s+para\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?/i)
-  if (moveMatch) {
-    const noteSearch = moveMatch[1].trim()
-    const folderSearch = moveMatch[2].trim()
-
-    const targetNote = notes.find(n => n.title.toLowerCase().includes(noteSearch.toLowerCase()))
-    const targetFolder = folders.find(f => f.name.toLowerCase().includes(folderSearch.toLowerCase()))
-
-    if (targetNote && targetFolder) {
-      return {
-        message: `Localizei a nota "${targetNote.title}" e a pasta de destino "${targetFolder.name}". Confirme a mudança:`,
-        action: { id: generateId(), type: 'move_note', noteId: targetNote.id, noteTitle: targetNote.title, folderId: targetFolder.id, folderName: targetFolder.name }
-      }
-    } else if (!targetNote) {
-      return { message: `Não encontrei nenhuma nota com o nome correspondente a "${noteSearch}".` }
-    } else {
-      return { message: `Não encontrei nenhuma pasta de destino com o nome correspondente a "${folderSearch}".` }
-    }
-  }
-
-  // 3. Transformar pasta em Hub: "transforme a pasta X em hub", "tornar a pasta X um hub"
-  const hubMatch = lower.match(/(?:transforme|tornar|tornar a|definir|torne)\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?\s+(?:em|como|um)?\s*hub/i)
-  if (hubMatch) {
-    const folderSearch = hubMatch[1].trim()
-    const targetFolder = folders.find(f => f.name.toLowerCase().includes(folderSearch.toLowerCase()))
-    if (targetFolder) {
-      return {
-        message: `Deseja alternar a pasta "${targetFolder.name}" para status de Hub Central?`,
-        action: { id: generateId(), type: 'toggle_hub', folderId: targetFolder.id, folderName: targetFolder.name, isHome: !targetFolder.isHome }
-      }
-    }
-    return { message: `Não encontrei a pasta "${folderSearch}" para transformar em Hub.` }
-  }
-
-  // 4. Renomear pasta: "renomear pasta X para Y", "renomeie a pasta X para Y"
-  const renameMatch = lower.match(/(?:renomear|renomeie)\s+(?:a\s+pasta\s+)?["']?([^"'\n\r]+)["']?\s+para\s+["']?([^"'\n\r]+)["']?/i)
-  if (renameMatch) {
-    const oldName = renameMatch[1].trim()
-    const newName = renameMatch[2].trim()
-    const targetFolder = folders.find(f => f.name.toLowerCase().includes(oldName.toLowerCase()))
-    if (targetFolder) {
-      return {
-        message: `Preparei a renomeação da pasta "${targetFolder.name}" para "${newName}". Confirme:`,
-        action: { id: generateId(), type: 'rename_folder', folderId: targetFolder.id, folderName: targetFolder.name, newName }
-      }
-    }
-    return { message: `Não encontrei a pasta "${oldName}".` }
-  }
-
-  // 5. Criar nota: "criar nota X", "crie uma nota sobre Y"
-  const noteCreateMatch = lower.match(/(?:criar|crie|nova)\s+(?:uma\s+)?nota\s+(?:chamada|sobre|com o título)?\s*["']?([^"'\n\r]+)["']?/i)
-  if (noteCreateMatch) {
-    const noteTitle = noteCreateMatch[1].trim()
-    return {
-      message: `Entendido! Preparei a criação da nota "${noteTitle}". Confirme no card abaixo:`,
-      action: { id: generateId(), type: 'create_note', title: noteTitle, content: `# ${noteTitle}\n\nNota criada pelo Assistente Organon.` }
-    }
-  }
-
-  // Fallback assistente geral
-  return {
-    message: `Olá! Sou o Orquestrador IA do Organon.\n\nPosso executar os seguintes comandos de organização:\n\n• **"Criar pasta [Nome]"** (ex: *crie a pasta PROMPTS*)\n• **"Mova a nota [Nome] para [Pasta]"** (ex: *mova a nota DevTools para a pasta Tools*)\n• **"Transforme a pasta [Nome] em Hub"**\n• **"Renomear pasta [Nome] para [NovoNome]"**\n• **"Criar nota [Título]"**\n\n*(Dica: Você também pode configurar sua chave de API nas configurações de IA para respostas avançadas de LLM!)*`
-  }
-}
-
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
-
-interface ChatbotProps {
-  notes?: Array<{ id: string; title: string; content: string; folderId?: string | null }>
-  folders?: Array<{ id: string; name: string; parentId?: string | null; isHome?: boolean }>
-  cards?: Array<{ id: string; title: string; status?: string }>
-  screenContext?: ScreenContext
-  onApplyNote?: (noteId: string | undefined, content: string) => void
-  onNavigateToNote?: (noteId: string) => void
-  onCreateNote?: (title: string, content: string, folderId?: string | null) => void
-  onAddFolder?: (name: string, parentId?: string | null) => string
-  onUpdateFolder?: (folderId: string, updates: Partial<{ name: string; parentId: string | null; isHome: boolean }>) => void
-  onUpdateNote?: (noteId: string, updates: Partial<{ title: string; content: string; folderId: string | null; isPinned: boolean; isFavorite: boolean }>) => void
-  isOpen?: boolean
-  onClose?: () => void
-  hideFloatingTrigger?: boolean
-  conversationsDir?: string
-}
-
-export type PendingAction =
-  | { id: string; type: 'create_note'; title: string; content: string; folderId?: string | null }
-  | { id: string; type: 'update_note'; title: string; content: string }
-  | { id: string; type: 'create_folder'; name: string; parentId?: string | null }
-  | { id: string; type: 'move_note'; noteId: string; noteTitle: string; folderId: string; folderName: string }
-  | { id: string; type: 'toggle_hub'; folderId: string; folderName: string; isHome: boolean }
-  | { id: string; type: 'rename_folder'; folderId: string; folderName: string; newName: string }
+export type { AiConfig, PendingAction } from './chatbot/chatbot.types'
 
 export const Chatbot: React.FC<ChatbotProps> = ({
   notes = [],
@@ -419,26 +55,20 @@ export const Chatbot: React.FC<ChatbotProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [isListening, setIsListening] = useState(false)
 
   // Config do Assistente & Modal
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => loadAiConfig())
   const [showAiSettings, setShowAiSettings] = useState(false)
-  const [copiedKey, setCopiedKey] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
-
-  const copyApiKey = () => {
-    if (aiConfig.apiKey) {
-      navigator.clipboard.writeText(aiConfig.apiKey)
-      setCopiedKey(true)
-      setTimeout(() => setCopiedKey(false), 2000)
-    }
-  }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const recognitionRef = useRef<any>(null)
   const inputClearedRef = useRef(false)
+
+  const { isListening, startListening, stopListening } = useChatbotVoice({
+    onTranscript: (text) => setInputValue((prev) => prev + text),
+    onError: (err) => setError(err),
+  })
 
   // Get current context
   const currentContext = screenContext?.screen || 'general'
@@ -596,7 +226,7 @@ Regras para manipulação:
       const localResult = parseLocalIntent(content, folders, notes as any)
       setMessages(prev => [
         ...prev,
-        { id: generateId(), role: 'assistant', content: localResult.message, timestamp: new Date() }
+        { id: generateId(), role: 'assistant', content: localResult.message, timestamp: new Date() },
       ])
       if (localResult.action) {
         setPendingAction(localResult.action as any)
@@ -687,7 +317,6 @@ Regras para manipulação:
 
       // Check for action tags in final content
       const createNoteMatch = fullContent.match(/\[ACTION:CREATE_NOTE\](\{.*?\})\[\/ACTION\]/s)
-      const updateNoteMatch = fullContent.match(/\[ACTION:UPDATE_NOTE\](\{.*?\})\[\/ACTION\]/s)
       const createFolderMatch = fullContent.match(/\[ACTION:CREATE_FOLDER\](\{.*?\})\[\/ACTION\]/s)
       const moveNoteMatch = fullContent.match(/\[ACTION:MOVE_NOTE\](\{.*?\})\[\/ACTION\]/s)
       const toggleHubMatch = fullContent.match(/\[ACTION:TOGGLE_HUB\](\{.*?\})\[\/ACTION\]/s)
@@ -762,65 +391,46 @@ Regras para manipulação:
             })
           }
         } catch {}
-      } else if (updateNoteMatch) {
-        try {
-          const actionPayload = JSON.parse(updateNoteMatch[1])
-          setPendingAction({
-            id: generateId(),
-            type: 'update_note',
-            title: actionPayload.title || 'Escrever na Nota Atual',
-            content: actionPayload.content || '',
-          })
-        } catch {}
       }
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro na comunicação'
-      setError(errorMessage)
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessageId ? { ...msg, content: `Erro: ${errorMessage}` } : msg
-      ))
+    } catch (err: any) {
+      setError(err.message || 'Erro ao comunicar com a IA')
+      setMessages(prev => prev.filter(m => m.id !== assistantMessageId))
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Confirm and Execute Pending Action
+  // Action confirmations
   const handleConfirmPendingAction = () => {
     if (!pendingAction) return
 
     if (pendingAction.type === 'create_note') {
       if (onCreateNote) {
-        onCreateNote(pendingAction.title, pendingAction.content || '', pendingAction.folderId)
+        onCreateNote(pendingAction.title, pendingAction.content, pendingAction.folderId)
       }
-      const evt = new CustomEvent('organon:create-note', { detail: { title: pendingAction.title, content: pendingAction.content, folderId: pendingAction.folderId } })
-      window.dispatchEvent(evt)
-
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `Nota "${pendingAction.title}" criada com sucesso no Organon!`,
+        content: `Nota "${pendingAction.title}" criada com sucesso!`,
         timestamp: new Date(),
-        actionPayload: {
-          type: 'view_note',
-          title: pendingAction.title,
-        }
+        actionPayload: { type: 'view_note', title: pendingAction.title },
       }])
     } else if (pendingAction.type === 'create_folder') {
       if (onAddFolder) {
         onAddFolder(pendingAction.name, pendingAction.parentId)
       }
-      const parentFolder = folders.find(f => f.id === pendingAction.parentId)
-      const parentInfo = parentFolder ? ` dentro de "${parentFolder.name}"` : ''
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `Pasta "${pendingAction.name}" criada com sucesso${parentInfo}!`,
+        content: `Pasta "${pendingAction.name}" criada com sucesso!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'move_note') {
       if (onUpdateNote) {
-        onUpdateNote(pendingAction.noteId, { folderId: pendingAction.folderId })
+        const target = notes.find(n => n.id === pendingAction.noteId)
+        if (target) {
+          onUpdateNote(pendingAction.noteId, { ...target, folderId: pendingAction.folderId, isPinned: false, isFavorite: false })
+        }
       }
       setMessages(prev => [...prev, {
         id: generateId(),
@@ -832,11 +442,12 @@ Regras para manipulação:
       if (onUpdateFolder) {
         onUpdateFolder(pendingAction.folderId, { isHome: pendingAction.isHome })
       }
-      const statusLabel = pendingAction.isHome ? 'transformada em Hub Central' : 'removida do modo Hub'
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `Pasta "${pendingAction.folderName}" ${statusLabel} com sucesso!`,
+        content: pendingAction.isHome
+          ? `A pasta "${pendingAction.folderName}" agora é um Hub Central!`
+          : `A pasta "${pendingAction.folderName}" deixou de ser um Hub Central.`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'rename_folder') {
@@ -846,7 +457,7 @@ Regras para manipulação:
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'assistant',
-        content: `Pasta renomeada de "${pendingAction.folderName}" para "${pendingAction.newName}" com sucesso!`,
+        content: `Pasta "${pendingAction.folderName}" renomeada para "${pendingAction.newName}"!`,
         timestamp: new Date(),
       }])
     } else if (pendingAction.type === 'update_note') {
@@ -871,36 +482,6 @@ Regras para manipulação:
     setPendingAction(null)
   }
 
-  // Voice Input
-  const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setError('Navegador sem suporte para voz')
-      return
-    }
-
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-    const recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = true
-    recognition.lang = 'pt-BR'
-
-    recognition.onstart = () => { setIsListening(true); setError(null) }
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join('')
-      setInputValue(prev => prev + transcript)
-    }
-    recognition.onerror = () => setIsListening(false)
-    recognition.onend = () => setIsListening(false)
-
-    recognitionRef.current = recognition
-    recognition.start()
-  }, [])
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop()
-    setIsListening(false)
-  }, [])
-
   const exportConversation = () => {
     const content = messages.map(m => `## ${m.role === 'user' ? 'Você' : 'Assistente'} (${m.timestamp.toLocaleString('pt-BR')})\n\n${m.content}\n`).join('\n\n---\n\n')
     const blob = new Blob([content], { type: 'text/markdown' })
@@ -916,10 +497,6 @@ Regras para manipulação:
     navigator.clipboard.writeText(text)
     setCopiedId(msgId)
     setTimeout(() => setCopiedId(null), 2000)
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -939,7 +516,12 @@ Regras para manipulação:
     <>
       {/* FAB (Botao flutuante opcional) */}
       {!hideFloatingTrigger && (
-        <button className="chatbot-fab" onClick={() => setIsOpen(!isChatOpen)} title={isChatOpen ? 'Fechar' : 'Assistente IA'}>
+        <button
+          className="chatbot-fab"
+          onClick={() => setIsOpen(!isChatOpen)}
+          title={isChatOpen ? 'Fechar' : 'Assistente IA'}
+          aria-label={isChatOpen ? 'Fechar' : 'Assistente IA'}
+        >
           {isChatOpen ? Icons.close : Icons.chat}
         </button>
       )}
@@ -959,103 +541,52 @@ Regras para manipulação:
             </div>
           </div>
           <div className="chatbot-header-actions">
-            <button className="chatbot-header-btn" onClick={() => setShowAiSettings(true)} title="Configurações de IA (API Key)">
+            <button
+              className="chatbot-header-btn"
+              onClick={() => setShowAiSettings(true)}
+              title="Configurações de IA (API Key)"
+              aria-label="Configurações de IA"
+            >
               {Icons.gear}
             </button>
-            <button className="chatbot-header-btn" onClick={exportConversation} title="Exportar conversa">
+            <button
+              className="chatbot-header-btn"
+              onClick={exportConversation}
+              title="Exportar conversa"
+              aria-label="Exportar conversa"
+            >
               {Icons.download}
             </button>
-            <button className="chatbot-header-btn" onClick={() => setMessages([])} title="Limpar" disabled={messages.length === 0}>
+            <button
+              className="chatbot-header-btn"
+              onClick={() => setMessages([])}
+              title="Limpar"
+              disabled={messages.length === 0}
+              aria-label="Limpar"
+            >
               {Icons.trash}
             </button>
-            <button className="chatbot-header-btn" onClick={() => setIsOpen(false)} title="Minimizar">
+            <button
+              className="chatbot-header-btn"
+              onClick={() => setIsOpen(false)}
+              title="Minimizar"
+              aria-label="Minimizar"
+            >
               {Icons.minimize}
             </button>
           </div>
         </div>
 
         {/* Modal Configuração de IA */}
-        {showAiSettings && (
-          <div style={{ padding: '16px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Configurações de IA & API</span>
-              <button type="button" onClick={() => setShowAiSettings(false)} style={{ border: 'none', background: 'transparent', color: 'var(--color-text)', cursor: 'pointer' }}>×</button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 600 }}>Provedor de IA:</label>
-              <select
-                value={aiConfig.provider}
-                onChange={e => {
-                  const prov = e.target.value as any
-                  const preset = PROVIDER_PRESETS[prov]
-                  setAiConfig(prev => ({
-                    ...prev,
-                    provider: prov,
-                    baseUrl: preset ? preset.url : prev.baseUrl,
-                    model: preset ? preset.defaultModel : prev.model,
-                  }))
-                }}
-                style={{ padding: '6px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-text)', fontSize: '12px' }}
-              >
-                {Object.entries(PROVIDER_PRESETS).map(([key, item]) => (
-                  <option key={key} value={key}>{item.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 600 }}>Chave de API (API Key):</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <input
-                  type="password"
-                  placeholder={aiConfig.provider === 'ollama' ? 'Não necessária para Ollama Local' : 'Cole sua API Key (sk-...)'}
-                  value={aiConfig.apiKey}
-                  onChange={e => setAiConfig(prev => ({ ...prev, apiKey: e.target.value.trim() }))}
-                  style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-text)', fontSize: '12px' }}
-                />
-                <button
-                  type="button"
-                  onClick={copyApiKey}
-                  disabled={!aiConfig.apiKey}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--color-border)',
-                    background: 'var(--color-surface)',
-                    color: 'var(--color-text)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: aiConfig.apiKey ? 'pointer' : 'not-allowed',
-                    opacity: aiConfig.apiKey ? 1 : 0.5,
-                  }}
-                >
-                  {copiedKey ? 'Copiado' : 'Copiar'}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 600 }}>Modelo de IA:</label>
-              <input
-                type="text"
-                value={aiConfig.model}
-                onChange={e => setAiConfig(prev => ({ ...prev, model: e.target.value.trim() }))}
-                style={{ padding: '6px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-text)', fontSize: '12px' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={() => { saveAiConfig(aiConfig); setShowAiSettings(false); setError(null) }}
-                style={{ flex: 1, padding: '8px', borderRadius: '6px', background: 'var(--color-primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}
-              >
-                Salvar e Aplicar
-              </button>
-            </div>
-          </div>
-        )}
+        <ChatbotSettingsModal
+          isOpen={showAiSettings}
+          onClose={() => setShowAiSettings(false)}
+          config={aiConfig}
+          onSave={cfg => {
+            setAiConfig(cfg)
+            saveAiConfig(cfg)
+          }}
+        />
 
         {/* Suggestions */}
         {messages.length === 0 && (
@@ -1086,175 +617,25 @@ Regras para manipulação:
           )}
 
           {messages.map(msg => (
-            <div key={msg.id} className={`chatbot-message chatbot-message-${msg.role}`}>
-              <div className="chatbot-message-avatar">
-                {msg.role === 'assistant' ? Icons.bot : Icons.user}
-              </div>
-              <div className="chatbot-message-content">
-                {msg.notes && msg.notes.length > 0 && (
-                  <div className="chatbot-message-notes">
-                    {msg.notes.map(note => (
-                      <NoteReference key={note.id} note={note} onClick={() => onNavigateToNote?.(note.id)} />
-                    ))}
-                  </div>
-                )}
-                <div className="chatbot-message-bubble">
-                  {msg.content.replace(/\[ACTION:CREATE_NOTE\].*?\[\/ACTION\]/s, '').trim()}
-
-                  {msg.actionPayload?.type === 'view_note' && (
-                    <div style={{ marginTop: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const found = notes.find(n => n.title.toLowerCase() === msg.actionPayload?.title?.toLowerCase()) || notes[notes.length - 1]
-                          if (found && onNavigateToNote) {
-                            onNavigateToNote(found.id)
-                          }
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          background: 'var(--color-primary)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          marginTop: '6px',
-                        }}
-                      >
-                        Ver Nota
-                      </button>
-                    </div>
-                  )}
-
-                  {msg.role === 'assistant' && msg.content && (
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const cleanText = msg.content
-                            .replace(/\[ACTION:CREATE_NOTE\].*?\[\/ACTION\]/s, '')
-                            .replace(/\[ACTION:UPDATE_NOTE\].*?\[\/ACTION\]/s, '')
-                            .trim()
-                          if (onApplyNote) {
-                            onApplyNote(undefined, cleanText)
-                          }
-                          const evt = new CustomEvent('organon:apply-note', { detail: { content: cleanText } })
-                          window.dispatchEvent(evt)
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '5px 10px',
-                          background: 'rgba(99, 102, 241, 0.15)',
-                          color: 'var(--color-primary)',
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Escrever nesta Nota
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const cleanText = msg.content
-                            .replace(/\[ACTION:CREATE_NOTE\].*?\[\/ACTION\]/s, '')
-                            .replace(/\[ACTION:UPDATE_NOTE\].*?\[\/ACTION\]/s, '')
-                            .trim()
-                          const firstLine = cleanText.split('\n')[0].replace(/^#+\s*/, '').slice(0, 40).trim() || 'Nova Nota do Assistente'
-                          if (onCreateNote) {
-                            onCreateNote(firstLine, cleanText)
-                          }
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '5px 10px',
-                          background: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Salvar como Nova Nota
-                      </button>
-                    </div>
-                  )}
-
-                  {msg.content && (
-                    <div className="chatbot-message-actions">
-                      <button className="chatbot-copy-btn" onClick={() => copyToClipboard(msg.content, msg.id)} title="Copiar">
-                        {copiedId === msg.id ? Icons.check : Icons.copy}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="chatbot-message-time">{formatTime(msg.timestamp)}</div>
-              </div>
-            </div>
+            <ChatMessageItem
+              key={msg.id}
+              message={msg}
+              notes={notes}
+              copiedId={copiedId}
+              onCopy={copyToClipboard}
+              onNavigateToNote={onNavigateToNote}
+              onApplyNote={onApplyNote}
+              onCreateNote={onCreateNote}
+            />
           ))}
 
           {/* Card de Layout de Confirmação Pendente */}
           {pendingAction && (
-            <div style={{ margin: '8px 12px', padding: '12px 14px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.35)', borderRadius: '10px' }}>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--color-primary)', letterSpacing: '0.04em' }}>
-                {pendingAction.type === 'create_note' && 'Ação Solicitada: Criar Nota'}
-                {pendingAction.type === 'create_folder' && 'Ação Solicitada: Criar Pasta'}
-                {pendingAction.type === 'move_note' && 'Ação Solicitada: Mover Nota'}
-                {pendingAction.type === 'toggle_hub' && 'Ação Solicitada: Alternar Hub'}
-                {pendingAction.type === 'rename_folder' && 'Ação Solicitada: Renomear Pasta'}
-                {pendingAction.type === 'update_note' && 'Ação Solicitada: Atualizar Nota'}
-              </div>
-
-              <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '4px', color: 'var(--color-text)' }}>
-                {pendingAction.type === 'create_note' && pendingAction.title}
-                {pendingAction.type === 'create_folder' && pendingAction.name}
-                {pendingAction.type === 'move_note' && pendingAction.noteTitle}
-                {pendingAction.type === 'toggle_hub' && pendingAction.folderName}
-                {pendingAction.type === 'rename_folder' && pendingAction.folderName}
-                {pendingAction.type === 'update_note' && pendingAction.title}
-              </div>
-
-              {/* Subtitle / Details */}
-              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px', background: 'var(--color-surface)', padding: '6px 8px', borderRadius: '6px' }}>
-                {pendingAction.type === 'create_note' && (pendingAction.content ? pendingAction.content.slice(0, 100) + '...' : 'Nota vazia')}
-                {pendingAction.type === 'create_folder' && `Criar nova pasta no Organon`}
-                {pendingAction.type === 'move_note' && `Mover para a pasta "${pendingAction.folderName}"`}
-                {pendingAction.type === 'toggle_hub' && (pendingAction.isHome ? 'Transformar em Hub Central de Navegação' : 'Remover modo Hub Central')}
-                {pendingAction.type === 'rename_folder' && `Renomear pasta para "${pendingAction.newName}"`}
-                {pendingAction.type === 'update_note' && `Aplicar alterações no conteúdo da nota`}
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={handleConfirmPendingAction}
-                  style={{ flex: 1, padding: '7px 12px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Confirmar e Executar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelPendingAction}
-                  style={{ padding: '7px 12px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
+            <ChatbotActionCard
+              action={pendingAction}
+              onConfirm={handleConfirmPendingAction}
+              onCancel={handleCancelPendingAction}
+            />
           )}
 
           {isLoading && (
@@ -1276,19 +657,46 @@ Regras para manipulação:
         )}
 
         {/* Input Form */}
-        <form className="chatbot-input-form" onSubmit={(e) => { e.preventDefault(); const relevantNotes = searchNotes(inputValue); sendMessage(inputValue, relevantNotes) }}>
+        <form
+          className="chatbot-input-form"
+          onSubmit={e => {
+            e.preventDefault()
+            const relevantNotes = searchNotes(inputValue)
+            sendMessage(inputValue, relevantNotes)
+          }}
+        >
           <div className="chatbot-input-wrap">
-            <textarea ref={inputRef} className="chatbot-input" value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder={`Fale com o assistente sobre ${screenContext?.title || 'o sistema'}...`} rows={1} disabled={isLoading} onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                const relevantNotes = searchNotes(inputValue)
-                sendMessage(inputValue, relevantNotes)
-              }
-            }} />
-            <button type="button" className={`chatbot-mic-btn ${isListening ? 'is-listening' : ''}`} onClick={isListening ? stopListening : startListening} title={isListening ? 'Parar' : 'Gravar voz'}>
+            <textarea
+              ref={inputRef}
+              className="chatbot-input"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              placeholder={`Fale com o assistente sobre ${screenContext?.title || 'o sistema'}...`}
+              rows={1}
+              disabled={isLoading}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  const relevantNotes = searchNotes(inputValue)
+                  sendMessage(inputValue, relevantNotes)
+                }
+              }}
+            />
+            <button
+              type="button"
+              className={`chatbot-mic-btn ${isListening ? 'is-listening' : ''}`}
+              onClick={isListening ? stopListening : startListening}
+              title={isListening ? 'Parar' : 'Gravar voz'}
+              aria-label={isListening ? 'Parar' : 'Gravar voz'}
+            >
               {isListening ? Icons.micOff : Icons.mic}
             </button>
-            <button type="submit" className="chatbot-send-btn" disabled={!inputValue.trim() || isLoading}>
+            <button
+              type="submit"
+              className="chatbot-send-btn"
+              disabled={!inputValue.trim() || isLoading}
+              aria-label="Enviar"
+            >
               {Icons.send}
             </button>
           </div>
