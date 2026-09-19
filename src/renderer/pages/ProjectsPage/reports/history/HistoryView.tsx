@@ -20,7 +20,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ reports, onBack, onSel
 
     <TotalCommitsLine reports={reports} />
 
-    <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+    <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '6px' }}>
       {reports.map((r, i) => (
         <WeekCard key={r.date} report={r} onSelect={() => onSelectReport(i)} />
       ))}

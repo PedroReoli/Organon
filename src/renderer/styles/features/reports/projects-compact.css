@@ -1,0 +1,531 @@
+/* ==========================================================================
+   PROJECTS COMPACT & GIT LIVE STATUS STYLES (REOLI OPERATE MODE)
+   Ultra-compact, dense table layout, above-the-fold scanability
+   ========================================================================== */
+
+/* Compact Container & Content Scroll */
+.projects-content-scroll {
+  padding: 6px 10px !important;
+}
+
+.projects-header,
+.projects-subpage-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 6px !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.projects-title,
+.projects-subpage-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--text-primary, #f1f5f9) !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.projects-subtitle,
+.projects-subpage-subtitle {
+  font-size: 10px !important;
+  color: var(--text-muted, #94a3b8) !important;
+  margin: 1px 0 0 0 !important;
+}
+
+.projects-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.projects-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+  height: 24px !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+}
+
+/* Mobile Toggle Hide on Desktop */
+.projects-mobile-toggle {
+  display: none !important;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 60;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary, #111420);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  color: var(--text-primary, #f1f5f9);
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .projects-mobile-toggle {
+    display: flex !important;
+  }
+}
+
+/* Polished Metrics Ribbon (Reoli Operate Mode) */
+.projects-metrics-ribbon {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary, #111420);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 4px 6px;
+  margin: 6px 0 10px 0;
+  overflow-x: auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.projects-metric-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 14px;
+  position: relative;
+  flex: 1;
+  min-width: 85px;
+}
+
+.projects-metric-chip:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 18%;
+  height: 64%;
+  width: 1px;
+  background: var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.projects-metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.2;
+}
+
+.projects-metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #f1f5f9);
+  font-feature-settings: "tnum";
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.projects-metric-chip.pill-green .projects-metric-value { color: #22c55e; }
+.projects-metric-chip.pill-red .projects-metric-value { color: #ef4444; }
+.projects-metric-chip.pill-blue .projects-metric-value { color: #818cf8; }
+.projects-metric-chip.pill-amber .projects-metric-value { color: #f59e0b; }
+
+/* Fallback Stats Bar */
+.projects-stats-compact-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary, #111420);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 2px 6px !important;
+  margin-bottom: 6px !important;
+  overflow-x: auto;
+  min-height: 28px;
+  box-sizing: border-box;
+}
+
+.projects-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px !important;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.projects-stat-pill-value {
+  font-weight: 700;
+  color: var(--text-primary, #f1f5f9);
+  font-feature-settings: "tnum";
+}
+
+.projects-stat-pill-label {
+  color: var(--text-muted, #94a3b8);
+  font-size: 10px;
+}
+
+/* Compact Grid / Row Layout */
+.projects-compact-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.projects-compact-charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+@media (max-width: 1100px) {
+  .projects-compact-charts { grid-template-columns: 1fr; }
+}
+
+/* View Mode Selector & Filters */
+.projects-view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.projects-view-toggle {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  padding: 1px;
+  gap: 2px;
+}
+
+.projects-view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.projects-view-toggle-btn:hover { color: var(--text-primary, #ffffff); }
+.projects-view-toggle-btn.is-active {
+  background: var(--color-primary, #6366f1);
+  color: #ffffff;
+}
+
+/* Compact Table (Dense, 28-30px row height) */
+.projects-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.015));
+}
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 11px;
+}
+
+.projects-table thead tr {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  height: 24px !important;
+}
+
+.projects-table th {
+  padding: 2px 6px !important;
+  font-size: 9.5px !important;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.projects-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  height: 28px !important;
+  transition: background-color 0.15s ease;
+}
+
+.projects-table tbody tr:last-child { border-bottom: none; }
+.projects-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.035); }
+
+.projects-table td {
+  padding: 2px 6px !important;
+  color: var(--text-primary, #f1f5f9);
+  vertical-align: middle;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+/* Repo Name Cell */
+.projects-table-repo-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.projects-table-repo-icon {
+  color: var(--color-primary, #6366f1);
+  flex-shrink: 0;
+}
+
+.projects-table-repo-name {
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.projects-table-repo-name:hover {
+  color: var(--color-primary, #818cf8);
+  text-decoration: underline;
+}
+
+.projects-table-repo-group {
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted, #94a3b8);
+  font-family: var(--font-mono, monospace);
+}
+
+/* Branch Pill */
+.projects-table-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary, #cbd5e1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  max-width: 110px;
+  height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+/* Git Status Badges */
+.projects-git-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  height: 18px;
+  box-sizing: border-box;
+}
+
+.projects-git-badge-clean {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.projects-git-badge-dirty {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.projects-git-badge-ahead {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.projects-git-badge-behind {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.projects-git-badge-synced {
+  color: var(--text-muted, #94a3b8);
+  font-size: 10px;
+}
+
+/* CI / PR Badges */
+.projects-ci-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.projects-ci-success { color: #22c55e; }
+.projects-ci-failure { color: #ef4444; }
+.projects-ci-running { color: #3b82f6; animation: pulse 1.5s infinite; }
+
+/* Commit Message Cell */
+.projects-commit-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 300px;
+}
+
+.projects-commit-hash {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--text-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.projects-commit-msg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.projects-commit-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 16px;
+}
+
+.projects-commit-warn:hover { background: rgba(239, 68, 68, 0.25); }
+
+/* Table Row Actions */
+.projects-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.projects-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0 !important;
+}
+
+.projects-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.projects-icon-btn.btn-fix { color: #f59e0b; }
+.projects-icon-btn.btn-fix:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.projects-icon-btn.btn-undo { color: #ef4444; }
+.projects-icon-btn.btn-undo:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Inline Amend Modal */
+.projects-amend-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.projects-amend-modal {
+  background: #13141f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  width: 440px;
+  max-width: 95vw;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.projects-amend-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.projects-amend-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  color: #f1f5f9;
+  font-family: var(--font-mono, monospace);
+  box-sizing: border-box;
+}
+
+.projects-amend-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+}
+
+.projects-amend-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+
+

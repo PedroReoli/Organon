@@ -185,3 +185,35 @@ export interface GeneralReport {
   updatedAt?: string
   [key: string]: any
 }
+
+export interface GitRepoLiveStatus {
+  ok: boolean
+  branch?: string
+  isClean?: boolean
+  modifiedCount?: number
+  ahead?: number
+  behind?: number
+  lastCommit?: {
+    hash: string
+    message: string
+    relativeTime: string
+    author: string
+    isConventional: boolean
+  }
+  fromCache?: boolean
+  error?: string
+}
+
+export interface GitCloudStatus {
+  ok: boolean
+  isGitHub?: boolean
+  hasRemote?: boolean
+  remoteUrl?: string
+  owner?: string
+  repo?: string
+  htmlUrl?: string
+  ciStatus?: 'success' | 'failure' | 'in_progress' | 'none'
+  openPrs?: number
+  error?: string
+}
+

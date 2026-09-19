@@ -14,9 +14,11 @@ import { GoalsView } from './goals/GoalsView'
 import { SearchView } from './search/SearchView'
 import { TimelineView } from './timeline/TimelineView'
 import { isElectron } from '@utils'
-import { LayoutGrid, CalendarDays, BarChart3, Clock, Hexagon, Settings, GitCompare, Target, Search, Activity, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { ProjectsSidebar } from './ProjectsSidebar'
 import '../../../styles/features/reports/projects-shell.css'
+import '../../../styles/features/reports/projects-compact.css'
+import '../../../styles/features/reports/projects-dashboard.css'
 
 export interface CodeReportsViewProps {
   reportsDir?: string | null
@@ -25,19 +27,6 @@ export interface CodeReportsViewProps {
 }
 
 type Screen = 'general' | 'dashboard' | 'project' | 'history' | 'overview' | 'packagejson' | 'compare' | 'goals' | 'search' | 'timeline' | 'config'
-
-const NAV_ITEMS: { id: Screen; label: string; icon: React.ReactNode }[] = [
-  { id: 'general',     label: 'Geral',           icon: <LayoutGrid size={16} /> },
-  { id: 'dashboard',   label: 'Semana',          icon: <CalendarDays size={16} /> },
-  { id: 'compare',     label: 'Comparativo',     icon: <GitCompare size={16} /> },
-  { id: 'timeline',    label: 'Timeline',        icon: <Activity size={16} /> },
-  { id: 'overview',    label: 'Visão Geral',     icon: <BarChart3 size={16} /> },
-  { id: 'history',     label: 'Histórico',       icon: <Clock size={16} /> },
-  { id: 'goals',       label: 'Metas',           icon: <Target size={16} /> },
-  { id: 'search',      label: 'Busca',           icon: <Search size={16} /> },
-  { id: 'packagejson', label: 'package.json',    icon: <Hexagon size={16} /> },
-  { id: 'config',      label: 'Configurações',   icon: <Settings size={16} /> },
-]
 
 export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, dataDir, onUpdateReportsDir }) => {
   const [resolvedDataDir, setResolvedDataDir] = useState<string | null>(dataDir ?? null)
@@ -127,7 +116,8 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
     return () => { api.offGitChanged(handler) }
   }, [watcherActive, baseDir])
 
-  if (isLoading || autoRunState === 'running' || (autoRunState === 'done' && reports.length === 0 && !general)) {
+  const hasData = reports.length > 0 || Boolean(general)
+  if (!hasData && (isLoading || autoRunState === 'running' || (autoRunState === 'done' && reports.length === 0 && !general))) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', width: '100%', gap: '16px', color: 'var(--color-text, #f1f5f9)' }}>
         <div style={{ position: 'relative', width: '44px', height: '44px' }}>
@@ -327,8 +317,9 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
       {/* Botão Mobile para abrir a sidebar caso a tela seja pequena */}
       <button 
         type="button"
-        className="projects-btn projects-mobile-toggle" 
+        className="projects-mobile-toggle" 
         onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Abrir menu lateral"
       >
         <Menu size={20} />
       </button>
@@ -340,11 +331,13 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
       />
 
       <ProjectsSidebar 
-        navItems={NAV_ITEMS}
         activeScreen={activeScreen}
         onSelectScreen={(id) => setScreen(id as Screen)}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
+        repoCount={general?.totalRepos || reports[0]?.repos?.length || 0}
+        weekLabel={reports[reportIndex]?.weekLabel || reports[0]?.weekLabel}
+        alertsCount={reports[0]?.alerts?.badCommits || 0}
       />
       
       <main className="projects-content-wrapper">

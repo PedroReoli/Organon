@@ -4,13 +4,12 @@ import { SummaryCards } from './SummaryCards'
 import { CommitsBarChart } from './CommitsBarChart'
 import { CommitHeatmap } from './CommitHeatmap'
 import { CommitTypePie } from './CommitTypePie'
-import { AlertsSection } from './AlertsSection'
 import { VelocityPanel } from './VelocityPanel'
 import { StreakPanel } from './StreakPanel'
 import { RecentCommitsPanel } from './RecentCommitsPanel'
-import { StoppedBubble } from './StoppedBubble'
+import { UnifiedAlertsStoppedCard } from './UnifiedAlertsStoppedCard'
 import { AllWeeksPanel } from './AllWeeksPanel'
-import { LayoutGrid, Trophy, RotateCcw } from 'lucide-react'
+import { LayoutGrid, Trophy, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface DashboardViewProps {
   report: WeekReport
@@ -48,32 +47,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [report.repos, activeGroup, activeType])
 
   const aggregatedHeatmap = useMemo((): HeatmapEntry[] => {
+    const map = new Map<string, number>()
+    const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+    // Se houver commits individuais filtráveis pelo tipo selecionado
     if (activeType) {
-      const map = new Map<string, number>()
-      const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
       for (const repo of filteredRepos) {
         for (const c of repo.commits ?? []) {
           if (c.type !== activeType) continue
-          const hour = c.hour ?? (c.time ? parseInt(c.time.split(':')[0]) : null)
-          if (hour === null) continue
-          const day = c.date ? DAYS_EN[new Date(c.date).getDay()] : null
-          if (!day) continue
+          let hour = c.hour ?? (c.time ? parseInt(c.time.split(':')[0], 10) : null)
+          if (hour === null && (c as any).timestamp) {
+            hour = new Date((c as any).timestamp).getHours()
+          }
+          if (hour === null) hour = 12
+          const dStr = c.date ? (c.date.includes('T') ? c.date : `${c.date}T12:00:00`) : null
+          const d = dStr ? new Date(dStr) : null
+          const day = d && !isNaN(d.getTime()) ? DAYS_EN[d.getDay()] : 'Mon'
           const key = `${day}|${hour}`
           map.set(key, (map.get(key) ?? 0) + 1)
         }
       }
-      return Array.from(map.entries()).map(([k, commits]) => {
-        const [day, hourStr] = k.split('|')
-        return { day, hour: Number(hourStr), commits }
-      })
     }
-    const map = new Map<string, number>()
-    for (const repo of filteredRepos) {
-      for (const e of repo.heatmap ?? []) {
-        const key = `${e.day}|${e.hour}`
-        map.set(key, (map.get(key) ?? 0) + e.commits)
+
+    // Se não há filtro de tipo ou os commits individuais não estavam carregados
+    if (map.size === 0) {
+      for (const repo of filteredRepos) {
+        for (const e of repo.heatmap ?? []) {
+          const key = `${e.day}|${e.hour}`
+          map.set(key, (map.get(key) ?? 0) + e.commits)
+        }
       }
     }
+
     return Array.from(map.entries()).map(([k, commits]) => {
       const [day, hourStr] = k.split('|')
       return { day, hour: Number(hourStr), commits }
@@ -97,55 +102,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="projects-content-scroll">
-      {/* Header */}
-      <div className="projects-header">
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Header Compacto & Estilizado */}
+      <div className="projects-subpage-header">
+        <div className="projects-subpage-title-group">
+          <div className="projects-pill-stepper">
             <button
               type="button"
-              className="projects-btn"
+              className="projects-stepper-btn"
               onClick={onNext}
               disabled={reportIndex >= totalReports - 1}
               title="Semana anterior"
-            >‹ Ant</button>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '160px' }}>
-              <span className="projects-title" style={{ fontSize: '18px' }}>{report.weekLabel}</span>
-              <span className="projects-subtitle">
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="projects-stepper-info">
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {report.weekLabel}
+              </span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
                 {report.period ? `${report.period.from} – ${report.period.to}` : report.date}
               </span>
             </div>
             <button
               type="button"
-              className="projects-btn"
+              className="projects-stepper-btn"
               onClick={onPrev}
               disabled={reportIndex <= 0}
               title="Semana seguinte"
-            >Próx ›</button>
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {topRepo?.commitCount > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--accent-yellow)' }}>
-                <Trophy size={13} />
-                <strong>{topRepo.name}</strong> {topRepo.commitCount}c
+              <span className="projects-stat-pill pill-amber" title={`Top projeto: ${topRepo.name} (${topRepo.commitCount} commits)`}>
+                <Trophy size={13} style={{ color: '#f59e0b' }} />
+                <span className="projects-stat-pill-value">{topRepo.name}</span>
+                <span className="projects-stat-pill-label" style={{ fontWeight: 700 }}>{topRepo.commitCount}c</span>
               </span>
             )}
             {(report.reactivated?.length ?? 0) > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--accent-green)' }}>
-                <RotateCcw size={13} />
-                {report.reactivated.join(', ')}
+              <span className="projects-stat-pill pill-green" title="Projetos reativados">
+                <RotateCcw size={13} style={{ color: '#22c55e' }} />
+                <span className="projects-stat-pill-value">{report.reactivated.join(', ')}</span>
               </span>
             )}
           </div>
         </div>
+
         <div className="projects-actions">
           <button
             type="button"
             className="projects-btn"
             onClick={() => setShowAllWeeks(true)}
-            title="Ver todas as semanas"
+            title="Ver grade de todas as semanas"
           >
-            <LayoutGrid size={14} />
-            <span>Todas</span>
+            <LayoutGrid size={13} />
+            <span>Ver Todas as Semanas</span>
           </button>
         </div>
       </div>
@@ -160,69 +174,76 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         />
       )}
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Grupo</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+      {/* Filtros Operacionais */}
+      <div className="projects-filter-bar">
+        <div className="projects-filter-group">
+          <span className="projects-filter-label">Grupo</span>
+          <div className="projects-view-toggle">
             {groups.map(g => (
-              <button key={g} type="button"
-                className={`projects-tab ${activeGroup === g ? 'is-active' : ''}`}
-                style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: activeGroup === g ? 'var(--color-primary-light)' : 'transparent' }}
-                onClick={() => setActiveGroup(g)}>{g}
+              <button
+                key={g}
+                type="button"
+                className={`projects-view-toggle-btn ${activeGroup === g ? 'is-active' : ''}`}
+                onClick={() => setActiveGroup(g)}
+              >
+                {g}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Tipo</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            <button type="button"
-              className={`projects-tab ${activeType === null ? 'is-active' : ''}`}
-              style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: activeType === null ? 'var(--color-primary-light)' : 'transparent' }}
-              onClick={() => setActiveType(null)}>Todos
+
+        <div className="projects-filter-group">
+          <span className="projects-filter-label">Tipo</span>
+          <div className="projects-view-toggle">
+            <button
+              type="button"
+              className={`projects-view-toggle-btn ${activeType === null ? 'is-active' : ''}`}
+              onClick={() => setActiveType(null)}
+            >
+              Todos
             </button>
             {COMMIT_TYPES.filter(t => (aggregatedTypes[t] ?? 0) > 0).map(t => (
-              <button key={t} type="button"
-                className={`projects-tab ${activeType === t ? 'is-active' : ''}`}
-                style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: activeType === t ? 'var(--color-primary-light)' : 'transparent' }}
-                onClick={() => setActiveType(activeType === t ? null : t)}>
-                {t} <span style={{ opacity: 0.6, marginLeft: '4px' }}>{aggregatedTypes[t]}</span>
+              <button
+                key={t}
+                type="button"
+                className={`projects-view-toggle-btn ${activeType === t ? 'is-active' : ''}`}
+                onClick={() => setActiveType(activeType === t ? null : t)}
+              >
+                {t} <span className="projects-filter-count">({aggregatedTypes[t]})</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Linha 1: 3 graficos */}
-      <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        <div className="projects-dashboard-card" style={{ padding: '16px' }}>
+      {/* Linha 1: 3 Gráficos de Análise */}
+      <div className="projects-dashboard-grid projects-dashboard-grid-row1">
+        <div className="projects-dashboard-card">
           <CommitsBarChart repos={filteredRepos} onSelect={onSelectRepo} />
         </div>
-        <div className="projects-dashboard-card" style={{ padding: '16px' }}>
+        <div className="projects-dashboard-card">
           <CommitTypePie
             commitTypes={aggregatedTypes}
             activeType={activeType}
             onSelectType={t => setActiveType(activeType === t ? null : t)}
           />
         </div>
-        <div className="projects-dashboard-card" style={{ padding: '16px' }}>
+        <div className="projects-dashboard-card">
           <CommitHeatmap heatmapData={aggregatedHeatmap} />
         </div>
       </div>
 
-      {/* Linha 2: 3 colunas — [Velocity+Streak] | [TODOs] | [Parados+Alertas] */}
-      <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Linha 2: 3 Colunas Operacionais */}
+      <div className="projects-dashboard-grid projects-dashboard-grid-row2">
+        <div className="projects-dashboard-col">
           <VelocityPanel repos={filteredRepos} onSelect={onSelectRepo} />
           <StreakPanel repos={filteredRepos} onSelect={onSelectRepo} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="projects-dashboard-col">
           <RecentCommitsPanel repos={filteredRepos} onSelect={onSelectRepo} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <StoppedBubble repos={report.repos} />
-          <AlertsSection report={report} onGoPackageJson={onGoPackageJson} />
+        <div className="projects-dashboard-col">
+          <UnifiedAlertsStoppedCard report={report} onGoPackageJson={onGoPackageJson} />
         </div>
       </div>
 

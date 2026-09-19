@@ -7,8 +7,8 @@ interface CommitsBarChartProps {
 }
 
 const PALETTE = [
-  'var(--color-primary)', '#22c55e', '#f59e0b', '#ef4444', 'var(--color-primary)',
-  'var(--color-primary)', '#fb923c', '#60a5fa', '#f472b6', '#34d399',
+  '#818cf8', '#22c55e', '#f59e0b', '#ec4899', '#38bdf8',
+  '#fb923c', '#a855f7', '#14b8a6', '#f43f5e', '#6366f1',
 ]
 
 export const CommitsBarChart: React.FC<CommitsBarChartProps> = ({ repos, onSelect }) => {
@@ -28,8 +28,13 @@ export const CommitsBarChart: React.FC<CommitsBarChartProps> = ({ repos, onSelec
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <h3 className="projects-card-title">Commits por projeto <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>{sorted.length}</span></h3>
-      <div className="projects-top-list" style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
+      <h3 className="projects-card-title">
+        Commits por projeto
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px', fontWeight: 500 }}>
+          {sorted.length}
+        </span>
+      </h3>
+      <div className="projects-top-list" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', gap: '8px' }}>
         {pagedRepos.map((repo, i) => {
           const color = PALETTE[i % PALETTE.length]
           const pct = Math.max(3, (repo.commitCount / max) * 100)
@@ -41,17 +46,17 @@ export const CommitsBarChart: React.FC<CommitsBarChartProps> = ({ repos, onSelec
               onClick={() => onSelect(repo)}
               title={label}
               style={{
-                display: 'flex', flexDirection: 'column', gap: '6px', 
+                display: 'flex', flexDirection: 'column', gap: '4px', 
                 background: 'transparent', border: 'none', padding: 0, 
                 cursor: 'pointer', textAlign: 'left', width: '100%'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '13px' }}>
-                <span className="projects-top-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '12px' }}>
+                <span className="projects-top-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, flexShrink: 0 }} />
                   {label}
                 </span>
-                <span className="projects-top-value">{repo.commitCount}</span>
+                <span className="projects-top-value" style={{ fontWeight: 600, fontSize: '11.5px', fontFamily: 'monospace' }}>{repo.commitCount}</span>
               </div>
               <div className="projects-top-track">
                 <div className="projects-top-fill" style={{ width: `${pct}%`, backgroundColor: color }} />
@@ -61,10 +66,10 @@ export const CommitsBarChart: React.FC<CommitsBarChartProps> = ({ repos, onSelec
         })}
       </div>
       {maxPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-          <button type="button" className="projects-btn" style={{ padding: '4px 8px' }} disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</button>
+        <div className="projects-pagination-bar">
+          <button type="button" className="projects-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</button>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{page + 1} de {maxPages}</span>
-          <button type="button" className="projects-btn" style={{ padding: '4px 8px' }} disabled={page >= maxPages - 1} onClick={() => setPage(p => p + 1)}>Próxima</button>
+          <button type="button" className="projects-btn" disabled={page >= maxPages - 1} onClick={() => setPage(p => p + 1)}>Próxima</button>
         </div>
       )}
     </div>

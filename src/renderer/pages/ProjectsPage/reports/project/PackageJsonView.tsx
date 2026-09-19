@@ -49,14 +49,14 @@ export const PackageJsonView: React.FC<PackageJsonViewProps> = ({ repos, onBack 
     <div className="projects-content-scroll">
       <div className="projects-header">
         <div>
-          <button type="button" className="projects-btn" onClick={onBack} style={{ marginBottom: '8px', padding: '4px 8px', border: 'none', background: 'transparent', paddingLeft: 0 }}>← Voltar</button>
+          <button type="button" className="projects-btn" onClick={onBack} style={{ marginBottom: '4px', padding: '2px 6px', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '11px' }}>← Voltar</button>
           <h1 className="projects-title">Mudanças em package.json</h1>
           <p className="projects-subtitle">{packageRepos.length} projeto{packageRepos.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
       {packageRepos.length > 1 && (
-        <div className="projects-tabs" style={{ marginBottom: '24px' }}>
+        <div className="projects-tabs" style={{ marginBottom: '6px' }}>
           {packageRepos.map((r, i) => (
             <button
               key={`${r.group}/${r.name}`}
@@ -71,17 +71,17 @@ export const PackageJsonView: React.FC<PackageJsonViewProps> = ({ repos, onBack 
       )}
 
       <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{key}</span>
-          <div style={{ display: 'flex', gap: '12px', fontSize: '13px', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{key}</span>
+          <div style={{ display: 'flex', gap: '8px', fontSize: '11.5px', fontWeight: 600 }}>
             {added > 0 && <span style={{ color: 'var(--accent-green)' }}>+{added}</span>}
             {removed > 0 && <span style={{ color: 'var(--accent-red)' }}>-{removed}</span>}
           </div>
         </div>
         <div style={{ display: 'flex', width: '100%' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ padding: '8px 16px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', fontSize: '12px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Antes</div>
-            <pre style={{ margin: 0, padding: '16px', fontSize: '12px', fontFamily: 'monospace', overflowX: 'auto', background: 'var(--bg-primary)', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            <div style={{ padding: '3px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', fontSize: '10.5px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Antes</div>
+            <pre style={{ margin: 0, padding: '8px 12px', fontSize: '11px', fontFamily: 'monospace', overflowX: 'auto', background: 'var(--bg-primary)', color: 'var(--text-primary)', lineHeight: 1.4 }}>
               {before.map((line, i) => {
                 const isDel = line !== '' && after[i] === ''
                 return <span key={i} style={isDel ? { background: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)', display: 'block' } : { display: 'block' }}>{line || ' '}</span>
@@ -90,8 +90,8 @@ export const PackageJsonView: React.FC<PackageJsonViewProps> = ({ repos, onBack 
           </div>
           <div style={{ width: '1px', background: 'var(--border)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ padding: '8px 16px', background: 'rgba(34, 197, 94, 0.1)', color: 'var(--accent-green)', fontSize: '12px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Depois</div>
-            <pre style={{ margin: 0, padding: '16px', fontSize: '12px', fontFamily: 'monospace', overflowX: 'auto', background: 'var(--bg-primary)', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            <div style={{ padding: '3px 10px', background: 'rgba(34, 197, 94, 0.1)', color: 'var(--accent-green)', fontSize: '10.5px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Depois</div>
+            <pre style={{ margin: 0, padding: '8px 12px', fontSize: '11px', fontFamily: 'monospace', overflowX: 'auto', background: 'var(--bg-primary)', color: 'var(--text-primary)', lineHeight: 1.4 }}>
               {after.map((line, i) => {
                 const isAdd = line !== '' && before[i] === ''
                 return <span key={i} style={isAdd ? { background: 'rgba(34, 197, 94, 0.2)', color: 'var(--accent-green)', display: 'block' } : { display: 'block' }}>{line || ' '}</span>
