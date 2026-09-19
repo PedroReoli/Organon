@@ -2,13 +2,15 @@
 
 /**
  * Organon Master CLI & AI Integration Bridge
- * Unified Command Line Interface for Humans & AI Agents.
+ * Unified Command Line Interface for Humans & AI Agents (Achilles-style Architecture).
  */
 
 const path = require('path');
 const store = require('./lib/store.cjs');
 const schema = require('./lib/schema.cjs');
 const repl = require('./lib/repl.cjs');
+const menu = require('./lib/menu.cjs');
+const protocol = require('./lib/protocol.cjs');
 
 const taskCmd = require('./lib/commands/task.cjs');
 const sprintCmd = require('./lib/commands/sprint.cjs');
@@ -16,6 +18,8 @@ const noteCmd = require('./lib/commands/note.cjs');
 const projectCmd = require('./lib/commands/project.cjs');
 const habitCmd = require('./lib/commands/habit.cjs');
 const statusCmd = require('./lib/commands/status.cjs');
+const doctorCmd = require('./lib/commands/doctor.cjs');
+const mcpServer = require('./lib/mcp.cjs');
 
 const BANNER = `
 \x1b[38;2;99;102;241m ██████╗ ██████╗  ██████╗  █████╗ ███╗   ██╗ ██████╗ ███╗   ██╗\x1b[0m
@@ -31,8 +35,10 @@ function printHelp() {
   console.log(BANNER);
   console.log(`\x1b[1mUSO GERAL:\x1b[0m
   \x1b[33morganon\x1b[0m <comando> [subcomando] [opções]
-  \x1b[33morganon\x1b[0m                  \x1b[90m(Inicia a CLI no modo interativo REPL)\x1b[0m
-  \x1b[33morganon schema\x1b[0m           \x1b[90m(Exibe schema JSON com especificações para IAs)\x1b[0m
+  \x1b[33morganon\x1b[0m                  \x1b[90m(Inicia menu interativo visual)\x1b[0m
+  \x1b[33morganon --ai\x1b[0m             \x1b[90m(Exibe o protocolo autônomo para agentes de IA)\x1b[0m
+  \x1b[33morganon doctor\x1b[0m           \x1b[90m(Diagnóstico de integridade do SQLite e sistema)\x1b[0m
+  \x1b[33morganon mcp\x1b[0m              \x1b[90m(Inicia servidor MCP via stdio para Claude/Cursor)\x1b[0m
 
 \x1b[1mCOMANDOS DISPONÍVEIS:\x1b[0m
 
@@ -62,18 +68,22 @@ function printHelp() {
     organon habit check <id_ou_nome>        \x1b[90m(Marca/desmarca hábito no dia de hoje)\x1b[0m
 
   \x1b[36m🤖 COMANDOS PARA IAs & AGENTES\x1b[0m
-    organon ai "<prompt em linguagem natural>"
+    organon --ai                            \x1b[90m(Exibe o protocolo autônomo para agentes de IA)\x1b[0m
+    organon doctor [--json]                 \x1b[90m(Diagnóstico completo de saúde do ambiente)\x1b[0m
+    organon mcp                             \x1b[90m(Inicia servidor MCP stdio JSON-RPC 2.0)\x1b[0m
     organon schema                          \x1b[90m(Emite JSON Tool Schema format para IAs)\x1b[0m
+    organon ai "<prompt em linguagem natural>"
     organon status                          \x1b[90m(Diagnóstico do sistema e diretórios de dados)\x1b[0m
     organon sync                            \x1b[90m(Notifica e recarrega a UI do app desktop)\x1b[0m
 
 \x1b[1mOPÇÕES GLOBAIS:\x1b[0m
   \x1b[33m--json\x1b[0m, \x1b[33m-j\x1b[0m        Retorna resposta exclusivamente em JSON estruturado para automações.
+  \x1b[33m--ai\x1b[0m, \x1b[33m-a\x1b[0m          Exibe o protocolo autônomo para agentes de IA.
   \x1b[33m--help\x1b[0m, \x1b[33m-h\x1b[0m        Exibe este menu de ajuda.
 `);
 }
 
-const BOOLEAN_FLAGS = new Set(['json', 'j', 'help', 'h', 'today', 'raw', 'all', 'v', 'version']);
+const BOOLEAN_FLAGS = new Set(['json', 'j', 'help', 'h', 'today', 'raw', 'all', 'v', 'version', 'ai', 'a']);
 
 function parseArgs(argsArray) {
   const options = { _: [] };
@@ -103,6 +113,7 @@ function parseArgs(argsArray) {
       const key = arg.slice(1);
       if (key === 'j') options.json = true;
       else if (key === 'h') options.help = true;
+      else if (key === 'a') options.ai = true;
       else options[key] = true;
     } else {
       options._.push(arg);
@@ -116,14 +127,38 @@ function execute(args, context = {}) {
   const isJson = Boolean(opts.json || opts.j);
   const primary = opts._[0] ? opts._[0].toLowerCase() : null;
   const secondary = opts._[1] ? opts._[1].toLowerCase() : null;
-  const target = opts._[2] || opts._[1];
 
+  // 0. AI Protocol
+  if (opts.ai || opts.a || primary === 'protocol' || primary === '--ai') {
+    protocol.printProtocol();
+    return;
+  }
+
+  // Help
   if (opts.help || primary === 'help') {
     if (isJson) {
       console.log(JSON.stringify(schema.AI_TOOLS_SCHEMA, null, 2));
     } else {
       printHelp();
     }
+    return;
+  }
+
+  // Doctor
+  if (primary === 'doctor' || primary === 'health' || primary === 'check') {
+    doctorCmd.handleDoctor(opts);
+    return;
+  }
+
+  // MCP
+  if (primary === 'mcp' || primary === 'mcp-server') {
+    mcpServer.startMcpServer();
+    return;
+  }
+
+  // Visual Menu
+  if (primary === 'menu') {
+    menu.startMenu(execute);
     return;
   }
 
@@ -249,11 +284,10 @@ function execute(args, context = {}) {
       const vel = sprintCmd.handleSprintVelocity();
       if (isJson) console.log(JSON.stringify(vel, null, 2));
       else {
-        console.log(`\n\x1b[1m🏃 VELOCIDADE DAS SPRINTS:\x1b[0m`);
-        vel.forEach(v => {
-          console.log(`  • \x1b[1m${v.name}\x1b[0m (${v.status}): ${v.completedPoints}/${v.totalPoints} pts (\x1b[32m${v.completionRate}%\x1b[0m) - ${v.totalCards} cards`);
-        });
-        console.log();
+        console.log(`\n\x1b[1mMÉTRICAS DE SPRINT:\x1b[0m`);
+        console.log(`  • Concluídos: ${vel.completedPoints} pts (${vel.completedCount} cards)`);
+        console.log(`  • Pendentes:  ${vel.pendingPoints} pts (${vel.pendingCount} cards)`);
+        console.log(`  • Taxa de Conclusão: \x1b[32m${vel.completionRate}%\x1b[0m\n`);
       }
       return;
     }
@@ -262,8 +296,8 @@ function execute(args, context = {}) {
     else {
       console.log(`\n\x1b[1m🏃 SPRINTS (${list.length}):\x1b[0m`);
       list.forEach(s => {
-        console.log(`  • \x1b[1m[${s.id.slice(0, 6)}]\x1b[0m ${s.name} [${s.status}] (${s.startDate} -> ${s.endDate})`);
-        if (s.goal) console.log(`    \x1b[90mMeta: ${s.goal}\x1b[0m`);
+        const badge = s.status === 'active' ? '\x1b[32m[ATIVA]\x1b[0m' : s.status === 'completed' ? '\x1b[90m[CONCLUÍDA]\x1b[0m' : '\x1b[33m[PLANEJAMENTO]\x1b[0m';
+        console.log(`  • \x1b[1m${s.name}\x1b[0m ${badge} - ${s.goal || 'Sem meta'}`);
       });
       console.log();
     }
@@ -275,24 +309,23 @@ function execute(args, context = {}) {
     if (secondary === 'create') {
       const res = noteCmd.handleNoteCreate(opts);
       if (isJson) console.log(JSON.stringify(res, null, 2));
-      else console.log(`\x1b[32m✔ Nota criada:\x1b[0m "${res.title}" em ${res.mdPath}`);
+      else console.log(`\x1b[32m✔ Nota criada:\x1b[0m [${res.id.slice(0, 6)}] "${res.title}" na pasta "${res.folder}"`);
       return;
     }
     if (secondary === 'read' || secondary === 'get') {
       const res = noteCmd.handleNoteRead(opts._[2]);
       if (isJson) console.log(JSON.stringify(res, null, 2));
       else {
-        console.log(`\n\x1b[1m📝 ${res.title}\x1b[0m \x1b[90m(${res.mdPath})\x1b[0m`);
-        console.log('─'.repeat(50));
+        console.log(`\n\x1b[1m📝 ${res.title}\x1b[0m \x1b[90m(Pasta: ${res.folder})\x1b[0m\n`);
         console.log(res.content);
-        console.log('─'.repeat(50));
+        console.log();
       }
       return;
     }
     if (secondary === 'update') {
       const res = noteCmd.handleNoteUpdate(opts._[2], opts);
       if (isJson) console.log(JSON.stringify(res, null, 2));
-      else console.log(`\x1b[32m✔ Nota atualizada:\x1b[0m "${res.title}"`);
+      else console.log(`\x1b[32m✔ Nota atualizada com sucesso:\x1b[0m "${res.title}"`);
       return;
     }
     if (secondary === 'delete' || secondary === 'rm') {
@@ -350,7 +383,7 @@ function execute(args, context = {}) {
     return;
   }
 
-  // Interactive explicit command
+  // Interactive REPL explicit command
   if (primary === 'interactive' || primary === 'cli' || primary === 'repl') {
     repl.startRepl(execute);
     return;
@@ -365,10 +398,10 @@ function execute(args, context = {}) {
 const rawArgs = process.argv.slice(2);
 
 if (rawArgs.length === 0) {
-  // If run in terminal with no args, print banner & start REPL
-  printHelp();
   if (process.stdin.isTTY) {
-    repl.startRepl(execute);
+    menu.startMenu(execute);
+  } else {
+    printHelp();
   }
 } else {
   try {
