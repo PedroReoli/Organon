@@ -3,6 +3,7 @@ import type { NativeImage } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { getMainWindow } from './window'
+import { getDevServerUrl } from './devServerUrl'
 import { loadStore } from '../storage/store'
 
 let tray: Tray | null = null
@@ -176,7 +177,7 @@ export function createSuperWhisperWindow(): BrowserWindow {
     const resolvedHtml = htmlCandidates.find(p => fs.existsSync(p)) || htmlCandidates[0]
     superWhisperWindow.loadFile(resolvedHtml)
   } else {
-    const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173'
+    const devServerUrl = getDevServerUrl()
     superWhisperWindow.loadURL(`${devServerUrl}/super-whisper.html`)
   }
 

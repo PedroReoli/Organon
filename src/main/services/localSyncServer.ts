@@ -1,6 +1,7 @@
 import * as http from 'http'
 import * as os from 'os'
 import * as dgram from 'dgram'
+import { findAvailablePort } from '../core/portFinder'
 import { getMainWindow } from '../core/window'
 import { loadStore, saveStore } from '../storage/store'
 
@@ -227,35 +228,42 @@ export function startLocalSyncServer(requestedPort = 8765): Promise<ServerState>
 
     server.on('error', (err: any) => {
       addLog(`Erro no servidor HTTP local: ${err.message}`, 'error')
-      if (err.code === 'EADDRINUSE') {
-        server?.listen(0, ip) // Escolhe porta livre
-      } else {
-        reject(err)
-      }
+      reject(err)
     })
 
-    server.listen(requestedPort, ip, () => {
-      const address = server?.address() as any
-      const actualPort = address ? address.port : requestedPort
+    void (async () => {
+      try {
+        const chosenPort = await findAvailablePort(requestedPort, ip, 20)
+        if (chosenPort !== requestedPort && chosenPort !== 0) {
+          addLog(`Porta ${requestedPort} já em uso. Alternando automaticamente para ${chosenPort}...`, 'info')
+        }
 
-      state = {
-        running: true,
-        port: actualPort,
-        ip,
-        pin,
-        logs: [],
-        progress: 0,
-        connectedDevice: null,
+        server?.listen(chosenPort, ip, () => {
+          const address = server?.address() as any
+          const actualPort = address ? address.port : chosenPort
+
+          state = {
+            running: true,
+            port: actualPort,
+            ip,
+            pin,
+            logs: [],
+            progress: 0,
+            connectedDevice: null,
+          }
+
+          addLog(`Servidor local ativado em http://${ip}:${actualPort}`, 'success')
+          addLog(`PIN de segurança gerado: ${pin}`, 'info')
+          addLog(`Transmitindo anúncio de auto-descoberta Wi-Fi (UDP porta 8766)...`, 'info')
+
+          startUdpBroadcast(ip, actualPort, pin)
+
+          resolve(state)
+        })
+      } catch (e: any) {
+        reject(e)
       }
-
-      addLog(`Servidor local ativado em http://${ip}:${actualPort}`, 'success')
-      addLog(`PIN de segurança gerado: ${pin}`, 'info')
-      addLog(`Transmitindo anúncio de auto-descoberta Wi-Fi (UDP porta 8766)...`, 'info')
-
-      startUdpBroadcast(ip, actualPort, pin)
-
-      resolve(state)
-    })
+    })()
   })
 }
 

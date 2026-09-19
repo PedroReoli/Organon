@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, desktopCapturer, session } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { getDevServerUrl } from './devServerUrl'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -147,7 +148,7 @@ export const createWindow = (): void => {
   })
 
   if (!app.isPackaged) {
-    const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173'
+    const devServerUrl = getDevServerUrl()
     mainWindow.loadURL(devServerUrl)
     if (process.env.ELECTRON_DEVTOOLS === '1') {
       mainWindow.webContents.openDevTools()

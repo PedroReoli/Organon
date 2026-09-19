@@ -8,6 +8,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const net = require('net');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -189,6 +190,31 @@ function formatViteLine(rawLine) {
   return `${c.gray}› [Vite] ${line}${c.reset}`;
 }
 
+function isPortAvailable(port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const tester = net.createServer();
+    tester.unref();
+    tester.once('error', () => {
+      resolve(false);
+    });
+    tester.once('listening', () => {
+      tester.close(() => {
+        resolve(true);
+      });
+    });
+    tester.listen(port, host);
+  });
+}
+
+async function findAvailablePort(startPort = 5173, host = '127.0.0.1', maxAttempts = 30) {
+  for (let p = startPort; p < startPort + maxAttempts; p++) {
+    if (await isPortAvailable(p, host)) {
+      return p;
+    }
+  }
+  return 0;
+}
+
 let viteProcess = null;
 let electronProcess = null;
 let isCleaningUp = false;
@@ -196,6 +222,11 @@ let isCleaningUp = false;
 function cleanup() {
   if (isCleaningUp) return;
   isCleaningUp = true;
+
+  try {
+    const urlFile = path.join(rootDir, '.dev-server-url');
+    if (fs.existsSync(urlFile)) fs.unlinkSync(urlFile);
+  } catch {}
 
   if (viteProcess) {
     try { viteProcess.kill(); } catch {}
@@ -214,89 +245,121 @@ process.on('SIGINT', () => {
 
 process.on('exit', cleanup);
 
-// Início
-renderDashboard();
-
-// 1. Iniciar Vite Dev Server chamando node direto
-viteProcess = spawn(nodeBin, [viteBin], {
-  cwd: rootDir,
-  env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
-});
-
-viteProcess.stdout.on('data', (data) => {
-  const lines = data.toString().split('\n');
-  lines.forEach(l => {
-    const formatted = formatViteLine(l);
-    if (formatted) addLog(formatted);
-    else renderDashboard();
-  });
-});
-
-viteProcess.stderr.on('data', (data) => {
-  const lines = data.toString().split('\n');
-  lines.forEach(l => {
-    if (!shouldIgnoreLine(l.trim())) {
-      addLog(`${c.yellow}⚠️ [Vite] ${l.trim()}${c.reset}`);
-    }
-  });
-});
-
-viteProcess.on('error', (err) => {
-  addLog(`${c.brightRed}Erro ao iniciar Vite: ${err.message}${c.reset}`);
-});
-
-// 2. Compilar TypeScript do Node e lançar Electron direto
-const tscProcess = spawn(nodeBin, [tscBin, '-p', 'tsconfig.node.json'], {
-  cwd: rootDir,
-  env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
-});
-
-tscProcess.on('close', (code) => {
-  if (code !== 0) {
-    state.electronStatus = `${c.brightRed}${c.bold}Falha na compilação TypeScript (Código ${code})${c.reset}`;
-    renderDashboard();
-    return;
-  }
-
-  state.electronStatus = `${c.brightGreen}${c.bold}Executando (Janela Ativa)${c.reset}`;
+async function main() {
   renderDashboard();
 
-  if (!fs.existsSync(electronBin)) {
-    addLog(`${c.brightRed}Executável do Electron não encontrado em: ${electronBin}${c.reset}`);
-    return;
+  // Verifica porta livre para o Vite
+  const chosenPort = await findAvailablePort(5173);
+  if (chosenPort !== 5173 && chosenPort !== 0) {
+    addLog(`${c.brightYellow}⚡ Porta 5173 em uso. Alternando automaticamente para a porta livre ${chosenPort}...${c.reset}`);
   }
 
-  electronProcess = spawn(electronBin, ['.'], {
+  const devUrl = `http://localhost:${chosenPort || 5173}`;
+  try {
+    fs.writeFileSync(path.join(rootDir, '.dev-server-url'), devUrl, 'utf-8');
+  } catch {}
+
+  // 1. Iniciar Vite Dev Server chamando node direto com a porta dinâmica
+  const viteArgs = [viteBin];
+  if (chosenPort > 0) {
+    viteArgs.push('--port', String(chosenPort));
+  }
+
+  viteProcess = spawn(nodeBin, viteArgs, {
+    cwd: rootDir,
+    env: {
+      ...process.env,
+      PORT: String(chosenPort),
+      VITE_DEV_SERVER_URL: devUrl,
+      FORCE_COLOR: '1',
+      NODE_NO_WARNINGS: '1'
+    }
+  });
+
+  viteProcess.stdout.on('data', (data) => {
+    const lines = data.toString().split('\n');
+    lines.forEach(l => {
+      const formatted = formatViteLine(l);
+      if (formatted) addLog(formatted);
+      else renderDashboard();
+    });
+  });
+
+  viteProcess.stderr.on('data', (data) => {
+    const lines = data.toString().split('\n');
+    lines.forEach(l => {
+      if (!shouldIgnoreLine(l.trim())) {
+        addLog(`${c.yellow}⚠️ [Vite] ${l.trim()}${c.reset}`);
+      }
+    });
+  });
+
+  viteProcess.on('error', (err) => {
+    addLog(`${c.brightRed}Erro ao iniciar Vite: ${err.message}${c.reset}`);
+  });
+
+  // 2. Compilar TypeScript do Node e lançar Electron direto
+  const tscProcess = spawn(nodeBin, [tscBin, '-p', 'tsconfig.node.json'], {
     cwd: rootDir,
     env: { ...process.env, FORCE_COLOR: '1', NODE_NO_WARNINGS: '1' }
   });
 
-  electronProcess.stdout.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach(l => {
-      const formatted = formatElectronLine(l);
-      if (formatted) addLog(formatted);
-    });
-  });
+  tscProcess.on('close', (code) => {
+    if (code !== 0) {
+      state.electronStatus = `${c.brightRed}${c.bold}Falha na compilação TypeScript (Código ${code})${c.reset}`;
+      renderDashboard();
+      return;
+    }
 
-  electronProcess.stderr.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach(l => {
-      const formatted = formatElectronLine(l);
-      if (formatted) addLog(formatted);
-    });
-  });
-
-  electronProcess.on('error', (err) => {
-    addLog(`${c.brightRed}Erro ao iniciar Electron: ${err.message}${c.reset}`);
-  });
-
-  electronProcess.on('close', (electronCode) => {
-    state.electronStatus = `${c.gray}Encerrado (Código ${electronCode})${c.reset}`;
+    state.electronStatus = `${c.brightGreen}${c.bold}Executando (Janela Ativa)${c.reset}`;
     renderDashboard();
-    setTimeout(() => {
-      cleanup();
-      process.exit(electronCode || 0);
-    }, 400);
+
+    if (!fs.existsSync(electronBin)) {
+      addLog(`${c.brightRed}Executável do Electron não encontrado em: ${electronBin}${c.reset}`);
+      return;
+    }
+
+    electronProcess = spawn(electronBin, ['.'], {
+      cwd: rootDir,
+      env: {
+        ...process.env,
+        VITE_DEV_SERVER_URL: state.viteUrl || devUrl,
+        FORCE_COLOR: '1',
+        NODE_NO_WARNINGS: '1'
+      }
+    });
+
+    electronProcess.stdout.on('data', (data) => {
+      const lines = data.toString().split('\n');
+      lines.forEach(l => {
+        const formatted = formatElectronLine(l);
+        if (formatted) addLog(formatted);
+      });
+    });
+
+    electronProcess.stderr.on('data', (data) => {
+      const lines = data.toString().split('\n');
+      lines.forEach(l => {
+        const formatted = formatElectronLine(l);
+        if (formatted) addLog(formatted);
+      });
+    });
+
+    electronProcess.on('error', (err) => {
+      addLog(`${c.brightRed}Erro ao iniciar Electron: ${err.message}${c.reset}`);
+    });
+
+    electronProcess.on('close', (electronCode) => {
+      state.electronStatus = `${c.gray}Encerrado (Código ${electronCode})${c.reset}`;
+      renderDashboard();
+      setTimeout(() => {
+        cleanup();
+        process.exit(electronCode || 0);
+      }, 400);
+    });
   });
+}
+
+main().catch(err => {
+  console.error('Falha ao iniciar ambiente dev:', err);
 });

@@ -48,6 +48,7 @@ tsc_output.txt
 *.bak
 *.tmp
 *.temp
+.dev-server-url
 
 /.privado
 .privado/
