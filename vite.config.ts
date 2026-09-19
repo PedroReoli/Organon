@@ -1,9 +1,30 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf-8')) as { version: string }
+
+const devServerUrlSyncPlugin = {
+  name: 'organon-dev-port-sync',
+  configureServer(server: any) {
+    server.httpServer?.once('listening', () => {
+      const address = server.httpServer?.address()
+      if (address && typeof address === 'object') {
+        const port = address.port
+        const url = `http://localhost:${port}`
+        try {
+          writeFileSync(path.join(__dirname, '.dev-server-url'), url, 'utf-8')
+        } catch {}
+      }
+    })
+    server.httpServer?.once('close', () => {
+      try {
+        unlinkSync(path.join(__dirname, '.dev-server-url'))
+      } catch {}
+    })
+  },
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -17,7 +38,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [react()],
+    plugins: [react(), devServerUrlSyncPlugin],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
     },
@@ -126,7 +147,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: devServerPort,
-      strictPort: true,
+      strictPort: false,
       host: true,
       hmr: {
         overlay: true,

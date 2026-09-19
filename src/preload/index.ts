@@ -279,6 +279,14 @@ const electronAPI = {
   stopGitWatcher: () => ipcRenderer.invoke('reports:stopGitWatcher'),
   onGitChanged: (cb: () => void) => ipcRenderer.on('reports:gitChanged', cb),
   offGitChanged: (cb: () => void) => ipcRenderer.removeListener('reports:gitChanged', cb),
+  gitRepoLiveStatus: (repoPath: string, forceRefresh?: boolean) =>
+    ipcRenderer.invoke('git:repoLiveStatus', repoPath, forceRefresh),
+  gitAmendCommit: (repoPath: string, newMsg: string) =>
+    ipcRenderer.invoke('git:amendCommit', repoPath, newMsg),
+  gitUndoLastCommit: (repoPath: string) =>
+    ipcRenderer.invoke('git:undoLastCommit', repoPath),
+  gitCloudStatus: (repoPath: string, customToken?: string) =>
+    ipcRenderer.invoke('git:cloudStatus', repoPath, customToken),
 
   // Conversations
   saveConversation: (id: string, messages: any[]) => ipcRenderer.invoke('conversations:save', id, messages),
