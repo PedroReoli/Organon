@@ -1,7 +1,7 @@
 import React from 'react'
 import { FolderTree, Folder } from 'lucide-react'
 import type { Note, NoteFolder, BreadcrumbPart } from '@types'
-import { WysiwygEditor } from '../../shared/WysiwygEditor'
+import { WysiwygEditor } from '../editor/WysiwygEditor'
 import { FolderIcon, HomeFolderIcon, PageIcon } from './icons'
 
 interface FolderEditorPaneProps {

@@ -57,32 +57,12 @@ export function useAppDebugHud({ settings, activeView }: UseAppDebugHudOptions) 
         if (cls.includes('sprint-card') && !parts.some(p => p.includes('SprintCardItem'))) {
           const title = node.querySelector('.sprint-card-title')?.textContent?.trim()
           parts.unshift(`SprintCardItem#${title || node.getAttribute('data-debug-id') || '?'}`)
-        } else if (cls.includes('period-cell') && !parts.some(p => p.includes('Cell'))) {
-          const id = node.getAttribute('data-debug-id') || ''
-          parts.unshift(id ? `PeriodView.Cell#${id}` : 'PeriodView.Cell')
-        } else if (cls.includes('period-grid') && !parts.some(p => p.includes('PeriodView'))) {
-          parts.unshift('PeriodView.Grid')
-        } else if ((cls.includes('period-backlog') || cls.includes('hourly-backlog')) && !parts.some(p => p.includes('Backlog'))) {
-          parts.unshift('PeriodView.Backlog')
-        } else if (cls.includes('period-view') && !parts.some(p => p.includes('PeriodView'))) {
-          parts.unshift('views/PeriodView')
-        } else if ((cls.includes('hourly-view') || cls.includes('hourly-grid')) && !parts.some(p => p.includes('Hourly'))) {
-          parts.unshift('views/HourlyView')
-        } else if (cls.includes('planning-hub') && !parts.some(p => p.includes('HubPlanejamento'))) {
-          parts.unshift('hubs/HubPlanejamento')
-        } else if (cls.includes('planning-home') && !parts.some(p => p.includes('PlanningHome'))) {
-          parts.unshift('planning/PlanningHomePage')
-        } else if (cls.includes('planning-month') && !parts.some(p => p.includes('MonthView'))) {
-          parts.unshift('views/MonthView')
-        } else if (cls.includes('planning-timeline') && !parts.some(p => p.includes('Timeline'))) {
-          parts.unshift('views/TimelineView')
-        } else if (cls.includes('crm-hub') && !parts.some(p => p.includes('CRM'))) {
-          parts.unshift('hubs/HubCRM')
-        } else if (cls.includes('crm-pipeline') && !parts.some(p => p.includes('Pipeline'))) {
-          parts.unshift('CRMPipeline')
-        } else if (cls.includes('crm-contact-card') && !parts.some(p => p.includes('ContactCard'))) {
-          const name = node.querySelector('.crm-contact-name')?.textContent?.trim()
-          parts.unshift(`CRMContactCard#${name || '?'}`)
+        } else if (cls.includes('daily-view') && !parts.some(p => p.includes('DailyView'))) {
+          parts.unshift('PlannerPage.DailyView')
+        } else if (cls.includes('weekly-view') && !parts.some(p => p.includes('WeeklyView'))) {
+          parts.unshift('PlannerPage.WeeklyView')
+        } else if (cls.includes('planner-navbar') && !parts.some(p => p.includes('PlannerNavbar'))) {
+          parts.unshift('PlannerPage.PlannerNavbar')
         } else if ((cls.includes('notes-view') || cls.includes('notes-')) && !parts.some(p => p.includes('Notes'))) {
           parts.unshift('NotesView')
         } else if (cls.includes('note-editor') && !parts.some(p => p.includes('Editor'))) {

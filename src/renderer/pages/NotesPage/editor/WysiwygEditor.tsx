@@ -283,6 +283,19 @@ export const WysiwygEditor = ({
         const rawText = event.clipboardData?.getData('text/plain') ?? ''
         const rawHtml = event.clipboardData?.getData('text/html') ?? ''
 
+        const isRichSemanticHtml = Boolean(
+          rawHtml && /<(table|thead|tbody|tr|td|h[1-6]|ul|ol|li|img|blockquote)[\s>]/i.test(rawHtml)
+        )
+
+        if (looksLikeMarkdownPaste(rawText) && (!rawHtml || !isRichSemanticHtml)) {
+          event.preventDefault()
+          editorInstance.chain().focus().insertContentAt(
+            { from: editorInstance.state.selection.from, to: editorInstance.state.selection.to },
+            markdownToHtml(rawText),
+          ).run()
+          return true
+        }
+
         if (rawHtml) {
           const sanitized = sanitizePastedHtml(rawHtml)
           if (sanitized) {
@@ -307,7 +320,7 @@ export const WysiwygEditor = ({
           }
         }
 
-        if (mode === 'full' && looksLikeMarkdownPaste(rawText)) {
+        if (looksLikeMarkdownPaste(rawText)) {
           event.preventDefault()
           editorInstance.chain().focus().insertContentAt(
             { from: editorInstance.state.selection.from, to: editorInstance.state.selection.to },

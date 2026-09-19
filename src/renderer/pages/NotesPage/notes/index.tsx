@@ -48,18 +48,6 @@ export const NotesView = ({
     [notes, folders],
   )
 
-  // Outline keyboard shortcut Ctrl+Shift+O
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') {
-        e.preventDefault()
-        setShowOutline(prev => !prev)
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
-
   // 1. Tree hook manages navigation state, drag-drop, context menus, etc.
   //    Content callbacks are injected after content hook is declared below.
   //    We use refs to break the initialization cycle.
@@ -74,6 +62,31 @@ export const NotesView = ({
     prepareNewNote:       (id)   => prepareNewNoteRef.current(id),
     setNoteContentDirect: (html) => setNoteContentDirectRef.current(html),
   })
+
+  // Outline keyboard shortcut Ctrl+Shift+O e listeners de barra lateral (Ctrl+B / Ctrl+Shift+B)
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault()
+        setShowOutline(prev => !prev)
+      }
+    }
+    const handleToggleLeft = () => {
+      tree.setSidebarOpen((prev: boolean) => !prev)
+    }
+    const handleToggleRight = () => {
+      setShowOutline(prev => !prev)
+    }
+
+    document.addEventListener('keydown', handler)
+    window.addEventListener('organon:toggle-left-sidebar', handleToggleLeft)
+    window.addEventListener('organon:toggle-right-sidebar', handleToggleRight)
+    return () => {
+      document.removeEventListener('keydown', handler)
+      window.removeEventListener('organon:toggle-left-sidebar', handleToggleLeft)
+      window.removeEventListener('organon:toggle-right-sidebar', handleToggleRight)
+    }
+  }, [tree.setSidebarOpen])
 
   // 2. Content hook receives the selected IDs from the tree hook.
   const content = useNoteContent({

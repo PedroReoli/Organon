@@ -22,9 +22,6 @@
 @import './shared/animations.css';
 @import './shared/utilities.css';
 @import './layout/navigation.css';
-@import './features/shortcuts/base.css';
-@import './features/shortcuts/organizer.css';
-@import './features/shortcuts/icon-picker.css';
 @import './features/reports/reports.css';
 @import './features/reports/reports-pages.css';
 @import './features/settings/core.css';
@@ -35,8 +32,6 @@
 @import './features/history/history.css';
 @import './shared/theme-cards.css';
 @import './features/installer/installer.css';
-@import './features/calendar/base.css';
-@import './features/today/dashboard.css';
 @import './features/clipboard/clipboard.css';
 @import './features/notes/sidebar.css';
 @import './features/notes/chatbot.css';

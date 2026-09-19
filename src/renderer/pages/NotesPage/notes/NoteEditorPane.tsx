@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Note } from '@types'
-import { WysiwygEditor } from '../../shared/WysiwygEditor'
+import { WysiwygEditor } from '../editor/WysiwygEditor'
 import type { BreadcrumbPart } from '@types'
 import { organonApi } from '../../../../api/organon'
 import { NoteExportModal } from './NoteExportModal'
