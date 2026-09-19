@@ -289,13 +289,17 @@ export const registerCoreIpcHandlers = (): void => {
   })
 
   const reportWatchers = new Map<string, fs.FSWatcher>()
+  let reportWatcherDebounce: NodeJS.Timeout | null = null
 
   ipcMain.handle('reports:watch', (_event, dirPath: string) => {
     if (reportWatchers.has(dirPath)) return
     try {
       if (!fs.existsSync(dirPath)) return
       const w = fs.watch(dirPath, { persistent: false }, () => {
-        getMainWindow()?.webContents.send('reports:changed')
+        if (reportWatcherDebounce) clearTimeout(reportWatcherDebounce)
+        reportWatcherDebounce = setTimeout(() => {
+          getMainWindow()?.webContents.send('reports:changed')
+        }, 1200)
       })
       reportWatchers.set(dirPath, w)
     } catch {
@@ -457,6 +461,158 @@ export const registerCoreIpcHandlers = (): void => {
         resolve({ ok: !err, stdout: stdout ?? '', stderr: stderr ?? '' })
       })
     })
+  })
+
+  // ── Git Live Status & Cache ──────────────────────────────────────────────
+  const gitStatusCache = new Map<string, { timestamp: number; data: any }>()
+  const GIT_CACHE_TTL = 15000 // 15s cache TTL
+
+  const runGit = (repoPath: string, args: string[]): Promise<{ ok: boolean; stdout: string; stderr: string }> => {
+    return new Promise((resolve) => {
+      execFile('git', ['-C', repoPath, ...args], { encoding: 'utf-8', timeout: 15000 }, (err, stdout, stderr) => {
+        resolve({ ok: !err, stdout: (stdout ?? '').trim(), stderr: (stderr ?? '').trim() })
+      })
+    })
+  }
+
+  ipcMain.handle('git:repoLiveStatus', async (_event, repoPath: string, forceRefresh = false) => {
+    if (!repoPath || !fs.existsSync(repoPath)) {
+      return { ok: false, error: 'Caminho inexistente' }
+    }
+
+    const cached = gitStatusCache.get(repoPath)
+    if (!forceRefresh && cached && Date.now() - cached.timestamp < GIT_CACHE_TTL) {
+      return { ok: true, ...cached.data, fromCache: true }
+    }
+
+    try {
+      const branchRes = await runGit(repoPath, ['rev-parse', '--abbrev-ref', 'HEAD'])
+      const branch = branchRes.ok ? branchRes.stdout : 'HEAD'
+
+      const statusRes = await runGit(repoPath, ['status', '--porcelain'])
+      const statusLines = statusRes.stdout ? statusRes.stdout.split('\n').filter(Boolean) : []
+      const isClean = statusLines.length === 0
+      const modifiedCount = statusLines.length
+
+      let ahead = 0
+      let behind = 0
+      const countsRes = await runGit(repoPath, ['rev-list', '--left-right', '--count', 'HEAD...@{u}'])
+      if (countsRes.ok && countsRes.stdout) {
+        const parts = countsRes.stdout.split(/\s+/)
+        if (parts.length >= 2) {
+          ahead = parseInt(parts[0], 10) || 0
+          behind = parseInt(parts[1], 10) || 0
+        }
+      }
+
+      const logRes = await runGit(repoPath, ['log', '-1', '--format=%h\t%s\t%cr\t%an'])
+      let lastCommit = { hash: '', message: '', relativeTime: '', author: '', isConventional: true }
+      if (logRes.ok && logRes.stdout) {
+        const [hash, message, relativeTime, author] = logRes.stdout.split('\t')
+        const conventionalRegex = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_.-]+\))?: .+/
+        lastCommit = {
+          hash: hash || '',
+          message: message || '',
+          relativeTime: relativeTime || '',
+          author: author || '',
+          isConventional: conventionalRegex.test(message || '')
+        }
+      }
+
+      const data = {
+        branch,
+        isClean,
+        modifiedCount,
+        ahead,
+        behind,
+        lastCommit
+      }
+
+      gitStatusCache.set(repoPath, { timestamp: Date.now(), data })
+      return { ok: true, ...data, fromCache: false }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || 'Falha ao consultar Git' }
+    }
+  })
+
+  ipcMain.handle('git:amendCommit', async (_event, repoPath: string, newMsg: string) => {
+    if (!repoPath || !newMsg?.trim()) {
+      return { ok: false, error: 'Caminho ou mensagem inválida' }
+    }
+    const res = await runGit(repoPath, ['commit', '--amend', '-m', newMsg.trim()])
+    gitStatusCache.delete(repoPath)
+    return { ok: res.ok, stdout: res.stdout, error: res.stderr }
+  })
+
+  ipcMain.handle('git:undoLastCommit', async (_event, repoPath: string) => {
+    if (!repoPath) return { ok: false, error: 'Caminho inválido' }
+    const res = await runGit(repoPath, ['reset', '--soft', 'HEAD~1'])
+    gitStatusCache.delete(repoPath)
+    return { ok: res.ok, stdout: res.stdout, error: res.stderr }
+  })
+
+  ipcMain.handle('git:cloudStatus', async (_event, repoPath: string, customToken?: string) => {
+    if (!repoPath) return { ok: false, error: 'Caminho inválido' }
+    try {
+      const urlRes = await runGit(repoPath, ['config', '--get', 'remote.origin.url'])
+      if (!urlRes.ok || !urlRes.stdout) {
+        return { ok: true, isGitHub: false, hasRemote: false }
+      }
+
+      const url = urlRes.stdout
+      const match = url.match(/github\.com[:/]([^/]+)\/([^/.]+)/)
+      if (!match) {
+        return { ok: true, isGitHub: false, hasRemote: true, remoteUrl: url }
+      }
+
+      const owner = match[1]
+      const repo = match[2]
+      const token = customToken || process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+
+      const headers: Record<string, string> = {
+        'User-Agent': 'Organon-Desktop',
+        Accept: 'application/vnd.github.v3+json'
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      let ciStatus: 'success' | 'failure' | 'in_progress' | 'none' = 'none'
+      try {
+        const runsResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=1`, { headers })
+        if (runsResp.ok) {
+          const runsData = await runsResp.json() as any
+          const latestRun = runsData?.workflow_runs?.[0]
+          if (latestRun) {
+            if (latestRun.status === 'in_progress') ciStatus = 'in_progress'
+            else if (latestRun.conclusion === 'success') ciStatus = 'success'
+            else if (latestRun.conclusion === 'failure') ciStatus = 'failure'
+          }
+        }
+      } catch {}
+
+      let openPrs = 0
+      try {
+        const prResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=10`, { headers })
+        if (prResp.ok) {
+          const prData = await prResp.json() as any
+          if (Array.isArray(prData)) openPrs = prData.length
+        }
+      } catch {}
+
+      return {
+        ok: true,
+        isGitHub: true,
+        hasRemote: true,
+        owner,
+        repo,
+        htmlUrl: `https://github.com/${owner}/${repo}`,
+        ciStatus,
+        openPrs
+      }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || 'Erro ao consultar status na nuvem' }
+    }
   })
 
   // ── Git Watcher ──────────────────────────────────────────────────────────
