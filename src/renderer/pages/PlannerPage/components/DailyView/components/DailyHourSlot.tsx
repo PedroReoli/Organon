@@ -15,6 +15,7 @@ export interface DailySlotProps {
   onEdit: (id: string) => void;
   onToggleStatus?: (id: string) => void;
   onOpenAdd: () => void;
+  onQuickCreate?: (title: string) => void;
 }
 
 export const DailyHourSlot: React.FC<DailySlotProps> = ({
@@ -26,9 +27,19 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
   onEdit,
   onToggleStatus,
   onOpenAdd,
+  onQuickCreate,
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const hourLabel = hour !== undefined ? `${hour.toString().padStart(2, '0')}:00` : '';
+  const [isInlineAdding, setIsInlineAdding] = React.useState(false);
+  const [inlineTitle, setInlineTitle] = React.useState('');
+  const inlineInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isInlineAdding) {
+      inlineInputRef.current?.focus();
+    }
+  }, [isInlineAdding]);
 
   return (
     <div
@@ -78,10 +89,59 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
           </div>
         )}
 
+        {/* Inline Quick Add Form */}
+        {isInlineAdding && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (inlineTitle.trim()) {
+                if (onQuickCreate) {
+                  onQuickCreate(inlineTitle.trim());
+                } else {
+                  onOpenAdd();
+                }
+                setInlineTitle('');
+              }
+              setIsInlineAdding(false);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full p-1.5 rounded-lg bg-[#0a0f1d] border border-indigo-500/80 shadow-lg shadow-indigo-950/50 flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <input
+              ref={inlineInputRef}
+              type="text"
+              value={inlineTitle}
+              onChange={(e) => setInlineTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setIsInlineAdding(false);
+                  setInlineTitle('');
+                }
+              }}
+              placeholder={`Tarefa às ${hourLabel}...`}
+              className="w-full bg-slate-900/80 border border-slate-700/60 rounded px-2 py-1 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-400 transition-colors"
+            />
+            <div className="flex items-center justify-between text-[9px] text-slate-400 px-0.5">
+              <span className="font-mono text-indigo-300/80">↵ Enter salva</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsInlineAdding(false);
+                  onOpenAdd();
+                }}
+                className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline underline-offset-2"
+              >
+                Mais campos...
+              </button>
+            </div>
+          </form>
+        )}
+
         {/* Empty Slot Hover Add Button */}
-        {tasks.length === 0 && (!isOver || !activeTask) && (
+        {tasks.length === 0 && !isInlineAdding && (!isOver || !activeTask) && (
           <div
-            onClick={onOpenAdd}
+            onClick={() => setIsInlineAdding(true)}
             className="h-8 flex items-center justify-between px-3 rounded-md text-xs text-slate-600 opacity-0 group-hover/slot:opacity-100 hover:bg-white/5 hover:text-slate-300 transition-all cursor-pointer select-none"
           >
             <span className="text-[11px] font-medium">+ Adicionar tarefa às {hourLabel}</span>
@@ -91,11 +151,11 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
       </div>
 
       {/* Add button on the right when tasks already exist */}
-      {tasks.length > 0 && (
+      {tasks.length > 0 && !isInlineAdding && (
         <div className="px-2 py-1 opacity-0 group-hover/slot:opacity-100 transition-opacity">
           <button
             type="button"
-            onClick={onOpenAdd}
+            onClick={() => setIsInlineAdding(true)}
             title={`Adicionar tarefa às ${hourLabel}`}
             className="w-6 h-6 rounded border border-slate-700/60 bg-[#121b2f] hover:bg-[#18243e] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >

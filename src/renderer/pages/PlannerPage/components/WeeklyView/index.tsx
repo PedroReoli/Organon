@@ -18,10 +18,9 @@ import type { Day, Period, Project } from '@types';
 import {
   MatrixSlot,
   MonthWeekDroppable,
-  WeeklyQuickAddModal,
   WeeklyViewHeader,
-  type WeeklyQuickAddModalState,
 } from './components';
+import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
 
 interface WeeklyViewProps {
   tasks: PlanningTask[];
@@ -65,7 +64,7 @@ export const WeeklyView = ({
   const zoomFactorRef = useRef(1);
 
   // Quick Add Modal State
-  const [quickAddModal, setQuickAddModal] = useState<WeeklyQuickAddModalState | null>(null);
+  const [quickAddModal, setQuickAddModal] = useState<PlanningQuickAddState | null>(null);
 
   // Keyboard navigation
   useEffect(() => {
@@ -565,6 +564,14 @@ export const WeeklyView = ({
                   onToggleStatus={handleToggleStatus}
                   onPostponeWeek={handlePostponeWeek}
                   onOpenAdd={() => openAddModal()}
+                  onQuickCreate={(title) => {
+                    onAddTask?.({
+                      title,
+                      status: 'todo',
+                      priority: 'P3',
+                      location: { day: null, period: null },
+                    });
+                  }}
                 />
               </div>
             )}
@@ -584,7 +591,7 @@ export const WeeklyView = ({
                 >
                   <span
                     className={`text-[11px] font-bold uppercase tracking-wider ${
-                      day.isToday ? 'text-indigo-400' : 'text-slate-400'
+                    day.isToday ? 'text-indigo-400' : 'text-slate-400'
                     }`}
                   >
                     {day.label}
@@ -633,6 +640,15 @@ export const WeeklyView = ({
                           onToggleStatus={handleToggleStatus}
                           onPostponeWeek={handlePostponeWeek}
                           onOpenAdd={() => openAddModal(day.key, shift.id, day.dateStr, day.label)}
+                          onQuickCreate={(title) => {
+                            onAddTask?.({
+                              title,
+                              date: day.dateStr,
+                              status: 'todo',
+                              priority: 'P3',
+                              location: { day: day.key, period: shift.id },
+                            });
+                          }}
                         />
                       </div>
                     );
@@ -648,7 +664,7 @@ export const WeeklyView = ({
         </DragOverlay>
       </DndContext>
 
-      <WeeklyQuickAddModal
+      <PlanningQuickAddModal
         modal={quickAddModal}
         projects={projects}
         onChange={setQuickAddModal}

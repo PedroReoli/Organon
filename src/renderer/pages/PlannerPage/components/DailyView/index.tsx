@@ -17,11 +17,10 @@ import type { Project } from '@types';
 import { Clock } from 'lucide-react';
 import {
   DailyHourSlot,
-  DailyQuickAddModal,
   DailyViewHeader,
   DailySidebar,
-  type DailyQuickAddModalState,
 } from './components';
+import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
 
 interface DailyViewProps {
   tasks: PlanningTask[];
@@ -53,7 +52,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
   const zoomFactorRef = useRef(1);
 
   // Quick Add Modal State
-  const [quickAddModal, setQuickAddModal] = useState<DailyQuickAddModalState | null>(null);
+  const [quickAddModal, setQuickAddModal] = useState<PlanningQuickAddState | null>(null);
 
   // Compute Active Selected Date
   const selectedDateObj = useMemo(() => {
@@ -407,6 +406,16 @@ export const DailyView: React.FC<DailyViewProps> = ({
                     onEdit={onEdit}
                     onToggleStatus={onToggleStatus}
                     onOpenAdd={() => openQuickAdd(hour)}
+                    onQuickCreate={(title) => {
+                      onAddTask?.({
+                        title,
+                        date: selectedDateStr,
+                        time: `${hour.toString().padStart(2, '0')}:00`,
+                        status: 'todo',
+                        priority: 'P3',
+                        location: { day: null, period: null },
+                      });
+                    }}
                   />
                 );
               })}
@@ -417,10 +426,11 @@ export const DailyView: React.FC<DailyViewProps> = ({
         <DragOverlay zIndex={9999}>{null}</DragOverlay>
       </DndContext>
 
-      <DailyQuickAddModal
+      <PlanningQuickAddModal
         modal={quickAddModal}
         projects={projects}
-        formattedDateTitle={formattedDateTitle}
+        contextTitle="Nova Tarefa para o Dia"
+        contextSubtitle={formattedDateTitle}
         onChange={setQuickAddModal}
         onSubmit={submitQuickAdd}
       />

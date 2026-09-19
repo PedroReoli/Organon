@@ -19,6 +19,7 @@ export interface MatrixSlotProps {
   onToggleStatus: (id: string) => void;
   onPostponeWeek: (id: string) => void;
   onOpenAdd: () => void;
+  onQuickCreate?: (title: string) => void;
 }
 
 export const MatrixSlot: React.FC<MatrixSlotProps> = ({
@@ -34,8 +35,18 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   onToggleStatus,
   onPostponeWeek,
   onOpenAdd,
+  onQuickCreate,
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const [isInlineAdding, setIsInlineAdding] = React.useState(false);
+  const [inlineTitle, setInlineTitle] = React.useState('');
+  const inlineInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isInlineAdding) {
+      inlineInputRef.current?.focus();
+    }
+  }, [isInlineAdding]);
 
   return (
     <div
@@ -103,13 +114,62 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
           </div>
         )}
 
+        {/* Inline Quick Add Form */}
+        {isInlineAdding && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (inlineTitle.trim()) {
+                if (onQuickCreate) {
+                  onQuickCreate(inlineTitle.trim());
+                } else {
+                  onOpenAdd();
+                }
+                setInlineTitle('');
+              }
+              setIsInlineAdding(false);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full p-1.5 rounded-lg bg-[#0a0f1d] border border-indigo-500/80 shadow-lg shadow-indigo-950/50 flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <input
+              ref={inlineInputRef}
+              type="text"
+              value={inlineTitle}
+              onChange={(e) => setInlineTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setIsInlineAdding(false);
+                  setInlineTitle('');
+                }
+              }}
+              placeholder="Nome da tarefa..."
+              className="w-full bg-slate-900/80 border border-slate-700/60 rounded px-2 py-1 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-400 transition-colors"
+            />
+            <div className="flex items-center justify-between text-[9px] text-slate-400 px-0.5">
+              <span className="font-mono text-indigo-300/80">↵ Enter salva</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsInlineAdding(false);
+                  onOpenAdd();
+                }}
+                className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline underline-offset-2"
+              >
+                Mais campos...
+              </button>
+            </div>
+          </form>
+        )}
+
         {/* Empty State Prompt */}
-        {tasks.length === 0 && (!isOver || !activeTask) && (
+        {tasks.length === 0 && !isInlineAdding && (!isOver || !activeTask) && (
           <div
             onClick={(e) => {
               if (!selectedTaskId) {
                 e.stopPropagation();
-                onOpenAdd();
+                setIsInlineAdding(true);
               }
             }}
             className="flex-1 flex flex-col items-center justify-center text-center p-2 cursor-pointer select-none text-slate-500 hover:text-slate-300 transition-colors group/empty"
@@ -118,20 +178,20 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
               <Plus className="w-3 h-3" />
             </div>
             <span className="text-[9.5px] font-bold tracking-wider uppercase text-slate-500/90 group-hover/slot:text-slate-400 leading-tight">
-              {selectedTaskId ? 'CLIQUE PARA MOVER' : 'ARRASTE OU CTRL+CLIQUE PARA MOVER'}
+              {selectedTaskId ? 'CLIQUE PARA MOVER' : '+ CRIAR TAREFA OU ARRASTE'}
             </span>
           </div>
         )}
       </div>
 
       {/* Quick Add Button at bottom when cards exist */}
-      {tasks.length > 0 && (
+      {tasks.length > 0 && !isInlineAdding && (
         <div className="pt-1 mt-1 border-t border-white/5 opacity-0 group-hover/slot:opacity-100 transition-opacity">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onOpenAdd();
+              setIsInlineAdding(true);
             }}
             className="w-full py-0.5 text-[9.5px] font-semibold flex items-center justify-center gap-1 rounded bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
           >
