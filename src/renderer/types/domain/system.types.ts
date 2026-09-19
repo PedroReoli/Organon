@@ -1,6 +1,6 @@
 import { Card, SprintCard, SprintColumn, SprintColumnGroup, SprintColumnSection, SprintSwimLane, SprintMetadata, SprintBoardConfig, AgendaCategory, CalendarEvent } from './planner.types'
 import { NoteFolder, Note, NoteTemplate, CanvasFolder, CanvasVersionEntry } from './notes.types'
-import { Project, RegisteredIDE } from './projects.types'
+import { Project, RegisteredIDE, GitRepoLiveStatus, GitCloudStatus } from './projects.types'
 import { Bill, Expense, BudgetCategory, IncomeEntry, FinancialConfig, SavingsGoal, Investment } from './financial.types'
 import { StudyState } from './study.types'
 
@@ -693,6 +693,10 @@ declare global {
       saveConversation?: (id: string, content: string) => Promise<string | null>
       setContentProtection?: (enabled: boolean) => Promise<boolean>
       onPlanningSync?: (callback: () => void) => () => void
+      gitRepoLiveStatus?: (repoPath: string, forceRefresh?: boolean) => Promise<GitRepoLiveStatus>
+      gitAmendCommit?: (repoPath: string, newMsg: string) => Promise<{ ok: boolean; stdout?: string; error?: string }>
+      gitUndoLastCommit?: (repoPath: string) => Promise<{ ok: boolean; stdout?: string; error?: string }>
+      gitCloudStatus?: (repoPath: string, customToken?: string) => Promise<GitCloudStatus>
     }
   }
 }

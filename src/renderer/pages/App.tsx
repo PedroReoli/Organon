@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   useStore,
   useAuth,
@@ -8,8 +8,8 @@ import {
   useRealtime,
 } from './shared/hooks'
 import { deleteAllFromApi } from '../../api/sync'
-import { applyTheme, isElectron } from '@utils'
-import { THEMES, DEFAULT_SETTINGS } from '@types'
+import { isElectron } from '@utils'
+import { DEFAULT_SETTINGS } from '@types'
 import { Titlebar } from './shared/Titlebar'
 import { type DashboardHubCard, type DashboardSyncStatus } from './DashboardPage/DashboardPage'
 import { InstallerView } from './SettingsPage/InstallerView'
@@ -19,15 +19,18 @@ import { useWakeWordListener } from '../hooks/useWakeWordListener'
 import type { AppView } from './shared/InternalNav'
 import {
   APP_HUBS,
-  APP_VIEW_LABELS,
   SYNC_STATUS_LABELS,
 } from './app/app.constants'
 import { useAppDebugHud } from './app/useAppDebugHud'
 import { useCalendarReminders } from './app/useCalendarReminders'
 import { AppGlobalModals } from './app/AppGlobalModals'
 import { AppViewRouter } from './app/AppViewRouter'
+import { useSidebarShortcuts } from '../hooks/useSidebarShortcuts'
+import { useAppLifecycle } from './app/useAppLifecycle'
+import { useAppShellConfig } from './app/useAppShellConfig'
 
 export const App = () => {
+  useSidebarShortcuts()
   const {
     cards,
     calendarEvents,
@@ -191,20 +194,7 @@ export const App = () => {
     },
   })
 
-  // Verificação silenciosa de atualizações no startup (após 5s)
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const res = await (window as any).electronAPI?.checkForUpdates?.()
-        if (res?.updateAvailable) {
-          setShowUpdateModal(true)
-        }
-      } catch {
-        // Ignora erros na verificação silenciosa
-      }
-    }, 5000)
-    return () => clearTimeout(timer)
-  }, [])
+
 
   useClipboardExpiration({ retentionDays: 30, onPurge: purgeExpiredClipboard })
 
@@ -291,73 +281,15 @@ export const App = () => {
     [activeView],
   )
 
-  // ── Effects ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const checkInstaller = async () => {
-      if (!isElectron()) {
-        setShowInstaller(false)
-        return
-      }
-      try {
-        const isPackaged = await window.electronAPI.isPackaged()
-        if (!isPackaged) {
-          setShowInstaller(false)
-          return
-        }
-        const isCompleted = await window.electronAPI.isInstallerCompleted()
-        setShowInstaller(!isCompleted)
-      } catch {
-        setShowInstaller(false)
-      }
-    }
-    checkInstaller()
-  }, [])
-
-  useEffect(() => {
-    const theme = THEMES[settings.themeName]
-    if (theme) applyTheme(theme)
-  }, [settings.themeName])
-
-  // Listener do popup do Super Whisper
-  useEffect(() => {
-    if (!isElectron()) return
-    if (!window.electronAPI?.onSuperWhisperTranscript) return
-
-    const handler = (text: string) => {
-      if (!text || !text.trim()) return
-      window.dispatchEvent(new CustomEvent('transcript:send-to-ai', { detail: { text } }))
-      window.dispatchEvent(new CustomEvent('chatbot:open', { detail: { text } }))
-    }
-
-    window.electronAPI.onSuperWhisperTranscript(handler)
-    return () => {
-      window.electronAPI.offSuperWhisperTranscript?.()
-    }
-  }, [])
-
-  // Auto-purge da lixeira no startup
-  useEffect(() => {
-    purgeOldTrash()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Auto-launch on boot
-  const autoLaunchRanRef = useRef(false)
-  useEffect(() => {
-    if (autoLaunchRanRef.current) return
-    if (isLoading) return
-    if (!isElectron()) return
-    if (apps.length === 0) return
-    autoLaunchRanRef.current = true
-    const targets = apps.filter((a) => a.autoLaunch === true && a.exePath)
-    if (targets.length === 0) return
-    targets.forEach((app, idx) => {
-      setTimeout(() => {
-        window.electronAPI?.launchExe?.(app.exePath).catch(() => {})
-      }, idx * 2000)
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, apps])
+  // ── Ciclo de vida da aplicação (Instalador, Tema, Whisper, Atualizações, Auto-Launch) ─
+  useAppLifecycle({
+    settings,
+    apps,
+    isLoading,
+    purgeOldTrash,
+    setShowInstaller: (val) => setShowInstaller(val),
+    setShowUpdateModal,
+  })
 
   // Lembretes de eventos do calendário
   useCalendarReminders({ calendarEvents })
@@ -386,93 +318,22 @@ export const App = () => {
     })()
   }
 
-  const currentShellConfig = useMemo(() => {
-    const buildConfig = () => {
-      const defaultHub = currentHub?.label || 'Organon'
-      const defaultView = APP_VIEW_LABELS[activeView] || activeView
-
-      switch (activeView) {
-        case 'projects':
-          return {
-            hubTitle: 'Operação',
-            viewTitle: 'Projetos & Git',
-            metricsText: `${projects.length} repositórios monitorados · Organon Git Engine`,
-            actions: [
-              { label: '+ Novo Card', onClick: () => addCard('Novo projeto/task'), variant: 'primary' as const },
-              { label: 'Varredura Git', onClick: () => { (window as any).electronAPI?.gitEngine?.scan?.() } },
-            ],
-          }
-        case 'okrs':
-          return {
-            hubTitle: 'Planejamento',
-            viewTitle: 'OKRs & Metas',
-            metricsText: 'Acompanhamento de Objetivos e Resultados-Chave (KRs)',
-            actions: [
-              { label: '+ Novo Card', onClick: () => addCard('Meta OKR'), variant: 'primary' as const },
-            ],
-          }
-        case 'notes':
-          return {
-            hubTitle: 'Conhecimento',
-            viewTitle: 'Notas & Documentos',
-            metricsText: `${notes.length} anotações salvas no ecossistema`,
-            actions: [
-              { label: '+ Nova Nota', onClick: () => addNote('Nova Nota', ''), variant: 'primary' as const },
-            ],
-          }
-        case 'study':
-          return {
-            hubTitle: 'Foco',
-            viewTitle: 'Modo Foco & Pomodoro',
-            metricsText: `${study.goals.length} metas · ${study.sessions.length} sessões concluídas`,
-            actions: [
-              { label: 'Ditado de Voz', onClick: () => setShowVoiceModal(true), variant: 'primary' as const },
-            ],
-          }
-        case 'settings':
-        case 'history':
-          return {
-            hubTitle: 'Sistema',
-            viewTitle: 'Configurações & Histórico',
-            metricsText: `Sincronização Local Wi-Fi Ativa · ${lastSyncAt ? 'Sincronizado' : 'Pronto'}`,
-            actions: [
-              { label: 'Wi-Fi QR Sync', onClick: () => setShowLocalSyncModal(true), variant: 'primary' as const },
-              { label: 'Atualizações', onClick: () => setShowUpdateModal(true) },
-            ],
-          }
-        default:
-          const pending = cards.filter((c) => c.status !== 'done').length
-          return {
-            hubTitle: defaultHub,
-            viewTitle: defaultView,
-            metricsText: `${pending} cards pendentes · ${projects.length} repositórios monitorados`,
-            actions: [
-              { label: '+ Novo Card', onClick: () => addCard('Nova tarefa'), variant: 'primary' as const },
-              { label: 'Ditado de Voz', onClick: () => setShowVoiceModal(true) },
-            ],
-          }
-      }
-    }
-
-    const cfg = buildConfig()
-    const chatAction = {
-      label: isChatOpen ? 'Fechar IA' : 'Chat IA',
-      onClick: () => setIsChatOpen((prev) => !prev),
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
-      variant: isChatOpen ? ('primary' as const) : undefined,
-    }
-
-    return {
-      hubTitle: cfg.hubTitle,
-      viewTitle: cfg.viewTitle,
-      metricsText: cfg.metricsText,
-      footerActions: [...cfg.actions, chatAction],
-    }
-  }, [activeView, cards, projects, notes, study, currentHub, lastSyncAt, addCard, addNote, isChatOpen])
+  const currentShellConfig = useAppShellConfig({
+    activeView,
+    cards,
+    projects,
+    notes,
+    study,
+    currentHub,
+    lastSyncAt,
+    addCard,
+    addNote,
+    isChatOpen,
+    setIsChatOpen,
+    setShowVoiceModal,
+    setShowLocalSyncModal,
+    setShowUpdateModal,
+  })
 
   // ── Early returns ───────────────────────────────────────────────────────────
   if (showInstaller === null) {

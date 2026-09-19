@@ -88,8 +88,32 @@ export const AppGlobalModals: React.FC<AppGlobalModalsProps> = ({
 
       {showViewsNavigator && (
         <ViewsNavigatorModal
+          notes={notes}
           onNavigate={(view: AppView) => {
             onSetActiveView(view)
+            setShowViewsNavigator(false)
+          }}
+          onSelectNote={(noteId) => {
+            onSetActiveView('notes')
+            onSetPendingNoteId(noteId)
+            setShowViewsNavigator(false)
+          }}
+          onAddNote={(title) => {
+            onAddNote(title)
+            onSetActiveView('notes')
+            setShowViewsNavigator(false)
+          }}
+          onAddCard={(title) => {
+            onAddCard(title)
+            onSetActiveView('planner')
+            setShowViewsNavigator(false)
+          }}
+          onOpenChat={() => {
+            setIsChatOpen(true)
+            setShowViewsNavigator(false)
+          }}
+          onOpenSync={() => {
+            setShowLocalSyncModal(true)
             setShowViewsNavigator(false)
           }}
           onClose={() => setShowViewsNavigator(false)}

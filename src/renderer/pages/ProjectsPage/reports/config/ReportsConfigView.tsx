@@ -1,44 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { isElectron } from '@utils'
-import { FolderPlus, FolderOpen, Trash2, Plus, Folder, Check } from 'lucide-react'
-
-function sep(dir: string): string {
-  return dir.includes('/') && !dir.includes('\\') ? '/' : '\\'
-}
-
-function derivePaths(baseDir: string) {
-  const s = sep(baseDir)
-  const base = baseDir.replace(/[/\\]+$/, '')
-  return {
-    scriptPath: base + s + 'generate_report.py',
-    configPath: base + s + 'reports-config.json',
-    lastRunPath: base + s + '.last_run',
-  }
-}
-
-interface ReportsConfig {
-  scanRoots: string[]
-  scanPaths: string[]
-  ignoreFolders: string[]
-  maxDepth: number
-  minIntervalHours: number
-  reportsJsonDir: string
-  weekReportsDir: string
-}
-
-function getDefaultConfig(baseDir: string): ReportsConfig {
-  const s = sep(baseDir)
-  const base = baseDir.replace(/[/\\]+$/, '')
-  return {
-    scanRoots: [],
-    scanPaths: [],
-    ignoreFolders: ['node_modules', '.git', 'dist', 'build'],
-    maxDepth: 6,
-    minIntervalHours: 1,
-    reportsJsonDir: base + s + '.reportsjson',
-    weekReportsDir: base + s + '.week-reports',
-  }
-}
+import React from 'react'
+import {
+  FolderPlus,
+  FolderOpen,
+  Trash2,
+  Plus,
+  Folder,
+  Check,
+  Play,
+  Clock,
+  Settings2,
+  Terminal,
+  Sliders,
+  AlertCircle,
+  ArrowLeft,
+} from 'lucide-react'
+import { useReportsConfig } from './useReportsConfig'
 
 interface ReportsConfigViewProps {
   baseDir: string
@@ -46,352 +22,541 @@ interface ReportsConfigViewProps {
   onRunComplete: () => void
 }
 
-type RunState = 'idle' | 'running' | 'ok' | 'error'
-
 export const ReportsConfigView: React.FC<ReportsConfigViewProps> = ({ baseDir, onBack, onRunComplete }) => {
-  const hasBaseDir = baseDir.trim().length > 0
-  const { scriptPath, configPath, lastRunPath } = hasBaseDir ? derivePaths(baseDir) : { scriptPath: '', configPath: '', lastRunPath: '' }
-  const defaultConfig = useMemo(() => getDefaultConfig(baseDir), [baseDir])
-  const [config, setConfig] = useState<ReportsConfig>(defaultConfig)
-  const [lastRun, setLastRun] = useState<string | null>(null)
-  const [runState, setRunState] = useState<RunState>('idle')
-  const [runOutput, setRunOutput] = useState('')
-  const [saved, setSaved] = useState(false)
-  const [scanRootsInput, setScanRootsInput] = useState(defaultConfig.scanRoots.join(', '))
-  const [ignoreFoldersInput, setIgnoreFoldersInput] = useState(defaultConfig.ignoreFolders.join(', '))
-  const [scanPaths, setScanPaths] = useState<string[]>([])
-  const [manualPathInput, setManualPathInput] = useState('')
-  const [browsing, setBrowsing] = useState(false)
+  const {
+    config,
+    setConfig,
+    saved,
+    scanRootsInput,
+    setScanRootsInput,
+    ignoreFoldersInput,
+    setIgnoreFoldersInput,
+    scanPaths,
+    manualPathInput,
+    setManualPathInput,
+    browsing,
+    hasBaseDir,
+    lastRun,
+    runState,
+    runOutput,
+    setRunOutput,
+    canRun,
+    hoursAgo,
+    minInterval,
+    handleBrowseFolder,
+    handleAddManualPath,
+    handleRemovePath,
+    handleSave,
+    handleRun,
+  } = useReportsConfig(baseDir, onRunComplete)
 
-  useEffect(() => {
-    if (!isElectron()) return
-    const api = window.electronAPI as any
-    void api.readReportsConfig(configPath).then((cfg: ReportsConfig | null) => {
-      if (cfg) {
-        setConfig({ ...defaultConfig, ...cfg })
-        setScanRootsInput((cfg.scanRoots ?? defaultConfig.scanRoots).join(', '))
-        setIgnoreFoldersInput((cfg.ignoreFolders ?? defaultConfig.ignoreFolders).join(', '))
-        setScanPaths(cfg.scanPaths ?? [])
-      }
-    })
-    void api.getReportsLastRun(lastRunPath).then((ts: string | null) => setLastRun(ts))
-  }, [configPath, lastRunPath])
-
-  const hoursAgo = lastRun ? Math.round((Date.now() - new Date(lastRun).getTime()) / 3600000) : null
-  const minInterval = config.minIntervalHours ?? 1
-  const canRun = hasBaseDir && runState !== 'running' && (hoursAgo === null || hoursAgo >= minInterval)
-
-  const handleBrowseFolder = async () => {
-    if (!isElectron() || browsing) return
-    setBrowsing(true)
-    try {
-      const api = window.electronAPI as any
-      const selected = typeof api.selectPath === 'function'
-        ? await api.selectPath()
-        : typeof api.projectSelectFolder === 'function'
-          ? await api.projectSelectFolder()
-          : null
-
-      if (selected && typeof selected === 'string') {
-        const trimmed = selected.trim()
-        if (trimmed && !scanPaths.includes(trimmed)) {
-          setScanPaths(prev => [...prev, trimmed])
-        }
-      }
-    } finally {
-      setBrowsing(false)
-    }
-  }
-
-  const handleAddManualPath = () => {
-    const trimmed = manualPathInput.trim()
-    if (!trimmed) return
-    if (!scanPaths.includes(trimmed)) {
-      setScanPaths(prev => [...prev, trimmed])
-    }
-    setManualPathInput('')
-  }
-
-  const handleRemovePath = (indexToRemove: number) => {
-    setScanPaths(prev => prev.filter((_, i) => i !== indexToRemove))
-  }
-
-  const handleSave = async () => {
-    if (!isElectron()) return
-    const api = window.electronAPI as any
-    const cfg = {
-      ...config,
-      scanRoots: scanRootsInput.split(',').map((s: string) => s.trim()).filter(Boolean),
-      ignoreFolders: ignoreFoldersInput.split(',').map((s: string) => s.trim()).filter(Boolean),
-      scanPaths: scanPaths.map(p => p.trim()).filter(Boolean),
-    }
-    await api.writeReportsConfig(configPath, cfg)
-    setConfig(cfg)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleRun = async () => {
-    if (!isElectron() || !canRun) return
-    const api = window.electronAPI as any
-    setRunState('running')
-    setRunOutput('')
-    const result = await api.runReportScript(scriptPath)
-    setRunState(result.ok ? 'ok' : 'error')
-    setRunOutput(result.ok ? result.output : (result.error || result.output))
-    if (result.ok) {
-      const ts = await api.getReportsLastRun(lastRunPath)
-      setLastRun(ts)
-      onRunComplete()
-    }
-  }
 
   return (
     <div className="projects-content-scroll">
-      <div className="projects-header">
-        <div>
-          <button type="button" className="projects-btn" onClick={onBack} style={{ marginBottom: '8px', padding: '4px 8px', border: 'none', background: 'transparent', paddingLeft: 0, cursor: 'pointer' }}>← Voltar</button>
-          <h1 className="projects-title">Configurações de Projetos & Reports</h1>
-        </div>
-      </div>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-
-        {/* Gerenciamento de Pastas Adicionais (scanPaths) */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div>
-              <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <FolderPlus size={18} color="var(--accent-primary)" />
-                Pastas Adicionais de Projetos
-              </h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                Adicione diretórios externos ou outras unidades de disco para escanear repositórios Git.
-              </p>
-            </div>
-            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-              {scanPaths.length} {scanPaths.length === 1 ? 'pasta configurada' : 'pastas configuradas'}
-            </span>
+      {/* Top Header */}
+      <div className="projects-header" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="button"
+            className="projects-btn"
+            onClick={onBack}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={14} /> Voltar
+          </button>
+          <div>
+            <h1 className="projects-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>
+              Configurações de Projetos & Relatórios
+            </h1>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
+              Gerencie diretórios de busca, parâmetros de varredura e execução do script
+            </p>
           </div>
+        </div>
 
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="projects-btn"
-              onClick={() => void handleBrowseFolder()}
-              disabled={browsing}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
-            >
-              <FolderOpen size={16} />
-              {browsing ? 'Selecionando...' : 'Selecionar Pasta...'}
-            </button>
+        <button
+          type="button"
+          className="projects-btn"
+          style={{
+            padding: '8px 18px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: saved ? 'var(--accent-green, #22c55e)' : 'var(--color-primary, #6366f1)',
+            borderColor: saved ? 'var(--accent-green, #22c55e)' : 'var(--color-primary, #6366f1)',
+            color: '#fff',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease',
+          }}
+          onClick={() => void handleSave()}
+        >
+          {saved ? <><Check size={16} /> Salvo com sucesso!</> : 'Salvar Alterações'}
+        </button>
+      </div>
 
-            <div style={{ display: 'flex', flex: 1, minWidth: '240px', gap: '6px' }}>
-              <input
-                style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }}
-                value={manualPathInput}
-                onChange={e => setManualPathInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddManualPath() }}
-                placeholder="Ou digite o caminho (ex: D:\MeusProjetos)"
-              />
+      {/* 2-Column Responsive Grid (Full 1920x1080 usage without empty gutters) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+          gap: '14px',
+          width: '100%',
+          alignItems: 'start',
+        }}
+      >
+        {/* COLUNA 1: DIRETÓRIOS & PASTAS DE VARREDURA */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          
+          {/* Card: Pastas Adicionais (scanPaths) */}
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  <FolderPlus size={16} color="var(--color-primary, #818cf8)" />
+                  Pastas Adicionais de Projetos
+                </h3>
+                <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  Diretórios externos ou outras unidades mapeadas para escaneamento Git.
+                </p>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                {scanPaths.length} {scanPaths.length === 1 ? 'pasta' : 'pastas'}
+              </span>
+            </div>
+
+            {/* Ações de adicionar */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="projects-btn"
-                onClick={handleAddManualPath}
-                disabled={!manualPathInput.trim()}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', cursor: manualPathInput.trim() ? 'pointer' : 'default', opacity: manualPathInput.trim() ? 1 : 0.6 }}
+                onClick={() => void handleBrowseFolder()}
+                disabled={browsing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  background: 'var(--color-primary, #6366f1)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
               >
-                <Plus size={16} />
-                Adicionar
+                <FolderOpen size={14} />
+                {browsing ? 'Buscando...' : 'Selecionar Pasta...'}
               </button>
-            </div>
-          </div>
 
-          {/* Lista de Pastas Adicionadas */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-            {scanPaths.length === 0 ? (
-              <div style={{ padding: '16px', background: 'var(--bg-primary)', border: '1px dashed var(--border)', borderRadius: '6px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                Nenhuma pasta adicional cadastrada. Use o botão <strong>"Selecionar Pasta..."</strong> para incluir pastas personalizadas.
-              </div>
-            ) : (
-              scanPaths.map((p, index) => (
-                <div
-                  key={`${p}-${index}`}
+              <div style={{ display: 'flex', flex: 1, minWidth: '220px', gap: '6px' }}>
+                <input
+                  style={{
+                    flex: 1,
+                    padding: '7px 10px',
+                    background: 'var(--bg-primary, #090b10)',
+                    border: '1px solid var(--border, rgba(255, 255, 255, 0.1))',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    fontSize: '12px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                  }}
+                  value={manualPathInput}
+                  onChange={e => setManualPathInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddManualPath() }}
+                  placeholder="Ou digite o caminho (ex: D:\MeusProjetos)"
+                />
+                <button
+                  type="button"
+                  className="projects-btn"
+                  onClick={handleAddManualPath}
+                  disabled={!manualPathInput.trim()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
+                    gap: '4px',
+                    padding: '7px 12px',
+                    background: manualPathInput.trim() ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    cursor: manualPathInput.trim() ? 'pointer' : 'default',
+                    fontSize: '12px',
+                    opacity: manualPathInput.trim() ? 1 : 0.5,
+                  }}
+                >
+                  <Plus size={14} />
+                  Adicionar
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de Pastas Adicionadas */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+              {scanPaths.length === 0 ? (
+                <div style={{ padding: '14px', background: 'var(--bg-primary)', border: '1px dashed var(--border)', borderRadius: '6px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                  Nenhuma pasta adicional cadastrada. Use o botão <strong>"Selecionar Pasta..."</strong> para incluir caminhos.
+                </div>
+              ) : (
+                scanPaths.map((p, index) => (
+                  <div
+                    key={`${p}-${index}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      padding: '7px 10px',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                      <Folder size={14} color="var(--color-primary, #818cf8)" style={{ flexShrink: 0 }} />
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--text-primary)',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={p}
+                      >
+                        {p}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePath(index)}
+                      title="Remover pasta"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        transition: 'color 0.15s',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-red, #ef4444)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Card: Subpastas & Pastas Ignoradas */}
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Settings2 size={16} color="var(--accent-blue, #38bdf8)" />
+              Filtros da Pasta Base
+            </h3>
+
+            <div>
+              <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                Subpastas Específicas (scanRoots)
+              </label>
+              <input
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  fontSize: '12.5px',
+                  boxSizing: 'border-box',
+                }}
+                value={scanRootsInput}
+                onChange={e => setScanRootsInput(e.target.value)}
+                placeholder="DomusDev, Pessoais, Reoli, Autocom3 (vazio = todas)"
+              />
+              <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                Separe por vírgula. Se vazio, varre todas as subpastas da base.
+              </span>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                Pastas Ignoradas (ignoreFolders)
+              </label>
+              <input
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  fontSize: '12.5px',
+                  boxSizing: 'border-box',
+                }}
+                value={ignoreFoldersInput}
+                onChange={e => setIgnoreFoldersInput(e.target.value)}
+                placeholder="node_modules, .git, dist, build, .next"
+              />
+              <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                Diretórios ignorados durante a busca recursiva de repositórios.
+              </span>
+            </div>
+          </div>
+
+          {/* Card: Diretórios de Saída */}
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Terminal size={15} color="var(--accent-yellow, #f59e0b)" />
+              Diretórios de Relatórios
+            </h3>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
+                Diretório JSON (.reportsjson)
+              </label>
+              <input
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  fontSize: '12px',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  boxSizing: 'border-box',
+                }}
+                value={config.reportsJsonDir}
+                onChange={e => setConfig(c => ({ ...c, reportsJsonDir: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
+                Diretório Markdown (.week-reports)
+              </label>
+              <input
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  fontSize: '12px',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  boxSizing: 'border-box',
+                }}
+                value={config.weekReportsDir}
+                onChange={e => setConfig(c => ({ ...c, weekReportsDir: e.target.value }))}
+              />
+            </div>
+          </div>
+
+        </div>
+
+        {/* COLUNA 2: EXECUÇÃO DO AGENTE & PARÂMETROS AVANÇADOS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          {/* Card: Executar Agente */}
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <Play size={16} color="var(--accent-green, #22c55e)" />
+                Execução do Agente de Relatórios
+              </h3>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: runState === 'running' ? 'rgba(99, 102, 241, 0.2)' : runState === 'ok' ? 'rgba(34, 197, 94, 0.2)' : runState === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  color: runState === 'running' ? 'var(--color-primary)' : runState === 'ok' ? 'var(--accent-green)' : runState === 'error' ? 'var(--accent-red)' : 'var(--text-secondary)',
+                }}
+              >
+                {runState === 'running' ? 'Executando...' : runState === 'ok' ? 'Concluído' : runState === 'error' ? 'Falhou' : 'Pronto'}
+              </span>
+            </div>
+
+            {!hasBaseDir ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '6px', color: 'var(--accent-red)', fontSize: '12px' }}>
+                <AlertCircle size={16} />
+                <span>Pasta base não configurada. Configure a pasta de relatórios antes de executar.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '10px 12px', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <Clock size={14} />
+                    <span>
+                      {lastRun
+                        ? hoursAgo === 0 ? 'Executado agora há pouco' : `Última execução: há ${hoursAgo}h`
+                        : 'Nunca executado'}
+                    </span>
+                  </div>
+                  
+                  {!canRun && runState !== 'running' && hoursAgo !== null && (
+                    <span style={{ color: 'var(--accent-yellow)', fontSize: '11.5px', fontWeight: 500 }}>
+                      Aguarde {minInterval - hoursAgo}h para nova execução
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    className="projects-btn"
+                    style={{
+                      background: 'var(--accent-green, #22c55e)',
+                      color: '#000',
+                      border: 'none',
+                      padding: '7px 16px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: canRun ? 'pointer' : 'not-allowed',
+                      opacity: canRun ? 1 : 0.6,
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    onClick={() => void handleRun()}
+                    disabled={!canRun}
+                  >
+                    <Play size={13} fill="#000" />
+                    {runState === 'running' ? 'Gerando Relatórios...' : 'Executar Agora'}
+                  </button>
+                </div>
+
+                {/* Console Log de Execução */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Terminal de Saída
+                    </span>
+                    {runOutput && (
+                      <button
+                        type="button"
+                        onClick={() => setRunOutput('')}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '10.5px', cursor: 'pointer' }}
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: '12px 14px',
+                      background: 'var(--bg-primary, #090b10)',
+                      borderRadius: '6px',
+                      border: `1px solid ${runState === 'error' ? 'rgba(239, 68, 68, 0.4)' : runState === 'ok' ? 'rgba(34, 197, 94, 0.4)' : 'var(--border)'}`,
+                      color: runState === 'error' ? '#f87171' : runState === 'ok' ? '#4ade80' : 'var(--text-secondary)',
+                      fontSize: '11.5px',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      overflowX: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      minHeight: '140px',
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      lineHeight: '1.45',
+                    }}
+                  >
+                    {runOutput || (runState === 'running' ? 'Executando script python generate_report.py...\nAguarde os relatórios serem consolidados...' : 'Pronto para executar. Clique em "Executar Agora" para gerar relatórios atualizados.')}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card: Parâmetros do Escaneamento */}
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Sliders size={16} color="var(--color-primary, #818cf8)" />
+              Parâmetros de Execução
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Profundidade Máxima (maxDepth)
+                </label>
+                <input
+                  style={{
+                    width: '100%',
                     padding: '8px 12px',
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border)',
                     borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    fontSize: '13px',
+                    fontFamily: 'monospace',
+                    boxSizing: 'border-box',
                   }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <Folder size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p}>
-                      {p}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePath(index)}
-                    title="Remover pasta"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '4px',
-                      transition: 'color 0.15s, background 0.15s',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-red)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={config.maxDepth}
+                  onChange={e => setConfig(c => ({ ...c, maxDepth: Number(e.target.value) }))}
+                />
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  Níveis de subpastas a percorrer (1 a 10).
+                </span>
+              </div>
 
-        {/* Executar Agente */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3 className="projects-card-title">Executar Agente de Relatórios</h3>
-          {!hasBaseDir ? (
-            <span style={{ color: 'var(--accent-red)', fontSize: '13px' }}>
-              Pasta base não configurada. Configure a pasta de reports nas configurações antes de executar.
-            </span>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="projects-btn"
-                style={runState === 'running' ? { opacity: 0.5, pointerEvents: 'none', background: 'var(--accent-primary)', color: '#fff', borderColor: 'var(--accent-primary)' } : { background: 'var(--accent-primary)', color: '#fff', borderColor: 'var(--accent-primary)', cursor: 'pointer' }}
-                onClick={() => void handleRun()}
-                disabled={!canRun}
-              >
-                {runState === 'running' ? 'Executando...' : '▶ Executar agora'}
-              </button>
-              <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                {lastRun
-                  ? hoursAgo === 0 ? 'Executado agora' : `Última execução: há ${hoursAgo}h`
-                  : 'Nunca executado'}
-              </span>
-              {!canRun && runState !== 'running' && hoursAgo !== null && (
-                <span style={{ color: 'var(--accent-yellow)', fontSize: '13px' }}>Aguarde {minInterval - hoursAgo}h para executar novamente</span>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Intervalo Mínimo (horas)
+                </label>
+                <input
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    fontSize: '13px',
+                    fontFamily: 'monospace',
+                    boxSizing: 'border-box',
+                  }}
+                  type="number"
+                  min={0}
+                  max={168}
+                  value={config.minIntervalHours}
+                  onChange={e => setConfig(c => ({ ...c, minIntervalHours: Number(e.target.value) }))}
+                />
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  Cooldown mínimo entre execuções automáticas.
+                </span>
+              </div>
             </div>
-          )}
-          {runOutput && (
-            <pre style={{ marginTop: '8px', padding: '16px', background: 'var(--bg-primary)', borderRadius: '6px', border: `1px solid ${runState === 'error' ? 'var(--accent-red)' : 'var(--accent-green)'}`, color: runState === 'error' ? 'var(--accent-red)' : 'var(--accent-green)', fontSize: '12px', overflowX: 'auto', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto' }}>
-              {runOutput}
-            </pre>
-          )}
-        </div>
-
-        {/* Pastas Raiz Relativas */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <h3 className="projects-card-title" style={{ marginBottom: '4px' }}>Subpastas da Pasta Base (scanRoots)</h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Nomes de subpastas dentro da pasta base de projetos, separados por vírgula</p>
-          </div>
-          <input
-            style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            value={scanRootsInput}
-            onChange={e => setScanRootsInput(e.target.value)}
-            placeholder="DomusDev, Pessoais, Reoli, Autocom3"
-          />
-        </div>
-
-        {/* Pastas Ignoradas */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <h3 className="projects-card-title" style={{ marginBottom: '4px' }}>Pastas ignoradas (ignoreFolders)</h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Nomes de pastas a ignorar durante a busca recursiva, separados por vírgula</p>
-          </div>
-          <input
-            style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            value={ignoreFoldersInput}
-            onChange={e => setIgnoreFoldersInput(e.target.value)}
-            placeholder="Relatorios, node_modules, .git, dist, build, .next"
-          />
-        </div>
-
-        {/* Profundidade e Intervalo */}
-        <div className="projects-dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 className="projects-card-title">Profundidade máxima</h3>
-            <input
-              style={{ width: '100px', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-              type="number"
-              min={1}
-              max={10}
-              value={config.maxDepth}
-              onChange={e => setConfig(c => ({ ...c, maxDepth: Number(e.target.value) }))}
-            />
           </div>
 
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 className="projects-card-title">Intervalo mínimo (horas)</h3>
-            <input
-              style={{ width: '100px', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-              type="number"
-              min={0}
-              max={168}
-              value={config.minIntervalHours}
-              onChange={e => setConfig(c => ({ ...c, minIntervalHours: Number(e.target.value) }))}
-            />
-          </div>
-        </div>
-
-        {/* Diretórios de Saída */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h3 className="projects-card-title">Diretório de relatórios JSON (.reportsjson)</h3>
-          <input
-            style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            value={config.reportsJsonDir}
-            onChange={e => setConfig(c => ({ ...c, reportsJsonDir: e.target.value }))}
-          />
-        </div>
-
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h3 className="projects-card-title">Diretório de relatórios Markdown (.week-reports)</h3>
-          <input
-            style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            value={config.weekReportsDir}
-            onChange={e => setConfig(c => ({ ...c, weekReportsDir: e.target.value }))}
-          />
-        </div>
-
-        {/* Botão de Salvar */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', marginBottom: '32px' }}>
-          <button
-            type="button"
-            className="projects-btn"
-            style={{
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: saved ? 'var(--accent-green)' : 'var(--accent-primary)',
-              borderColor: saved ? 'var(--accent-green)' : 'var(--accent-primary)',
-              color: '#fff',
-              borderRadius: '6px',
-              transition: 'background 0.2s',
-            }}
-            onClick={() => void handleSave()}
-          >
-            {saved ? <><Check size={16} /> Salvo com sucesso!</> : 'Salvar Configurações'}
-          </button>
         </div>
 
       </div>
