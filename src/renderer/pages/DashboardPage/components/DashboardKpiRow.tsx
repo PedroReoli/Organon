@@ -1,13 +1,12 @@
 import React, { useState } from 'react'
 import {
-  CheckCircle2,
-  TrendingUp,
-  FileText,
-  FolderKanban,
+  CheckCircle,
+  TrendUp,
+  Books,
+  GitBranch,
   ArrowUpRight,
-  Sparkles,
-  GitBranch
-} from 'lucide-react'
+  Sparkle
+} from '@phosphor-icons/react'
 
 interface DashboardKpiRowProps {
   totalTasks: number
@@ -71,7 +70,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle size={18} weight="duotone" />
           </div>
         </div>
 
@@ -114,7 +113,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
                 }}
               />
             </svg>
-            <Sparkles className="w-3 h-3 absolute" style={{ color: 'var(--color-primary)' }} />
+            <Sparkle size={11} weight="fill" className="absolute" style={{ color: 'var(--color-primary)' }} />
           </div>
         </div>
 
@@ -139,7 +138,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-semibold shrink-0"
           >
-            Kanban <ArrowUpRight className="w-3 h-3" />
+            Kanban <ArrowUpRight size={13} weight="bold" />
           </span>
         </div>
       </div>
@@ -173,7 +172,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110"
           >
-            <TrendingUp className="w-4 h-4" />
+            <TrendUp size={18} weight="duotone" />
           </div>
         </div>
 
@@ -228,7 +227,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-semibold shrink-0"
           >
-            Detalhes <ArrowUpRight className="w-3 h-3" />
+            Detalhes <ArrowUpRight size={13} weight="bold" />
           </span>
         </div>
       </div>
@@ -262,7 +261,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110"
           >
-            <FileText className="w-4 h-4" />
+            <Books size={18} weight="duotone" />
           </div>
         </div>
 
@@ -315,7 +314,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-semibold shrink-0"
           >
-            Explorar <ArrowUpRight className="w-3 h-3" />
+            Explorar <ArrowUpRight size={13} weight="bold" />
           </span>
         </div>
       </div>
@@ -349,7 +348,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110"
           >
-            <FolderKanban className="w-4 h-4" />
+            <GitBranch size={18} weight="duotone" />
           </div>
         </div>
 
@@ -375,7 +374,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             }}
             className="p-1.5 rounded-lg border flex items-center justify-center"
           >
-            <GitBranch className="w-4 h-4" />
+            <GitBranch size={16} weight="duotone" />
           </div>
         </div>
 
@@ -399,7 +398,7 @@ export const DashboardKpiRow: React.FC<DashboardKpiRowProps> = ({
             style={{ color: 'var(--color-primary)' }}
             className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 font-semibold shrink-0"
           >
-            Acessar <ArrowUpRight className="w-3 h-3" />
+            Acessar <ArrowUpRight size={13} weight="bold" />
           </span>
         </div>
       </div>

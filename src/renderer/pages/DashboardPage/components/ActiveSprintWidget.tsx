@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Rocket, Target, Calendar, ArrowRight, CheckCircle2, Flame, Clock3, Sparkles } from 'lucide-react'
+import { RocketLaunch, Target, CalendarBlank, ArrowRight, CheckCircle, Fire, Clock, Sparkle } from '@phosphor-icons/react'
 
 interface ActiveSprintWidgetProps {
   sprintName?: string
@@ -58,7 +58,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
               }}
               className="p-1.5 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/sprint:scale-105"
             >
-              <Rocket className="w-4 h-4" />
+              <RocketLaunch size={18} weight="duotone" />
             </div>
             <div>
               <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -75,7 +75,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
             className="text-xs font-semibold flex items-center gap-1 hover:underline cursor-pointer group-hover/sprint:translate-x-0.5 transition-transform"
           >
             <span>Planejador</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight size={13} weight="bold" />
           </button>
         </div>
 
@@ -88,7 +88,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
             }}
             className="p-2.5 rounded-lg border mb-3 flex items-start gap-2"
           >
-            <Target className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
+            <Target size={14} weight="duotone" className="shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
             <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px] leading-snug line-clamp-2">
               {goal}
             </p>
@@ -99,7 +99,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
         <div className="space-y-2 my-2">
           <div className="flex items-center justify-between text-xs">
             <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px] font-medium flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+              <Fire size={14} weight="fill" className="text-amber-500 animate-pulse" />
               Ritmo de Entrega
             </span>
             <span style={{ color: 'var(--color-text)' }} className="font-bold text-xs font-mono flex items-center gap-1">
@@ -141,7 +141,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
               className="p-2 rounded-lg border transition-all cursor-pointer text-center"
             >
               <div className="text-[10px] text-emerald-400 font-medium flex items-center justify-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Entregues
+                <CheckCircle size={13} weight="fill" /> Entregues
               </div>
               <div style={{ color: 'var(--color-text)' }} className="text-sm font-extrabold mt-0.5">
                 {completedPoints} <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px] font-normal">pts</span>
@@ -160,7 +160,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
               className="p-2 rounded-lg border transition-all cursor-pointer text-center"
             >
               <div className="text-[10px] font-medium flex items-center justify-center gap-1" style={{ color: 'var(--color-primary)' }}>
-                <Clock3 className="w-3 h-3" /> Em Aberto
+                <Clock size={13} weight="duotone" /> Em Aberto
               </div>
               <div style={{ color: 'var(--color-text)' }} className="text-sm font-extrabold mt-0.5">
                 {remainingPoints} <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px] font-normal">pts</span>
@@ -178,8 +178,8 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
         }}
         className="flex items-center justify-between pt-2.5 border-t mt-2 text-[11px] relative z-10"
       >
-        <span className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
+        <span className="flex items-center gap-1.5">
+          <CalendarBlank size={13} weight="duotone" />
           {startDate && endDate ? `${startDate} a ${endDate}` : 'Ciclo Atual'}
         </span>
         <button
@@ -188,7 +188,7 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
           style={{ color: 'var(--color-primary)' }}
           className="font-semibold hover:underline cursor-pointer flex items-center gap-1"
         >
-          <Sparkles className="w-3 h-3" />
+          <Sparkle size={13} weight="fill" />
           <span>Ver Backlog</span>
         </button>
       </div>

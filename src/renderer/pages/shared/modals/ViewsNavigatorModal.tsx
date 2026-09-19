@@ -1,10 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppView } from '../InternalNav'
-import { DEFAULT_NAVBAR_GROUPS, DEFAULT_NAVBAR_ITEMS, renderNavIcon } from '../navConfig'
+import type { Note } from '@types'
+import { DEFAULT_NAVBAR_ITEMS, renderNavIcon } from '../navConfig'
+import { FileText, Plus, Bot, RefreshCw, LayoutGrid } from 'lucide-react'
 
-interface ViewsNavigatorModalProps {
+export interface ViewsNavigatorModalProps {
+  notes?: Note[]
   onNavigate: (view: AppView) => void
-  onClose:    () => void
+  onSelectNote?: (noteId: string) => void
+  onAddNote?: (title: string) => void
+  onAddCard?: (title: string) => void
+  onOpenChat?: () => void
+  onOpenSync?: () => void
+  onClose: () => void
+}
+
+interface PaletteItem {
+  id: string
+  type: 'view' | 'note' | 'action'
+  label: string
+  sublabel?: string
+  badge: string
+  icon: React.ReactNode
+  onSelect: () => void
 }
 
 const ALL_VIEWS = [
@@ -18,20 +36,120 @@ const ALL_VIEWS = [
   { view: 'settings' as AppView, label: 'Configurações', groupId: null, description: 'Preferências do sistema' },
 ]
 
-export const ViewsNavigatorModal = ({ onNavigate, onClose }: ViewsNavigatorModalProps) => {
-  const [query, setQuery]       = useState('')
-  const [cursor, setCursor]     = useState(0)
-  const inputRef                = useRef<HTMLInputElement>(null)
-  const listRef                 = useRef<HTMLDivElement>(null)
-
-  const filtered = query.trim()
-    ? ALL_VIEWS.filter(v =>
-        v.label.toLowerCase().includes(query.toLowerCase()) ||
-        v.description.toLowerCase().includes(query.toLowerCase())
-      )
-    : ALL_VIEWS
+export const ViewsNavigatorModal = ({
+  notes = [],
+  onNavigate,
+  onSelectNote,
+  onAddNote,
+  onAddCard,
+  onOpenChat,
+  onOpenSync,
+  onClose,
+}: ViewsNavigatorModalProps) => {
+  const [query, setQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  // Build items list
+  const paletteItems = useMemo<PaletteItem[]>(() => {
+    const q = query.trim().toLowerCase()
+    const items: PaletteItem[] = []
+
+    // 1. Quick Actions when query is typed
+    if (q) {
+      if (onAddNote) {
+        items.push({
+          id: `action:add-note`,
+          type: 'action',
+          label: `Criar nota "${query.trim()}"`,
+          sublabel: 'Abre no editor de notas',
+          badge: 'AÇÃO',
+          icon: <Plus className="w-4 h-4 text-emerald-400" />,
+          onSelect: () => onAddNote(query.trim()),
+        })
+      }
+      if (onAddCard) {
+        items.push({
+          id: `action:add-card`,
+          type: 'action',
+          label: `Criar tarefa "${query.trim()}"`,
+          sublabel: 'Adiciona no planejamento',
+          badge: 'AÇÃO',
+          icon: <Plus className="w-4 h-4 text-indigo-400" />,
+          onSelect: () => onAddCard(query.trim()),
+        })
+      }
+    } else {
+      // System static actions
+      if (onOpenChat) {
+        items.push({
+          id: 'action:open-chat',
+          type: 'action',
+          label: 'Conversar com Assistente IA',
+          sublabel: 'Abre o chatbot lateral',
+          badge: 'IA',
+          icon: <Bot className="w-4 h-4 text-indigo-400" />,
+          onSelect: () => onOpenChat(),
+        })
+      }
+      if (onOpenSync) {
+        items.push({
+          id: 'action:open-sync',
+          type: 'action',
+          label: 'Sincronização Local & Rede',
+          sublabel: 'Status do servidor e pareamento',
+          badge: 'SYNC',
+          icon: <RefreshCw className="w-4 h-4 text-cyan-400" />,
+          onSelect: () => onOpenSync(),
+        })
+      }
+    }
+
+    // 2. Matching Views
+    const filteredViews = ALL_VIEWS.filter(v =>
+      !q || v.label.toLowerCase().includes(q) || v.description.toLowerCase().includes(q)
+    )
+    for (const v of filteredViews) {
+      const iconId = DEFAULT_NAVBAR_ITEMS.find(i => i.view === v.view)?.iconId
+      items.push({
+        id: `view:${v.view}`,
+        type: 'view',
+        label: v.label,
+        sublabel: v.description || undefined,
+        badge: 'TELA',
+        icon: iconId ? renderNavIcon(iconId) : <LayoutGrid className="w-4 h-4 text-slate-400" />,
+        onSelect: () => onNavigate(v.view),
+      })
+    }
+
+    // 3. Matching Notes
+    if (q && notes.length > 0) {
+      const matchingNotes = notes
+        .filter(n => (n.title && n.title.toLowerCase().includes(q)) || (n.content && n.content.toLowerCase().includes(q)))
+        .slice(0, 8)
+
+      for (const n of matchingNotes) {
+        items.push({
+          id: `note:${n.id}`,
+          type: 'note',
+          label: n.title || 'Nota sem título',
+          sublabel: n.content ? n.content.replace(/[#*`\n]/g, ' ').slice(0, 50) : undefined,
+          badge: 'NOTA',
+          icon: <FileText className="w-4 h-4 text-amber-400" />,
+          onSelect: () => {
+            if (onSelectNote) onSelectNote(n.id)
+            else onNavigate('notes')
+          },
+        })
+      }
+    }
+
+    return items
+  }, [query, notes, onNavigate, onSelectNote, onAddNote, onAddCard, onOpenChat, onOpenSync])
+
   useEffect(() => { setCursor(0) }, [query])
 
   useEffect(() => {
@@ -40,33 +158,27 @@ export const ViewsNavigatorModal = ({ onNavigate, onClose }: ViewsNavigatorModal
   }, [cursor])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, filtered.length - 1)) }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)) }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCursor(c => Math.min(c + 1, paletteItems.length - 1))
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCursor(c => Math.max(c - 1, 0))
+    }
     if (e.key === 'Enter') {
       e.preventDefault()
-      const item = filtered[cursor]
-      if (item) { onNavigate(item.view); onClose() }
+      const item = paletteItems[cursor]
+      if (item) {
+        item.onSelect()
+        onClose()
+      }
     }
     if (e.key === 'Escape') onClose()
   }
 
-  // Group items when no search
-  const grouped = query.trim() ? null : (() => {
-    const groups: Array<{ groupId: string | null; label: string; items: typeof filtered }> = [
-      { groupId: null, label: 'Início', items: filtered.filter(v => v.view === 'today' || v.view === 'settings') },
-      ...DEFAULT_NAVBAR_GROUPS.sort((a, b) => a.order - b.order).map(g => ({
-        groupId: g.id,
-        label: g.label,
-        items: filtered.filter(v => v.groupId === g.id),
-      })).filter(g => g.items.length > 0),
-    ].filter(g => g.items.length > 0)
-    return groups
-  })()
-
-  let globalIdx = 0
-
   return (
-    <div className="vn-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Navegador de telas">
+    <div className="vn-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Command Palette">
       <div className="vn-modal" onClick={e => e.stopPropagation()}>
         <div className="vn-search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="vn-search-icon">
@@ -76,7 +188,7 @@ export const ViewsNavigatorModal = ({ onNavigate, onClose }: ViewsNavigatorModal
           <input
             ref={inputRef}
             className="vn-search-input"
-            placeholder="Buscar tela..."
+            placeholder="Buscar telas, notas, comandos ou digite para criar... (Ctrl+K)"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -85,61 +197,45 @@ export const ViewsNavigatorModal = ({ onNavigate, onClose }: ViewsNavigatorModal
         </div>
 
         <div className="vn-list" ref={listRef}>
-          {grouped ? (
-            grouped.map(group => (
-              <div key={group.groupId ?? 'root'} className="vn-group">
-                <div className="vn-group-label">{group.label}</div>
-                {group.items.map(item => {
-                  const idx = globalIdx++
-                  const isActive = cursor === idx
-                  const iconId = DEFAULT_NAVBAR_ITEMS.find(i => i.view === item.view)?.iconId
-                  return (
-                    <button
-                      key={item.view}
-                      type="button"
-                      data-idx={idx}
-                      className={`vn-item ${isActive ? 'is-active' : ''}`}
-                      onMouseEnter={() => setCursor(idx)}
-                      onClick={() => { onNavigate(item.view); onClose() }}
-                    >
-                      <span className="vn-item-icon">
-                        {iconId ? renderNavIcon(iconId) : null}
-                      </span>
-                      <span className="vn-item-label">{item.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))
-          ) : (
-            filtered.map((item, idx) => {
-              const isActive = cursor === idx
-              const iconId = DEFAULT_NAVBAR_ITEMS.find(i => i.view === item.view)?.iconId
-              return (
-                <button
-                  key={item.view}
-                  type="button"
-                  data-idx={idx}
-                  className={`vn-item ${isActive ? 'is-active' : ''}`}
-                  onMouseEnter={() => setCursor(idx)}
-                  onClick={() => { onNavigate(item.view); onClose() }}
-                >
-                  <span className="vn-item-icon">
-                    {iconId ? renderNavIcon(iconId) : null}
-                  </span>
-                  <span className="vn-item-label">{item.label}</span>
-                </button>
-              )
-            })
-          )}
-          {filtered.length === 0 && (
-            <div className="vn-empty">Nenhuma tela encontrada para "{query}"</div>
+          {paletteItems.map((item, idx) => {
+            const isActive = cursor === idx
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-idx={idx}
+                className={`vn-item ${isActive ? 'is-active' : ''}`}
+                onMouseEnter={() => setCursor(idx)}
+                onClick={() => {
+                  item.onSelect()
+                  onClose()
+                }}
+              >
+                <span className="vn-item-icon">{item.icon}</span>
+                <div className="flex-1 flex flex-col text-left min-w-0">
+                  <span className="vn-item-label truncate">{item.label}</span>
+                  {item.sublabel && (
+                    <span className="text-[11px] text-slate-400 truncate leading-tight">
+                      {item.sublabel}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/5 text-slate-400 shrink-0 ml-2">
+                  {item.badge}
+                </span>
+              </button>
+            )
+          })}
+
+          {paletteItems.length === 0 && (
+            <div className="vn-empty">Nenhum resultado encontrado para "{query}"</div>
           )}
         </div>
 
         <div className="vn-footer">
           <span><kbd className="vn-kbd">↑↓</kbd> navegar</span>
-          <span><kbd className="vn-kbd">Enter</kbd> abrir</span>
+          <span><kbd className="vn-kbd">Enter</kbd> selecionar</span>
+          <span><kbd className="vn-kbd">Ctrl+K</kbd> atalho</span>
           <span><kbd className="vn-kbd">Esc</kbd> fechar</span>
         </div>
       </div>

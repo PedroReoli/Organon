@@ -3,18 +3,19 @@ import { AppView } from '../../pages/shared/InternalNav'
 import logoNameImg from '../../images/logo-name.png'
 import faviconImg from '../../images/favicon.png'
 import {
-  FileText,
+  Notebook,
   Kanban,
-  FolderGit2,
-  Mic,
-  History,
-  Search,
-  Bot,
-  Wifi,
-  Settings,
+  GitFork,
+  Microphone,
+  ClockCounterClockwise,
+  MagnifyingGlass,
+  Sparkle,
+  WifiHigh,
+  GearSix,
   Plus,
-  ChevronDown,
-} from 'lucide-react'
+  CaretDown,
+  FileText,
+} from '@phosphor-icons/react'
 
 interface Props {
   activeView: AppView
@@ -53,22 +54,22 @@ export const TopNavbarShell: React.FC<Props> = ({
 }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false)
 
-  // Módulos principais centralizados
+  // Módulos principais centralizados com tipografia refinada e ícones Phosphor
   const mainNavItems: Array<{ view: AppView; label: string; icon: React.ReactNode }> = [
-    { view: 'notes', label: 'NOTAS', icon: <FileText className="w-3.5 h-3.5" /> },
-    { view: 'planner', label: 'PLANEJAMENTO', icon: <Kanban className="w-3.5 h-3.5" /> },
-    { view: 'projects', label: 'PROJETOS', icon: <FolderGit2 className="w-3.5 h-3.5" /> },
-    { view: 'transcripts', label: 'WHISPER', icon: <Mic className="w-3.5 h-3.5" /> },
-    { view: 'history', label: 'HISTÓRICO', icon: <History className="w-3.5 h-3.5" /> },
+    { view: 'notes', label: 'Notas', icon: <Notebook size={16} weight="duotone" /> },
+    { view: 'planner', label: 'Planejamento', icon: <Kanban size={16} weight="duotone" /> },
+    { view: 'projects', label: 'Projetos', icon: <GitFork size={16} weight="duotone" /> },
+    { view: 'transcripts', label: 'Whisper', icon: <Microphone size={16} weight="duotone" /> },
+    { view: 'history', label: 'Histórico', icon: <ClockCounterClockwise size={16} weight="duotone" /> },
   ]
 
   return (
     <header
       style={{
-        height: '56px',
-        background: 'color-mix(in srgb, var(--color-surface) 94%, var(--color-background))',
+        height: '54px',
+        background: 'color-mix(in srgb, var(--color-surface) 90%, var(--color-background))',
         borderBottom: '1px solid var(--color-border)',
-        backdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(16px)',
         zIndex: 100,
         userSelect: 'none',
         position: 'relative',
@@ -76,45 +77,29 @@ export const TopNavbarShell: React.FC<Props> = ({
       className="w-full px-4 sm:px-6 flex items-center justify-between gap-4"
     >
       {/* ========================================================
-          FLANCO ESQUERDO: LOGO ORGANON
+          FLANCO ESQUERDO: LOGO ORGANON COM HOVER SUAVE
           ======================================================== */}
       <div className="flex items-center min-w-[140px]">
         <button
           type="button"
           onClick={onNavigateHome}
-          title="Cockpit Geral / Início (Organon Home)"
+          title="Cockpit Geral / Início"
           style={{
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
           }}
-          className="group relative flex items-center justify-center py-1 px-1.5 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+          className="group relative flex items-center justify-center py-1 px-2 rounded-lg transition-all duration-200 hover:bg-white/[0.04]"
         >
-          {/* Ambient Glow no Hover */}
-          <div
-            style={{
-              background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 70%)',
-            }}
-            className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"
-          />
-
           <img
             src={logoNameImg}
             alt="Organon"
-            style={{ height: '34px', objectFit: 'contain' }}
-            className="relative z-10 drop-shadow-sm transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
+            style={{ height: '30px', objectFit: 'contain' }}
+            className="relative z-10 transition-transform duration-200 group-hover:scale-[1.02]"
             onError={(e) => {
               e.currentTarget.src = faviconImg
             }}
           />
-
-          {/* Ponto indicador de Cockpit Ativo */}
-          {activeView === 'today' && (
-            <span
-              style={{ background: 'var(--color-primary)' }}
-              className="absolute -bottom-1 w-1.5 h-1.5 rounded-full shadow-[0_0_6px_var(--color-primary)] animate-pulse"
-            />
-          )}
         </button>
       </div>
 
@@ -123,7 +108,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           ======================================================== */}
       <div className="flex items-center justify-center flex-1">
         {onNavigateView && (
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex items-center gap-1">
             {mainNavItems.map((item) => {
               const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
               return (
@@ -133,28 +118,22 @@ export const TopNavbarShell: React.FC<Props> = ({
                   onClick={() => onNavigateView(item.view)}
                   style={{
                     background: isActive
-                      ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface))'
+                      ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
                       : 'transparent',
                     borderColor: isActive
-                      ? 'color-mix(in srgb, var(--color-primary) 35%, transparent)'
+                      ? 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
                       : 'transparent',
                     color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   }}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05]"
+                  className="group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[12.5px] font-semibold tracking-normal transition-all duration-150 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-white/[0.08]"
                 >
                   <span
                     style={{ color: isActive ? 'var(--color-primary)' : 'inherit' }}
-                    className="opacity-75 group-hover:opacity-100 transition-opacity"
+                    className="transition-colors group-hover:text-[var(--color-text)]"
                   >
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
-                  {isActive && (
-                    <span
-                      style={{ background: 'var(--color-primary)' }}
-                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full shadow-[0_0_6px_var(--color-primary)]"
-                    />
-                  )}
                 </button>
               )
             })}
@@ -163,10 +142,10 @@ export const TopNavbarShell: React.FC<Props> = ({
       </div>
 
       {/* ========================================================
-          FLANCO DIREITO: FERRAMENTAS (BUSCA, IA, SYNC) + HERO CTA + CONFIGS
+          FLANCO DIREITO: FERRAMENTAS + HERO CTA + CONFIGS
           ======================================================== */}
-      <div className="flex items-center justify-end gap-2 sm:gap-2.5 min-w-[140px]">
-        {/* BOTÃO DE BUSCA */}
+      <div className="flex items-center justify-end gap-2 min-w-[140px]">
+        {/* BOTÃO DE BUSCA (CMD+K) */}
         <button
           type="button"
           onClick={onOpenQuickSearch}
@@ -178,8 +157,8 @@ export const TopNavbarShell: React.FC<Props> = ({
           }}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer hover:text-[var(--color-text)] hover:border-[var(--color-primary)] transition-all"
         >
-          <Search className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-          <span className="text-[11.5px] font-semibold">BUSCA</span>
+          <MagnifyingGlass size={14} weight="bold" className="text-[var(--color-primary)]" />
+          <span className="text-[11.5px] font-semibold">Busca</span>
           <kbd
             style={{
               background: 'var(--color-surface)',
@@ -208,7 +187,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             }}
             className="p-1.5 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center shadow-xs hover:scale-105"
           >
-            <Bot className="w-4 h-4" />
+            <Sparkle size={16} weight="duotone" />
           </button>
         )}
 
@@ -224,7 +203,7 @@ export const TopNavbarShell: React.FC<Props> = ({
           }}
           className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
         >
-          <Wifi className="w-4 h-4" />
+          <WifiHigh size={16} weight="duotone" />
         </button>
 
         {/* Ditado de Voz */}
@@ -240,7 +219,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             }}
             className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
           >
-            <Mic className="w-4 h-4" />
+            <Microphone size={16} weight="duotone" />
           </button>
         )}
 
@@ -255,9 +234,9 @@ export const TopNavbarShell: React.FC<Props> = ({
                 color: 'var(--color-primary-text, #ffffff)',
                 boxShadow: '0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent)',
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-extrabold tracking-wide uppercase transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-normal transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Plus size={14} weight="bold" />
               <span>Nova Tarefa</span>
             </button>
 
@@ -272,7 +251,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                 className="ml-0.5 p-1.5 rounded-full hover:brightness-125 transition-all cursor-pointer"
                 title="Mais opções de criação"
               >
-                <ChevronDown className="w-3 h-3" />
+                <CaretDown size={11} weight="bold" />
               </button>
             )}
           </div>
@@ -295,7 +274,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[var(--color-text)] hover:bg-white/[0.06] transition-colors text-left cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <Plus size={14} weight="bold" className="text-[var(--color-primary)]" />
                 <span>Nova Tarefa</span>
               </button>
 
@@ -307,7 +286,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[var(--color-text)] hover:bg-white/[0.06] transition-colors text-left cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-amber-500" />
+                <FileText size={14} weight="duotone" className="text-amber-500" />
                 <span>Nova Nota</span>
               </button>
             </div>
@@ -323,7 +302,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             style={{ color: 'var(--color-text-muted)' }}
             className="p-1.5 rounded-lg hover:text-[var(--color-text)] hover:bg-white/[0.06] transition-all cursor-pointer flex items-center justify-center group"
           >
-            <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+            <GearSix size={17} weight="duotone" className="group-hover:rotate-45 transition-transform duration-300" />
           </button>
         )}
       </div>

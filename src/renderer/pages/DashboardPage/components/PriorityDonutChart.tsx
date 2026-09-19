@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { PieChart, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ChartPieSlice, WarningCircle, CheckCircle } from '@phosphor-icons/react'
 
 interface PriorityDonutChartProps {
   urgentCount: number
@@ -27,15 +27,16 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
   const [activeSliceKey, setActiveSliceKey] = useState<string | null>(null)
 
   const rawData: SliceItem[] = [
-    { key: 'urgent', label: 'Urgente', value: urgentCount, color: '#f43f5e', glowColor: 'rgba(244, 63, 94, 0.45)' },
-    { key: 'high', label: 'Alta', value: highCount, color: '#f59e0b', glowColor: 'rgba(245, 158, 11, 0.45)' },
-    { key: 'medium', label: 'Média', value: mediumCount, color: 'var(--color-primary)', glowColor: 'color-mix(in srgb, var(--color-primary) 45%, transparent)' },
-    { key: 'low', label: 'Baixa', value: lowCount, color: '#71717a', glowColor: 'rgba(113, 113, 122, 0.4)' },
+    { key: 'urgent', label: 'Urgente (P1)', value: urgentCount, color: '#f43f5e', glowColor: 'rgba(244, 63, 94, 0.45)' },
+    { key: 'high', label: 'Alta (P2)', value: highCount, color: '#f59e0b', glowColor: 'rgba(245, 158, 11, 0.45)' },
+    { key: 'medium', label: 'Média (P3)', value: mediumCount, color: 'var(--color-primary)', glowColor: 'color-mix(in srgb, var(--color-primary) 45%, transparent)' },
+    { key: 'low', label: 'Baixa (P4)', value: lowCount, color: '#71717a', glowColor: 'rgba(113, 113, 122, 0.4)' },
     { key: 'done', label: 'Concluídas', value: completedCount, color: '#10b981', glowColor: 'rgba(16, 185, 129, 0.45)' },
   ]
 
   const data = rawData.filter(d => d.value > 0)
   const total = data.reduce((acc, d) => acc + d.value, 0) || 1
+  const hasData = data.length > 0
 
   const activeSlice = data.find(d => d.key === activeSliceKey) || null
 
@@ -62,7 +63,7 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
             }}
             className="p-1.5 rounded-lg"
           >
-            <PieChart className="w-4 h-4" />
+            <ChartPieSlice size={18} weight="duotone" />
           </div>
           <div>
             <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold flex items-center gap-1.5">
@@ -101,6 +102,7 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
               r={radius}
               stroke="color-mix(in srgb, var(--color-border) 60%, transparent)"
               strokeWidth="9"
+              strokeDasharray={hasData ? undefined : '4 6'}
               fill="transparent"
             />
 
@@ -158,24 +160,48 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
                   {Math.round((activeSlice.value / total) * 100)}%
                 </span>
               </div>
-            ) : (
+            ) : hasData ? (
               <div className="flex flex-col items-center transition-all">
                 <span style={{ color: 'var(--color-text)' }} className="text-lg font-black leading-none tracking-tight">
-                  {total === 1 && data.length === 0 ? 0 : total}
+                  {total}
                 </span>
                 <span style={{ color: 'var(--color-text-muted)' }} className="text-[9px] font-medium mt-0.5">
                   Cards
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center transition-all">
+                <ChartPieSlice size={22} weight="duotone" style={{ color: 'var(--color-text-muted)' }} />
+                <span style={{ color: 'var(--color-text-muted)' }} className="text-[8px] font-semibold mt-1 uppercase tracking-wider">
+                  Vazio
                 </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Legend with interactive mini-progress indicators */}
+        {/* Legend or Polished Empty State */}
         <div className="flex-1 space-y-1 text-xs">
-          {data.length === 0 ? (
-            <div style={{ color: 'var(--color-text-muted)' }} className="text-xs py-4 text-center">
-              Sem dados
+          {!hasData ? (
+            <div
+              style={{
+                background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
+                borderColor: 'var(--color-border)',
+              }}
+              className="p-2.5 rounded-lg border text-center space-y-1"
+            >
+              <p style={{ color: 'var(--color-text)' }} className="text-[11px] font-semibold">
+                Nenhum card priorizado
+              </p>
+              <p style={{ color: 'var(--color-text-muted)' }} className="text-[10px] leading-tight">
+                Adicione tarefas com P1, P2, P3 ou P4 no Kanban para mapear o gráfico.
+              </p>
+              <div className="flex items-center justify-center gap-1.5 pt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="P1" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="P2" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" title="P3" />
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" title="P4" />
+              </div>
             </div>
           ) : (
             data.map(item => {
@@ -259,7 +285,7 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
           onMouseLeave={() => setActiveSliceKey(null)}
           className="flex items-center gap-1 cursor-pointer hover:text-rose-400 transition-colors"
         >
-          <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+          <WarningCircle size={13} weight="bold" className="text-rose-500 shrink-0" />
           <span><strong className="text-rose-500 font-bold">{urgentCount}</strong> urgentes</span>
         </span>
         <span
@@ -267,7 +293,7 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
           onMouseLeave={() => setActiveSliceKey(null)}
           className="flex items-center gap-1 cursor-pointer hover:text-emerald-400 transition-colors"
         >
-          <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+          <CheckCircle size={13} weight="bold" className="text-emerald-500 shrink-0" />
           <span><strong className="text-emerald-500 font-bold">{completedCount}</strong> entregues</span>
         </span>
       </div>

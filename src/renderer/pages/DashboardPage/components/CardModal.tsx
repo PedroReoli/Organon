@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import type { Card, CardPriority, CardStatus, Project } from '@types'
 import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_ORDER } from '@types'
-import { WysiwygEditor } from '../../shared/WysiwygEditor'
+import { WysiwygEditor } from '@Notes/editor/WysiwygEditor'
 import { getTodayISO } from '@utils'
 import { Button } from '@shared/components/primitives'
 import { Check } from 'lucide-react'

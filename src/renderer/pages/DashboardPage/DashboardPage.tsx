@@ -11,7 +11,7 @@ import { CompactTodayQueue } from './components/CompactTodayQueue'
 import { ActiveSprintWidget } from './components/ActiveSprintWidget'
 import { RecentNotesWidget } from './components/RecentNotesWidget'
 import { ModernHubNavigation } from './components/ModernHubNavigation'
-import { Sparkles, Clock, CheckCircle2 } from 'lucide-react'
+import { Gauge, Clock, CalendarBlank, CheckCircle } from '@phosphor-icons/react'
 
 export type DashboardSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 
@@ -203,21 +203,24 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border shadow-xs transition-all"
       >
         <div className="space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span
               style={{
-                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
                 color: 'var(--color-primary)',
-                borderColor: 'color-mix(in srgb, var(--color-primary) 28%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
               }}
-              className="text-xs font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5"
+              className="text-[11px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 tracking-wider uppercase shadow-2xs"
             >
-              <Sparkles className="w-3 h-3" />
-              Cockpit Geral
+              <Gauge size={14} weight="duotone" />
+              Cockpit Operacional
             </span>
-            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {dateFormatted} • <strong style={{ color: 'var(--color-text)' }}>{timeFormatted}</strong>
+            <span style={{ color: 'var(--color-text-muted)' }} className="text-xs font-medium flex items-center gap-1.5">
+              <CalendarBlank size={13} weight="duotone" />
+              {dateFormatted}
+              <span className="opacity-40">•</span>
+              <Clock size={13} weight="duotone" />
+              <strong style={{ color: 'var(--color-text)' }}>{timeFormatted}</strong>
             </span>
           </div>
           <h1
@@ -236,9 +239,9 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
               borderColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
               color: 'var(--color-text)',
             }}
-            className="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2"
+            className="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2 shadow-2xs"
           >
-            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
+            <CheckCircle size={15} weight="duotone" style={{ color: 'var(--color-primary)' }} />
             <span><strong>{pendingTasks}</strong> pendentes hoje</span>
           </div>
         </div>

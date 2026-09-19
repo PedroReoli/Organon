@@ -1,14 +1,14 @@
 import React from 'react'
 import type { AppView } from '../../shared/InternalNav'
 import {
-  Calendar,
-  FileText,
-  FolderKanban,
+  SquaresFour,
+  Kanban,
+  Notebook,
+  GitFork,
   Headphones,
-  Network,
-  Settings,
-  LayoutGrid
-} from 'lucide-react'
+  ShareNetwork,
+  GearSix
+} from '@phosphor-icons/react'
 
 interface ModernHubNavigationProps {
   onNavigate: (view: AppView) => void
@@ -23,32 +23,32 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
     {
       label: 'Planejador',
       view: 'planner',
-      icon: <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Kanban size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Notas',
       view: 'notes',
-      icon: <FileText className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Notebook size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Projetos',
       view: 'projects',
-      icon: <FolderKanban className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <GitFork size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Modo Foco',
       view: 'study',
-      icon: <Headphones className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <Headphones size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'System Design',
       view: 'system-design',
-      icon: <Network className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <ShareNetwork size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     },
     {
       label: 'Configurações',
       view: 'settings',
-      icon: <Settings className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />,
+      icon: <GearSix size={16} weight="duotone" style={{ color: 'var(--color-primary)' }} />,
     }
   ]
 
@@ -67,9 +67,9 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
               background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
               color: 'var(--color-primary)',
             }}
-            className="p-1 rounded-md"
+            className="p-1.5 rounded-lg"
           >
-            <LayoutGrid className="w-3.5 h-3.5" />
+            <SquaresFour size={16} weight="duotone" />
           </div>
           <div>
             <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider">

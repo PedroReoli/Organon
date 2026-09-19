@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { BarChart3, Calendar, TrendingUp, Sparkles, ArrowUpRight } from 'lucide-react'
+import { ChartBar, CalendarBlank, TrendUp, Sparkle, ArrowUpRight } from '@phosphor-icons/react'
 
 export interface DayActivity {
   key: string
@@ -50,7 +50,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
             }}
             className="p-2 rounded-lg border shadow-xs transition-transform duration-300 group-hover/container:scale-105"
           >
-            <BarChart3 className="w-4 h-4" />
+            <ChartBar size={18} weight="duotone" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -114,7 +114,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
             }}
             className="text-xs flex items-center gap-1"
           >
-            {activeDay.isToday && <Sparkles className="w-3 h-3 text-amber-400" />}
+            {activeDay.isToday && <Sparkle size={12} weight="fill" className="text-amber-400" />}
             {activeDay.label} ({activeDay.date.slice(8, 10)}/{activeDay.date.slice(5, 7)})
           </span>
           <span style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">
@@ -138,7 +138,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
             style={{ color: 'var(--color-primary)' }}
             className="text-[10px] font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
           >
-            Ver dia <ArrowUpRight className="w-2.5 h-2.5" />
+            Ver dia <ArrowUpRight size={11} weight="bold" />
           </button>
         </div>
       </div>
@@ -259,12 +259,12 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
         }}
         className="flex items-center justify-between pt-2 border-t mt-1 text-[11px] z-10"
       >
-        <span className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" style={{ color: 'var(--color-primary)' }} />
+        <span className="flex items-center gap-1.5">
+          <CalendarBlank size={13} weight="duotone" style={{ color: 'var(--color-primary)' }} />
           <span>Filtro dinâmico da semana</span>
         </span>
-        <span className="flex items-center gap-1">
-          <TrendingUp className="w-3 h-3 text-emerald-400" />
+        <span className="flex items-center gap-1.5">
+          <TrendUp size={13} weight="bold" className="text-emerald-400" />
           <span>Média: <strong>{Math.round(totalWeekTasks / (days.length || 1))}</strong> itens/dia</span>
         </span>
       </div>

@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Note } from '@types'
-import { FileText, ArrowRight, Clock, Star, Pin } from 'lucide-react'
+import { NotePencil, FileText, ArrowRight, Clock, Star, PushPin, Plus } from '@phosphor-icons/react'
 
 interface RecentNotesWidgetProps {
   notes: Note[]
@@ -35,7 +35,7 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
               }}
               className="p-1.5 rounded-lg"
             >
-              <FileText className="w-4 h-4" />
+              <NotePencil size={18} weight="duotone" />
             </div>
             <div>
               <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold">Notas Recentes</h3>
@@ -50,13 +50,16 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
             className="text-xs font-medium flex items-center gap-0.5 hover:opacity-80 transition-opacity"
           >
             <span>Ver Todas</span>
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight size={12} weight="bold" />
           </button>
         </div>
 
         <div className="space-y-1.5">
           {recent.length === 0 ? (
-            <div style={{ color: 'var(--color-text-muted)' }} className="py-6 text-center text-xs">Nenhuma nota encontrada.</div>
+            <div style={{ color: 'var(--color-text-muted)' }} className="py-6 text-center text-xs">
+              <NotePencil size={20} weight="duotone" className="mx-auto mb-1 opacity-40" />
+              Nenhuma nota encontrada.
+            </div>
           ) : (
             recent.map(note => {
               const formattedDate = new Date(note.updatedAt || note.createdAt).toLocaleDateString('pt-BR', {
@@ -77,7 +80,9 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <FileText
                       style={{ color: 'var(--color-text-muted)' }}
-                      className="w-3.5 h-3.5 group-hover:text-[var(--color-primary)] transition-colors shrink-0"
+                      className="group-hover:text-[var(--color-primary)] transition-colors shrink-0"
+                      size={14}
+                      weight="duotone"
                     />
                     <span
                       style={{ color: 'var(--color-text)' }}
@@ -88,10 +93,10 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
                   </div>
 
                   <div style={{ color: 'var(--color-text-muted)' }} className="flex items-center gap-2 shrink-0 ml-2 text-[10px]">
-                    {note.isPinned && <Pin className="w-2.5 h-2.5 text-amber-500" />}
-                    {note.isFavorite && <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />}
+                    {note.isPinned && <PushPin size={11} weight="fill" className="text-amber-500" />}
+                    {note.isFavorite && <Star size={11} weight="fill" className="text-amber-500" />}
                     <span className="flex items-center gap-0.5">
-                      <Clock className="w-2.5 h-2.5" />
+                      <Clock size={11} weight="duotone" />
                       {formattedDate}
                     </span>
                   </div>
@@ -110,13 +115,15 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
         className="pt-2 border-t mt-2 text-[11px] flex items-center justify-between"
       >
         <span>{notes.length} documentos totais</span>
-        <span
+        <button
+          type="button"
           style={{ color: 'var(--color-primary)' }}
-          className="cursor-pointer font-medium hover:underline"
+          className="cursor-pointer font-medium hover:underline flex items-center gap-1"
           onClick={onNavigateToNotes}
         >
-          Criar Nova Nota
-        </span>
+          <Plus size={11} weight="bold" />
+          <span>Criar Nova Nota</span>
+        </button>
       </div>
     </div>
   )

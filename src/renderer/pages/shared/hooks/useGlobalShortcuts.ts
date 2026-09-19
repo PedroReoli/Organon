@@ -65,6 +65,12 @@ export function useGlobalShortcuts({
       const viewsNavShortcut = getShortcutById(keyboardShortcuts, 'views-navigator')
       const clipboardModalShortcut = getShortcutById(keyboardShortcuts, 'clipboard-modal')
 
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setShowViewsNavigator(true)
+        return
+      }
+
       if (viewsNavShortcut && matchesShortcut(e, viewsNavShortcut)) {
         e.preventDefault()
         setShowViewsNavigator(true)
