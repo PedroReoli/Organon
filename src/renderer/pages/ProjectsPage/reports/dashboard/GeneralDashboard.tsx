@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Table, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react'
 import type { GeneralReport, WeekReport } from '@types'
 import { StatsBar } from '../StatsBar'
 import { CompactLineChart } from '../CompactLineChart'
@@ -8,6 +8,8 @@ import { CommitTypesMini } from '../CommitTypesMini'
 import { SectionTabs } from '../SectionTabs'
 import { RepoList } from '../RepoList'
 import { RecentCommits } from '../RecentCommits'
+import { CompactRepoTable } from '../CompactRepoTable'
+import { getCommitTypeColor } from '../constants/commitTypes'
 
 interface GeneralDashboardProps {
   general: GeneralReport
@@ -20,10 +22,7 @@ interface GeneralDashboardProps {
   onToggleWatcher: () => void
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  feat: '#22c55e', fix: '#ef4444', refactor: 'var(--color-primary)', chore: '#94a3b8',
-  docs: 'var(--color-primary)', perf: '#f59e0b', other: '#64748b', revert: '#f97316', test: 'var(--color-primary)',
-}
+
 
 export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({ 
   general, 
@@ -37,6 +36,8 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('ativos')
   const [fixingHash, setFixingHash] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'compact' | 'cards'>('compact')
+  const [showCharts, setShowCharts] = useState(true)
 
   const activeRepos = useMemo(() =>
     (general.repos ?? []).filter((r: any) => r.status !== 'parado').sort((a: any, b: any) => (b.weeklyAverage || 0) - (a.weeklyAverage || 0)),
@@ -154,7 +155,7 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
     Object.entries(general.commitTypesTotals ?? {})
       .filter(([, v]) => Number(v) > 0)
       .sort((a, b) => Number(b[1]) - Number(a[1]))
-      .map(([id, value]) => ({ id, label: id, value: Number(value), color: TYPE_COLORS[id] ?? '#64748b' })),
+      .map(([id, value]) => ({ id, label: id, value: Number(value), color: getCommitTypeColor(id) })),
     [general.commitTypesTotals]
   )
 
@@ -204,13 +205,58 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
         </div>
       </div>
 
-      <StatsBar stats={stats} />
+      <StatsBar stats={stats} compact={true} />
 
-      <div className="projects-dashboard-grid">
-        <CompactLineChart data={lineData} monthMarkers={monthMarkers} />
-        <TopProjectsCard projects={topProjectsData} />
-        <CommitTypesMini data={pieData} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <button
+          type="button"
+          onClick={() => setShowCharts(v => !v)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: 10.5,
+            cursor: 'pointer',
+            padding: '1px 5px',
+            borderRadius: 3,
+          }}
+        >
+          {showCharts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          <span>{showCharts ? 'Ocultar Gráficos' : 'Exibir Gráficos de Ritmo'}</span>
+        </button>
+
+        <div className="projects-view-toggle">
+          <button
+            type="button"
+            className={`projects-view-toggle-btn ${viewMode === 'compact' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('compact')}
+            title="Tabela Compacta (Operate Mode)"
+          >
+            <Table size={11} />
+            <span>Tabela</span>
+          </button>
+          <button
+            type="button"
+            className={`projects-view-toggle-btn ${viewMode === 'cards' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('cards')}
+            title="Cards Tradicionais"
+          >
+            <LayoutGrid size={11} />
+            <span>Cards</span>
+          </button>
+        </div>
       </div>
+
+      {showCharts && (
+        <div className="projects-compact-charts">
+          <CompactLineChart data={lineData} monthMarkers={monthMarkers} />
+          <TopProjectsCard projects={topProjectsData} />
+          <CommitTypesMini data={pieData} />
+        </div>
+      )}
 
       <SectionTabs 
         tabs={tabOptions} 
@@ -218,9 +264,21 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
         onChange={setActiveTab} 
       />
 
-      <div style={{ paddingBottom: 40 }}>
-        {activeTab === 'ativos' && <RepoList repos={activeRepos} onSelectRepo={onSelectRepo} />}
-        {activeTab === 'parados' && <RepoList repos={stoppedRepos} onSelectRepo={onSelectRepo} />}
+      <div style={{ paddingBottom: 16 }}>
+        {activeTab === 'ativos' && (
+          viewMode === 'compact' ? (
+            <CompactRepoTable repos={activeRepos} onSelectRepo={onSelectRepo} reports={reports} />
+          ) : (
+            <RepoList repos={activeRepos} onSelectRepo={onSelectRepo} />
+          )
+        )}
+        {activeTab === 'parados' && (
+          viewMode === 'compact' ? (
+            <CompactRepoTable repos={stoppedRepos} onSelectRepo={onSelectRepo} reports={reports} />
+          ) : (
+            <RepoList repos={stoppedRepos} onSelectRepo={onSelectRepo} />
+          )
+        )}
         {activeTab === 'commits' && <RecentCommits commits={recentCommits} />}
         {activeTab === 'badcommits' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>

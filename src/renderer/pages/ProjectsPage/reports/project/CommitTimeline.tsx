@@ -1,15 +1,6 @@
 import React from 'react'
 import type { CommitEntry } from '@types'
-
-const TYPE_COLORS: Record<string, string> = {
-  feat:     'var(--color-primary)',
-  fix:      '#22c55e',
-  refactor: '#f97316',
-  chore:    '#6b7280',
-  docs:     'var(--color-primary)',
-  style:    'var(--color-primary)',
-  test:     'var(--color-primary)',
-}
+import { CommitTypeBadge } from '../components/CommitTypeBadge'
 
 interface CommitTimelineProps {
   commits: CommitEntry[]
@@ -21,9 +12,7 @@ export const CommitTimeline: React.FC<CommitTimelineProps> = ({ commits }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto', paddingRight: '8px' }}>
       {commits.map((c, i) => (
         <div key={`${c.hash}-${i}`} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 100px', gap: '16px', alignItems: 'center', background: 'var(--bg-primary)', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-          <span style={{ background: TYPE_COLORS[c.type] ?? '#6b7280', color: '#fff', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', textAlign: 'center', textTransform: 'uppercase' }}>
-            {c.type}
-          </span>
+          <CommitTypeBadge type={c.type} size="md" />
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{c.msg}</span>
             <code style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{c.hash}</code>

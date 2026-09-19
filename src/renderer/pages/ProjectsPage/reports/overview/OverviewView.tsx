@@ -7,11 +7,7 @@ interface OverviewViewProps {
   onSelectReport: (index: number) => void
 }
 
-const COMMIT_TYPE_COLORS: Record<string, string> = {
-  feat: '#22c55e', fix: '#ef4444', refactor: 'var(--color-primary)', chore: '#94a3b8',
-  docs: '#60a5fa', perf: '#f59e0b', other: '#6b7280', revert: '#f97316',
-  style: 'var(--color-primary)', merge: '#6b7280',
-}
+import { getCommitTypeColor } from '../constants/commitTypes'
 
 const PIE_COLORS = ['var(--color-primary)', '#22c55e', '#f97316', 'var(--color-primary)', 'var(--color-primary)', 'var(--color-primary)', '#eab308', '#ef4444']
 
@@ -90,7 +86,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
       return {
         type, count, pct: Math.round((count / total) * 100),
         x1, y1, x2, y2, large: sweep > Math.PI ? 1 : 0,
-        color: COMMIT_TYPE_COLORS[type] ?? PIE_COLORS[i % PIE_COLORS.length],
+        color: getCommitTypeColor(type, PIE_COLORS[i % PIE_COLORS.length]),
       }
     })
   }, [commitTypes])
@@ -124,12 +120,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
   const lineData = chronological
   const lineMax = Math.max(1, ...lineData.map(r => r.summary.totalCommits))
   const [chartMode, setChartMode] = useState<ChartMode>('bar')
-  const H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 24, PAD_B = 36
-  
-  const chartGap = 48
-  const W = Math.max(800, PAD_L + PAD_R + (lineData.length * chartGap))
-  const chartStartX = PAD_L + ((W - PAD_L - PAD_R) - (chartGap * lineData.length)) / 2
-  const barW = 24
+  const H = 220, PAD_L = 40, PAD_R = 20, PAD_T = 24, PAD_B = 36
+  const W = 1000
+  const chartGap = lineData.length > 0 ? (W - PAD_L - PAD_R) / lineData.length : 48
+  const chartStartX = PAD_L
+  const barW = Math.max(6, Math.min(28, chartGap * 0.65))
 
   const chartTypesPerWeek = useMemo(() => {
     return chronological.map(r => {
@@ -167,40 +162,40 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         </div>
       </div>
 
-      <div className="projects-stats-bar" style={{ marginBottom: '32px' }}>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{sliced.length}</span>
-          <span className="projects-stat-label">Semanas</span>
+      <div className="projects-stats-compact-bar" style={{ marginBottom: 6 }}>
+        <div className="projects-stat-pill">
+          <span className="projects-stat-pill-label">Semanas:</span>
+          <span className="projects-stat-pill-value">{sliced.length}</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{totals.commits}</span>
-          <span className="projects-stat-label">Commits totais</span>
+        <div className="projects-stat-pill pill-blue">
+          <span className="projects-stat-pill-label">Commits:</span>
+          <span className="projects-stat-pill-value">{totals.commits}</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{avgCommits}</span>
-          <span className="projects-stat-label">Média/semana</span>
+        <div className="projects-stat-pill">
+          <span className="projects-stat-pill-label">Média/sem:</span>
+          <span className="projects-stat-pill-value">{avgCommits}</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{totals.activeRepos}</span>
-          <span className="projects-stat-label">Repos ativos</span>
+        <div className="projects-stat-pill pill-green">
+          <span className="projects-stat-pill-label">Ativos:</span>
+          <span className="projects-stat-pill-value">{totals.activeRepos}</span>
         </div>
         {totals.todos > 0 && (
-          <div className="projects-stat-card">
-            <span className="projects-stat-value" style={{ color: 'var(--accent-yellow)' }}>{totals.todos}</span>
-            <span className="projects-stat-label">TODOs</span>
+          <div className="projects-stat-pill pill-amber">
+            <span className="projects-stat-pill-label">TODOs:</span>
+            <span className="projects-stat-pill-value">{totals.todos}</span>
           </div>
         )}
         {totals.badCommits > 0 && (
-          <div className="projects-stat-card">
-            <span className="projects-stat-value" style={{ color: 'var(--accent-red)' }}>{totals.badCommits}</span>
-            <span className="projects-stat-label">Bad commits</span>
+          <div className="projects-stat-pill pill-red">
+            <span className="projects-stat-pill-label">Bad Commits:</span>
+            <span className="projects-stat-pill-value">{totals.badCommits}</span>
           </div>
         )}
       </div>
 
       {lineData.length >= 2 && (
-        <div className="projects-dashboard-card" style={{ marginBottom: '24px', paddingBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div className="projects-dashboard-card" style={{ marginBottom: 6, padding: '6px 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <h3 className="projects-card-title" style={{ margin: 0 }}>Evolução de commits por semana</h3>
             <div className="projects-tabs" style={{ marginBottom: 0 }}>
               {(['bar', 'line', 'area', 'stacked'] as ChartMode[]).map(mode => (
@@ -216,8 +211,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
               ))}
             </div>
           </div>
-          <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
-            <svg width={W} height={H} className="rp-line-svg" style={{ minWidth: W }} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+          <div style={{ width: '100%', overflow: 'hidden' }}>
+            <svg width="100%" height={H} className="rp-line-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
               {/* Grid lines */}
               {[0, 0.25, 0.5, 0.75, 1].map(pct => {
                 const y = PAD_T + (1 - pct) * (H - PAD_T - PAD_B)
@@ -328,7 +323,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
                       const segH = (count / lineMax) * (H - PAD_T - PAD_B)
                       yOffset -= segH
                       return (
-                        <rect key={type} x={x} y={yOffset} width={barW} height={segH} fill={COMMIT_TYPE_COLORS[type] || '#6b7280'} opacity={0.85} rx={2}>
+                        <rect key={type} x={x} y={yOffset} width={barW} height={segH} fill={getCommitTypeColor(type)} opacity={0.85} rx={2}>
                           <title>{`${formatWeekLabel(r.date)} — ${type}: ${count}`}</title>
                         </rect>
                       )
@@ -338,13 +333,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
                 )
               })}
 
-              {/* X axis labels */}
+              {/* X axis labels agrupados */}
               {lineData.map((r, i) => {
+                const step = lineData.length > 16 ? Math.ceil(lineData.length / 8) : lineData.length > 8 ? 2 : 1
+                const shouldShowLabel = i % step === 0 || i === lineData.length - 1
+                if (!shouldShowLabel) return null
                 const x = chartStartX + i * chartGap + chartGap / 2
-                // Se houver muitas semanas, pode omitir algumas, mas com chartGap = 48 dá pra mostrar todas.
-                // Mas vamos rotacionar um pouco pra ficar melhor e não sobrepor as barras.
                 return (
-                  <text key={`lbl-${r.date}`} x={x} y={H - 12} textAnchor="middle" fontSize="12" fill="var(--text-secondary)">
+                  <text key={`lbl-${r.date}`} x={x} y={H - 12} textAnchor="middle" fontSize="10.5" fill="var(--text-secondary)">
                     {formatWeekLabel(r.date)}
                   </text>
                 )
@@ -354,19 +350,19 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         </div>
       )}
 
-      <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '6px', marginBottom: '6px' }}>
+        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
           <h3 className="projects-card-title">Top repos (total de commits)</h3>
           <div className="projects-top-list">
             {topRepos.map(repo => {
               const pct = Math.max(4, (repo.commits / maxRepoCommits) * 100)
               return (
-                <div key={`${repo.group}/${repo.name}`} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="projects-top-name" style={{ width: '120px' }} title={`${repo.group}/${repo.name}`}>{repo.name}</span>
+                <div key={`${repo.group}/${repo.name}`} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="projects-top-name" style={{ width: '110px' }} title={`${repo.group}/${repo.name}`}>{repo.name}</span>
                   <div className="projects-top-track">
                     <div className="projects-top-fill" style={{ width: `${pct}%`, backgroundColor: 'var(--accent-primary)' }} />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', width: '32px', textAlign: 'right' }}>{repo.commits}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', width: '32px', textAlign: 'right' }}>{repo.commits}</span>
                 </div>
               )
             })}
@@ -374,10 +370,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         </div>
 
         {pieSlices.length > 0 && (
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
             <h3 className="projects-card-title">Tipos de commit (acumulado)</h3>
-            <div style={{ display: 'flex', gap: '32px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-              <svg width={160} height={160} viewBox="0 0 120 120">
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+              <svg width={130} height={130} viewBox="0 0 120 120">
                 {pieSlices.map(s => {
                   const R = 50, CX = 60, CY = 60
                   return (
@@ -394,11 +390,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
                   )
                 })}
               </svg>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {pieSlices.map(s => (
-                  <div key={s.type} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }} />
-                    <span style={{ color: 'var(--text-primary)', width: '60px' }}>{s.type}</span>
+                  <div key={s.type} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: s.color }} />
+                    <span style={{ color: 'var(--text-primary)', width: '55px' }}>{s.type}</span>
                     <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{s.pct}%</span>
                   </div>
                 ))}
@@ -408,16 +404,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         )}
         
         {badRepos.length > 0 && (
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
             <h3 className="projects-card-title" style={{ color: 'var(--accent-red)' }}>Repos com mais bad commits</h3>
             <div className="projects-top-list">
               {badRepos.map(([key, count]) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="projects-top-name" style={{ width: '120px' }} title={key}>{key.split('/')[1] ?? key}</span>
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="projects-top-name" style={{ width: '110px' }} title={key}>{key.split('/')[1] ?? key}</span>
                   <div className="projects-top-track">
                     <div className="projects-top-fill" style={{ width: `${(count / (badRepos[0][1] || 1)) * 100}%`, backgroundColor: 'var(--accent-red)' }} />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-red)', width: '32px', textAlign: 'right' }}>{count}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-red)', width: '32px', textAlign: 'right' }}>{count}</span>
                 </div>
               ))}
             </div>
@@ -425,16 +421,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         )}
 
         {stoppedRecurrent.length > 0 && (
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
             <h3 className="projects-card-title" style={{ color: 'var(--accent-yellow)' }}>Repos parados recorrentes</h3>
             <div className="projects-top-list">
               {stoppedRecurrent.map(([key, weeks]) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="projects-top-name" style={{ width: '120px' }} title={key}>{key.split('/')[1] ?? key}</span>
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="projects-top-name" style={{ width: '110px' }} title={key}>{key.split('/')[1] ?? key}</span>
                   <div className="projects-top-track">
                     <div className="projects-top-fill" style={{ width: `${(weeks / (stoppedRecurrent[0][1] || 1)) * 100}%`, backgroundColor: 'var(--accent-yellow)' }} />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-yellow)', width: '32px', textAlign: 'right' }}>{weeks}s</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-yellow)', width: '32px', textAlign: 'right' }}>{weeks}s</span>
                 </div>
               ))}
             </div>
@@ -442,26 +438,26 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
         )}
       </div>
 
-      <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
         <h3 className="projects-card-title">Semanas analisadas</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
           {sliced.map((r, i) => (
             <button
               key={r.date}
               type="button"
               onClick={() => onSelectReport(i)}
               className="projects-commit-row"
-              style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.2s', gap: '16px' }}
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.2s', gap: '10px' }}
             >
-              <span style={{ width: '60px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.weekLabel}</span>
-              <span style={{ width: '120px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              <span style={{ width: '55px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.weekLabel}</span>
+              <span style={{ width: '110px', fontSize: '11px', color: 'var(--text-muted)' }}>
                 {r.period ? `${r.period.from}–${r.period.to}` : r.date}
               </span>
               <div className="projects-top-track" style={{ flex: 1 }}>
                 <div className="projects-top-fill" style={{ width: `${Math.max(4, (r.summary.totalCommits / lineMax) * 100)}%`, backgroundColor: 'var(--accent-primary)' }} />
               </div>
-              <span style={{ width: '40px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.summary.totalCommits}c</span>
-              <span style={{ width: '60px', textAlign: 'right', fontSize: '11px', color: 'var(--text-secondary)' }}>{r.summary.activeThisWeek} ativos</span>
+              <span style={{ width: '38px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.summary.totalCommits}c</span>
+              <span style={{ width: '55px', textAlign: 'right', fontSize: '10.5px', color: 'var(--text-secondary)' }}>{r.summary.activeThisWeek} atv</span>
             </button>
           ))}
         </div>

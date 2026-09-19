@@ -1,17 +1,8 @@
 import React, { useMemo, useState } from 'react'
+import { GitCommit, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { RepoReport } from '@types'
 
-const TYPE_COLORS: Record<string, string> = {
-  feat: 'var(--color-primary)', fix: '#22c55e', refactor: '#f97316', chore: '#6b7280',
-  docs: 'var(--color-primary)', style: 'var(--color-primary)', test: 'var(--color-primary)', perf: '#f59e0b',
-  revert: '#ef4444', other: '#6b7280',
-}
-
-const REPO_PALETTE = [
-  'var(--color-primary)', '#22c55e', '#f59e0b', '#ef4444', 'var(--color-primary)',
-  'var(--color-primary)', '#fb923c', '#60a5fa', '#f472b6', '#34d399',
-  '#e879f9', '#38bdf8', '#facc15', '#4ade80', '#f87171',
-]
+import { CommitTypeBadge } from '../components/CommitTypeBadge'
 
 interface RecentCommitsPanelProps {
   repos: RepoReport[]
@@ -20,16 +11,7 @@ interface RecentCommitsPanelProps {
 
 export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({ repos, onSelect }) => {
   const [page, setPage] = useState(0)
-  const ITEMS_PER_PAGE = 8
-
-  const repoColorMap = useMemo(() => {
-    const map = new Map<string, string>()
-    const active = repos.filter(r => (r.commits?.length ?? 0) > 0)
-    active.forEach((r, i) => {
-      map.set(`${r.group}/${r.name}`, REPO_PALETTE[i % REPO_PALETTE.length])
-    })
-    return map
-  }, [repos])
+  const ITEMS_PER_PAGE = 5
 
   const allCommits = useMemo(() =>
     repos
@@ -47,15 +29,25 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({ repos, o
 
   return (
     <div className="projects-dashboard-card" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <h3 className="projects-card-title">Commits recentes <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>{allCommits.length}</span></h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+        <h3 className="projects-card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+          <GitCommit size={15} color="var(--color-primary, #818cf8)" />
+          <span>Commits Recentes</span>
+        </h3>
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, fontFamily: 'monospace' }}>
+          {allCommits.length} commits
+        </span>
+      </div>
+
       {allCommits.length === 0 ? (
-        <span style={{ color: 'var(--text-muted)' }}>Nenhum commit esta semana</span>
+        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+          Nenhum commit encontrado nesta semana.
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          <div className="projects-commits-list" style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
+          <div className="projects-commits-list" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '2px' }}>
             {commits.map((c, i) => {
               const repoKey = `${c.repo.group}/${c.repo.name}`
-              const repoColor = repoColorMap.get(repoKey) ?? '#6b7280'
               return (
                 <button
                   key={`${c.hash}-${i}`}
@@ -63,29 +55,103 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({ repos, o
                   className="projects-commit-row"
                   onClick={() => onSelect(c.repo)}
                   title={repoKey}
-                  style={{ 
-                    cursor: 'pointer', textAlign: 'left', borderLeft: `3px solid ${repoColor}`,
-                    background: 'var(--bg-primary)', padding: '10px 14px', marginBottom: '8px',
-                    display: 'grid', gridTemplateColumns: '70px 1fr 80px', gap: '12px'
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '7px 10px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    borderLeft: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.05)';
                   }}
                 >
-                  <span className="projects-commit-type" style={{ background: TYPE_COLORS[c.type] ?? '#6b7280' }}>
-                    {c.type}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <span className="projects-commit-msg">{c.msg}</span>
-                    <span className="projects-commit-repo" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.repo.name}</span>
+                  <CommitTypeBadge type={c.type} style={{ width: 46 }} />
+
+                  <div className="projects-commit-info" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <div
+                      className="projects-commit-msg"
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: 'var(--text-primary, #f1f5f9)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={c.msg}
+                    >
+                      {c.msg}
+                    </div>
+                    <div
+                      className="projects-commit-repo"
+                      style={{
+                        fontSize: '10.5px',
+                        color: 'var(--text-muted, #94a3b8)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        marginTop: '1px',
+                      }}
+                    >
+                      {c.repo.name}
+                    </div>
                   </div>
-                  <span className="projects-commit-time" style={{ textAlign: 'right' }}>{c.date}</span>
+
+                  <span
+                    className="projects-commit-time"
+                    style={{
+                      fontSize: '10.5px',
+                      fontFamily: 'monospace',
+                      color: 'var(--text-muted, #94a3b8)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {c.date}
+                  </span>
                 </button>
               )
             })}
           </div>
+
           {maxPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-              <button type="button" className="projects-btn" style={{ padding: '4px 8px' }} disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</button>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{page + 1} de {maxPages}</span>
-              <button type="button" className="projects-btn" style={{ padding: '4px 8px' }} disabled={page >= maxPages - 1} onClick={() => setPage(p => p + 1)}>Próxima</button>
+            <div className="projects-pagination-bar" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid var(--border, rgba(255,255,255,0.07))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="projects-btn"
+                disabled={page === 0}
+                onClick={() => setPage(p => p - 1)}
+                style={{ padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+              >
+                <ChevronLeft size={13} /> Anterior
+              </button>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                {page + 1} de {maxPages}
+              </span>
+              <button
+                type="button"
+                className="projects-btn"
+                disabled={page >= maxPages - 1}
+                onClick={() => setPage(p => p + 1)}
+                style={{ padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+              >
+                Próxima <ChevronRight size={13} />
+              </button>
             </div>
           )}
         </div>

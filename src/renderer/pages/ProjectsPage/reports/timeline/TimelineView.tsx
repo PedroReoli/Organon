@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import {
+  Activity,
+  Calendar,
+  Clock,
+  FolderGit2,
+  Trophy,
+  X,
+} from 'lucide-react'
 import type { WeekReport } from '@types'
+import { CommitTypeBadge } from '../components/CommitTypeBadge'
 
 interface TimelineViewProps {
   reports: WeekReport[]
@@ -17,12 +25,12 @@ interface DayCommit {
 export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
-  // Build commit index by day
+  // Index de commits por dia
   const commitsByDay = useMemo(() => {
     const map = new Map<string, DayCommit[]>()
     for (const report of reports) {
       for (const repo of report.repos) {
-        for (const c of repo.commits) {
+        for (const c of repo.commits ?? []) {
           if (!c.date) continue
           const d = c.date.slice(0, 10)
           const list = map.get(d) ?? []
@@ -34,7 +42,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
     return map
   }, [reports])
 
-  // Build a heatmap of daily activity over the last 365 days
+  // Heatmap dos últimos 365 dias
   const heatmapData = useMemo(() => {
     const days: { date: string; count: number; weekday: number }[] = []
     const now = new Date()
@@ -49,7 +57,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
 
   const maxCount = Math.max(1, ...heatmapData.map(d => d.count))
 
-  // Group by weeks (columns)
+  // Agrupamento em colunas semanais
   const weeks: typeof heatmapData[] = []
   let currentWeek: typeof heatmapData = []
   for (const day of heatmapData) {
@@ -61,7 +69,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
   }
   if (currentWeek.length > 0) weeks.push(currentWeek)
 
-  // Monthly activity summary
+  // Resumo mensal
   const monthlyData = useMemo(() => {
     const months = new Map<string, { commits: number; days: number }>()
     for (const d of heatmapData) {
@@ -74,10 +82,49 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
     return Array.from(months.entries()).map(([month, data]) => ({ month, ...data }))
   }, [heatmapData])
 
-  // Top active days
+  // Dias mais produtivos
   const topDays = useMemo(() => {
     return [...heatmapData].filter(d => d.count > 0).sort((a, b) => b.count - a.count).slice(0, 5)
   }, [heatmapData])
+
+  // Distribuição por dia da semana (Segunda a Domingo)
+  const weekdayTotals = useMemo(() => {
+    const totals = [0, 0, 0, 0, 0, 0, 0] // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+    for (const d of heatmapData) {
+      totals[d.weekday] += d.count
+    }
+    const order = [1, 2, 3, 4, 5, 6, 0]
+    const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+    const max = Math.max(1, ...totals)
+    const grandTotal = totals.reduce((s, v) => s + v, 0) || 1
+
+    return order.map((idx, i) => ({
+      label: labels[i],
+      count: totals[idx],
+      barPct: Math.round((totals[idx] / max) * 100),
+      sharePct: Math.round((totals[idx] / grandTotal) * 100),
+    }))
+  }, [heatmapData])
+
+  // Top Repositórios mais ativos no ano
+  const topReposInPeriod = useMemo(() => {
+    const map = new Map<string, { repo: string; group: string; count: number }>()
+    for (const report of reports) {
+      for (const repo of report.repos) {
+        const key = `${repo.group}/${repo.name}`
+        const count = repo.commitCount || repo.commits?.length || 0
+        const cur = map.get(key) ?? { repo: repo.name, group: repo.group, count: 0 }
+        cur.count += count
+        map.set(key, cur)
+      }
+    }
+    const list = [...map.values()].filter(r => r.count > 0).sort((a, b) => b.count - a.count).slice(0, 7)
+    const maxRepoCommits = Math.max(1, list[0]?.count || 1)
+    return list.map(r => ({
+      ...r,
+      pct: Math.round((r.count / maxRepoCommits) * 100),
+    }))
+  }, [reports])
 
   const totalCommits = heatmapData.reduce((s, d) => s + d.count, 0)
   const activeDays = heatmapData.filter(d => d.count > 0).length
@@ -91,7 +138,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
   })()
 
   function getColor(count: number): string {
-    if (count === 0) return 'var(--color-background)'
+    if (count === 0) return 'rgba(255, 255, 255, 0.04)'
     const intensity = count / maxCount
     if (intensity > 0.75) return '#22c55e'
     if (intensity > 0.5) return '#4ade80'
@@ -101,7 +148,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
 
   const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-  // Month labels for the heatmap columns
   const monthLabels = useMemo(() => {
     const labels: { label: string; col: number }[] = []
     let lastMonth = ''
@@ -111,7 +157,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
         const m = firstDay.date.slice(0, 7)
         if (m !== lastMonth) {
           const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-          const monthIdx = parseInt(firstDay.date.slice(5, 7)) - 1
+          const monthIdx = parseInt(firstDay.date.slice(5, 7), 10) - 1
           labels.push({ label: monthNames[monthIdx], col: i })
           lastMonth = m
         }
@@ -122,170 +168,278 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
 
   const selectedDayCommits = selectedDay ? (commitsByDay.get(selectedDay) ?? []) : []
 
-  const TYPE_COLORS: Record<string, string> = {
-    feat: '#22c55e', fix: '#ef4444', refactor: 'var(--color-primary)', chore: '#94a3b8',
-    docs: '#60a5fa', perf: '#f59e0b', other: '#6b7280', revert: '#f97316', test: 'var(--color-primary)',
-  }
-
   function fmtDate(d: string): string {
-    return d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4)
+    return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
   }
 
   return (
-    <div className="projects-content-scroll">
-      <div className="projects-header">
+    <div className="projects-content-scroll" style={{ paddingBottom: '32px' }}>
+      {/* Header */}
+      <div className="projects-header" style={{ marginBottom: '8px' }}>
         <div>
           <h1 className="projects-title">Timeline de Atividade</h1>
-          <p className="projects-subtitle">Último ano</p>
+          <p className="projects-subtitle">Histórico anual consolidado de desenvolvimento</p>
         </div>
       </div>
 
-      <div className="projects-stats-bar" style={{ marginBottom: '32px' }}>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{totalCommits}</span>
-          <span className="projects-stat-label">Commits</span>
+      {/* KPI Bar */}
+      <div className="projects-stats-compact-bar" style={{ marginBottom: '12px' }}>
+        <div className="projects-stat-pill">
+          <span className="projects-stat-pill-label">Commits no ano:</span>
+          <span className="projects-stat-pill-value">{totalCommits.toLocaleString('pt-BR')}</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{activeDays}</span>
-          <span className="projects-stat-label">Dias ativos</span>
+        <div className="projects-stat-pill pill-blue">
+          <span className="projects-stat-pill-label">Dias ativos:</span>
+          <span className="projects-stat-pill-value">{activeDays}</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value" style={{ color: 'var(--accent-green)' }}>{currentStreak}</span>
-          <span className="projects-stat-label">Streak atual</span>
+        <div className="projects-stat-pill pill-green">
+          <span className="projects-stat-pill-label">Streak atual:</span>
+          <span className="projects-stat-pill-value">{currentStreak}d</span>
         </div>
-        <div className="projects-stat-card">
-          <span className="projects-stat-value">{activeDays > 0 ? Math.round(totalCommits / activeDays) : 0}</span>
-          <span className="projects-stat-label">Média/dia ativo</span>
+        <div className="projects-stat-pill">
+          <span className="projects-stat-pill-label">Média/dia ativo:</span>
+          <span className="projects-stat-pill-value">{activeDays > 0 ? Math.round(totalCommits / activeDays) : 0}</span>
+        </div>
+        <div className="projects-stat-pill">
+          <span className="projects-stat-pill-label">Consistência:</span>
+          <span className="projects-stat-pill-value">{Math.round((activeDays / 365) * 100)}%</span>
         </div>
       </div>
 
-      <div className="projects-dashboard-grid" style={{ alignItems: 'flex-start' }}>
-        {/* Heatmap (Coluna Esquerda) */}
-        <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
-          <h2 className="projects-card-title">Contribuições</h2>
+      {/* Bloco 1: Heatmap Anual Completo (Largura Total) */}
+      <div className="projects-dashboard-card" style={{ marginBottom: '12px', padding: '12px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h2 className="projects-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Activity size={15} color="var(--color-primary)" />
+            <span>Matriz Anual de Contribuições (52 Semanas)</span>
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: 'var(--text-muted)' }}>
+            <span>Menos</span>
+            {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
+              <div key={i} style={{ width: '10px', height: '10px', borderRadius: '2px', background: getColor(v * maxCount) }} />
+            ))}
+            <span>Mais</span>
+            <span style={{ opacity: 0.7 }}>(máx: {maxCount})</span>
+          </div>
+        </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto', paddingBottom: '16px' }}>
-            {/* Month labels */}
-            <div style={{ display: 'flex', paddingLeft: '40px', marginBottom: '12px', position: 'relative', height: '16px' }}>
-              {monthLabels.map((m, i) => (
-                <span
-                  key={i}
-                  style={{ position: 'absolute', left: `${40 + m.col * 22}px`, fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)' }}
-                >{m.label}</span>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', gap: '4px' }}>
-              {/* Day labels */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '36px' }}>
-                {dayLabels.map((l, i) => (
-                  <span key={i} style={{ fontSize: '12px', color: 'var(--text-muted)', height: '18px', lineHeight: '18px', textAlign: 'right', paddingRight: '6px' }}>
-                    {i % 2 === 1 ? l : ''}
-                  </span>
-                ))}
-              </div>
-
-              {/* Grid */}
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {weeks.map((week, wi) => (
-                  <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {week.map(day => (
-                      <div
-                        key={day.date}
-                        style={{ 
-                          width: '18px', height: '18px', borderRadius: '4px', cursor: day.count > 0 ? 'pointer' : 'default',
-                          background: getColor(day.count), border: selectedDay === day.date ? '2px solid var(--text-primary)' : '1px solid rgba(255,255,255,0.05)',
-                          transition: 'transform 0.1s ease',
-                          transform: selectedDay === day.date ? 'scale(1.1)' : 'scale(1)',
-                          boxShadow: selectedDay === day.date ? '0 0 8px rgba(255,255,255,0.2)' : 'none'
-                        }}
-                        title={`${fmtDate(day.date)}: ${day.count} commits`}
-                        onClick={() => day.count > 0 && setSelectedDay(selectedDay === day.date ? null : day.date)}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '24px', paddingLeft: '40px' }}>
-              <span>Menos</span>
-              {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
-                <div key={i} style={{ width: '16px', height: '16px', borderRadius: '3px', background: getColor(v * maxCount) }} />
-              ))}
-              <span>Mais</span>
-              <span style={{ marginLeft: '12px', opacity: 0.7 }}>(máx: {maxCount})</span>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto', paddingBottom: '6px' }}>
+          {/* Rótulos dos meses */}
+          <div style={{ display: 'flex', paddingLeft: '32px', marginBottom: '4px', position: 'relative', height: '14px' }}>
+            {monthLabels.map((m, i) => (
+              <span
+                key={i}
+                style={{ position: 'absolute', left: `${32 + m.col * 15}px`, fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}
+              >
+                {m.label}
+              </span>
+            ))}
           </div>
 
-          {/* Detalhe do dia selecionado */}
-          {selectedDay && (
-            <div style={{ marginTop: '16px', background: 'var(--bg-secondary)', borderRadius: '6px', padding: '16px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{fmtDate(selectedDay)}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '12px' }}>{selectedDayCommits.length} commits</span>
-                </div>
-                <button type="button" className="projects-btn" style={{ padding: '4px 8px', border: 'none', background: 'transparent' }} onClick={() => setSelectedDay(null)} aria-label="Fechar"><X size={14} /></button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-                {selectedDayCommits.sort((a, b) => (b.time ?? '').localeCompare(a.time ?? '')).map((c, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 100px 1fr 60px', gap: '12px', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                    <span style={{ background: TYPE_COLORS[c.type] ?? '#6b7280', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', textAlign: 'center' }}>{c.type}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.repo}</span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.msg}</span>
-                    {c.time && <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>{c.time}</span>}
-                  </div>
-                ))}
-              </div>
+          <div style={{ display: 'flex', gap: '3px' }}>
+            {/* Rótulos dos dias da semana */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '30px' }}>
+              {dayLabels.map((l, i) => (
+                <span key={i} style={{ fontSize: '9px', color: 'var(--text-muted)', height: '12px', lineHeight: '12px', textAlign: 'right', paddingRight: '6px', fontWeight: 600 }}>
+                  {i % 2 === 1 ? l : ''}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
 
-        {/* Coluna Direita (Resumo Mensal e Top Dias empilhados) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Monthly summary */}
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 className="projects-card-title">Resumo mensal</h2>
-            <div className="projects-top-list" style={{ gap: '12px', maxHeight: '360px', overflowY: 'auto', paddingRight: '8px' }}>
-              {monthlyData.map(m => (
-                <div key={m.month} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span className="projects-top-name">{m.month}</span>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'baseline' }}>
-                      <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{m.commits}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.days}d ativos</span>
-                    </div>
-                  </div>
-                  <div className="projects-top-track">
+            {/* Grid 52 semanas */}
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {weeks.map((week, wi) => (
+                <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {week.map(day => (
                     <div
-                      className="projects-top-fill"
-                      style={{ width: `${Math.min(100, (m.commits / Math.max(1, ...monthlyData.map(x => x.commits))) * 100)}%`, backgroundColor: 'var(--accent-primary)' }}
+                      key={day.date}
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '2px',
+                        cursor: day.count > 0 ? 'pointer' : 'default',
+                        background: getColor(day.count),
+                        border: selectedDay === day.date ? '2px solid var(--text-primary)' : '1px solid rgba(255,255,255,0.05)',
+                        transition: 'transform 0.1s ease',
+                        transform: selectedDay === day.date ? 'scale(1.2)' : 'scale(1)',
+                        boxShadow: selectedDay === day.date ? '0 0 8px rgba(255,255,255,0.3)' : 'none',
+                      }}
+                      title={`${fmtDate(day.date)}: ${day.count} commits`}
+                      onClick={() => day.count > 0 && setSelectedDay(selectedDay === day.date ? null : day.date)}
                     />
-                  </div>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Top days */}
-          {topDays.length > 0 && (
-            <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h2 className="projects-card-title">Dias mais produtivos</h2>
-              <div className="projects-top-list" style={{ gap: '8px' }}>
-                {topDays.map((d, i) => (
-                  <div key={d.date} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>
-                      <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{fmtDate(d.date)}</span>
+        {/* Detalhe do dia selecionado */}
+        {selectedDay && (
+          <div style={{ marginTop: '12px', background: 'color-mix(in srgb, var(--color-surface) 60%, black)', borderRadius: '6px', padding: '10px 14px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={14} color="var(--color-primary)" />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtDate(selectedDay)}</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-primary)', background: 'color-mix(in srgb, var(--color-primary) 15%, transparent)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                  {selectedDayCommits.length} commits
+                </span>
+              </div>
+              <button
+                type="button"
+                className="projects-btn"
+                style={{ padding: '2px 6px', border: 'none', background: 'transparent' }}
+                onClick={() => setSelectedDay(null)}
+                aria-label="Fechar detalhe"
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
+              {selectedDayCommits.sort((a, b) => (b.time ?? '').localeCompare(a.time ?? '')).map((c, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '55px 120px 1fr 60px', gap: '8px', alignItems: 'center', background: 'var(--bg-primary)', padding: '4px 10px', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                  <CommitTypeBadge type={c.type} size="xs" />
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{c.repo}</span>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.msg}</span>
+                  {c.time && <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', textAlign: 'right', fontFamily: 'monospace' }}>{c.time}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bloco 2: 3 Colunas Analíticas Preenchendo 1920x1080 */}
+      <div className="projects-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '12px', alignItems: 'stretch' }}>
+        
+        {/* Coluna 1: Resumo Mensal & Dias Mais Produtivos */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="projects-dashboard-card" style={{ flex: 1, padding: '12px 14px' }}>
+            <h2 className="projects-card-title" style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Calendar size={14} color="var(--color-primary)" />
+              <span>Resumo Mensal</span>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+              {monthlyData.map(m => {
+                const maxMonth = Math.max(1, ...monthlyData.map(x => x.commits))
+                const barWidth = Math.min(100, Math.round((m.commits / maxMonth) * 100))
+                return (
+                  <div key={m.month} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{m.month}</span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
+                        <span style={{ color: 'var(--color-primary)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{m.commits}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{m.days}d atv</span>
+                      </div>
                     </div>
-                    <span style={{ color: 'var(--accent-yellow)', fontWeight: 600, fontSize: '14px' }}>{d.count} commits</span>
+                    <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${barWidth}%`, height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {topDays.length > 0 && (
+            <div className="projects-dashboard-card" style={{ padding: '12px 14px' }}>
+              <h2 className="projects-card-title" style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Trophy size={14} color="#eab308" />
+                <span>Dias Mais Produtivos</span>
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {topDays.map((d, i) => (
+                  <div key={d.date} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '10.5px', width: '18px', fontWeight: 700 }}>#{i + 1}</span>
+                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)' }}>{fmtDate(d.date)}</span>
+                    </div>
+                    <span style={{ color: '#eab308', fontWeight: 700, fontSize: '11.5px', fontVariantNumeric: 'tabular-nums' }}>{d.count} commits</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* Coluna 2: Distribuição por Dia da Semana (Seg-Dom) */}
+        <div className="projects-dashboard-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' }}>
+          <h2 className="projects-card-title" style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} color="var(--color-primary)" />
+            <span>Distribuição por Dia da Semana</span>
+          </h2>
+          <p style={{ margin: '0 0 14px 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+            Volume acumulado de commits ao longo dos 365 dias
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'space-around' }}>
+            {weekdayTotals.map(w => (
+              <div key={w.label} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', width: '35px' }}>{w.label}</span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--color-primary)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                      {w.count.toLocaleString('pt-BR')}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '10.5px', width: '28px', textAlign: 'right' }}>
+                      {w.sharePct}%
+                    </span>
+                  </div>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${w.barPct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary), #38bdf8)', borderRadius: '3px' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coluna 3: Ranking de Repositórios Mais Trabalhados */}
+        <div className="projects-dashboard-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' }}>
+          <h2 className="projects-card-title" style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FolderGit2 size={14} color="var(--color-primary)" />
+            <span>Top Projetos no Período</span>
+          </h2>
+          <p style={{ margin: '0 0 12px 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+            Repositórios que mais receberam entregas no ano
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+            {topReposInPeriod.map((r, i) => (
+              <div
+                key={`${r.group}/${r.repo}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  padding: '7px 10px',
+                  background: 'color-mix(in srgb, var(--color-surface) 60%, black)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '10.5px', fontWeight: 700, width: '16px' }}>#{i + 1}</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.repo}
+                    </span>
+                    <span style={{ fontSize: '9.5px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px' }}>
+                      {r.group}
+                    </span>
+                  </div>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 700, fontSize: '11.5px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                    {r.count} commits
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: `${r.pct}%`, height: '100%', backgroundColor: 'var(--color-primary)', borderRadius: '2px' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   )

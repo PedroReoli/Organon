@@ -1,16 +1,12 @@
 import React from 'react'
 import { X, Trophy } from 'lucide-react'
 import type { WeekReport } from '@types'
+import { getCommitTypeColor } from '../constants/commitTypes'
 
 interface AllWeeksPanelProps {
   reports: WeekReport[]
   onSelectWeek: (index: number) => void
   onClose: () => void
-}
-
-const TYPE_COLORS: Record<string, string> = {
-  feat: '#22c55e', fix: '#ef4444', refactor: 'var(--color-primary)', chore: '#94a3b8',
-  docs: '#60a5fa', perf: '#f59e0b', other: '#6b7280',
 }
 
 export const AllWeeksPanel: React.FC<AllWeeksPanelProps> = ({ reports, onSelectWeek, onClose }) => {
@@ -67,7 +63,7 @@ export const AllWeeksPanel: React.FC<AllWeeksPanelProps> = ({ reports, onSelectW
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     {topTypes.map(([t, v]) => (
                       <div key={t} style={{ position: 'relative', height: '14px', background: 'var(--bg-secondary)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${(v / maxType) * 100}%`, backgroundColor: TYPE_COLORS[t] ?? '#6b7280', opacity: 0.6 }} />
+                        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${(v / maxType) * 100}%`, backgroundColor: getCommitTypeColor(t), opacity: 0.6 }} />
                         <span style={{ position: 'absolute', top: 0, left: '4px', bottom: 0, display: 'flex', alignItems: 'center', fontSize: '9px', fontWeight: 600, color: 'var(--text-primary)' }}>{t}</span>
                       </div>
                     ))}
