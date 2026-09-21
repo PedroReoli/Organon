@@ -139,24 +139,34 @@ export const ProjectsSidebar: React.FC<ProjectsSidebarProps> = ({
     >
       {/* Brand Header */}
       <div className="projects-sidebar-brand">
-        <div className="projects-sidebar-brand-left">
-          <div className="projects-sidebar-brand-icon">
-            <FolderGit2 size={16} />
-          </div>
-          {!isCollapsed && (
-            <span className="projects-sidebar-brand-title">Projetos & Git</span>
-          )}
-        </div>
+        {!isCollapsed ? (
+          <>
+            <div className="projects-sidebar-brand-left">
+              <div className="projects-sidebar-brand-icon">
+                <FolderGit2 size={15} />
+              </div>
+              <span className="projects-sidebar-brand-title">Projetos & Git</span>
+            </div>
 
-        <button
-          type="button"
-          className="projects-icon-btn"
-          style={{ width: 24, height: 24 }}
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-        >
-          {isCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-        </button>
+            <button
+              type="button"
+              className="projects-icon-btn projects-sidebar-toggle-btn"
+              onClick={() => setIsCollapsed(true)}
+              title="Recolher barra lateral"
+            >
+              <PanelLeftClose size={14} />
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="projects-sidebar-expand-rail-btn"
+            onClick={() => setIsCollapsed(false)}
+            title="Expandir barra lateral"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
       </div>
 
       {/* Nav Items grouped */}

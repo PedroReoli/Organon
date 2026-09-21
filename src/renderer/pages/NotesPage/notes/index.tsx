@@ -19,6 +19,7 @@ import { NotesTreeManagerModal } from './NotesTreeManagerModal'
 import type { NotesViewProps } from '@types'
 import type { NoteBookmark } from '@types'
 import { Button } from '@shared/components/primitives'
+import { PanelLeftOpen } from 'lucide-react'
 
 export const NotesView = ({
   notes, folders,
@@ -261,6 +262,36 @@ export const NotesView = ({
       )}
 
       <div className="projects-content-wrapper" style={{ position: 'relative' }}>
+        {/* Botão de Expandir Barra Lateral quando recolhida */}
+        {isSidebarCollapsed && (
+          <button
+            type="button"
+            onClick={() => tree.setSidebarOpen(true)}
+            title="Expandir barra lateral (Notas e Pastas)"
+            className="notes-floating-sidebar-toggle"
+            style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              zIndex: 35,
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
+
         {/* Lixeira View ou Home/Editor */}
         {showTrash ? (
           <NotesTrashView
