@@ -217,31 +217,40 @@ function runScript(scriptName) {
   const isWin = process.platform === 'win32';
   let child;
 
-  if (scriptName === 'dev' || scriptName === 'full') {
-    child = spawn(process.execPath, [path.resolve(__dirname, 'dev-app.cjs')], {
-      stdio: 'inherit',
-      cwd: path.resolve(__dirname, '..'),
-      env: { ...process.env, NODE_NO_WARNINGS: '1' }
-    });
-  } else if (scriptName === 'install:all') {
-    child = spawn(process.execPath, [path.resolve(__dirname, 'install-all.cjs')], {
-      stdio: 'inherit',
-      cwd: path.resolve(__dirname, '..'),
-      env: { ...process.env, NODE_NO_WARNINGS: '1' }
-    });
-  } else if (scriptName === 'bump' || scriptName === 'bump:v') {
-    child = spawn(process.execPath, [path.resolve(__dirname, 'bump-version.js')], {
-      stdio: 'inherit',
-      cwd: path.resolve(__dirname, '..'),
-      env: { ...process.env, NODE_NO_WARNINGS: '1' }
-    });
-  } else {
-    const npmCmd = isWin ? 'npm.cmd' : 'npm';
-    child = spawn(npmCmd, ['run', scriptName], {
-      stdio: 'inherit',
-      cwd: path.resolve(__dirname, '..'),
-      env: { ...process.env, NODE_NO_WARNINGS: '1' }
-    });
+  try {
+    if (scriptName === 'dev' || scriptName === 'full') {
+      child = spawn(process.execPath, [path.resolve(__dirname, 'dev-app.cjs')], {
+        stdio: 'inherit',
+        cwd: path.resolve(__dirname, '..'),
+        shell: isWin,
+        env: { ...process.env, NODE_NO_WARNINGS: '1' }
+      });
+    } else if (scriptName === 'install:all') {
+      child = spawn(process.execPath, [path.resolve(__dirname, 'install-all.cjs')], {
+        stdio: 'inherit',
+        cwd: path.resolve(__dirname, '..'),
+        shell: isWin,
+        env: { ...process.env, NODE_NO_WARNINGS: '1' }
+      });
+    } else if (scriptName === 'bump' || scriptName === 'bump:v') {
+      child = spawn(process.execPath, [path.resolve(__dirname, 'bump-version.js')], {
+        stdio: 'inherit',
+        cwd: path.resolve(__dirname, '..'),
+        shell: isWin,
+        env: { ...process.env, NODE_NO_WARNINGS: '1' }
+      });
+    } else {
+      const npmCmd = isWin ? 'npm.cmd' : 'npm';
+      child = spawn(npmCmd, ['run', scriptName], {
+        stdio: 'inherit',
+        cwd: path.resolve(__dirname, '..'),
+        shell: true,
+        env: { ...process.env, NODE_NO_WARNINGS: '1' }
+      });
+    }
+  } catch (err) {
+    console.error(`\n${c.brightRed}Erro ao disparar processo: ${err.message}${c.reset}`);
+    return;
   }
 
   child.on('close', (code) => {
