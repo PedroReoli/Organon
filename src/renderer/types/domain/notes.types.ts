@@ -27,6 +27,11 @@ export interface Note {
   deletedAt?: string | null
   deletedFromFolderId?: string | null
   bookmarks?: NoteBookmark[]
+  icon?: string | null
+  cover?: string | null
+  fontFamily?: 'sans' | 'serif' | 'mono'
+  isSmallText?: boolean
+  isFullWidth?: boolean
 }
 
 export const NOTE_TRASH_RETENTION_DAYS = 30

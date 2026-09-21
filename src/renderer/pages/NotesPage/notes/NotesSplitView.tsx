@@ -52,6 +52,7 @@ export const NotesSplitView: React.FC<NotesSplitViewProps> = ({
               content={primaryContent}
               onChange={html => onPrimaryContentChange(primaryNote.id, html)}
               mode="full"
+              hideToolbar={true}
               placeholder="Edite a nota principal..."
             />
           </div>

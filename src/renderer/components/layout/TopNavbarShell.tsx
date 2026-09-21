@@ -79,7 +79,7 @@ export const TopNavbarShell: React.FC<Props> = ({
       {/* ========================================================
           FLANCO ESQUERDO: LOGO ORGANON COM HOVER SUAVE
           ======================================================== */}
-      <div className="flex items-center min-w-[140px]">
+      <div className="flex items-center shrink-0">
         <button
           type="button"
           onClick={onNavigateHome}
@@ -106,7 +106,7 @@ export const TopNavbarShell: React.FC<Props> = ({
       {/* ========================================================
           ZONA CENTRAL: MÓDULOS PRINCIPAIS DE NAVEGAÇÃO
           ======================================================== */}
-      <div className="flex items-center justify-center flex-1">
+      <div className="flex items-center justify-center flex-1 min-w-0 overflow-x-auto no-scrollbar">
         {onNavigateView && (
           <nav className="flex items-center gap-1">
             {mainNavItems.map((item) => {
@@ -116,6 +116,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                   key={item.view}
                   type="button"
                   onClick={() => onNavigateView(item.view)}
+                  title={item.label}
                   style={{
                     background: isActive
                       ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
@@ -125,7 +126,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                       : 'transparent',
                     color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   }}
-                  className="group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[12.5px] font-semibold tracking-normal transition-all duration-150 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-white/[0.08]"
+                  className="group relative flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg border text-[12px] sm:text-[12.5px] font-semibold tracking-normal transition-all duration-150 cursor-pointer hover:text-[var(--color-text)] hover:bg-white/[0.05] hover:border-white/[0.08] shrink-0"
                 >
                   <span
                     style={{ color: isActive ? 'var(--color-primary)' : 'inherit' }}
@@ -133,7 +134,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                   >
                     {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  <span className="hidden md:inline">{item.label}</span>
                 </button>
               )
             })}
@@ -144,7 +145,7 @@ export const TopNavbarShell: React.FC<Props> = ({
       {/* ========================================================
           FLANCO DIREITO: FERRAMENTAS + HERO CTA + CONFIGS
           ======================================================== */}
-      <div className="flex items-center justify-end gap-2 min-w-[140px]">
+      <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
         {/* BOTÃO DE BUSCA (CMD+K) */}
         <button
           type="button"
@@ -155,16 +156,16 @@ export const TopNavbarShell: React.FC<Props> = ({
             background: 'color-mix(in srgb, var(--color-background) 70%, var(--color-surface))',
             color: 'var(--color-text-muted)',
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer hover:text-[var(--color-text)] hover:border-[var(--color-primary)] transition-all"
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer hover:text-[var(--color-text)] hover:border-[var(--color-primary)] transition-all"
         >
           <MagnifyingGlass size={14} weight="bold" className="text-[var(--color-primary)]" />
-          <span className="text-[11.5px] font-semibold">Busca</span>
+          <span className="text-[11.5px] font-semibold hidden sm:inline">Busca</span>
           <kbd
             style={{
               background: 'var(--color-surface)',
               borderColor: 'var(--color-border)',
             }}
-            className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-bold ml-0.5"
+            className="text-[9px] font-mono px-1 py-0.2 rounded border leading-none font-bold ml-0.5 hidden sm:inline"
           >
             ⌘K
           </kbd>
@@ -201,7 +202,7 @@ export const TopNavbarShell: React.FC<Props> = ({
             background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
             color: 'var(--color-text-muted)',
           }}
-          className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
+          className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center hidden xs:flex"
         >
           <WifiHigh size={16} weight="duotone" />
         </button>
@@ -217,7 +218,7 @@ export const TopNavbarShell: React.FC<Props> = ({
               background: 'color-mix(in srgb, var(--color-background) 60%, var(--color-surface))',
               color: 'var(--color-text-muted)',
             }}
-            className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center"
+            className="p-1.5 rounded-lg border hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer flex items-center justify-center hidden sm:flex"
           >
             <Microphone size={16} weight="duotone" />
           </button>
@@ -234,10 +235,10 @@ export const TopNavbarShell: React.FC<Props> = ({
                 color: 'var(--color-primary-text, #ffffff)',
                 boxShadow: '0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent)',
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tracking-normal transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[12px] font-bold tracking-normal transition-all duration-200 hover:brightness-110 hover:shadow-md active:scale-95 cursor-pointer"
             >
               <Plus size={14} weight="bold" />
-              <span>Nova Tarefa</span>
+              <span className="hidden sm:inline">Nova Tarefa</span>
             </button>
 
             {onNewNote && (

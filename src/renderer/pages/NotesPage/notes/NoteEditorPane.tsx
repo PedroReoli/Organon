@@ -6,26 +6,34 @@ import { organonApi } from '../../../../api/organon'
 import { NoteExportModal } from './NoteExportModal'
 import { NoteAutoSaveIndicator } from './NoteAutoSaveIndicator'
 import type { AutoSaveStatus } from './NoteAutoSaveIndicator'
+import { PageCustomizationMenu, type NoteFontFamily } from '../editor/menus/PageCustomizationMenu'
 import {
-  Download,
   Folder,
   FileText,
   Star,
   Pin,
   Lock,
-  Unlock,
-  Trash2,
   Plus,
-  History,
   ListTree,
   Link2,
   Bookmark,
   ChevronRight,
   Tag,
   X,
-  AlignJustify,
-  ArrowLeftRight
+  MoreHorizontal,
+  Smile,
+  Image as ImageIcon,
 } from 'lucide-react'
+
+const EMOJI_PRESETS = ['📝', '💡', '🚀', '⭐', '🎯', '📂', '🔥', '⚡', '🧠', '💻', '🎨', '📚', '⚙️', '✨', '🔒', '📊', '🌐', '☕', '🏷️', '💎']
+const COVER_PRESETS = [
+  { label: 'Aurora', value: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)' },
+  { label: 'Midnight', value: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)' },
+  { label: 'Esmeralda', value: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%)' },
+  { label: 'Sunset', value: 'linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%)' },
+  { label: 'Cyberpunk', value: 'linear-gradient(135deg, #0891b2 0%, #4f46e5 50%, #9333ea 100%)' },
+  { label: 'Ruby', value: 'linear-gradient(135deg, #881337 0%, #be123c 50%, #f43f5e 100%)' },
+]
 
 interface NoteRevision {
   id: string
@@ -101,17 +109,72 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
 }) => {
   const [newTagInput, setNewTagInput] = useState('')
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [isCustomMenuOpen, setIsCustomMenuOpen] = useState(false)
+  const [fontFamily, setFontFamily] = useState<NoteFontFamily>(() => {
+    return (localStorage.getItem('organon_notes_font') as NoteFontFamily) || (selectedNote.fontFamily as NoteFontFamily) || 'sans'
+  })
+  const [isSmallText, setIsSmallText] = useState<boolean>(() => {
+    return localStorage.getItem('organon_notes_smalltext') === 'true' || !!selectedNote.isSmallText
+  })
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false)
+  const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false)
+  const [customCoverUrl, setCustomCoverUrl] = useState('')
+
   const [isFullWidth, setIsFullWidth] = useState<boolean>(() => {
-    return localStorage.getItem('organon_notes_fullwidth') === 'true'
+    return localStorage.getItem('organon_notes_fullwidth') === 'true' || !!selectedNote.isFullWidth
   })
 
   const toggleFullWidth = useCallback(() => {
     setIsFullWidth(prev => {
       const next = !prev
       localStorage.setItem('organon_notes_fullwidth', String(next))
+      if (onUpdateNote) onUpdateNote(selectedNote.id, { isFullWidth: next })
+      return next
+    })
+  }, [onUpdateNote, selectedNote.id])
+
+  const handleChangeFontFamily = useCallback((font: NoteFontFamily) => {
+    setFontFamily(font)
+    localStorage.setItem('organon_notes_font', font)
+    if (onUpdateNote) onUpdateNote(selectedNote.id, { fontFamily: font })
+  }, [onUpdateNote, selectedNote.id])
+
+  const [showFixedToolbar, setShowFixedToolbar] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('organon_notes_show_toolbar') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const handleToggleFixedToolbar = useCallback(() => {
+    setShowFixedToolbar(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('organon_notes_show_toolbar', String(next))
+      } catch {}
       return next
     })
   }, [])
+
+  const handleToggleSmallText = useCallback(() => {
+    setIsSmallText(prev => {
+      const next = !prev
+      localStorage.setItem('organon_notes_smalltext', String(next))
+      if (onUpdateNote) onUpdateNote(selectedNote.id, { isSmallText: next })
+      return next
+    })
+  }, [onUpdateNote, selectedNote.id])
+
+  const handleSetIcon = useCallback((icon: string | null) => {
+    if (onUpdateNote) onUpdateNote(selectedNote.id, { icon })
+    setIsIconPickerOpen(false)
+  }, [onUpdateNote, selectedNote.id])
+
+  const handleSetCover = useCallback((cover: string | null) => {
+    if (onUpdateNote) onUpdateNote(selectedNote.id, { cover })
+    setIsCoverPickerOpen(false)
+  }, [onUpdateNote, selectedNote.id])
 
   const handleAddTag = useCallback(() => {
     const tag = newTagInput.trim().replace(/^#/, '')
@@ -188,274 +251,161 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
       className="w-full h-full flex flex-col overflow-hidden relative"
     >
       {/* ========================================================
-          STICKY TOP TOOLBAR & HEADER DA NOTA (COLADA NO TOPO)
+          STICKY TOP TOOLBAR (NOTION-STYLE BREADCRUMBS & ACTIONS)
           ======================================================== */}
       <div
         style={{
-          background: 'color-mix(in srgb, var(--color-background) 80%, transparent)',
+          background: 'color-mix(in srgb, var(--color-background) 85%, transparent)',
           borderColor: 'color-mix(in srgb, var(--color-border) 40%, transparent)',
         }}
-        className="sticky top-0 z-20 border-b px-4 py-2.5 space-y-2 shrink-0 select-none backdrop-blur-md"
+        className="sticky top-0 z-20 border-b px-4 py-2 flex items-center justify-between gap-3 text-xs shrink-0 select-none backdrop-blur-md"
       >
-        {/* LINHA 1: BREADCRUMBS & FERRAMENTAS DE ESTRUTURA */}
-        <div className="flex items-center justify-between gap-3 text-xs">
-          {/* Breadcrumb Path */}
-          <div className="flex items-center gap-1.5 text-[var(--color-text-muted)] truncate flex-1 min-w-0">
-            {noteBreadcrumb.map((part: BreadcrumbPart) => (
-              <React.Fragment key={part.id}>
-                <button
-                  type="button"
-                  onClick={() => part.kind === 'note' ? onOpenNote(part.id || '') : onOpenFolder(part.id || '')}
-                  className="flex items-center gap-1 hover:text-[var(--color-text)] transition-colors truncate max-w-[140px] cursor-pointer"
-                >
-                  {part.kind === 'folder' ? (
-                    <Folder className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
-                  ) : (
-                    <FileText className="w-3.5 h-3.5 shrink-0" />
-                  )}
-                  <span className="truncate">{part.label}</span>
-                </button>
-                <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
-              </React.Fragment>
-            ))}
-            <span className="font-semibold text-[var(--color-text)] truncate max-w-[200px]">
-              {selectedNote.title || 'Sem título'}
-            </span>
-          </div>
-
-          {/* Ferramentas de Conteúdo: Sumário, Backlinks, Grafo, Bookmarks, AutoSave */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
-
-            <div className="h-3.5 w-px bg-neutral-700/30 mx-1" />
-
-            {onToggleOutline && (
+        {/* Breadcrumbs Path */}
+        <div className="flex items-center gap-1.5 text-[var(--color-text-muted)] truncate flex-1 min-w-0">
+          {noteBreadcrumb.map((part: BreadcrumbPart) => (
+            <React.Fragment key={part.id}>
               <button
                 type="button"
-                onClick={onToggleOutline}
-                title="Sumário de Tópicos / Outline (Ctrl+Shift+O)"
-                style={{
-                  background: showOutline ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
-                  color: showOutline ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                }}
-                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                onClick={() => part.kind === 'note' ? onOpenNote(part.id || '') : onOpenFolder(part.id || '')}
+                className="flex items-center gap-1 hover:text-[var(--color-text)] transition-colors truncate max-w-[140px] cursor-pointer"
               >
-                <ListTree className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sumário</span>
+                {part.kind === 'folder' ? (
+                  <Folder className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
+                )}
+                <span className="truncate">{part.label}</span>
               </button>
-            )}
-
-            {onToggleBacklinksPanel && (
-              <button
-                type="button"
-                onClick={onToggleBacklinksPanel}
-                title="Visualizar Backlinks / Conexões"
-                style={{
-                  background: showBacklinks ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
-                  color: showBacklinks ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                }}
-                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
-              >
-                <Link2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Backlinks</span>
-              </button>
-            )}
-
-
-
-            {onAddBookmark && (
-              <button
-                type="button"
-                onClick={onAddBookmark}
-                title="Adicionar aos Bookmarks"
-                className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
-              >
-                <Bookmark className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+              <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
+            </React.Fragment>
+          ))}
+          <span className="font-semibold text-[var(--color-text)] truncate max-w-[200px] flex items-center gap-1.5">
+            {selectedNote.icon && <span className="text-sm">{selectedNote.icon}</span>}
+            <span>{selectedNote.title || 'Sem título'}</span>
+          </span>
         </div>
 
-        {/* LINHA 2: TÍTULO DA NOTA & AÇÕES PRINCIPAIS */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            <input
-              ref={titleInputRef}
-              className={`w-full text-xl sm:text-2xl font-black tracking-tight text-[var(--color-text)] bg-transparent outline-none ${selectedNoteLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
-              value={noteTitle}
-              onChange={e => setNoteTitle(e.target.value)}
-              onBlur={onTitleBlur}
-              placeholder="Título da nota..."
-              readOnly={selectedNoteLocked}
-            />
-            {selectedNoteLocked && (
-              <span className="text-rose-400 p-1 rounded bg-rose-500/10 shrink-0" title="Nota trancada">
-                <Lock className="w-4 h-4" />
-              </span>
-            )}
-          </div>
+        {/* Quick Actions & Menu ··· */}
+        <div className="flex items-center gap-1 shrink-0 relative">
+          <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
 
-          {/* Grupo de Ações da Nota */}
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Favorito ⭐ */}
+          <div className="h-3.5 w-px bg-white/10 mx-1 hidden sm:block" />
+
+          {onToggleOutline && (
             <button
               type="button"
-              onClick={() => onToggleFavorite(selectedNote.id)}
-              title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Favoritar nota'}
+              onClick={onToggleOutline}
+              title="Sumário de Tópicos (Ctrl+Shift+O)"
               style={{
-                color: selectedNote.isFavorite ? '#f59e0b' : 'var(--color-text-muted)',
-                background: selectedNote.isFavorite ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
-              disabled={selectedNoteLocked}
-            >
-              <Star className={`w-4 h-4 ${selectedNote.isFavorite ? 'fill-amber-500' : ''}`} />
-            </button>
-
-            {/* Fixar 📌 */}
-            <button
-              type="button"
-              onClick={() => onTogglePinned(selectedNote.id)}
-              title={selectedNote.isPinned ? 'Desafixar nota' : 'Fixar nota'}
-              style={{
-                color: selectedNote.isPinned ? '#10b981' : 'var(--color-text-muted)',
-                background: selectedNote.isPinned ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
-              disabled={selectedNoteLocked}
-            >
-              <Pin className="w-4 h-4" />
-            </button>
-
-            {/* Trancar 🔒 */}
-            <button
-              type="button"
-              onClick={() => onToggleLock(selectedNote.id)}
-              title={selectedNoteLocked ? 'Destrancar nota' : 'Proteger nota com trava'}
-              style={{
-                color: selectedNoteLocked ? '#f43f5e' : 'var(--color-text-muted)',
-                background: selectedNoteLocked ? 'rgba(244, 63, 94, 0.12)' : 'transparent',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
-            >
-              {selectedNoteLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-            </button>
-
-            {/* Histórico 🕒 */}
-            <button
-              type="button"
-              onClick={toggleHistory}
-              title="Histórico de revisões"
-              style={{
-                color: historyOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                background: historyOpen ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : 'transparent',
-              }}
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
-            >
-              <History className="w-4 h-4" />
-            </button>
-
-            {/* Nova Subpágina */}
-            <button
-              type="button"
-              onClick={() => onAddNote(selectedNote.folderId, selectedNote.id)}
-              title="Criar nova subpágina"
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
-              disabled={selectedNoteLocked}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-
-            {/* Exportar .md / PDF */}
-            <button
-              type="button"
-              onClick={() => setExportModalOpen(true)}
-              title="Exportar Nota (.md, PDF, Texto)"
-              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-
-            {/* Alternar Largura: Centralizado vs Full Width (Notion) */}
-            <button
-              type="button"
-              onClick={toggleFullWidth}
-              title={isFullWidth ? 'Modo Centralizado (Notion)' : 'Modo Largura Total (Full Width)'}
-              style={{
-                color: isFullWidth ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                background: isFullWidth ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : 'transparent',
+                background: showOutline ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
+                color: showOutline ? 'var(--color-primary)' : 'var(--color-text-muted)',
               }}
               className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
             >
-              {isFullWidth ? <ArrowLeftRight className="w-4 h-4" /> : <AlignJustify className="w-4 h-4" />}
-              <span className="hidden sm:inline">{isFullWidth ? 'Full Width' : 'Centralizado'}</span>
+              <ListTree className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sumário</span>
             </button>
-
-            {/* Excluir Nota */}
-            <button
-              type="button"
-              onClick={() => onRequestDelete(selectedNote.id)}
-              title="Mover para Lixeira"
-              className="p-1.5 rounded-lg border border-transparent hover:border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-              disabled={selectedNoteLocked}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* LINHA 3: TAGS & METADADOS DA NOTA */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
-          <Tag className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0 opacity-70" />
-
-          {/* Chips de Tags */}
-          {(selectedNote.tags || []).map((tag: string) => (
-            <span
-              key={tag}
-              style={{
-                background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-                color: 'var(--color-primary)',
-                borderColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold"
-            >
-              <span>#{tag}</span>
-              {!selectedNoteLocked && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="hover:text-rose-400 cursor-pointer text-xs ml-0.5"
-                  title="Remover tag"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </span>
-          ))}
-
-          {/* Input para adicionar nova tag */}
-          {!selectedNoteLocked && (
-            <div className="flex items-center">
-              <input
-                type="text"
-                value={newTagInput}
-                onChange={e => setNewTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddTag() }}
-                placeholder="+ Tag..."
-                style={{
-                  background: 'color-mix(in srgb, var(--color-background) 80%, var(--color-surface))',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text)',
-                }}
-                className="px-2 py-0.5 rounded-full border text-[11px] outline-none w-20 focus:w-28 focus:border-[var(--color-primary)] transition-all font-medium"
-              />
-            </div>
           )}
 
-          {/* Word count & Reading time indicator */}
-          <div className="ml-auto text-[11px] text-[var(--color-text-muted)] font-medium">
-            {wordCount} palavras • ~{readingTime} min
-          </div>
+          {onToggleBacklinksPanel && (
+            <button
+              type="button"
+              onClick={onToggleBacklinksPanel}
+              title="Visualizar Backlinks / Conexões"
+              style={{
+                background: showBacklinks ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
+                color: showBacklinks ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] hover:text-[var(--color-text)] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Backlinks</span>
+            </button>
+          )}
+
+          {onAddBookmark && (
+            <button
+              type="button"
+              onClick={onAddBookmark}
+              title="Adicionar aos Bookmarks"
+              className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer hidden sm:flex"
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Favorito ⭐ */}
+          <button
+            type="button"
+            onClick={() => onToggleFavorite(selectedNote.id)}
+            title={selectedNote.isFavorite ? 'Remover dos favoritos' : 'Favoritar nota'}
+            style={{
+              color: selectedNote.isFavorite ? '#f59e0b' : 'var(--color-text-muted)',
+              background: selectedNote.isFavorite ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
+            }}
+            className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+            disabled={selectedNoteLocked}
+          >
+            <Star className={`w-3.5 h-3.5 ${selectedNote.isFavorite ? 'fill-amber-500' : ''}`} />
+          </button>
+
+          {/* Fixar 📌 */}
+          <button
+            type="button"
+            onClick={() => onTogglePinned(selectedNote.id)}
+            title={selectedNote.isPinned ? 'Desafixar nota' : 'Fixar nota'}
+            style={{
+              color: selectedNote.isPinned ? '#10b981' : 'var(--color-text-muted)',
+              background: selectedNote.isPinned ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+            }}
+            className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] transition-all cursor-pointer"
+            disabled={selectedNoteLocked}
+          >
+            <Pin className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Nova Subpágina */}
+          <button
+            type="button"
+            onClick={() => onAddNote(selectedNote.folderId, selectedNote.id)}
+            title="Criar nova subpágina"
+            className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+            disabled={selectedNoteLocked}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Menu Customização Notion (···) */}
+          <button
+            type="button"
+            onClick={() => setIsCustomMenuOpen(prev => !prev)}
+            title="Opções da Página & Estilo"
+            style={{
+              background: isCustomMenuOpen ? 'rgba(255,255,255,0.1)' : 'transparent',
+            }}
+            className="p-1.5 rounded-lg border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all cursor-pointer"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+
+          {/* Popover Menu Customização */}
+          <PageCustomizationMenu
+            isOpen={isCustomMenuOpen}
+            onClose={() => setIsCustomMenuOpen(false)}
+            fontFamily={fontFamily}
+            onChangeFontFamily={handleChangeFontFamily}
+            isSmallText={isSmallText}
+            onToggleSmallText={handleToggleSmallText}
+            isFullWidth={isFullWidth}
+            onToggleFullWidth={toggleFullWidth}
+            showFixedToolbar={showFixedToolbar}
+            onToggleFixedToolbar={handleToggleFixedToolbar}
+            isLocked={selectedNoteLocked}
+            onToggleLock={() => onToggleLock(selectedNote.id)}
+            onOpenHistory={toggleHistory}
+            onOpenExport={() => setExportModalOpen(true)}
+            onDelete={() => onRequestDelete(selectedNote.id)}
+          />
         </div>
       </div>
 
@@ -468,7 +418,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
             background: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
           }}
-          className="p-3 border-b space-y-2 text-xs"
+          className="p-3 border-b space-y-2 text-xs select-none"
         >
           <div className="flex items-center justify-between font-bold text-[var(--color-text)]">
             <span>Histórico de Versões</span>
@@ -478,7 +428,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
                 setHistoryOpen(false)
                 setPreviewRevision(null)
               }}
-              className="text-[var(--color-text-muted)] hover:text-white"
+              className="text-[var(--color-text-muted)] hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -491,7 +441,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
                 <button
                   type="button"
                   onClick={() => setPreviewRevision(null)}
-                  className="text-xs text-[var(--color-primary)] font-bold hover:underline"
+                  className="text-xs text-[var(--color-primary)] font-bold hover:underline cursor-pointer"
                 >
                   ← Voltar para lista
                 </button>
@@ -525,20 +475,308 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
       )}
 
       {/* ========================================================
-          CORPO DO EDITOR PRINCIPAL (NOTION STYLE - TRANSPARENTE E CENTRALIZADO)
+          CORPO DO CANVAS NOTION (SCROLL PRINCIPAL)
           ======================================================== */}
       <div className="flex-1 overflow-y-auto">
+        {/* BANNER DE CAPA (PAGE COVER) */}
+        {selectedNote.cover && (
+          <div
+            style={{
+              background: selectedNote.cover.startsWith('http') || selectedNote.cover.startsWith('data:')
+                ? `url(${selectedNote.cover}) center/cover no-repeat`
+                : selectedNote.cover,
+            }}
+            className="w-full h-36 sm:h-44 relative group/cover transition-all"
+          >
+            {!selectedNoteLocked && (
+              <div className="absolute right-4 bottom-3 flex items-center gap-1.5 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => setIsCoverPickerOpen(prev => !prev)}
+                  className="px-2.5 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <ImageIcon size={12} />
+                  <span>Mudar Capa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetCover(null)}
+                  className="px-2 py-1 rounded-md bg-black/60 hover:bg-rose-900/80 text-rose-300 text-[11px] font-medium backdrop-blur-xs transition-all cursor-pointer"
+                  title="Remover Capa"
+                >
+                  Remover
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTAINER DO DOCUMENTO */}
         <div className={`transition-all duration-200 py-6 ${isFullWidth ? 'w-full max-w-none px-6 sm:px-12' : 'max-w-3xl mx-auto w-full px-4 sm:px-8'}`}>
-          <WysiwygEditor
-            content={noteContent}
-            onChange={(html) => onContentChange(selectedNote.id, html)}
-            readOnly={selectedNoteLocked}
-            placeholder="Comece a escrever sua nota... Digite / para comandos ou selecione texto para formatar."
-            mode="full"
-            currentNoteId={selectedNote.id}
-            noteTitlesById={noteTitlesById}
-            onNoteMentionClick={onOpenNote}
-          />
+          {/* HEADER DE CONTROLES: ÍCONE & HOVER ACTIONS */}
+          <div className="relative group/headerActions mb-2">
+            {/* Ícone da Página */}
+            {selectedNote.icon ? (
+              <div className={`relative inline-block ${selectedNote.cover ? '-mt-12 sm:-mt-14 mb-2 z-10' : 'mb-3'}`}>
+                <button
+                  type="button"
+                  onClick={() => !selectedNoteLocked && setIsIconPickerOpen(prev => !prev)}
+                  className={`text-4xl sm:text-5xl hover:scale-110 active:scale-95 transition-transform cursor-pointer p-1 rounded-xl hover:bg-white/10 ${
+                    selectedNoteLocked ? 'cursor-default' : ''
+                  }`}
+                  title={selectedNoteLocked ? '' : 'Clique para alterar o ícone'}
+                >
+                  {selectedNote.icon}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Ações de Hover: + Adicionar Ícone / + Adicionar Capa */}
+            {!selectedNoteLocked && (
+              <div
+                className={`flex items-center gap-3 text-xs text-[var(--color-text-muted)] transition-opacity mb-2 ${
+                  selectedNote.icon && selectedNote.cover
+                    ? 'opacity-0 hover:opacity-100'
+                    : 'opacity-0 group-hover/headerActions:opacity-100'
+                }`}
+              >
+                {!selectedNote.icon && (
+                  <button
+                    type="button"
+                    onClick={() => setIsIconPickerOpen(true)}
+                    className="flex items-center gap-1.5 hover:text-[var(--color-text)] hover:bg-white/5 px-2 py-1 rounded cursor-pointer transition-colors"
+                  >
+                    <Smile size={13} className="text-[var(--color-primary)]" />
+                    <span>+ Adicionar Ícone</span>
+                  </button>
+                )}
+                {!selectedNote.cover && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCoverPickerOpen(true)}
+                    className="flex items-center gap-1.5 hover:text-[var(--color-text)] hover:bg-white/5 px-2 py-1 rounded cursor-pointer transition-colors"
+                  >
+                    <ImageIcon size={13} className="text-[var(--color-primary)]" />
+                    <span>+ Adicionar Capa</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* POPOVER DO SELETOR DE ÍCONE */}
+            {isIconPickerOpen && (
+              <div
+                style={{
+                  background: 'var(--color-surface, #181f33)',
+                  borderColor: 'var(--color-border, rgba(255,255,255,0.12))',
+                  boxShadow: '0 16px 36px -8px rgba(0,0,0,0.5)',
+                }}
+                className="absolute left-0 top-12 z-30 p-3 rounded-xl border w-72 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text)] mb-2">
+                  <span>Escolha um Ícone</span>
+                  {selectedNote.icon && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetIcon(null)}
+                      className="text-rose-400 hover:underline text-[11px] cursor-pointer"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-1.5 p-1 bg-white/[0.03] rounded-lg mb-2">
+                  {EMOJI_PRESETS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleSetIcon(emoji)}
+                      className="text-xl p-1.5 rounded hover:bg-white/10 transition-transform active:scale-95 cursor-pointer text-center"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsIconPickerOpen(false)}
+                  className="w-full text-center text-xs text-slate-400 hover:text-white py-1 cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {/* POPOVER DO SELETOR DE CAPA */}
+            {isCoverPickerOpen && (
+              <div
+                style={{
+                  background: 'var(--color-surface, #181f33)',
+                  borderColor: 'var(--color-border, rgba(255,255,255,0.12))',
+                  boxShadow: '0 16px 36px -8px rgba(0,0,0,0.5)',
+                }}
+                className="absolute left-0 top-12 z-30 p-3 rounded-xl border w-80 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text)] mb-2">
+                  <span>Gradientes de Capa</span>
+                  {selectedNote.cover && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetCover(null)}
+                      className="text-rose-400 hover:underline text-[11px] cursor-pointer"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {COVER_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => handleSetCover(preset.value)}
+                      style={{ background: preset.value }}
+                      className="h-12 rounded-lg border border-white/20 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-end p-1 shadow-xs"
+                    >
+                      <span className="text-[9px] font-bold text-white drop-shadow-md truncate">
+                        {preset.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <span className="text-[11px] text-[var(--color-text-muted)]">Ou URL de imagem:</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      placeholder="https://images.unsplash..."
+                      value={customCoverUrl}
+                      onChange={(e) => setCustomCoverUrl(e.target.value)}
+                      className="flex-1 px-2 py-1 rounded border border-white/10 bg-black/20 text-xs text-white outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => customCoverUrl.trim() && handleSetCover(customCoverUrl.trim())}
+                      className="px-2.5 py-1 rounded bg-[var(--color-primary)] text-white text-xs font-bold cursor-pointer"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCoverPickerOpen(false)}
+                  className="w-full text-center text-xs text-slate-400 hover:text-white py-1 mt-2 cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* TÍTULO NATIVO NO CANVAS (SEM CARA DE FORMULÁRIO) */}
+          <div className="flex items-start gap-2 mb-3">
+            <input
+              ref={titleInputRef}
+              className={`w-full text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-text)] bg-transparent border-none outline-none py-1 placeholder:text-slate-500/30 transition-opacity ${
+                selectedNoteLocked ? 'opacity-80 cursor-not-allowed' : ''
+              }`}
+              value={noteTitle}
+              onChange={e => setNoteTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const editorDom = document.querySelector('.tiptap-editor .ProseMirror') as HTMLElement | null
+                  if (editorDom) {
+                    editorDom.focus()
+                  }
+                }
+              }}
+              onBlur={onTitleBlur}
+              placeholder="Sem título"
+              readOnly={selectedNoteLocked}
+            />
+            {selectedNoteLocked && (
+              <span className="text-rose-400 p-1 rounded bg-rose-500/10 shrink-0 mt-2" title="Nota trancada">
+                <Lock className="w-4 h-4" />
+              </span>
+            )}
+          </div>
+
+          {/* TAGS & METADADOS DA NOTA */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5 pb-4 text-xs border-b border-white/5 mb-6">
+            <Tag className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0 opacity-70" />
+
+            {/* Chips de Tags */}
+            {(selectedNote.tags || []).map((tag: string) => (
+              <span
+                key={tag}
+                style={{
+                  background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                  color: 'var(--color-primary)',
+                  borderColor: 'color-mix(in srgb, var(--color-primary) 25%, transparent)',
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold"
+              >
+                <span>#{tag}</span>
+                {!selectedNoteLocked && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="hover:text-rose-400 cursor-pointer text-xs ml-0.5"
+                    title="Remover tag"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+
+            {/* Input para adicionar nova tag */}
+            {!selectedNoteLocked && (
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={newTagInput}
+                  onChange={e => setNewTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddTag() }}
+                  placeholder="+ Tag..."
+                  style={{
+                    background: 'color-mix(in srgb, var(--color-background) 80%, var(--color-surface))',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text)',
+                  }}
+                  className="px-2 py-0.5 rounded-full border text-[11px] outline-none w-20 focus:w-28 focus:border-[var(--color-primary)] transition-all font-medium"
+                />
+              </div>
+            )}
+
+            {/* Word count & Reading time indicator */}
+            <div className="ml-auto text-[11px] text-[var(--color-text-muted)] font-medium">
+              {wordCount} palavras • ~{readingTime} min
+            </div>
+          </div>
+
+          {/* EDITOR WYSIWYG TIPOGRAFICAMENTE CONFIGURÁVEL */}
+          <div
+            className={`transition-all ${
+              fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'
+            } ${isSmallText ? 'text-[13px] leading-relaxed' : 'text-[15px] leading-relaxed'}`}
+          >
+            <WysiwygEditor
+              content={noteContent}
+              onChange={(html) => onContentChange(selectedNote.id, html)}
+              readOnly={selectedNoteLocked}
+              placeholder="Comece a escrever sua nota... Digite / para comandos ou selecione texto para formatar."
+              mode="full"
+              hideToolbar={!showFixedToolbar}
+              currentNoteId={selectedNote.id}
+              noteTitlesById={noteTitlesById}
+              onNoteMentionClick={onOpenNote}
+            />
+          </div>
 
           {/* Subpáginas Vinculadas no Rodapé */}
           {noteSubpages.length > 0 && (

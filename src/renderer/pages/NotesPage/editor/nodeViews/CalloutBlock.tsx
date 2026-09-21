@@ -3,46 +3,46 @@ import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import { Info, Lightbulb, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react'
 
-const CALLOUT_CONFIGS: Record<string, { label: string; icon: React.ReactNode; bg: string; border: string; text: string; iconColor: string }> = {
+const CALLOUT_CONFIGS: Record<string, { label: string; icon: React.ReactNode; bg: string; border: string; text: string; iconBg: string }> = {
   note: {
     label: 'Nota',
-    icon: <Info className="w-4 h-4" />,
-    bg: 'bg-blue-500/10 dark:bg-blue-950/30',
-    border: 'border-blue-500/40',
-    text: 'text-blue-600 dark:text-blue-400',
-    iconColor: 'text-blue-500'
+    icon: <Info className="w-4 h-4 text-blue-400" />,
+    bg: 'bg-blue-500/[0.08] dark:bg-blue-950/25',
+    border: 'border-blue-500/20 dark:border-blue-500/30',
+    text: 'text-blue-600 dark:text-blue-300',
+    iconBg: 'bg-blue-500/15',
   },
   tip: {
     label: 'Dica',
-    icon: <Lightbulb className="w-4 h-4" />,
-    bg: 'bg-emerald-500/10 dark:bg-emerald-950/30',
-    border: 'border-emerald-500/40',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    iconColor: 'text-emerald-500'
+    icon: <Lightbulb className="w-4 h-4 text-emerald-400" />,
+    bg: 'bg-emerald-500/[0.08] dark:bg-emerald-950/25',
+    border: 'border-emerald-500/20 dark:border-emerald-500/30',
+    text: 'text-emerald-600 dark:text-emerald-300',
+    iconBg: 'bg-emerald-500/15',
   },
   warning: {
     label: 'Atenção',
-    icon: <AlertTriangle className="w-4 h-4" />,
-    bg: 'bg-amber-500/10 dark:bg-amber-950/30',
-    border: 'border-amber-500/40',
-    text: 'text-amber-600 dark:text-amber-400',
-    iconColor: 'text-amber-500'
+    icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,
+    bg: 'bg-amber-500/[0.08] dark:bg-amber-950/25',
+    border: 'border-amber-500/20 dark:border-amber-500/30',
+    text: 'text-amber-600 dark:text-amber-300',
+    iconBg: 'bg-amber-500/15',
   },
   important: {
     label: 'Importante',
-    icon: <AlertCircle className="w-4 h-4" />,
-    bg: 'bg-rose-500/10 dark:bg-rose-950/30',
-    border: 'border-rose-500/40',
-    text: 'text-rose-600 dark:text-rose-400',
-    iconColor: 'text-rose-500'
+    icon: <AlertCircle className="w-4 h-4 text-rose-400" />,
+    bg: 'bg-rose-500/[0.08] dark:bg-rose-950/25',
+    border: 'border-rose-500/20 dark:border-rose-500/30',
+    text: 'text-rose-600 dark:text-rose-300',
+    iconBg: 'bg-rose-500/15',
   },
   success: {
     label: 'Sucesso',
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    bg: 'bg-green-500/10 dark:bg-green-950/30',
-    border: 'border-green-500/40',
-    text: 'text-green-600 dark:text-green-400',
-    iconColor: 'text-green-500'
+    icon: <CheckCircle2 className="w-4 h-4 text-green-400" />,
+    bg: 'bg-green-500/[0.08] dark:bg-green-950/25',
+    border: 'border-green-500/20 dark:border-green-500/30',
+    text: 'text-green-600 dark:text-green-300',
+    iconBg: 'bg-green-500/15',
   }
 }
 
@@ -57,19 +57,19 @@ export const CalloutBlock: React.FC<NodeViewProps> = ({ node, updateAttributes }
   }
 
   return (
-    <NodeViewWrapper className={`my-3 p-3.5 rounded-lg border-l-4 ${config.border} ${config.bg} transition-all`}>
-      <div className="flex items-center gap-2 mb-1.5 select-none" contentEditable={false}>
-        <button
-          type="button"
-          onClick={cycleType}
-          title="Clique para alternar o tipo de callout"
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${config.text} hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer`}
-        >
-          <span className={config.iconColor}>{config.icon}</span>
-          <span>{config.label}</span>
-        </button>
+    <NodeViewWrapper className={`my-3 p-3.5 rounded-xl border ${config.border} ${config.bg} flex items-start gap-3 transition-all select-text group/callout shadow-2xs`}>
+      <button
+        type="button"
+        onClick={cycleType}
+        contentEditable={false}
+        title="Clique para alternar o tipo de callout (Nota, Dica, Atenção, Importante, Sucesso)"
+        className={`w-7 h-7 rounded-lg ${config.iconBg} flex items-center justify-center shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all mt-0.5`}
+      >
+        {config.icon}
+      </button>
+      <div className="flex-1 min-w-0">
+        <NodeViewContent className="callout-content text-sm leading-relaxed text-[var(--color-text)] outline-none" />
       </div>
-      <NodeViewContent className="callout-content text-sm leading-relaxed" />
     </NodeViewWrapper>
   )
 }

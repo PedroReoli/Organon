@@ -261,18 +261,18 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
         onNavigateToProjects={() => onNavigate('projects')}
       />
 
-      {/* Main Charts & Queue Grid (3 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        {/* Weekly Activity Bar Chart (5 Columns) */}
-        <div className="lg:col-span-5 h-full">
+      {/* Main Charts & Queue Grid (Responsive 1 to 3 Columns) */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
+        {/* Weekly Activity Bar Chart (5 Columns on XL) */}
+        <div className="xl:col-span-5 h-full min-w-0">
           <WeeklyActivityChart
             days={weeklyData}
             onSelectDate={date => onGoToCalendarDate(date)}
           />
         </div>
 
-        {/* Priority Donut Chart (3 Columns) */}
-        <div className="lg:col-span-3 h-full">
+        {/* Priority Donut Chart (3 Columns on XL) */}
+        <div className="xl:col-span-3 h-full min-w-0">
           <PriorityDonutChart
             urgentCount={urgentCount}
             highCount={highCount}
@@ -282,8 +282,8 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
           />
         </div>
 
-        {/* Compact Today Executive Queue (4 Columns) */}
-        <div className="lg:col-span-4 h-full">
+        {/* Compact Today Executive Queue (4 Columns on XL) */}
+        <div className="xl:col-span-4 h-full min-w-0">
           <CompactTodayQueue
             todayCards={todayCards}
             onToggleCard={cardId => {
@@ -299,24 +299,30 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* Bottom Grid: Sprint Widget, Recent Notes & Modern Hub Navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        <ActiveSprintWidget
-          sprintName="Sprint 1 - Launch & Growth"
-          goal="Finalizar Módulo de Planejamento e migrar notas legadas"
-          startDate="16 Set"
-          endDate="30 Set"
-          completedPoints={completedCount}
-          totalPoints={totalTasks || 10}
-          onNavigateToSprint={() => onNavigate('planner')}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+        <div className="min-w-0">
+          <ActiveSprintWidget
+            sprintName="Sprint 1 - Launch & Growth"
+            goal="Finalizar Módulo de Planejamento e migrar notas legadas"
+            startDate="16 Set"
+            endDate="30 Set"
+            completedPoints={completedCount}
+            totalPoints={totalTasks || 10}
+            onNavigateToSprint={() => onNavigate('planner')}
+          />
+        </div>
 
-        <RecentNotesWidget
-          notes={notes}
-          onOpenNote={() => onGoToNotes()}
-          onNavigateToNotes={onGoToNotes}
-        />
+        <div className="min-w-0">
+          <RecentNotesWidget
+            notes={notes}
+            onOpenNote={() => onGoToNotes()}
+            onNavigateToNotes={onGoToNotes}
+          />
+        </div>
 
-        <ModernHubNavigation onNavigate={onNavigate} />
+        <div className="min-w-0 md:col-span-2 xl:col-span-1">
+          <ModernHubNavigation onNavigate={onNavigate} />
+        </div>
       </div>
     </div>
   )

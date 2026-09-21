@@ -573,6 +573,7 @@ export const FolderEditorPane = ({
               placeholder="Escreva aqui o conteúdo, índice ou rascunhos desta pasta hub..."
               floatingToolbox
               disableImages
+              hideToolbar={true}
             />
           )}
         </div>
