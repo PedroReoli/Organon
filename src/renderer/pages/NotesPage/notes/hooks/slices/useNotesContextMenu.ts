@@ -45,19 +45,31 @@ export function useNotesContextMenu(notes: Note[], folders: NoteFolder[]) {
 
   useEffect(() => {
     if (!ctxMenu) return
-    const onPointerDown = (e: PointerEvent) => {
+
+    const onPointerDown = (e: MouseEvent | PointerEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
         setCtxMenu(null)
       }
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setCtxMenu(null)
     }
-    document.addEventListener('pointerdown', onPointerDown)
+
+    const onBlur = () => {
+      setCtxMenu(null)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('mousedown', onPointerDown, true)
     document.addEventListener('keydown', onKey)
+    window.addEventListener('blur', onBlur)
+
     return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('mousedown', onPointerDown, true)
       document.removeEventListener('keydown', onKey)
+      window.removeEventListener('blur', onBlur)
     }
   }, [ctxMenu])
 

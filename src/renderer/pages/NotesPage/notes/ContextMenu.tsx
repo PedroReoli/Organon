@@ -73,18 +73,47 @@ export const ContextMenu = ({
   }
 
   return createPortal(
-    <div
-      ref={contextMenuRef}
-      className="notes-ctx-menu"
-      style={{ left: pos.x, top: pos.y }}
-      role="menu"
-      aria-label={ctxMenu.kind === 'note' ? 'Ações da nota' : 'Ações da pasta'}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-      onPointerDown={e => e.stopPropagation()}
-      onClick={e => e.stopPropagation()}
-      onContextMenu={e => { e.preventDefault(); e.stopPropagation() }}
-    >
+    <>
+      <div
+        className="notes-ctx-backdrop"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9998,
+          background: 'transparent',
+          cursor: 'default',
+        }}
+        onPointerDown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          close()
+        }}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          close()
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          close()
+        }}
+      />
+      <div
+        ref={contextMenuRef}
+        className="notes-ctx-menu"
+        style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
+        role="menu"
+        aria-label={ctxMenu.kind === 'note' ? 'Ações da nota' : 'Ações da pasta'}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+      >
       {ctxMenu.kind === 'note' && ctxNote && (() => {
         const locked = ctxNote.isLocked
         return (
@@ -199,7 +228,8 @@ export const ContextMenu = ({
           </div>
         </>
       ))()}
-    </div>,
+      </div>
+    </>,
     document.body,
   )
 }
