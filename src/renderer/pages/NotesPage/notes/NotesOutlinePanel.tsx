@@ -7,6 +7,7 @@
 import React from 'react'
 import type { NoteBookmark } from '@types'
 import type { OutlineItem } from './useNotesOutline'
+import { ListTree, Bookmark, X, FileText } from 'lucide-react'
 
 interface NotesOutlinePanelProps {
   outline: OutlineItem[]
@@ -26,22 +27,35 @@ export const NotesOutlinePanel: React.FC<NotesOutlinePanelProps> = ({
   onClose,
 }) => {
   return (
-    <aside className="notes-outline-panel">
+    <aside className="notes-outline-panel" aria-label="Painel de Sumário">
       <header className="notes-outline-header">
-        <span>Outline</span>
+        <div className="flex items-center gap-2 font-semibold tracking-wide">
+          <ListTree className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+          <span>Sumário</span>
+        </div>
         {onClose && (
-          <button type="button" className="notes-outline-close" onClick={onClose} aria-label="Fechar">
-            ×
+          <button
+            type="button"
+            className="notes-outline-close"
+            onClick={onClose}
+            aria-label="Fechar sumário"
+            title="Fechar"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </header>
 
       {outline.length === 0 && bookmarks.length === 0 ? (
-        <p className="notes-outline-empty">Sem cabeçalhos nem bookmarks.</p>
+        <div className="notes-outline-empty">
+          <FileText className="w-8 h-8 opacity-25 mb-2 mx-auto stroke-1" />
+          <p>Sem cabeçalhos ou marcadores</p>
+          <span className="text-[11px] opacity-60">Use H1, H2 ou H3 na nota para gerar a estrutura.</span>
+        </div>
       ) : (
         <div className="notes-outline-body">
           {outline.length > 0 && (
-            <section>
+            <section className="notes-outline-section">
               <ul className="notes-outline-list">
                 {outline.map((item) => (
                   <li
@@ -49,8 +63,9 @@ export const NotesOutlinePanel: React.FC<NotesOutlinePanelProps> = ({
                     className={`notes-outline-item notes-outline-level-${item.level}`}
                     style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
                   >
-                    <button type="button" onClick={() => onJumpToHeading(item.id)}>
-                      {item.text || '(sem texto)'}
+                    <button type="button" onClick={() => onJumpToHeading(item.id)} title={item.text}>
+                      <span className="notes-outline-dot" />
+                      <span className="truncate">{item.text || '(sem texto)'}</span>
                     </button>
                   </li>
                 ))}
@@ -60,21 +75,27 @@ export const NotesOutlinePanel: React.FC<NotesOutlinePanelProps> = ({
 
           {bookmarks.length > 0 && (
             <section className="notes-outline-bookmarks">
-              <h4>Bookmarks ({bookmarks.length})</h4>
-              <ul>
+              <div className="notes-outline-section-header">
+                <div className="flex items-center gap-1.5">
+                  <Bookmark className="w-3 h-3 text-amber-400" />
+                  <h4>Marcadores ({bookmarks.length})</h4>
+                </div>
+              </div>
+              <ul className="notes-outline-bookmarks-list">
                 {bookmarks.map((bm) => (
                   <li key={bm.id} className="notes-outline-bookmark-item">
-                    <button type="button" onClick={() => onJumpToBookmark(bm.anchor)}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" style={{ flexShrink: 0 }}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
-                      {bm.label}
+                    <button type="button" onClick={() => onJumpToBookmark(bm.anchor)} title={bm.label}>
+                      <Bookmark className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span className="truncate">{bm.label}</span>
                     </button>
                     <button
                       type="button"
                       className="notes-outline-bookmark-remove"
                       onClick={() => onRemoveBookmark(bm.id)}
-                      aria-label="Remover bookmark"
+                      aria-label="Remover marcador"
+                      title="Remover marcador"
                     >
-                      ×
+                      <X className="w-3 h-3" />
                     </button>
                   </li>
                 ))}

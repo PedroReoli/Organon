@@ -10,6 +10,7 @@
 import React, { useMemo } from 'react'
 import type { Note } from '@types'
 import type { NotesLinkIndex } from './useNotesLinkIndex'
+import { Network, ArrowDownLeft, ArrowUpRight, FileText, Link2Off, X } from 'lucide-react'
 
 interface NotesBacklinksPanelProps {
   noteId: string | null
@@ -37,31 +38,56 @@ export const NotesBacklinksPanel: React.FC<NotesBacklinksPanelProps> = ({
 
   if (!noteId) {
     return (
-      <aside className="notes-backlinks-panel">
+      <aside className="notes-backlinks-panel" aria-label="Painel de Conexões">
         <header className="notes-backlinks-header">
-          <span>Backlinks</span>
+          <div className="flex items-center gap-2 font-semibold tracking-wide">
+            <Network className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+            <span>Conexões</span>
+          </div>
+          {onClose && (
+            <button type="button" className="notes-backlinks-close" onClick={onClose} aria-label="Fechar">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </header>
-        <p className="notes-backlinks-empty">Selecione uma nota.</p>
+        <div className="notes-backlinks-empty">
+          <FileText className="w-8 h-8 opacity-25 mb-2 mx-auto stroke-1" />
+          <span>Selecione uma nota para visualizar conexões.</span>
+        </div>
       </aside>
     )
   }
 
   return (
-    <aside className="notes-backlinks-panel">
+    <aside className="notes-backlinks-panel" aria-label="Painel de Conexões">
       <header className="notes-backlinks-header">
-        <span>Conexões</span>
+        <div className="flex items-center gap-2 font-semibold tracking-wide">
+          <Network className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+          <span>Conexões</span>
+        </div>
         {onClose && (
-          <button type="button" className="notes-backlinks-close" onClick={onClose} aria-label="Fechar">
-            ×
+          <button type="button" className="notes-backlinks-close" onClick={onClose} aria-label="Fechar" title="Fechar">
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </header>
 
       <div className="notes-backlinks-body">
-        <section>
-          <h4>Linkam para esta nota ({incoming.length})</h4>
+        {/* Notas que referenciam esta */}
+        <section className="notes-backlinks-section">
+          <div className="notes-backlinks-section-title">
+            <div className="flex items-center gap-1.5">
+              <ArrowDownLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Linkam para esta nota</span>
+            </div>
+            <span className="notes-backlinks-badge">{incoming.length}</span>
+          </div>
+
           {incoming.length === 0 ? (
-            <p className="notes-backlinks-empty">Nenhuma nota referencia esta.</p>
+            <div className="notes-backlinks-empty-box">
+              <Link2Off className="w-4 h-4 opacity-40 mb-1" />
+              <span>Nenhuma nota referencia esta.</span>
+            </div>
           ) : (
             <ul className="notes-backlinks-list">
               {incoming.map((ref, idx) => {
@@ -69,8 +95,13 @@ export const NotesBacklinksPanel: React.FC<NotesBacklinksPanelProps> = ({
                 return (
                   <li key={`${ref.sourceNoteId}-${idx}`} className="notes-backlinks-item">
                     <button type="button" onClick={() => onOpenNote(ref.sourceNoteId)}>
-                      <span className="notes-backlinks-title">{source?.title ?? '(removida)'}</span>
-                      <span className="notes-backlinks-snippet">{ref.contextSnippet}</span>
+                      <div className="notes-backlinks-item-header">
+                        <FileText className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                        <span className="notes-backlinks-title truncate">{source?.title || 'Nota sem título'}</span>
+                      </div>
+                      {ref.contextSnippet && (
+                        <span className="notes-backlinks-snippet">{ref.contextSnippet}</span>
+                      )}
                     </button>
                   </li>
                 )
@@ -79,10 +110,21 @@ export const NotesBacklinksPanel: React.FC<NotesBacklinksPanelProps> = ({
           )}
         </section>
 
-        <section>
-          <h4>Esta nota linka para ({outgoing.length})</h4>
+        {/* Links de saída desta nota */}
+        <section className="notes-backlinks-section">
+          <div className="notes-backlinks-section-title">
+            <div className="flex items-center gap-1.5">
+              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Esta nota linka para</span>
+            </div>
+            <span className="notes-backlinks-badge">{outgoing.length}</span>
+          </div>
+
           {outgoing.length === 0 ? (
-            <p className="notes-backlinks-empty">Nenhum wiki-link nesta nota.</p>
+            <div className="notes-backlinks-empty-box">
+              <Link2Off className="w-4 h-4 opacity-40 mb-1" />
+              <span>Nenhum wiki-link nesta nota.</span>
+            </div>
           ) : (
             <ul className="notes-backlinks-list">
               {outgoing.map((ref, idx) => (
@@ -91,12 +133,22 @@ export const NotesBacklinksPanel: React.FC<NotesBacklinksPanelProps> = ({
                     type="button"
                     disabled={!ref.targetNoteId}
                     onClick={() => ref.targetNoteId && onOpenNote(ref.targetNoteId)}
+                    title={!ref.targetNoteId ? 'Nota referenciada não existe' : ref.targetTitle}
                   >
-                    <span className={`notes-backlinks-title ${!ref.targetNoteId ? 'is-broken' : ''}`}>
-                      {ref.targetTitle}
-                      {!ref.targetNoteId && ' (broken)'}
-                    </span>
-                    <span className="notes-backlinks-snippet">{ref.contextSnippet}</span>
+                    <div className="notes-backlinks-item-header">
+                      <FileText
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          ref.targetNoteId ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      />
+                      <span className={`notes-backlinks-title truncate ${!ref.targetNoteId ? 'is-broken' : ''}`}>
+                        {ref.targetTitle}
+                        {!ref.targetNoteId && ' (não encontrada)'}
+                      </span>
+                    </div>
+                    {ref.contextSnippet && (
+                      <span className="notes-backlinks-snippet">{ref.contextSnippet}</span>
+                    )}
                   </button>
                 </li>
               ))}
