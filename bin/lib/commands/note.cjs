@@ -132,10 +132,190 @@ function handleNoteDelete(idOrTitle) {
   return { deletedId: note.id, title: note.title };
 }
 
+function handleNoteMove(idOrTitle, options = {}) {
+  const { notesData, note } = findNote(idOrTitle);
+  if (!note) {
+    throw new Error(`Nota não encontrada para: "${idOrTitle}"`);
+  }
+
+  let movedTarget = '';
+
+  if (options.parent) {
+    const { note: parentNote } = findNote(options.parent);
+    if (!parentNote) {
+      throw new Error(`Nota pai não encontrada: "${options.parent}"`);
+    }
+    if (parentNote.id === note.id) {
+      throw new Error("Uma nota não pode ser subpágina de si mesma");
+    }
+    note.parentNoteId = parentNote.id;
+    note.folderId = parentNote.folderId || null;
+    movedTarget = `subpágina de "${parentNote.title}"`;
+  } else if (options.folder !== undefined) {
+    if (!options.folder || options.folder.toLowerCase() === 'raiz' || options.folder.toLowerCase() === 'geral') {
+      note.folderId = null;
+      note.parentNoteId = null;
+      movedTarget = 'Raiz (Geral)';
+    } else {
+      let folder = notesData.noteFolders.find(f =>
+        f.name.toLowerCase() === options.folder.toLowerCase() || f.id === options.folder
+      );
+      if (!folder) {
+        folder = {
+          id: store.randomUUID(),
+          name: options.folder,
+          parentId: null,
+          order: notesData.noteFolders.length,
+          isHome: false,
+        };
+        notesData.noteFolders.push(folder);
+      }
+      note.folderId = folder.id;
+      note.parentNoteId = null;
+      movedTarget = `pasta "${folder.name}"`;
+    }
+  } else {
+    throw new Error("Especifique o destino: --folder=\"NomeDaPasta\" ou --parent=\"NotaPai\"");
+  }
+
+  note.updatedAt = new Date().toISOString();
+  store.saveNotesData(notesData);
+  return { id: note.id, title: note.title, movedTarget, folderId: note.folderId, parentNoteId: note.parentNoteId };
+}
+
+function handleNoteRename(idOrTitle, newTitle) {
+  if (!newTitle || !newTitle.trim()) {
+    throw new Error("Novo título é obrigatório (--title=\"Novo Título\")");
+  }
+  const { notesData, note } = findNote(idOrTitle);
+  if (!note) {
+    throw new Error(`Nota não encontrada para: "${idOrTitle}"`);
+  }
+
+  const oldTitle = note.title;
+  note.title = newTitle.trim();
+  note.updatedAt = new Date().toISOString();
+  store.saveNotesData(notesData);
+  return { id: note.id, oldTitle, title: note.title };
+}
+
+function handleNoteOrganize(options = {}) {
+  const notesData = store.getNotesData();
+  const by = options.by || 'alphabet'; // alphabet | recent | created
+
+  if (by === 'alphabet') {
+    notesData.notes.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  } else if (by === 'recent') {
+    notesData.notes.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+  } else if (by === 'created') {
+    notesData.notes.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+  }
+
+  notesData.notes.forEach((n, idx) => {
+    n.order = idx;
+  });
+
+  if (options.folders) {
+    notesData.noteFolders.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    notesData.noteFolders.forEach((f, idx) => {
+      f.order = idx;
+    });
+  }
+
+  store.saveNotesData(notesData);
+  return { totalNotes: notesData.notes.length, organizedBy: by };
+}
+
+function handleNoteSet(idOrTitle, options = {}) {
+  const { notesData, note } = findNote(idOrTitle);
+  if (!note) {
+    throw new Error(`Nota não encontrada para: "${idOrTitle}"`);
+  }
+
+  if (options.icon !== undefined) note.icon = options.icon || null;
+  if (options.cover !== undefined) note.cover = options.cover || null;
+  if (options.pinned !== undefined) note.isPinned = options.pinned === true || options.pinned === 'true';
+  if (options.favorite !== undefined) note.isFavorite = options.favorite === true || options.favorite === 'true';
+  if (options.lock !== undefined) note.isLocked = options.lock === true || options.lock === 'true';
+  if (options.tags !== undefined) {
+    note.tags = Array.isArray(options.tags) ? options.tags : options.tags.split(',').map(t => t.trim());
+  }
+
+  note.updatedAt = new Date().toISOString();
+  store.saveNotesData(notesData);
+  return note;
+}
+
+function handleFolderList() {
+  const notesData = store.getNotesData();
+  return (notesData.noteFolders || []).map(f => {
+    const count = (notesData.notes || []).filter(n => n.folderId === f.id).length;
+    return {
+      id: f.id,
+      name: f.name,
+      parentId: f.parentId,
+      order: f.order,
+      notesCount: count
+    };
+  });
+}
+
+function handleFolderCreate(name, parentNameOrId) {
+  if (!name || !name.trim()) throw new Error("Nome da pasta é obrigatório");
+  const notesData = store.getNotesData();
+
+  let parentId = null;
+  if (parentNameOrId) {
+    const parentFolder = notesData.noteFolders.find(f =>
+      f.name.toLowerCase() === parentNameOrId.toLowerCase() || f.id === parentNameOrId
+    );
+    if (parentFolder) parentId = parentFolder.id;
+  }
+
+  const newFolder = {
+    id: store.randomUUID(),
+    name: name.trim(),
+    parentId,
+    order: notesData.noteFolders.length,
+    isHome: false,
+  };
+
+  notesData.noteFolders.push(newFolder);
+  store.saveNotesData(notesData);
+  return newFolder;
+}
+
+function handleFolderDelete(idOrName) {
+  const notesData = store.getNotesData();
+  const folder = notesData.noteFolders.find(f =>
+    f.id === idOrName || f.name.toLowerCase() === (idOrName || '').toLowerCase()
+  );
+  if (!folder) throw new Error(`Pasta não encontrada: "${idOrName}"`);
+
+  // Move orpas to root
+  notesData.notes.forEach(n => {
+    if (n.folderId === folder.id) {
+      n.folderId = null;
+    }
+  });
+
+  notesData.noteFolders = notesData.noteFolders.filter(f => f.id !== folder.id);
+  store.saveNotesData(notesData);
+  return { deletedId: folder.id, name: folder.name };
+}
+
 module.exports = {
   handleNoteList,
   handleNoteRead,
   handleNoteCreate,
   handleNoteUpdate,
-  handleNoteDelete
+  handleNoteDelete,
+  handleNoteMove,
+  handleNoteRename,
+  handleNoteOrganize,
+  handleNoteSet,
+  handleFolderList,
+  handleFolderCreate,
+  handleFolderDelete,
 };
+

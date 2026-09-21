@@ -60,7 +60,12 @@ function printHelp() {
   \x1b[36m📝 NOTAS & MARKDOWN (note / notes)\x1b[0m
     organon note list [--folder="Trabalho"] [--search="termo"]
     organon note read <id_ou_titulo>
-    organon note create --title="Ideias de Arquitetura" --content="# Conteúdo" [--folder="Geral"]
+    organon note create --title="Ideias" --content="# Conteúdo" [--folder="Geral"]
+    organon note move <id_ou_titulo> [--folder="Pasta"] [--parent="NotaPai"]
+    organon note rename <id_ou_titulo> --title="Novo Título"
+    organon note organize [--by=alphabet|recent|created]
+    organon note folder [list|create|delete]
+    organon note set <id_ou_titulo> [--icon="🚀"] [--favorite=true] [--pinned=true]
     organon note delete <id_ou_titulo>
 
   \x1b[36m⚡ HÁBITOS & ROTINA (habit / habits)\x1b[0m
@@ -318,6 +323,59 @@ function execute(args, context = {}) {
       else {
         console.log(`\n\x1b[1m📝 ${res.title}\x1b[0m \x1b[90m(Pasta: ${res.folder})\x1b[0m\n`);
         console.log(res.content);
+        console.log();
+      }
+      return;
+    }
+    if (secondary === 'move') {
+      const targetQuery = opts._[2];
+      const res = noteCmd.handleNoteMove(targetQuery, opts);
+      if (isJson) console.log(JSON.stringify(res, null, 2));
+      else console.log(`\x1b[32m✔ Nota movida com sucesso:\x1b[0m "${res.title}" -> ${res.movedTarget}`);
+      return;
+    }
+    if (secondary === 'rename') {
+      const targetQuery = opts._[2];
+      const newTitle = opts.title || opts._[3];
+      const res = noteCmd.handleNoteRename(targetQuery, newTitle);
+      if (isJson) console.log(JSON.stringify(res, null, 2));
+      else console.log(`\x1b[32m✔ Nota renomeada:\x1b[0m "${res.oldTitle}" -> "\x1b[1m${res.title}\x1b[0m"`);
+      return;
+    }
+    if (secondary === 'organize') {
+      const res = noteCmd.handleNoteOrganize(opts);
+      if (isJson) console.log(JSON.stringify(res, null, 2));
+      else console.log(`\x1b[32m✔ Reorganização concluída:\x1b[0m ${res.totalNotes} notas ordenadas por "${res.organizedBy}".`);
+      return;
+    }
+    if (secondary === 'set') {
+      const targetQuery = opts._[2];
+      const res = noteCmd.handleNoteSet(targetQuery, opts);
+      if (isJson) console.log(JSON.stringify(res, null, 2));
+      else console.log(`\x1b[32m✔ Atributos atualizados para a nota:\x1b[0m "${res.title}"`);
+      return;
+    }
+    if (secondary === 'folder' || secondary === 'folders') {
+      const subAction = opts._[2] || 'list';
+      if (subAction === 'create' || subAction === 'add') {
+        const folderName = opts.name || opts._[3];
+        const res = noteCmd.handleFolderCreate(folderName, opts.parent);
+        if (isJson) console.log(JSON.stringify(res, null, 2));
+        else console.log(`\x1b[32m✔ Pasta criada:\x1b[0m "${res.name}"`);
+        return;
+      }
+      if (subAction === 'delete' || subAction === 'rm') {
+        const folderName = opts.name || opts._[3];
+        const res = noteCmd.handleFolderDelete(folderName);
+        if (isJson) console.log(JSON.stringify(res, null, 2));
+        else console.log(`\x1b[31m✔ Pasta removida:\x1b[0m "${res.name}"`);
+        return;
+      }
+      const list = noteCmd.handleFolderList();
+      if (isJson) console.log(JSON.stringify(list, null, 2));
+      else {
+        console.log(`\n\x1b[1m📂 PASTAS (${list.length}):\x1b[0m`);
+        list.forEach(f => console.log(`  • \x1b[33m${f.name}\x1b[0m (${f.notesCount} notas)`));
         console.log();
       }
       return;
