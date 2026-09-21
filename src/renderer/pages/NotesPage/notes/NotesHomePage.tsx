@@ -433,7 +433,7 @@ export const NotesHomePage: React.FC<NotesHomePageProps> = ({
                 </div>
 
                 <div className="h-44 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={176}>
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
                       <XAxis
                         dataKey="name"

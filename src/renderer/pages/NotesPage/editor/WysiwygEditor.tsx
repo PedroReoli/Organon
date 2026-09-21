@@ -13,6 +13,7 @@ import { SlashCommandMenu, type SlashMenuState } from './menus/SlashCommandMenu'
 import { TableFloatingMenu } from './menus/TableFloatingMenu'
 import { EditorBubbleMenu } from './menus/EditorBubbleMenu'
 import { AiAssistantMenu } from './menus/AiAssistantMenu'
+import { BlockDragHandle } from './menus/BlockDragHandle'
 
 export interface WysiwygEditorProps {
   content: string
@@ -25,6 +26,7 @@ export interface WysiwygEditorProps {
   disableImages?: boolean
   noteTitlesById?: Record<string, string>
   onNoteMentionClick?: (noteId: string) => void
+  hideToolbar?: boolean
 }
 
 interface LinkQuickMenuState {
@@ -57,6 +59,7 @@ export const WysiwygEditor = ({
   disableImages = false,
   noteTitlesById,
   onNoteMentionClick,
+  hideToolbar = false,
 }: WysiwygEditorProps) => {
   const [linkQuickMenu, setLinkQuickMenu] = useState<LinkQuickMenuState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -615,23 +618,33 @@ export const WysiwygEditor = ({
 
   return (
     <div ref={editorContainerRef} className={`editor-container${readOnly ? ' is-readonly' : ''}`}>
-      {!readOnly && mode === 'full' && !floatingToolbox && (
-        <FullToolbar editor={editor} disableImages={disableImages} />
-      )}
-      {!readOnly && mode === 'compact' && (
-        <CompactToolbar editor={editor} />
+      {/* Container estável para a barra fixa — display toggle evita DOMException insertBefore com Tippy/BubbleMenu */}
+      {!readOnly && !floatingToolbox && (
+        <div
+          className="editor-fixed-toolbar-wrapper"
+          style={{ display: hideToolbar ? 'none' : 'block' }}
+        >
+          {mode === 'full' ? (
+            <FullToolbar editor={editor} disableImages={disableImages} />
+          ) : (
+            <CompactToolbar editor={editor} />
+          )}
+        </div>
       )}
       {!readOnly && mode === 'full' && (
-        <>
+        <div className="editor-floating-menus-wrapper" style={{ display: 'contents' }}>
           <EditorBubbleMenu editor={editor} onOpenAiMenu={() => setIsAiMenuOpen(true)} />
           <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
             <div className="pointer-events-auto">
               <TableFloatingMenu editor={editor} />
             </div>
           </div>
-        </>
+        </div>
       )}
-      <div ref={editorViewportRef} className="tiptap-editor">
+      <div ref={editorViewportRef} className="tiptap-editor relative">
+        {!readOnly && mode === 'full' && (
+          <BlockDragHandle editor={editor} containerRef={editorViewportRef} />
+        )}
         <EditorContent editor={editor} />
 
         {mode === 'full' && linkQuickMenu && (
