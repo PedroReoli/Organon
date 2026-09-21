@@ -1,12 +1,20 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   SystemNode,
   SystemEdge,
   SystemComponentDefinition,
   ArchitectureTemplate,
-  BUILTIN_TEMPLATES,
   ConnectionProtocol,
+  SavedSystemDesign,
 } from './types/systemDesign.types'
+import {
+  getSystemDesign,
+  saveSystemDesign,
+  saveAsTemplate,
+  exportSystemDesignToJson,
+  exportSystemDesignToMarkdown,
+} from './services/systemDesignStorage'
+import { SystemDesignHub } from './components/SystemDesignHub'
 import { PaletteSidebar } from './components/PaletteSidebar'
 import { TemplateSelectorModal } from './components/TemplateSelectorModal'
 import { SystemDesignReviewModal } from './components/SystemDesignReviewModal'
@@ -15,7 +23,17 @@ import { SystemDesignHeader } from './components/SystemDesignHeader'
 import { SystemEdgeLayer } from './components/SystemEdgeLayer'
 import { SystemDesignNodeItem } from './components/SystemDesignNodeItem'
 import { exportToMermaid } from './utils/mermaidExporter'
-import { Link2, X } from 'lucide-react'
+import {
+  Link2,
+  X,
+  Share2,
+  FileCode,
+  FileText,
+  Network,
+  Download,
+  Copy,
+  Check,
+} from 'lucide-react'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 80
@@ -35,8 +53,14 @@ const PROTOCOLS: ConnectionProtocol[] = [
 ]
 
 export const SystemDesignPage: React.FC = () => {
-  const [nodes, setNodes] = useState<SystemNode[]>(BUILTIN_TEMPLATES[0].nodes)
-  const [edges, setEdges] = useState<SystemEdge[]>(BUILTIN_TEMPLATES[0].edges)
+  // Estado de navegação Hub vs Canvas
+  const [currentDesignId, setCurrentDesignId] = useState<string | null>(null)
+  const [currentDesign, setCurrentDesign] = useState<SavedSystemDesign | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false)
+
+  // Nós e arestas do Canvas
+  const [nodes, setNodes] = useState<SystemNode[]>([])
+  const [edges, setEdges] = useState<SystemEdge[]>([])
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null)
   const [connectingMousePos, setConnectingMousePos] = useState<{ x: number; y: number } | null>(null)
@@ -51,12 +75,86 @@ export const SystemDesignPage: React.FC = () => {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
 
-  // Modals
+  // Modais
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'json' | 'markdown' | 'mermaid'>('json')
+  const [copySuccess, setCopySuccess] = useState(false)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  // Abrir design a partir do Hub
+  const handleOpenDesign = (id: string) => {
+    const loaded = getSystemDesign(id)
+    if (loaded) {
+      setCurrentDesign(loaded)
+      setCurrentDesignId(loaded.id)
+      setNodes(JSON.parse(JSON.stringify(loaded.nodes)))
+      setEdges(JSON.parse(JSON.stringify(loaded.edges)))
+      setSelectedNodeId(null)
+      setSelectedEdgeId(null)
+      setConnectSourceId(null)
+      setConnectingMousePos(null)
+      setPan({ x: 50, y: 50 })
+      setZoom(1)
+      setHasUnsavedChanges(false)
+    }
+  }
+
+  // Salvar design atual
+  const handleSaveCurrentDesign = () => {
+    if (!currentDesign) return
+    const updated = saveSystemDesign({
+      ...currentDesign,
+      nodes,
+      edges,
+    })
+    setCurrentDesign(updated)
+    setHasUnsavedChanges(false)
+  }
+
+  // Voltar para o Hub
+  const handleBackToHub = () => {
+    if (hasUnsavedChanges && currentDesign) {
+      // Salva automaticamente ao voltar
+      saveSystemDesign({
+        ...currentDesign,
+        nodes,
+        edges,
+      })
+    }
+    setCurrentDesignId(null)
+    setCurrentDesign(null)
+    setHasUnsavedChanges(false)
+  }
+
+  // Salvar como Template
+  const handleSaveAsTemplate = () => {
+    if (!currentDesign) return
+    const templateName = prompt('Digite o nome deste modelo de arquitetura:', `Template: ${currentDesign.name}`)
+    if (!templateName) return
+
+    saveAsTemplate(
+      {
+        ...currentDesign,
+        nodes,
+        edges,
+      },
+      templateName
+    )
+    alert(`Template "${templateName}" salvo com sucesso! Ele estará disponível na aba de Templates no Hub.`)
+  }
+
+  // Auto-salvar suave a cada 15 segundos se houver alterações
+  useEffect(() => {
+    if (!hasUnsavedChanges || !currentDesign) return
+    const timer = setTimeout(() => {
+      handleSaveCurrentDesign()
+    }, 15000)
+    return () => clearTimeout(timer)
+  }, [nodes, edges, hasUnsavedChanges, currentDesign])
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null
 
@@ -94,10 +192,10 @@ export const SystemDesignPage: React.FC = () => {
     }
     setNodes((prev) => [...prev, newNode])
     setSelectedNodeId(newNode.id)
+    setHasUnsavedChanges(true)
   }
 
   const handleAddComponentFromClick = (comp: SystemComponentDefinition) => {
-    // Posiciona próximo ao centro visível
     const centerX = (-pan.x + 350) / zoom
     const centerY = (-pan.y + 250) / zoom
     const offset = (nodes.length * 25) % 150
@@ -127,10 +225,9 @@ export const SystemDesignPage: React.FC = () => {
   // Início de drag de nó no canvas
   const handleNodePointerDown = (e: React.PointerEvent, nodeId: string) => {
     e.stopPropagation()
-    if (e.button !== 0) return // Apenas botão esquerdo
+    if (e.button !== 0) return
 
     if (connectSourceId) {
-      // Se estava no modo de conexão, conecta
       if (connectSourceId !== nodeId) {
         const newEdge: SystemEdge = {
           id: `edge-${Date.now()}`,
@@ -139,6 +236,7 @@ export const SystemDesignPage: React.FC = () => {
           protocol: 'HTTP/REST',
         }
         setEdges((prev) => [...prev, newEdge])
+        setHasUnsavedChanges(true)
       }
       setConnectSourceId(null)
       setConnectingMousePos(null)
@@ -159,7 +257,6 @@ export const SystemDesignPage: React.FC = () => {
 
   // Pan do Canvas com botão direito ou arrastar fundo com botão esquerdo
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    // Desmarcar seleções se clicar no fundo
     if (e.target === canvasRef.current || (e.target as HTMLElement).tagName === 'svg') {
       setSelectedNodeId(null)
       setSelectedEdgeId(null)
@@ -179,7 +276,6 @@ export const SystemDesignPage: React.FC = () => {
   }
 
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
-    // Se estiver arrastando nó
     if (draggingNodeId) {
       const coords = screenToCanvasCoords(e.clientX, e.clientY)
       setNodes((prev) =>
@@ -192,17 +288,16 @@ export const SystemDesignPage: React.FC = () => {
           }
         })
       )
+      setHasUnsavedChanges(true)
       return
     }
 
-    // Se estiver conectando e movendo o mouse
     if (connectSourceId) {
       const coords = screenToCanvasCoords(e.clientX, e.clientY)
       setConnectingMousePos(coords)
       return
     }
 
-    // Se estiver fazendo pan do canvas
     if (isPanning) {
       setPan({
         x: e.clientX - panStart.x,
@@ -231,6 +326,7 @@ export const SystemDesignPage: React.FC = () => {
   // Atualização de nó via Drawer
   const handleUpdateNode = (id: string, updates: Partial<SystemNode>) => {
     setNodes((prev) => prev.map((n) => (n.id === id ? { ...n, ...updates } : n)))
+    setHasUnsavedChanges(true)
   }
 
   // Exclusão de nó
@@ -238,12 +334,14 @@ export const SystemDesignPage: React.FC = () => {
     setNodes((prev) => prev.filter((n) => n.id !== id))
     setEdges((prev) => prev.filter((e) => e.source !== id && e.target !== id))
     if (selectedNodeId === id) setSelectedNodeId(null)
+    setHasUnsavedChanges(true)
   }
 
   // Exclusão de conexão
   const handleDeleteEdge = (edgeId: string) => {
     setEdges((prev) => prev.filter((e) => e.id !== edgeId))
     if (selectedEdgeId === edgeId) setSelectedEdgeId(null)
+    setHasUnsavedChanges(true)
   }
 
   // Ciclar protocolo da conexão
@@ -258,6 +356,7 @@ export const SystemDesignPage: React.FC = () => {
         return { ...edge, protocol: nextProtocol }
       })
     )
+    setHasUnsavedChanges(true)
   }
 
   const handleSelectTemplate = (tpl: ArchitectureTemplate) => {
@@ -267,14 +366,7 @@ export const SystemDesignPage: React.FC = () => {
     setConnectSourceId(null)
     setPan({ x: 50, y: 50 })
     setZoom(1)
-  }
-
-  const exportMermaidCode = () => {
-    const code = exportToMermaid(nodes, edges)
-    navigator.clipboard.writeText(code)
-    alert(
-      'Código Mermaid exportado e copiado para a área de transferência! Cole no módulo de Notas ou Markdown.'
-    )
+    setHasUnsavedChanges(true)
   }
 
   const resetView = () => {
@@ -291,7 +383,55 @@ export const SystemDesignPage: React.FC = () => {
       setEdges([])
       setSelectedNodeId(null)
       setConnectSourceId(null)
+      setHasUnsavedChanges(true)
     }
+  }
+
+  // Exportação no Canvas
+  const exportContent = React.useMemo(() => {
+    if (!currentDesign) return ''
+    const fullDesign: SavedSystemDesign = {
+      ...currentDesign,
+      nodes,
+      edges,
+    }
+    if (exportFormat === 'json') {
+      return exportSystemDesignToJson(fullDesign)
+    }
+    if (exportFormat === 'markdown') {
+      return exportSystemDesignToMarkdown(fullDesign)
+    }
+    if (exportFormat === 'mermaid') {
+      return exportToMermaid(nodes, edges)
+    }
+    return ''
+  }, [currentDesign, nodes, edges, exportFormat])
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(exportContent)
+    setCopySuccess(true)
+    setTimeout(() => setCopySuccess(false), 2000)
+  }
+
+  const handleDownloadFile = () => {
+    if (!currentDesign) return
+    const filename = `${currentDesign.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${
+      exportFormat === 'json' ? 'json' : exportFormat === 'markdown' ? 'md' : 'mmd'
+    }`
+    const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Se não houver design selecionado, renderiza o SystemDesignHub!
+  if (!currentDesignId) {
+    return <SystemDesignHub onOpenDesign={handleOpenDesign} />
   }
 
   return (
@@ -320,6 +460,144 @@ export const SystemDesignPage: React.FC = () => {
         edges={edges}
       />
 
+      {/* Modal de Exportação */}
+      {isExportModalOpen && (
+        <div className="sdh-modal-backdrop" onClick={() => setIsExportModalOpen(false)}>
+          <div
+            className="sdh-modal-dialog"
+            style={{ width: '640px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sdh-modal-header">
+              <h2 className="sdh-modal-title">
+                <Share2 size={16} style={{ color: currentDesign?.color || '#6366f1' }} />
+                <span>Exportar Arquitetura: {currentDesign?.name}</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="sdh-card-btn-icon"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="sdh-modal-body">
+              {/* Seletor de Formato */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('json')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${exportFormat === 'json' ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    background:
+                      exportFormat === 'json'
+                        ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))'
+                        : 'var(--color-background)',
+                    color: exportFormat === 'json' ? 'var(--color-primary)' : 'var(--color-text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.16s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '12px' }}>
+                    <FileCode size={14} />
+                    <span>JSON Estruturado</span>
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    Ideal para CLI e IA
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('markdown')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${exportFormat === 'markdown' ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    background:
+                      exportFormat === 'markdown'
+                        ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))'
+                        : 'var(--color-background)',
+                    color: exportFormat === 'markdown' ? 'var(--color-primary)' : 'var(--color-text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.16s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '12px' }}>
+                    <FileText size={14} />
+                    <span>Markdown + IA</span>
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    Com relatório e prompt
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('mermaid')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${exportFormat === 'mermaid' ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    background:
+                      exportFormat === 'mermaid'
+                        ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))'
+                        : 'var(--color-background)',
+                    color: exportFormat === 'mermaid' ? 'var(--color-primary)' : 'var(--color-text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.16s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '12px' }}>
+                    <Network size={14} />
+                    <span>Mermaid (.mmd)</span>
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    Código puro de nós
+                  </div>
+                </button>
+              </div>
+
+              <div>
+                <label className="sdh-form-label" style={{ marginBottom: '6px', display: 'block' }}>
+                  Prévia do Arquivo Gerado:
+                </label>
+                <div className="sdh-code-preview">{exportContent}</div>
+              </div>
+            </div>
+
+            <div className="sdh-modal-footer">
+              <button type="button" onClick={handleDownloadFile} className="sdh-btn-secondary">
+                <Download size={13} />
+                <span>
+                  Baixar .{exportFormat === 'json' ? 'json' : exportFormat === 'markdown' ? 'md' : 'mmd'}
+                </span>
+              </button>
+
+              <button type="button" onClick={handleCopyCode} className="sdh-btn-primary">
+                {copySuccess ? (
+                  <>
+                    <Check size={14} />
+                    <span>Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    <span>Copiar Código</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar de Paleta com Busca e Categorias */}
       <PaletteSidebar onAddComponent={handleAddComponentFromClick} />
 
@@ -336,15 +614,25 @@ export const SystemDesignPage: React.FC = () => {
       >
         {/* Toolbar Superior Modularizada */}
         <SystemDesignHeader
+          designName={currentDesign?.name}
+          designColor={currentDesign?.color}
+          hasUnsavedChanges={hasUnsavedChanges}
           nodesCount={nodes.length}
           edgesCount={edges.length}
           zoom={zoom}
+          onBackToHub={handleBackToHub}
+          onSaveDesign={handleSaveCurrentDesign}
+          onSaveAsTemplate={handleSaveAsTemplate}
+          onOpenExportModal={() => setIsExportModalOpen(true)}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onResetZoom={resetView}
           onOpenTemplates={() => setIsTemplateModalOpen(true)}
           onOpenReview={() => setIsReviewModalOpen(true)}
-          onExportMermaid={exportMermaidCode}
+          onExportMermaid={() => {
+            setIsExportModalOpen(true)
+            setExportFormat('mermaid')
+          }}
           onClearCanvas={handleClearCanvas}
         />
 

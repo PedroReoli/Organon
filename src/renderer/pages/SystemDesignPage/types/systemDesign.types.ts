@@ -265,3 +265,33 @@ export const BUILTIN_TEMPLATES: ArchitectureTemplate[] = [
     ],
   },
 ]
+
+export interface SavedSystemDesign {
+  id: string
+  name: string
+  description?: string
+  color: string // Hex color string
+  tags: string[]
+  nodes: SystemNode[]
+  edges: SystemEdge[]
+  createdAt: string
+  updatedAt: string
+  isTemplate?: boolean
+}
+
+export interface SystemDesignColorOption {
+  id: string
+  name: string
+  color: string
+}
+
+export const SYSTEM_DESIGN_COLORS: SystemDesignColorOption[] = [
+  { id: 'indigo', name: 'Índigo', color: '#6366f1' },
+  { id: 'emerald', name: 'Esmeralda', color: '#10b981' },
+  { id: 'amber', name: 'Âmbar', color: '#f59e0b' },
+  { id: 'rose', name: 'Rosa Coral', color: '#f43f5e' },
+  { id: 'cyan', name: 'Ciano', color: '#06b6d4' },
+  { id: 'purple', name: 'Púrpura', color: '#a855f7' },
+  { id: 'orange', name: 'Laranja', color: '#f97316' },
+  { id: 'blue', name: 'Azul Real', color: '#3b82f6' },
+]
