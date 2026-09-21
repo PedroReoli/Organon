@@ -69,40 +69,97 @@
 
 /* Header Component */
 .whisper-header-bar {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
   z-index: 10;
+  min-height: 48px;
 }
 
 .whisper-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.whisper-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .whisper-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .whisper-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
+  max-width: clamp(100px, 20vw, 240px);
+}
+
+.whisper-btn-text {
+  display: inline;
+  transition: opacity 0.15s ease;
+}
+
+/* Responsividade Refinada do Whisper Header */
+@media (max-width: 1260px) {
+  .whisper-header-right .whisper-btn-text {
+    display: none;
+  }
+  .whisper-btn-icon-label {
+    padding: 5px 8px;
+  }
+}
+
+@media (max-width: 1060px) {
+  .whisper-header-bar {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .whisper-header-left .whisper-btn-text {
+    display: none;
+  }
+  .whisper-title {
+    max-width: 130px;
+    font-size: 12.5px;
+  }
+  .whisper-mode-btn {
+    padding: 3px 8px;
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 820px) {
+  .whisper-header-bar {
+    flex-wrap: wrap;
+    padding: 6px 10px;
+  }
+  .whisper-header-center {
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--color-border);
+  }
 }
 
 .whisper-btn-icon-label {

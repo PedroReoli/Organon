@@ -1,5 +1,5 @@
 import React from 'react'
-import { PanelLeft, PanelRight, FileText, Settings, Sparkles } from 'lucide-react'
+import { PanelLeft, PanelRight, FileText, Settings, Sparkles, Mic } from 'lucide-react'
 import { RecordingModeType } from './WhisperRecordingHero'
 import { ScreenShareStealthBadge } from './ScreenShareStealthBadge'
 import { WhisperRecord } from '../types/whisper.types'
@@ -35,8 +35,8 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
 }) => {
   return (
     <header className="whisper-header-bar">
+      {/* Esquerda: Histórico e Título */}
       <div className="whisper-header-left">
-        {/* Toggle Histórico Drawer */}
         <button
           type="button"
           onClick={() => setIsHistoryDrawerOpen(!isHistoryDrawerOpen)}
@@ -44,37 +44,44 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           className={`whisper-btn-icon-label ${isHistoryDrawerOpen ? 'active' : ''}`}
         >
           <PanelLeft size={14} />
-          <span>Histórico</span>
+          <span className="whisper-btn-text">Histórico</span>
         </button>
 
-        {/* Título da Sessão / Gravação */}
-        <h1 className="whisper-title">
+        <h1
+          className="whisper-title"
+          title={selectedRecord ? selectedRecord.title : 'Whisper Live Copilot'}
+        >
           {selectedRecord ? selectedRecord.title : 'Whisper Live Copilot'}
         </h1>
+      </div>
 
-        {/* Seletor de Modo (Reunião / Ditado) */}
+      {/* Centro: Seletor de Modo Limpo */}
+      <div className="whisper-header-center">
         <div className="whisper-mode-switcher">
-          {(['meeting', 'prompt'] as const).map((m) => {
-            const active = recordingMode === m
-            const labelMap = {
-              meeting: 'Reunião & IA',
-              prompt: 'Ditado Global',
-              interview: 'Entrevista',
-            }
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setRecordingMode(m)}
-                className={`whisper-mode-btn ${active ? 'active' : ''}`}
-              >
-                {m === 'meeting' ? <Sparkles size={12} /> : null}
-                <span>{labelMap[m]}</span>
-              </button>
-            )
-          })}
-        </div>
+          <button
+            type="button"
+            onClick={() => setRecordingMode('meeting')}
+            className={`whisper-mode-btn ${recordingMode === 'meeting' ? 'active' : ''}`}
+            title="Modo Reunião: grava microfone e sistema com ata e tarefas automáticas"
+          >
+            <Sparkles size={12} />
+            <span>Reunião & IA</span>
+          </button>
 
+          <button
+            type="button"
+            onClick={() => setRecordingMode('prompt')}
+            className={`whisper-mode-btn ${recordingMode === 'prompt' ? 'active' : ''}`}
+            title="Modo Ditado: ditado por voz contínuo para comandos e notas"
+          >
+            <Mic size={12} />
+            <span>Ditado</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Direita: Status, Stealth e Ações */}
+      <div className="whisper-header-right">
         {/* Status Pill do Sistema de Áudio */}
         <button
           type="button"
@@ -88,10 +95,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
         </button>
 
         <ScreenShareStealthBadge />
-      </div>
 
-      {/* Ações do Topo */}
-      <div className="whisper-header-right">
         <button
           type="button"
           onClick={handleExportToNotes}
@@ -99,7 +103,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           title="Exportar transcrição para o app de Notas"
         >
           <FileText size={13} />
-          <span>Exportar Notas</span>
+          <span className="whisper-btn-text">Exportar</span>
         </button>
 
         <button
@@ -109,10 +113,9 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           title="Configurações e modelos do Whisper"
         >
           <Settings size={13} />
-          <span>Modelos</span>
+          <span className="whisper-btn-text">Modelos</span>
         </button>
 
-        {/* Toggle Painel Lateral de Inteligência */}
         <button
           type="button"
           onClick={() => setIsIntelligencePanelOpen(!isIntelligencePanelOpen)}
@@ -120,7 +123,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           className={`whisper-btn-icon-label ${isIntelligencePanelOpen ? 'active' : ''}`}
         >
           <PanelRight size={14} />
-          <span>Inteligência</span>
+          <span className="whisper-btn-text">Inteligência</span>
         </button>
       </div>
     </header>
