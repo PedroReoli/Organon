@@ -218,7 +218,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
 
   return (
     <div className="app-body" style={{ flex: 1, overflow: 'hidden' }}>
-      <div className="app-view">
+      <div key={activeView} className="app-view view-tab-enter">
         {activeView === 'today' && (
           <DashboardPage
             cards={cards}

@@ -341,7 +341,9 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
       />
       
       <main className="projects-content-wrapper">
-        {renderContent()}
+        <div key={activeScreen} className="view-tab-enter" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {renderContent()}
+        </div>
       </main>
     </div>
   )

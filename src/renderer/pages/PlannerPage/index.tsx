@@ -34,31 +34,35 @@ export const PlannerPage = () => {
       {/* Main Content Area */}
       <div style={{ flex: 1, overflow: 'hidden', background: 'var(--color-bg)' }}>
         {viewMode === 'weekly' && (
-          <WeeklyView
-            tasks={tasks}
-            projects={projects}
-            onEdit={setEditingTaskId}
-            onMoveTask={moveTask}
-            onUpdateTask={updateTask}
-            onAddTask={addTask}
-          />
+          <div key="weekly" className="view-tab-enter" style={{ height: '100%', width: '100%' }}>
+            <WeeklyView
+              tasks={tasks}
+              projects={projects}
+              onEdit={setEditingTaskId}
+              onMoveTask={moveTask}
+              onUpdateTask={updateTask}
+              onAddTask={addTask}
+            />
+          </div>
         )}
         {viewMode === 'daily' && (
-          <DailyView
-            tasks={tasks}
-            projects={projects}
-            onEdit={setEditingTaskId}
-            onAddTask={addTask}
-            onUpdateTask={updateTask}
-            onMoveTask={moveTask}
-            onRescheduleOverdue={rescheduleOverdue}
-            onToggleStatus={(id) => {
-              const t = tasks.find((item) => item.id === id);
-              if (t) {
-                updateTask(id, { status: t.status === 'done' ? 'todo' : 'done' });
-              }
-            }}
-          />
+          <div key="daily" className="view-tab-enter" style={{ height: '100%', width: '100%' }}>
+            <DailyView
+              tasks={tasks}
+              projects={projects}
+              onEdit={setEditingTaskId}
+              onAddTask={addTask}
+              onUpdateTask={updateTask}
+              onMoveTask={moveTask}
+              onRescheduleOverdue={rescheduleOverdue}
+              onToggleStatus={(id) => {
+                const t = tasks.find((item) => item.id === id);
+                if (t) {
+                  updateTask(id, { status: t.status === 'done' ? 'todo' : 'done' });
+                }
+              }}
+            />
+          </div>
         )}
       </div>
 
