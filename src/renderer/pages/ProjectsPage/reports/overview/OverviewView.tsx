@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import type { WeekReport } from '@types'
+import { TrendingUp } from 'lucide-react'
+import { getCommitTypeColor } from '../constants/commitTypes'
 
 interface OverviewViewProps {
   reports: WeekReport[]
@@ -7,9 +9,7 @@ interface OverviewViewProps {
   onSelectReport: (index: number) => void
 }
 
-import { getCommitTypeColor } from '../constants/commitTypes'
-
-const PIE_COLORS = ['var(--color-primary)', '#22c55e', '#f97316', 'var(--color-primary)', 'var(--color-primary)', 'var(--color-primary)', '#eab308', '#ef4444']
+const PIE_COLORS = ['#818cf8', '#34d399', '#f97316', '#38bdf8', '#fbbf24', '#f87171', '#a78bfa', '#94a3b8']
 
 type ChartMode = 'line' | 'bar' | 'area' | 'stacked'
 
@@ -21,6 +21,28 @@ function formatWeekLabel(dateStr: string): string {
   const day = parts[2]
   const month = MONTHS_SHORT[parseInt(parts[1], 10) - 1] || parts[1]
   return `${day} ${month}`
+}
+
+function getSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return ''
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
+  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
+
+  let d = `M ${points[0].x} ${points[0].y}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[Math.min(points.length - 1, i + 2)]
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+  }
+  return d
 }
 
 export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onSelectReport }) => {
@@ -73,20 +95,41 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
     return acc
   }, [sliced])
 
+  const [hoveredType, setHoveredType] = useState<string | null>(null)
+
   const pieSlices = useMemo(() => {
     const entries = Object.entries(commitTypes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
     const total = entries.reduce((s, [, v]) => s + v, 0)
     if (total === 0) return []
     let angle = -Math.PI / 2
+    const totalEntries = entries.length
+    const CX = 75, CY = 75, RO = 62, RI = 38
+
     return entries.map(([type, count], i) => {
       const sweep = (count / total) * 2 * Math.PI
-      const x1 = Math.cos(angle); const y1 = Math.sin(angle)
+      const gap = totalEntries > 1 ? 0.03 : 0
+      const aStart = angle + gap / 2
+      const aEnd = angle + sweep - gap / 2
       angle += sweep
-      const x2 = Math.cos(angle); const y2 = Math.sin(angle)
+
+      const ox1 = CX + RO * Math.cos(aStart)
+      const oy1 = CY + RO * Math.sin(aStart)
+      const ox2 = CX + RO * Math.cos(aEnd)
+      const oy2 = CY + RO * Math.sin(aEnd)
+      const ix1 = CX + RI * Math.cos(aStart)
+      const iy1 = CY + RI * Math.sin(aStart)
+      const ix2 = CX + RI * Math.cos(aEnd)
+      const iy2 = CY + RI * Math.sin(aEnd)
+      const large = (aEnd - aStart) > Math.PI ? 1 : 0
+
+      const path = `M ${ox1} ${oy1} A ${RO} ${RO} 0 ${large} 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${RI} ${RI} 0 ${large} 0 ${ix1} ${iy1} Z`
+
       return {
-        type, count, pct: Math.round((count / total) * 100),
-        x1, y1, x2, y2, large: sweep > Math.PI ? 1 : 0,
+        type,
+        count,
+        pct: Math.round((count / total) * 100),
         color: getCommitTypeColor(type, PIE_COLORS[i % PIE_COLORS.length]),
+        path,
       }
     })
   }, [commitTypes])
@@ -119,12 +162,65 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
 
   const lineData = chronological
   const lineMax = Math.max(1, ...lineData.map(r => r.summary.totalCommits))
-  const [chartMode, setChartMode] = useState<ChartMode>('bar')
-  const H = 220, PAD_L = 40, PAD_R = 20, PAD_T = 24, PAD_B = 36
-  const W = 1000
-  const chartGap = lineData.length > 0 ? (W - PAD_L - PAD_R) / lineData.length : 48
+  const [chartMode, setChartMode] = useState<ChartMode>('area')
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+  const [chartWidth, setChartWidth] = useState(1000)
+  const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    const el = chartContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setChartWidth(Math.max(480, Math.round(entry.contentRect.width)))
+        }
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const H = 220, PAD_L = 44, PAD_R = 24, PAD_T = 28, PAD_B = 36
+  const chartGap = lineData.length > 0 ? (chartWidth - PAD_L - PAD_R) / lineData.length : 48
   const chartStartX = PAD_L
-  const barW = Math.max(6, Math.min(28, chartGap * 0.65))
+  const barW = Math.max(8, Math.min(36, chartGap * 0.65))
+
+  const peakWeek = useMemo(() => {
+    if (!lineData.length) return null
+    let max = lineData[0]
+    for (const r of lineData) {
+      if (r.summary.totalCommits > max.summary.totalCommits) max = r
+    }
+    return max
+  }, [lineData])
+
+  const pts = useMemo(() => {
+    return lineData.map((r, i) => {
+      const x = chartStartX + i * chartGap + chartGap / 2
+      const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
+      return { x, y, report: r, idx: i }
+    })
+  }, [lineData, chartGap, chartStartX, lineMax, H, PAD_B, PAD_T])
+
+  const smoothLinePath = useMemo(() => getSmoothPath(pts), [pts])
+  const smoothAreaPath = useMemo(() => {
+    if (pts.length < 2) return ''
+    const baseline = H - PAD_B
+    return `${smoothLinePath} L ${pts[pts.length - 1].x} ${baseline} L ${pts[0].x} ${baseline} Z`
+  }, [smoothLinePath, pts, H, PAD_B])
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const relX = mouseX - PAD_L
+    if (relX < 0 || relX > chartWidth - PAD_L - PAD_R || lineData.length === 0) {
+      setHoveredWeekIdx(null)
+      return
+    }
+    const idx = Math.min(lineData.length - 1, Math.max(0, Math.floor(relX / chartGap)))
+    setHoveredWeekIdx(idx)
+  }
 
   const chartTypesPerWeek = useMemo(() => {
     return chronological.map(r => {
@@ -194,153 +290,343 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
       </div>
 
       {lineData.length >= 2 && (
-        <div className="projects-dashboard-card" style={{ marginBottom: 6, padding: '6px 10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <h3 className="projects-card-title" style={{ margin: 0 }}>Evolução de commits por semana</h3>
+        <div className="projects-dashboard-card" style={{ marginBottom: 8, padding: '12px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h3 className="projects-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <TrendingUp size={16} color="var(--color-primary)" />
+                <span>Evolução de Commits por Semana</span>
+              </h3>
+              {peakWeek && (
+                <span style={{ fontSize: '11px', background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.25)', color: '#a5b4fc', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  Pico: {peakWeek.summary.totalCommits} ({formatWeekLabel(peakWeek.date)})
+                </span>
+              )}
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Média: {avgCommits} commits/sem
+              </span>
+            </div>
+
             <div className="projects-tabs" style={{ marginBottom: 0 }}>
-              {(['bar', 'line', 'area', 'stacked'] as ChartMode[]).map(mode => (
+              {(['area', 'line', 'bar', 'stacked'] as ChartMode[]).map(mode => (
                 <button
                   key={mode}
                   type="button"
                   className={`projects-tab ${chartMode === mode ? 'projects-tab-active' : ''}`}
-                  style={chartMode === mode ? { color: 'var(--accent-primary)', borderBottomColor: 'var(--accent-primary)' } : {}}
+                  style={chartMode === mode ? { color: 'var(--color-primary)', borderBottomColor: 'var(--color-primary)', fontWeight: 700 } : {}}
                   onClick={() => setChartMode(mode)}
                 >
-                  {mode === 'bar' ? 'Barras' : mode === 'line' ? 'Linha' : mode === 'area' ? 'Área' : 'Stacked'}
+                  {mode === 'area' ? 'Área' : mode === 'line' ? 'Linha' : mode === 'bar' ? 'Barras' : 'Stacked'}
                 </button>
               ))}
             </div>
           </div>
-          <div style={{ width: '100%', overflow: 'hidden' }}>
-            <svg width="100%" height={H} className="rp-line-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+
+          <div
+            ref={chartContainerRef}
+            style={{ width: '100%', position: 'relative', overflow: 'hidden' }}
+          >
+            {/* Interactive floating tooltip card */}
+            {hoveredWeekIdx !== null && lineData[hoveredWeekIdx] && (() => {
+              const r = lineData[hoveredWeekIdx]
+              const p = pts[hoveredWeekIdx]
+              const leftPos = Math.min(Math.max(12, p.x - 100), chartWidth - 220)
+              const types = chartTypesPerWeek[hoveredWeekIdx] || {}
+              const typeEntries = Object.entries(types).filter(([, c]) => (c as number) > 0)
+              const activeCount = (r.repos || []).filter(repo => repo.commitCount > 0).length
+
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${leftPos}px`,
+                    top: '8px',
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    background: '#111420',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(99, 102, 241, 0.2)',
+                    minWidth: '180px',
+                  }}
+                >
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px' }}>
+                    Semana de {formatWeekLabel(r.date)}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {r.summary.totalCommits}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#a5b4fc', fontWeight: 600 }}>commits</span>
+                    {activeCount > 0 && (
+                      <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                        {activeCount} repos
+                      </span>
+                    )}
+                  </div>
+                  {typeEntries.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px' }}>
+                      {typeEntries.map(([t, count]) => (
+                        <span
+                          key={t}
+                          style={{
+                            fontSize: '9.5px',
+                            color: getCommitTypeColor(t),
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {t}: {count as number}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            <svg
+              width={chartWidth}
+              height={H}
+              viewBox={`0 0 ${chartWidth} ${H}`}
+              style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setHoveredWeekIdx(null)}
+            >
+              <defs>
+                <linearGradient id="smoothAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.4} />
+                  <stop offset="70%" stopColor="var(--color-primary)" stopOpacity={0.08} />
+                  <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+
               {/* Grid lines */}
               {[0, 0.25, 0.5, 0.75, 1].map(pct => {
                 const y = PAD_T + (1 - pct) * (H - PAD_T - PAD_B)
                 return (
                   <g key={`grid-${pct}`}>
-                    <line x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} stroke="var(--border)" strokeWidth={1} strokeDasharray={pct === 0 ? "0" : "4,4"} />
-                    <text x={PAD_L - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--text-secondary)">{Math.round(lineMax * pct)}</text>
+                    <line
+                      x1={PAD_L}
+                      y1={y}
+                      x2={chartWidth - PAD_R}
+                      y2={y}
+                      stroke="var(--border)"
+                      strokeWidth={1}
+                      strokeDasharray={pct === 0 ? '0' : '4,4'}
+                      opacity={0.6}
+                    />
+                    <text
+                      x={PAD_L - 8}
+                      y={y + 3.5}
+                      textAnchor="end"
+                      fontSize="10"
+                      fill="var(--text-muted)"
+                      fontWeight="500"
+                    >
+                      {Math.round(lineMax * pct)}
+                    </text>
                   </g>
                 )
               })}
 
-              {chartMode === 'bar' && lineData.map((r, i) => {
-                const x = chartStartX + i * chartGap + (chartGap - barW) / 2
-                const barH = (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
-                const y = H - PAD_B - barH
-                return (
-                  <g key={r.date}>
-                    <rect x={x} y={y} width={barW} height={barH} rx={4} fill="var(--accent-primary)" opacity={0.85}>
-                      <title>{`${formatWeekLabel(r.date)}: ${r.summary.totalCommits} commits`}</title>
-                    </rect>
-                    <text x={x + barW / 2} y={y - 6} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--text-primary)">{r.summary.totalCommits}</text>
-                  </g>
-                )
-              })}
+              {/* Crosshair vertical line */}
+              {hoveredWeekIdx !== null && pts[hoveredWeekIdx] && (
+                <line
+                  x1={pts[hoveredWeekIdx].x}
+                  y1={PAD_T}
+                  x2={pts[hoveredWeekIdx].x}
+                  y2={H - PAD_B}
+                  stroke="var(--color-primary)"
+                  strokeWidth={1.5}
+                  strokeDasharray="3,3"
+                  opacity={0.8}
+                />
+              )}
 
-              {chartMode === 'line' && (
+              {/* Mode: AREA */}
+              {chartMode === 'area' && (
                 <>
-                  <polyline
-                    points={lineData.map((r, i) => {
-                      const x = chartStartX + i * chartGap + chartGap / 2
-                      const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
-                      return `${x},${y}`
-                    }).join(' ')}
-                    fill="none"
-                    stroke="var(--accent-primary)"
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                  {lineData.map((r, i) => {
-                    const x = chartStartX + i * chartGap + chartGap / 2
-                    const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
+                  {smoothAreaPath && (
+                    <path d={smoothAreaPath} fill="url(#smoothAreaGrad)" />
+                  )}
+                  {smoothLinePath && (
+                    <path
+                      d={smoothLinePath}
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                  {pts.map((p, i) => {
+                    const isHovered = hoveredWeekIdx === i
                     return (
-                      <g key={r.date}>
-                        <circle cx={x} cy={y} r={5} fill="var(--bg-primary)" stroke="var(--accent-primary)" strokeWidth={2} />
-                        <title>{`${formatWeekLabel(r.date)}: ${r.summary.totalCommits} commits`}</title>
-                        <text x={x} y={y - 10} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--text-primary)">{r.summary.totalCommits}</text>
+                      <g key={p.report.date}>
+                        {isHovered && (
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r={10}
+                            fill="var(--color-primary)"
+                            opacity={0.25}
+                          />
+                        )}
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={isHovered ? 6 : 3.5}
+                          fill={isHovered ? '#ffffff' : 'var(--bg-primary)'}
+                          stroke="var(--color-primary)"
+                          strokeWidth={isHovered ? 3 : 2}
+                          style={{ transition: 'all 0.12s ease' }}
+                        />
                       </g>
                     )
                   })}
                 </>
               )}
 
-              {chartMode === 'area' && (
+              {/* Mode: LINE */}
+              {chartMode === 'line' && (
                 <>
-                  <defs>
-                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d={(() => {
-                      const pts = lineData.map((r, i) => {
-                        const x = chartStartX + i * chartGap + chartGap / 2
-                        const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
-                        return { x, y }
-                      })
-                      const baseline = H - PAD_B
-                      return `M ${pts[0].x},${baseline} ` + pts.map(p => `L ${p.x},${p.y}`).join(' ') + ` L ${pts[pts.length - 1].x},${baseline} Z`
-                    })()}
-                    fill="url(#areaGrad)"
-                  />
-                  <polyline
-                    points={lineData.map((r, i) => {
-                      const x = chartStartX + i * chartGap + chartGap / 2
-                      const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
-                      return `${x},${y}`
-                    }).join(' ')}
-                    fill="none"
-                    stroke="var(--accent-primary)"
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                  />
-                  {lineData.map((r, i) => {
-                    const x = chartStartX + i * chartGap + chartGap / 2
-                    const y = H - PAD_B - (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
+                  {smoothLinePath && (
+                    <path
+                      d={smoothLinePath}
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                  {pts.map((p, i) => {
+                    const isHovered = hoveredWeekIdx === i
                     return (
-                      <circle key={r.date} cx={x} cy={y} r={4} fill="var(--accent-primary)">
-                        <title>{`${formatWeekLabel(r.date)}: ${r.summary.totalCommits} commits`}</title>
-                      </circle>
+                      <g key={p.report.date}>
+                        {isHovered && (
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r={10}
+                            fill="var(--color-primary)"
+                            opacity={0.25}
+                          />
+                        )}
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={isHovered ? 6 : 4}
+                          fill={isHovered ? '#ffffff' : 'var(--color-primary)'}
+                          stroke={isHovered ? 'var(--color-primary)' : 'var(--bg-primary)'}
+                          strokeWidth={2}
+                          style={{ transition: 'all 0.12s ease' }}
+                        />
+                      </g>
                     )
                   })}
                 </>
               )}
 
+              {/* Mode: BAR */}
+              {chartMode === 'bar' && lineData.map((r, i) => {
+                const x = chartStartX + i * chartGap + (chartGap - barW) / 2
+                const barH = (r.summary.totalCommits / lineMax) * (H - PAD_T - PAD_B)
+                const y = H - PAD_B - barH
+                const isHovered = hoveredWeekIdx === i
+                return (
+                  <g key={r.date}>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={barW}
+                      height={Math.max(2, barH)}
+                      rx={3}
+                      fill={isHovered ? '#818cf8' : 'var(--color-primary)'}
+                      opacity={isHovered ? 1 : 0.85}
+                      style={{ transition: 'all 0.12s ease' }}
+                    />
+                    {isHovered && (
+                      <text
+                        x={x + barW / 2}
+                        y={y - 6}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fontWeight="700"
+                        fill="var(--text-primary)"
+                      >
+                        {r.summary.totalCommits}
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
+
+              {/* Mode: STACKED */}
               {chartMode === 'stacked' && lineData.map((r, i) => {
                 const x = chartStartX + i * chartGap + (chartGap - barW) / 2
                 const types = chartTypesPerWeek[i] || {}
                 const total = r.summary.totalCommits
                 const stackTypes = ['feat', 'fix', 'refactor', 'chore', 'docs', 'style', 'other']
                 let yOffset = H - PAD_B
+                const isHovered = hoveredWeekIdx === i
+
                 return (
-                  <g key={r.date}>
+                  <g key={r.date} opacity={isHovered ? 1 : 0.9}>
                     {stackTypes.map(type => {
                       const count = types[type] || 0
                       if (count === 0) return null
                       const segH = (count / lineMax) * (H - PAD_T - PAD_B)
                       yOffset -= segH
                       return (
-                        <rect key={type} x={x} y={yOffset} width={barW} height={segH} fill={getCommitTypeColor(type)} opacity={0.85} rx={2}>
-                          <title>{`${formatWeekLabel(r.date)} — ${type}: ${count}`}</title>
-                        </rect>
+                        <rect
+                          key={type}
+                          x={x}
+                          y={yOffset}
+                          width={barW}
+                          height={segH}
+                          fill={getCommitTypeColor(type)}
+                          rx={2}
+                        />
                       )
                     })}
-                    <text x={x + barW / 2} y={H - PAD_B - (total / lineMax) * (H - PAD_T - PAD_B) - 6} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--text-primary)">{total}</text>
+                    {isHovered && (
+                      <text
+                        x={x + barW / 2}
+                        y={H - PAD_B - (total / lineMax) * (H - PAD_T - PAD_B) - 6}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fontWeight="700"
+                        fill="var(--text-primary)"
+                      >
+                        {total}
+                      </text>
+                    )}
                   </g>
                 )
               })}
 
-              {/* X axis labels agrupados */}
+              {/* X axis labels agrupados com espaçamento harmonioso */}
               {lineData.map((r, i) => {
-                const step = lineData.length > 16 ? Math.ceil(lineData.length / 8) : lineData.length > 8 ? 2 : 1
+                const step = lineData.length > 20 ? Math.ceil(lineData.length / 10) : lineData.length > 10 ? 2 : 1
                 const shouldShowLabel = i % step === 0 || i === lineData.length - 1
                 if (!shouldShowLabel) return null
                 const x = chartStartX + i * chartGap + chartGap / 2
+                const isHovered = hoveredWeekIdx === i
                 return (
-                  <text key={`lbl-${r.date}`} x={x} y={H - 12} textAnchor="middle" fontSize="10.5" fill="var(--text-secondary)">
+                  <text
+                    key={`lbl-${r.date}`}
+                    x={x}
+                    y={H - 12}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill={isHovered ? 'var(--text-primary)' : 'var(--text-muted)'}
+                    fontWeight={isHovered ? '700' : '500'}
+                  >
                     {formatWeekLabel(r.date)}
                   </text>
                 )
@@ -369,39 +655,135 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ reports, onBack, onS
           </div>
         </div>
 
-        {pieSlices.length > 0 && (
-          <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>
-            <h3 className="projects-card-title">Tipos de commit (acumulado)</h3>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-              <svg width={130} height={130} viewBox="0 0 120 120">
-                {pieSlices.map(s => {
-                  const R = 50, CX = 60, CY = 60
-                  return (
-                    <path
-                      key={s.type}
-                      d={`M ${CX} ${CY} L ${CX + s.x1 * R} ${CY + s.y1 * R} A ${R} ${R} 0 ${s.large} 1 ${CX + s.x2 * R} ${CY + s.y2 * R} Z`}
-                      fill={s.color}
-                      opacity={0.85}
-                      stroke="var(--bg-primary)"
-                      strokeWidth={1}
+        {pieSlices.length > 0 && (() => {
+          const hoveredSlice = pieSlices.find(s => s.type === hoveredType)
+          const totalCommitsSum = pieSlices.reduce((sum, s) => sum + s.count, 0)
+          const CX = 75, CY = 75
+
+          return (
+            <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="projects-card-title" style={{ margin: 0 }}>Tipos de Commit (Acumulado)</h3>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  {totalCommitsSum} commits classificados
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '100%', justifyContent: 'space-between' }}>
+                {/* Donut SVG */}
+                <div style={{ position: 'relative', width: 150, height: 150, flexShrink: 0 }}>
+                  <svg width={150} height={150} viewBox="0 0 150 150">
+                    {pieSlices.map(s => {
+                      const isHovered = hoveredType === s.type
+                      return (
+                        <path
+                          key={s.type}
+                          d={s.path}
+                          fill={s.color}
+                          opacity={hoveredType ? (isHovered ? 1 : 0.4) : 0.9}
+                          stroke="#111420"
+                          strokeWidth={2}
+                          style={{
+                            cursor: 'pointer',
+                            transition: 'opacity 0.15s ease, transform 0.15s ease',
+                            transformOrigin: `${CX}px ${CY}px`,
+                            transform: isHovered ? 'scale(1.04)' : 'scale(1)',
+                          }}
+                          onMouseEnter={() => setHoveredType(s.type)}
+                          onMouseLeave={() => setHoveredType(null)}
+                        >
+                          <title>{`${s.type}: ${s.count} (${s.pct}%)`}</title>
+                        </path>
+                      )
+                    })}
+
+                    {/* Central Donut Readout */}
+                    <text
+                      x={CX}
+                      y={CY - 2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill={hoveredSlice ? hoveredSlice.color : 'var(--text-primary)'}
+                      fontSize={hoveredSlice ? '18' : '17'}
+                      fontWeight="800"
                     >
-                      <title>{`${s.type}: ${s.count} (${s.pct}%)`}</title>
-                    </path>
-                  )
-                })}
-              </svg>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {pieSlices.map(s => (
-                  <div key={s.type} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: s.color }} />
-                    <span style={{ color: 'var(--text-primary)', width: '55px' }}>{s.type}</span>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{s.pct}%</span>
-                  </div>
-                ))}
+                      {hoveredSlice ? hoveredSlice.count : totalCommitsSum}
+                    </text>
+                    <text
+                      x={CX}
+                      y={CY + 14}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="var(--text-muted)"
+                      fontSize="9"
+                      fontWeight="700"
+                      letterSpacing="0.05em"
+                    >
+                      {hoveredSlice ? `${hoveredSlice.type.toUpperCase()} (${hoveredSlice.pct}%)` : 'COMMITS'}
+                    </text>
+                  </svg>
+                </div>
+
+                {/* Interactive Legend with progress bars */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: 0, maxHeight: 180, overflowY: 'auto' }}>
+                  {pieSlices.map(s => {
+                    const isHovered = hoveredType === s.type
+                    return (
+                      <div
+                        key={s.type}
+                        onMouseEnter={() => setHoveredType(s.type)}
+                        onMouseLeave={() => setHoveredType(null)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          background: isHovered ? 'rgba(255, 255, 255, 0.07)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.12s ease',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '2px',
+                            background: s.color,
+                            flexShrink: 0,
+                            boxShadow: isHovered ? `0 0 8px ${s.color}` : 'none',
+                          }}
+                        />
+                        <span
+                          style={{
+                            color: isHovered ? '#ffffff' : 'var(--text-primary)',
+                            fontSize: '11px',
+                            width: '52px',
+                            fontWeight: isHovered ? 700 : 500,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {s.type}
+                        </span>
+                        <div style={{ flex: 1, height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${s.pct}%`, height: '100%', background: s.color, borderRadius: '2px' }} />
+                        </div>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '10px', width: '28px', textAlign: 'right', fontWeight: 600 }}>
+                          {s.pct}%
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '11px', width: '32px', textAlign: 'right', fontWeight: 700 }}>
+                          {s.count}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
         
         {badRepos.length > 0 && (
           <div className="projects-dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 10px' }}>

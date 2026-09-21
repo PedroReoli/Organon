@@ -326,13 +326,13 @@ export const CompactRepoTable: React.FC<CompactRepoTableProps> = ({
         <table className="projects-table">
           <thead>
             <tr>
-              <th style={{ width: '22%' }}>Repositório</th>
-              <th style={{ width: '13%' }}>Branch</th>
-              <th style={{ width: '13%' }}>Status Local</th>
-              <th style={{ width: '12%' }}>Sync Remoto</th>
-              <th style={{ width: '10%' }}>Nuvem / CI</th>
-              <th style={{ width: '22%' }}>Último Commit</th>
-              <th style={{ width: '8%', textAlign: 'right' }}>Ações</th>
+              <th style={{ width: '18%', minWidth: 150 }}>Repositório</th>
+              <th style={{ width: '9%', minWidth: 75 }}>Branch</th>
+              <th style={{ width: '8%', minWidth: 75 }}>Status Local</th>
+              <th style={{ width: '9%', minWidth: 80 }}>Sync Remoto</th>
+              <th style={{ width: '7%', minWidth: 65 }}>Nuvem / CI</th>
+              <th style={{ width: '41%' }}>Último Commit</th>
+              <th style={{ width: '8%', minWidth: 80, textAlign: 'right' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -489,6 +489,11 @@ export const CompactRepoTable: React.FC<CompactRepoTableProps> = ({
                         <span className="projects-commit-msg" title={lastCommit.message}>
                           {lastCommit.message || 'Sem commits registrados'}
                         </span>
+                        {lastCommit.relativeTime && (
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0, opacity: 0.85 }}>
+                            {lastCommit.relativeTime}
+                          </span>
+                        )}
                         {!lastCommit.isConventional && lastCommit.message && (
                           <span
                             className="projects-commit-warn"

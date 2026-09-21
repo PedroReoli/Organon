@@ -24,6 +24,7 @@ interface DayCommit {
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [hoveredDay, setHoveredDay] = useState<{ date: string; count: number; weekday: number } | null>(null)
 
   // Index de commits por dia
   const commitsByDay = useMemo(() => {
@@ -140,10 +141,22 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
   function getColor(count: number): string {
     if (count === 0) return 'rgba(255, 255, 255, 0.04)'
     const intensity = count / maxCount
-    if (intensity > 0.75) return '#22c55e'
-    if (intensity > 0.5) return '#4ade80'
-    if (intensity > 0.25) return '#86efac'
-    return '#bbf7d0'
+    if (intensity > 0.65) return '#22c55e'
+    if (intensity > 0.4) return '#34d399'
+    if (intensity > 0.2) return '#6ee7b7'
+    return '#a7f3d0'
+  }
+
+  function fmtDateFull(d: string): string {
+    const parts = d.split('-')
+    if (parts.length !== 3) return d
+    const year = parts[0]
+    const month = parseInt(parts[1], 10) - 1
+    const day = parseInt(parts[2], 10)
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    const dateObj = new Date(parseInt(year, 10), month, day)
+    const dayName = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][dateObj.getDay()]
+    return `${dayName}, ${day} de ${monthNames[month]} de ${year}`
   }
 
   const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -206,68 +219,128 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ reports }) => {
         </div>
       </div>
 
-      {/* Bloco 1: Heatmap Anual Completo (Largura Total) */}
-      <div className="projects-dashboard-card" style={{ marginBottom: '12px', padding: '12px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h2 className="projects-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Activity size={15} color="var(--color-primary)" />
-            <span>Matriz Anual de Contribuições (52 Semanas)</span>
-          </h2>
+      {/* Bloco 1: Heatmap Anual Completo (Largura Total 100%) */}
+      <div className="projects-dashboard-card" style={{ marginBottom: '12px', padding: '14px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 className="projects-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={15} color="var(--color-primary)" />
+              <span>Matriz Anual de Contribuições (52 Semanas)</span>
+            </h2>
+            {hoveredDay ? (
+              <span style={{ fontSize: '11px', background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.25)', color: 'var(--text-primary)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontWeight: 600 }}>{fmtDateFull(hoveredDay.date)}:</span>
+                <strong style={{ color: hoveredDay.count > 0 ? '#22c55e' : 'var(--text-muted)' }}>
+                  {hoveredDay.count > 0 ? `${hoveredDay.count} commits` : 'Sem commits'}
+                </strong>
+              </span>
+            ) : selectedDay ? (
+              <span style={{ fontSize: '11px', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.25)', color: '#22c55e', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                {fmtDate(selectedDay)} selecionado
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {totalCommits} commits nos últimos 365 dias
+              </span>
+            )}
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: 'var(--text-muted)' }}>
             <span>Menos</span>
             {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
-              <div key={i} style={{ width: '10px', height: '10px', borderRadius: '2px', background: getColor(v * maxCount) }} />
+              <div key={i} style={{ width: '11px', height: '11px', borderRadius: '2px', background: getColor(v * maxCount) }} />
             ))}
             <span>Mais</span>
             <span style={{ opacity: 0.7 }}>(máx: {maxCount})</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto', paddingBottom: '6px' }}>
-          {/* Rótulos dos meses */}
-          <div style={{ display: 'flex', paddingLeft: '32px', marginBottom: '4px', position: 'relative', height: '14px' }}>
-            {monthLabels.map((m, i) => (
+        <div style={{ display: 'flex', width: '100%', alignItems: 'flex-start' }}>
+          {/* Rótulos dos dias da semana (Gutter esquerdo) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '26px', flexShrink: 0, paddingTop: '18px' }}>
+            {dayLabels.map((l, i) => (
               <span
                 key={i}
-                style={{ position: 'absolute', left: `${32 + m.col * 15}px`, fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}
+                style={{
+                  fontSize: '9.5px',
+                  color: 'var(--text-muted)',
+                  height: 'clamp(10px, 1.35vw, 15px)',
+                  lineHeight: 'clamp(10px, 1.35vw, 15px)',
+                  textAlign: 'right',
+                  paddingRight: '6px',
+                  fontWeight: 600,
+                }}
               >
-                {m.label}
+                {i % 2 === 1 ? l : ''}
               </span>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '3px' }}>
-            {/* Rótulos dos dias da semana */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '30px' }}>
-              {dayLabels.map((l, i) => (
-                <span key={i} style={{ fontSize: '9px', color: 'var(--text-muted)', height: '12px', lineHeight: '12px', textAlign: 'right', paddingRight: '6px', fontWeight: 600 }}>
-                  {i % 2 === 1 ? l : ''}
+          {/* Grid 52 semanas em 100% de largura */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            {/* Rótulos dos meses proporcionais */}
+            <div style={{ position: 'relative', width: '100%', height: '16px', marginBottom: '3px' }}>
+              {monthLabels.map((m, i) => (
+                <span
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    left: `${(m.col / weeks.length) * 100}%`,
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {m.label}
                 </span>
               ))}
             </div>
 
-            {/* Grid 52 semanas */}
-            <div style={{ display: 'flex', gap: '3px' }}>
+            {/* Grid dinâmico que ocupa 100% da largura do card */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`,
+                gap: '3px',
+                width: '100%',
+              }}
+            >
               {weeks.map((week, wi) => (
-                <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  {week.map(day => (
-                    <div
-                      key={day.date}
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '2px',
-                        cursor: day.count > 0 ? 'pointer' : 'default',
-                        background: getColor(day.count),
-                        border: selectedDay === day.date ? '2px solid var(--text-primary)' : '1px solid rgba(255,255,255,0.05)',
-                        transition: 'transform 0.1s ease',
-                        transform: selectedDay === day.date ? 'scale(1.2)' : 'scale(1)',
-                        boxShadow: selectedDay === day.date ? '0 0 8px rgba(255,255,255,0.3)' : 'none',
-                      }}
-                      title={`${fmtDate(day.date)}: ${day.count} commits`}
-                      onClick={() => day.count > 0 && setSelectedDay(selectedDay === day.date ? null : day.date)}
-                    />
-                  ))}
+                <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%' }}>
+                  {week.map(day => {
+                    const isSelected = selectedDay === day.date
+                    const isHovered = hoveredDay?.date === day.date
+                    return (
+                      <div
+                        key={day.date}
+                        onMouseEnter={() => setHoveredDay(day)}
+                        onMouseLeave={() => setHoveredDay(null)}
+                        onClick={() => day.count > 0 && setSelectedDay(isSelected ? null : day.date)}
+                        title={`${fmtDate(day.date)}: ${day.count} commits`}
+                        style={{
+                          width: '100%',
+                          height: 'clamp(10px, 1.35vw, 15px)',
+                          borderRadius: '3px',
+                          cursor: day.count > 0 ? 'pointer' : 'default',
+                          background: getColor(day.count),
+                          border: isSelected
+                            ? '2px solid var(--text-primary)'
+                            : isHovered
+                            ? '1px solid rgba(255, 255, 255, 0.7)'
+                            : '1px solid rgba(255, 255, 255, 0.04)',
+                          transition: 'all 0.12s ease',
+                          transform: isSelected ? 'scale(1.25)' : isHovered ? 'scale(1.2)' : 'scale(1)',
+                          zIndex: isSelected ? 5 : isHovered ? 4 : 1,
+                          boxShadow: isSelected
+                            ? '0 0 10px rgba(34, 197, 94, 0.5)'
+                            : isHovered && day.count > 0
+                            ? '0 0 8px rgba(34, 197, 94, 0.3)'
+                            : 'none',
+                        }}
+                      />
+                    )
+                  })}
                 </div>
               ))}
             </div>
