@@ -69,52 +69,13 @@ const navbarCustomizeIcon = (
   </svg>
 )
 
-const syncIcons: Record<SyncStatus, JSX.Element> = {
-  idle: <></>,
-  pending: (
-    // Ícone de pendência: seta circular com ponto indicando fila
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M13.5 8A5.5 5.5 0 0 0 4 4.5" strokeLinecap="round" />
-      <path d="M2.5 8A5.5 5.5 0 0 0 12 11.5" strokeLinecap="round" />
-      <path d="M2 3l2 1.5L2 6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 10l-2 1.5 2 1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  syncing: (
-    // Ícone de atualização: setas girando
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="nav-sync-spin">
-      <path d="M13.5 8A5.5 5.5 0 0 0 4 4.5" strokeLinecap="round" />
-      <path d="M2.5 8A5.5 5.5 0 0 0 12 11.5" strokeLinecap="round" />
-      <path d="M2 3l2 1.5L2 6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 10l-2 1.5 2 1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  synced: (
-    // Ícone de atualizado: setas de refresh com check
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M13.5 8A5.5 5.5 0 0 0 4 4.5" strokeLinecap="round" />
-      <path d="M2.5 8A5.5 5.5 0 0 0 12 11.5" strokeLinecap="round" />
-      <path d="M2 3l2 1.5L2 6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 10l-2 1.5 2 1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  error: (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-    </svg>
-  ),
-}
-
-const syncLabels: Record<SyncStatus, string> = {
-  idle: '',
-  pending: 'Pendente — clique para sincronizar',
-  syncing: 'Sincronizando...',
-  synced: 'Sincronizado — clique para atualizar',
-  error: 'Erro no sync — clique para tentar novamente',
-}
-
-export const InternalNav = ({ activeView, onChange, disabled = false, navbarConfig, onOpenNavbarCustomize, syncStatus = 'idle', userLoggedIn = false, onSync, user, isRestoring = false, profilePhotoDataUrl }: InternalNavProps) => {
+export const InternalNav = ({
+  activeView,
+  onChange,
+  disabled = false,
+  navbarConfig,
+  onOpenNavbarCustomize,
+}: InternalNavProps) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const groupButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
@@ -254,20 +215,6 @@ export const InternalNav = ({ activeView, onChange, disabled = false, navbarConf
         </div>
 
         <div className="app-nav-actions">
-          {userLoggedIn && syncStatus !== 'idle' && (
-            <button
-              className={`nav-sync-indicator nav-sync-indicator--${syncStatus}`}
-              title={syncLabels[syncStatus]}
-              onClick={syncStatus !== 'syncing' ? onSync : undefined}
-              disabled={syncStatus === 'syncing' || disabled}
-            >
-              <span className="app-nav-icon" aria-hidden="true">
-                {syncIcons[syncStatus]}
-              </span>
-              <span>{syncStatus === 'pending' ? 'Pendente' : syncStatus === 'syncing' ? 'Sincronizando' : syncStatus === 'synced' ? 'Sincronizado' : 'Erro'}</span>
-            </button>
-          )}
-
           <button
             className="app-nav-action app-nav-action-navbar"
             onClick={handleOpenNavbarCustomize}
@@ -280,45 +227,17 @@ export const InternalNav = ({ activeView, onChange, disabled = false, navbarConf
             <span>Navbar</span>
           </button>
 
-          {(userLoggedIn && user) ? (
-            <button
-              className={`app-nav-user-avatar ${activeView === 'settings' ? 'is-active' : ''}`}
-              onClick={handleClick('settings')}
-              disabled={disabled}
-              title={user.name ? `${user.name} — ${user.email}` : user.email}
-            >
-              {profilePhotoDataUrl ? (
-                <img
-                  src={profilePhotoDataUrl}
-                  alt="Foto de perfil"
-                  style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                  aria-hidden="true"
-                />
-              ) : (
-                <span className="app-nav-user-initials" aria-hidden="true">
-                  {(user.name ?? user.email).charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span className="app-nav-user-label">{user.name || user.email}</span>
-            </button>
-          ) : isRestoring ? (
-            <button className="app-nav-user-avatar app-nav-user-avatar--restoring" disabled title="Restaurando sessão...">
-              <span className="app-nav-user-initials" aria-hidden="true">···</span>
-              <span className="app-nav-user-label">Entrando...</span>
-            </button>
-          ) : (
-            <button
-              className={`app-nav-action app-nav-action-settings ${activeView === 'settings' ? 'is-active' : ''}`}
-              onClick={handleClick('settings')}
-              disabled={disabled}
-              title="Configuracoes"
-            >
-              <span className="app-nav-icon app-nav-settings-icon" aria-hidden="true">
-                {settingsIcon}
-              </span>
-              <span>Config</span>
-            </button>
-          )}
+          <button
+            className={`app-nav-action app-nav-action-settings ${activeView === 'settings' ? 'is-active' : ''}`}
+            onClick={handleClick('settings')}
+            disabled={disabled}
+            title="Configurações"
+          >
+            <span className="app-nav-icon app-nav-settings-icon" aria-hidden="true">
+              {settingsIcon}
+            </span>
+            <span>Config</span>
+          </button>
         </div>
       </nav>
     </>

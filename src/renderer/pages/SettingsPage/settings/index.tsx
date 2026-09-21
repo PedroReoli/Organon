@@ -8,8 +8,6 @@ import { DataSection }           from './sections/DataSection'
 import { IdesSection }           from './sections/IdesSection'
 import { ShortcutsSection }      from './sections/ShortcutsSection'
 import { BackupSection }         from './sections/BackupSection'
-import { CloudSection }          from './sections/CloudSection'
-import { AccountSection }        from './sections/AccountSection'
 import { PlannerSection }        from './sections/PlannerSection'
 import { NotesSection }          from './sections/NotesSection'
 import { StudySection }          from './sections/StudySection'
@@ -23,7 +21,6 @@ export const SettingsView = (props: SettingsViewProps) => {
       <SettingsNav
         activeSection={v.activeSection}
         setActiveSection={v.setActiveSection}
-        hasSyncError={props.syncStatus === 'error'}
       />
 
       <div className="projects-content-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -83,23 +80,6 @@ export const SettingsView = (props: SettingsViewProps) => {
           onAddCalendarEvent={props.onAddCalendarEvent}
         />
 
-        <CloudSection
-          activeSection={v.activeSection}
-          settings={props.settings}
-          isConfigured={props.isConfigured}
-          userLoggedIn={props.userLoggedIn}
-          syncStatus={props.syncStatus}
-          syncError={props.syncError}
-          onSync={props.onSync}
-          pingStatus={v.pingStatus}
-          pingReport={v.pingReport}
-          handlePing={v.handlePing}
-          syncErrorSummary={v.syncErrorSummary}
-          syncErrorTime={v.syncErrorTime}
-          syncErrorRows={v.syncErrorRows}
-          handleDownloadSyncErrorReport={v.handleDownloadSyncErrorReport}
-        />
-
         <PlannerSection
           activeSection={v.activeSection}
           userLoggedIn={props.userLoggedIn}
@@ -125,45 +105,6 @@ export const SettingsView = (props: SettingsViewProps) => {
           activeSection={v.activeSection}
           settings={props.settings}
           onUpdateSettings={props.onUpdateSettings}
-        />
-
-        <AccountSection
-          activeSection={v.activeSection}
-          userLoggedIn={props.userLoggedIn}
-          authUser={props.authUser}
-          authError={props.authError}
-          onClearAuthError={props.onClearAuthError}
-          authLoading={props.authLoading}
-          profilePhotoDataUrl={props.profilePhotoDataUrl}
-          onUpdateProfilePhoto={props.onUpdateProfilePhoto}
-          storeSummary={props.storeSummary}
-          onLogin={props.onLogin}
-          onRegister={props.onRegister}
-          onLogout={props.onLogout}
-          editingProfileName={v.editingProfileName}
-          setEditingProfileName={v.setEditingProfileName}
-          profileNameDraft={v.profileNameDraft}
-          setProfileNameDraft={v.setProfileNameDraft}
-          profileSaving={v.profileSaving}
-          profilePhotoInputRef={v.profilePhotoInputRef}
-          handleSaveProfileName={v.handleSaveProfileName}
-          handleProfilePhotoChange={v.handleProfilePhotoChange}
-          authTab={v.authTab}
-          setAuthTab={v.setAuthTab}
-          authEmail={v.authEmail}
-          setAuthEmail={v.setAuthEmail}
-          authPassword={v.authPassword}
-          setAuthPassword={v.setAuthPassword}
-          authPasswordConfirm={v.authPasswordConfirm}
-          setAuthPasswordConfirm={v.setAuthPasswordConfirm}
-          showAuthPassword={v.showAuthPassword}
-          setShowAuthPassword={v.setShowAuthPassword}
-          authLocalError={v.authLocalError}
-          setAuthLocalError={v.setAuthLocalError}
-          authName={v.authName}
-          setAuthName={v.setAuthName}
-          authSubmitting={v.authSubmitting}
-          setAuthSubmitting={v.setAuthSubmitting}
         />
       </div>
     </div>

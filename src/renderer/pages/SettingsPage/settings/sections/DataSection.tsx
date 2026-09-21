@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Settings } from '@types'
 import { isElectron } from '@utils'
 import { Button, Input } from '@shared/components/primitives'
+import { HardDrive } from 'lucide-react'
 
 interface DataSectionProps {
   activeSection:    string
@@ -75,15 +76,56 @@ export const DataSection = ({ activeSection, settings, onUpdateSettings }: DataS
   return (
     <section className={`settings-section ${activeSection !== 'data' ? 'settings-section-hidden' : ''}`}>
       <div className="settings-section-header">
-        <h3>Pasta de dados</h3>
+        <h3>Armazenamento Local</h3>
+        <p className="settings-hint">
+          Configure as pastas locais utilizadas pelo Organon para salvar suas notas, base de dados e relatórios.
+        </p>
+      </div>
+
+      {/* Banner de Dados 100% Locais */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 16px',
+          borderRadius: '10px',
+          background: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))',
+          border: '1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border))',
+          marginBottom: '20px',
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: '8px',
+            background: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
+            color: 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <HardDrive size={18} />
+        </div>
+        <div>
+          <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-text)' }}>
+            Dados 100% Locais no seu Computador
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+            O Organon opera em regime puramente local e offline. Todos os arquivos ficam salvos nas pastas abaixo sem sincronização externa.
+          </div>
+        </div>
       </div>
 
       <div className="settings-data">
         <div className="settings-data-path">
-          <label className="form-label">Caminho atual</label>
+          <label className="form-label">Pasta principal de dados</label>
           <Input fullWidth type="text" value={dataDirInfo?.current ?? ''} readOnly />
           <div className="settings-data-hint">
-            {dataDirInfo?.custom ? 'Pasta personalizada' : 'Pasta padrao'}
+            {dataDirInfo?.custom ? 'Pasta personalizada' : 'Pasta padrão do sistema'}
           </div>
         </div>
         <div className="settings-data-actions">

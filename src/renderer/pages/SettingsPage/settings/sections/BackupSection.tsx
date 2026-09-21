@@ -3,6 +3,17 @@ import type { CalendarEvent } from '@types'
 import { isElectron } from '@utils'
 import { formatDate, formatFileSize } from '@Settings/settings/utils'
 import { Button } from '@shared/components/primitives'
+import {
+  HardDrive,
+  Download,
+  FolderOpen,
+  RotateCcw,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  FileDown,
+  History,
+} from 'lucide-react'
 
 interface BackupSectionProps {
   activeSection:      string
@@ -15,7 +26,7 @@ interface BackupSectionProps {
   onAddCalendarEvent?:(event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => any
 }
 
-const BACKUPS_PER_PAGE = 3
+const BACKUPS_PER_PAGE = 5
 
 export const BackupSection = ({
   activeSection, showResetConfirm, setShowResetConfirm,
@@ -27,6 +38,7 @@ export const BackupSection = ({
   const [mergeLoading,          setMergeLoading]          = useState(false)
   const [importMarkdownLoading, setImportMarkdownLoading] = useState(false)
   const [importPlanningLoading, setImportPlanningLoading] = useState(false)
+  const [feedbackMessage,       setFeedbackMessage]       = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     if (!isElectron()) return
@@ -34,19 +46,27 @@ export const BackupSection = ({
   }, [])
 
   const handleCreateBackup = async () => {
-    if (!isElectron()) return
+    if (!isElectron()) {
+      setFeedbackMessage({ type: 'error', text: 'Operação disponível no aplicativo desktop Organon.' })
+      return
+    }
     setBackupLoading(true)
+    setFeedbackMessage(null)
     try {
       const result = await window.electronAPI.createBackup()
       if (result.success) {
-        setBackups(await window.electronAPI.listBackups())
+        const updated = await window.electronAPI.listBackups()
+        setBackups(updated)
         setBackupPage(0)
-        alert('Backup criado com sucesso!')
+        setFeedbackMessage({
+          type: 'success',
+          text: `Backup gerado com sucesso! Arquivo salvo localmente no histórico.`,
+        })
       } else {
-        alert(`Erro ao criar backup: ${result.error}`)
+        setFeedbackMessage({ type: 'error', text: `Erro ao gerar backup: ${result.error}` })
       }
     } catch (error) {
-      alert(`Erro ao criar backup: ${error}`)
+      setFeedbackMessage({ type: 'error', text: `Erro ao gerar backup: ${error}` })
     } finally {
       setBackupLoading(false)
     }
@@ -221,54 +241,181 @@ export const BackupSection = ({
     }
   }
 
-  if (!isElectron()) return null
-
   const totalPages = Math.ceil(backups.length / BACKUPS_PER_PAGE)
   const paginated  = backups.slice(backupPage * BACKUPS_PER_PAGE, (backupPage + 1) * BACKUPS_PER_PAGE)
 
   return (
     <section className={`settings-section ${activeSection !== 'backup' ? 'settings-section-hidden' : ''}`}>
       <div className="settings-section-header">
-        <h3>Dados e Recuperação</h3>
+        <h3>Backup & Restauração Local</h3>
+        <p className="settings-hint">
+          Gere cópias de segurança completas, restaure pontos anteriores e gerencie o histórico de dados no seu computador.
+        </p>
       </div>
 
+      {/* Banner de Dados 100% Locais */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 16px',
+          borderRadius: '10px',
+          background: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))',
+          border: '1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border))',
+          marginBottom: '16px',
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: '8px',
+            background: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
+            color: 'var(--color-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <ShieldCheck size={18} />
+        </div>
+        <div>
+          <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-text)' }}>
+            Armazenamento 100% Local & Privado
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+            Nenhum dado pessoal, nota ou transcrição é transmitido para nuvens externas. Seus dados e backups pertencem unicamente a você.
+          </div>
+        </div>
+      </div>
+
+      {/* Banner de feedback temporário */}
+      {feedbackMessage && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            background:
+              feedbackMessage.type === 'success'
+                ? 'rgba(34, 197, 94, 0.1)'
+                : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${feedbackMessage.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            color: feedbackMessage.type === 'success' ? '#16a34a' : '#ef4444',
+            fontSize: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {feedbackMessage.type === 'success' ? (
+              <CheckCircle2 size={16} />
+            ) : (
+              <AlertCircle size={16} />
+            )}
+            <span>{feedbackMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackMessage(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'inherit',
+              fontSize: '11px',
+              fontWeight: 700,
+            }}
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
       <div className="settings-data-grid">
-        {/* Backup local */}
+        {/* Card 1: Gerar Backup Local */}
         <div className="settings-data-card">
-          <h4>Salvar Localmente</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <HardDrive size={16} style={{ color: 'var(--color-primary)' }} />
+            <h4>Gerar Backup Local</h4>
+          </div>
           <p className="settings-help-text" style={{ marginBottom: 10 }}>
-            Cria um backup manual completo e validado. Backups manuais não são removidos automaticamente.
+            Cria um snapshot imediato, validado e arquivado de todas as notas, tarefas, eventos e dados locais.
           </p>
           <div className="settings-backup-actions">
-            <Button variant="primary" onClick={handleCreateBackup} disabled={backupLoading}>
-              {backupLoading ? 'Salvando...' : 'Salvar Localmente'}
+            <Button
+              variant="primary"
+              onClick={handleCreateBackup}
+              disabled={backupLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={13} />
+              <span>{backupLoading ? 'Gerando Backup...' : 'Gerar Backup Agora'}</span>
             </Button>
-            <Button variant="secondary" onClick={handleOpenBackupsFolder}>
-              Abrir Pasta de Backups
+
+            <Button
+              variant="secondary"
+              onClick={handleOpenBackupsFolder}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <FolderOpen size={13} />
+              <span>Abrir Pasta de Backups</span>
             </Button>
-            <Button variant="secondary" onClick={handleMergeFromOldPath} disabled={mergeLoading}>
-              {mergeLoading ? 'Processando...' : 'Recuperar Dados de Pasta Antiga'}
+
+            <Button
+              variant="secondary"
+              onClick={handleMergeFromOldPath}
+              disabled={mergeLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RotateCcw size={13} />
+              <span>{mergeLoading ? 'Processando...' : 'Recuperar Pasta Antiga'}</span>
             </Button>
+
             {onOpenHistory && (
-              <Button variant="secondary" onClick={onOpenHistory}>
-                Abrir Historico
+              <Button
+                variant="secondary"
+                onClick={onOpenHistory}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <History size={13} />
+                <span>Abrir Histórico</span>
               </Button>
             )}
           </div>
 
           {backups.length > 0 && (
-            <div className="settings-backups-list">
+            <div className="settings-backups-list" style={{ marginTop: '12px' }}>
               <div className="settings-backups-header">
-                <h4>Backups disponíveis</h4>
-                <span className="settings-backups-total">{backups.length} backup(s)</span>
+                <h4>Backups Salvos no Disco</h4>
+                <span className="settings-backups-total">{backups.length} backup(s) encontrado(s)</span>
               </div>
               <div className="settings-backups-items">
-                {paginated.map(backup => (
+                {paginated.map((backup) => (
                   <div key={backup.path} className="settings-backup-item">
                     <div className="settings-backup-item-info">
-                      <div className="settings-backup-item-name">{backup.name}</div>
+                      <div className="settings-backup-item-name" style={{ fontWeight: 600 }}>
+                        {backup.name}
+                      </div>
                       <div className="settings-backup-item-meta">
-                        {formatDate(backup.date)} • {formatFileSize(backup.size)} • {backup.notes ?? 0} notas • {backup.valid === false ? 'Inválido' : (backup.category ?? 'Legado')}
+                        {formatDate(backup.date)} • {formatFileSize(backup.size)} • {backup.notes ?? 0} notas •{' '}
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: backup.valid === false ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                            color: backup.valid === false ? '#ef4444' : '#16a34a',
+                            fontWeight: 600,
+                            fontSize: '10px',
+                          }}
+                        >
+                          {backup.valid === false ? 'Inválido' : 'Validado'}
+                        </span>
                       </div>
                     </div>
                     <Button
@@ -284,27 +431,54 @@ export const BackupSection = ({
               </div>
               {totalPages > 1 && (
                 <div className="settings-backups-pagination">
-                  <Button variant="secondary" size="sm" onClick={() => setBackupPage(p => Math.max(0, p - 1))} disabled={backupPage === 0}>‹</Button>
-                  <span className="settings-backups-page-info">{backupPage + 1} / {totalPages}</span>
-                  <Button variant="secondary" size="sm" onClick={() => setBackupPage(p => Math.min(totalPages - 1, p + 1))} disabled={backupPage >= totalPages - 1}>›</Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setBackupPage((p) => Math.max(0, p - 1))}
+                    disabled={backupPage === 0}
+                  >
+                    ‹
+                  </Button>
+                  <span className="settings-backups-page-info">
+                    {backupPage + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setBackupPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={backupPage >= totalPages - 1}
+                  >
+                    ›
+                  </Button>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Importar dados */}
+        {/* Card 2: Importar dados */}
         <div className="settings-data-card">
-          <h4>Importar Dados</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileDown size={16} style={{ color: 'var(--color-primary)' }} />
+            <h4>Importar Dados</h4>
+          </div>
           <p className="settings-help-text">
-            Importe markdowns como notas ou dados de planejamento de um arquivo JSON (store/planning/calendar).
+            Importe markdowns (.md) existentes como notas ou restaure dados de planejamento a partir de arquivos JSON externos.
           </p>
           <div className="settings-backup-actions">
-            <Button variant="secondary" onClick={handleImportMarkdowns} disabled={importMarkdownLoading || !onAddNote}>
-              {importMarkdownLoading ? 'Importando...' : 'Importar Markdowns como Notas'}
+            <Button
+              variant="secondary"
+              onClick={handleImportMarkdowns}
+              disabled={importMarkdownLoading || !onAddNote}
+            >
+              {importMarkdownLoading ? 'Importando...' : 'Importar Markdowns (.md)'}
             </Button>
-            <Button variant="secondary" onClick={handleImportPlanningData} disabled={importPlanningLoading || !onAddCard || !onAddCalendarEvent}>
-              {importPlanningLoading ? 'Importando...' : 'Importar Dados de Planejamento'}
+            <Button
+              variant="secondary"
+              onClick={handleImportPlanningData}
+              disabled={importPlanningLoading || !onAddCard || !onAddCalendarEvent}
+            >
+              {importPlanningLoading ? 'Importando...' : 'Importar Planejamento (.json)'}
             </Button>
           </div>
         </div>
