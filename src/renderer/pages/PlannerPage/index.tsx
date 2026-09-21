@@ -11,7 +11,7 @@ export type PlannerViewMode = 'weekly' | 'daily';
 
 export const PlannerPage = () => {
   const [viewMode, setViewMode] = useState<PlannerViewMode>('weekly');
-  const { tasks, projects, updateTask, addTask, removeTask: _removeTask, moveTask, rescheduleOverdue } = usePlanningTasks();
+  const { tasks, projects, updateTask, addTask, removeTask, moveTask, rescheduleOverdue } = usePlanningTasks();
 
   // Reminders Daemon
   const { activeAlert, dismissAlert, snoozeAlert } = usePlanningReminders(tasks);
@@ -69,6 +69,24 @@ export const PlannerPage = () => {
         onClose={() => setEditingTaskId(null)}
         onSave={(id, updates) => {
           updateTask(id, updates);
+          setEditingTaskId(null);
+        }}
+        onDelete={(id) => {
+          removeTask(id);
+          setEditingTaskId(null);
+        }}
+        onDuplicate={(t) => {
+          addTask({
+            title: `${t.title} (Cópia)`,
+            status: t.status,
+            priority: t.priority,
+            projectId: t.projectId,
+            time: t.time,
+            date: t.date,
+            hasDate: t.hasDate,
+            storyPoints: t.storyPoints,
+            location: t.location,
+          });
           setEditingTaskId(null);
         }}
       />

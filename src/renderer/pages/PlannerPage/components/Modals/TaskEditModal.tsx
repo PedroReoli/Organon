@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PlanningTask } from '../../types/planning.types';
 import type { Project } from '@types';
+import { Trash2, Copy } from 'lucide-react';
 
 interface TaskEditModalProps {
   task: PlanningTask | null;
@@ -8,9 +9,19 @@ interface TaskEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (id: string, updates: Partial<PlanningTask>) => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (task: PlanningTask) => void;
 }
 
-export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave }: TaskEditModalProps) => {
+export const TaskEditModal = ({
+  task,
+  projects = [],
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  onDuplicate,
+}: TaskEditModalProps) => {
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState<PlanningTask['status']>('todo');
   const [priority, setPriority] = useState<PlanningTask['priority']>('P3');
@@ -31,9 +42,8 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave }: 
     }
   }, [task]);
 
-  if (!isOpen || !task) return null;
-
   const handleSave = () => {
+    if (!task) return;
     onSave(task.id, {
       title: title.trim() || task.title,
       status,
@@ -45,6 +55,23 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave }: 
       hasDate: !!date,
     });
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, title, status, priority, projectId, time, storyPoints, date]);
+
+  if (!isOpen || !task) return null;
 
   return (
     <div
@@ -250,38 +277,97 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave }: 
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '7px 14px',
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: '#94a3b8',
-              borderRadius: '6px',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            style={{
-              padding: '7px 16px',
-              background: 'var(--color-primary, #6366f1)',
-              border: 'none',
-              color: '#ffffff',
-              borderRadius: '6px',
-              fontWeight: 600,
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Salvar Alterações
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Deseja realmente excluir o card "${task.title}"?`)) {
+                    onDelete(task.id);
+                  }
+                }}
+                style={{
+                  padding: '7px 12px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#f87171',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 500,
+                }}
+                title="Excluir card permanentemente"
+              >
+                <Trash2 size={13} />
+                <span>Excluir</span>
+              </button>
+            )}
+
+            {onDuplicate && (
+              <button
+                type="button"
+                onClick={() => onDuplicate(task)}
+                style={{
+                  padding: '7px 12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: '#cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 500,
+                }}
+                title="Duplicar este card"
+              >
+                <Copy size={13} />
+                <span>Duplicar</span>
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '7px 14px',
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#94a3b8',
+                borderRadius: '6px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              style={{
+                padding: '7px 16px',
+                background: 'var(--color-primary, #6366f1)',
+                border: 'none',
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              Salvar Alterações
+            </button>
+          </div>
         </div>
       </div>
     </div>

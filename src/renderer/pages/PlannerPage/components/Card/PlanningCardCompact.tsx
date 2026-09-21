@@ -140,6 +140,12 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
     </div>
   );
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onEdit();
+  };
+
   if (isSortable) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: task.id,
@@ -158,6 +164,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
         style={style}
         {...attributes}
         {...listeners}
+        onContextMenu={handleContextMenu}
         className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] hover:bg-[#18233c] border border-white/5 hover:border-indigo-500/40 rounded-md cursor-grab active:cursor-grabbing shadow-xs transition-all"
       >
         {cardContent}
@@ -166,7 +173,10 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
   }
 
   return (
-    <div className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] border border-white/5 rounded-md shadow-xs">
+    <div
+      onContextMenu={handleContextMenu}
+      className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] border border-white/5 rounded-md shadow-xs"
+    >
       {cardContent}
     </div>
   );

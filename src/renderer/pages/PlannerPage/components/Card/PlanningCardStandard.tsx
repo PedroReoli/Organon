@@ -36,6 +36,11 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                 }}
                 {...attributes}
                 {...listeners}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEdit();
+                }}
             >
                 <div onClick={onEdit} style={{ fontWeight: 500, fontSize: '14px', cursor: 'pointer' }}>
                     {task.title}
@@ -58,6 +63,11 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
     return (
         <div
             onClick={onEdit}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit();
+            }}
             style={{
                 padding: '12px',
                 background: 'rgba(255,255,255,0.03)',
