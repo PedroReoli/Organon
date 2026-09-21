@@ -12,6 +12,8 @@ import { WhisperHeader } from './components/WhisperHeader'
 import { WhisperDiagnosticsModal } from './components/WhisperDiagnosticsModal'
 import { WhisperBulkActionsBar } from './components/WhisperBulkActionsBar'
 import { TranscriptPromptSettingsModal } from '../TranscriptsPage/components/TranscriptPromptSettingsModal'
+import { ChevronDown, ChevronUp, SlidersHorizontal, Sparkles, FileText } from 'lucide-react'
+import '../../styles/features/whisper/whisper.css'
 
 import { useWhisperPersistence } from './hooks/useWhisperPersistence'
 import { useWhisperDiagnostics } from './hooks/useWhisperDiagnostics'
@@ -125,6 +127,11 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false)
   const [activeSideTab, setActiveSideTab] = useState<'intelligence' | 'summary'>('intelligence')
+  const [isContextBarOpen, setIsContextBarOpen] = useState(false)
+
+  const activeTasksCount = (intelligenceData.tasks || []).filter(
+    (t) => t.status === 'running' || t.status === 'queued'
+  ).length
 
   // Handler para Exportar Relatório para Notas
   const handleExportToNotes = async () => {
@@ -160,16 +167,7 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
       : { background: 'rgba(248,113,113,0.15)', color: '#dc2626' })
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100%',
-        width: '100%',
-        background: 'var(--color-background)',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
-    >
+    <div className="whisper-page-container">
       {/* Modal de Configurações do Whisper */}
       <TranscriptPromptSettingsModal
         isOpen={isSettingsOpen}
@@ -212,16 +210,12 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
         </div>
       )}
 
-      {/* Histórico Sidebar na Grade de Layout (Transição Suave de 280px para 0px) */}
+      {/* Histórico Sidebar (Transição Suave de 280px para 0px) */}
       <div
+        className="whisper-drawer-sidebar"
         style={{
           width: isHistoryDrawerOpen ? '280px' : '0px',
-          height: '100%',
-          flexShrink: 0,
           borderRight: isHistoryDrawerOpen ? '1px solid var(--color-border)' : 'none',
-          background: 'var(--color-surface)',
-          overflow: 'hidden',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <WhisperSidebar
@@ -240,7 +234,7 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
       </div>
 
       {/* Área Central Principal Dominante */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div className="whisper-center-workspace">
         {/* Cabeçalho da Sessão */}
         <WhisperHeader
           selectedRecord={selectedRecord}
@@ -258,16 +252,8 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
         />
 
         {/* Scrollable Main Stream Container */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Seletor de Contexto de Projeto (Discreto no topo do stream) */}
-          {recordingMode !== 'prompt' && <ProjectContextSelector
-            config={projectContext}
-            onChange={setProjectContext}
-          />}
-
-          <MeetingResearchConsole data={intelligenceData} hasProject={!!projectContext?.enabled && !!projectContext.path} allowWeb={projectContext?.allowWebResearch !== false}
-            onAsk={async (question, scope) => { setIsIntelligencePanelOpen(true); await handleAskAgents(question, scope) }} onCancel={handleCancelResearch} onExport={handleExportResearch} />
-          {/* Hero de Gravação Único e Coerente */}
+        <div className="whisper-scroll-body">
+          {/* 1. Hero de Gravação no Topo (Elegante e Compacto) */}
           <WhisperRecordingHero
             isRecording={isRecording}
             isTranscribing={isTranscribing}
@@ -283,38 +269,87 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
             isGeneratingNote={isGeneratingNote}
           />
 
-          {/* Banner de Feedback de Pesquisa e Perguntas ao Vivo */}
+          {/* 2. Ribbon Colapsável de Contexto do Projeto e Agentes (no modo reunião) */}
+          {recordingMode !== 'prompt' && (
+            <div className="whisper-context-ribbon">
+              <div
+                className="whisper-context-ribbon-header"
+                onClick={() => setIsContextBarOpen(!isContextBarOpen)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsContextBarOpen(!isContextBarOpen) }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <SlidersHorizontal size={13} style={{ color: 'var(--color-primary)' }} />
+                  <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>Contexto & Agentes IA</span>
+                  <span className="whisper-context-badge">
+                    {projectContext?.path ? projectContext.name || 'Pasta Vinculada' : 'Sem pasta vinculada'}
+                  </span>
+                  <span className="whisper-context-badge">
+                    {projectContext?.allowWebResearch !== false ? '🌐 Web ativa' : '🌐 Web desativada'}
+                  </span>
+                  {activeTasksCount > 0 && (
+                    <span className="whisper-context-badge" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)' }}>
+                      <Sparkles size={10} />
+                      <span>{activeTasksCount} agente(s) em execução</span>
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '11px' }}>
+                  <span>{isContextBarOpen ? 'Recolher' : 'Configurar'}</span>
+                  {isContextBarOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </div>
+              </div>
+
+              {isContextBarOpen && (
+                <div className="whisper-context-ribbon-content">
+                  <ProjectContextSelector
+                    config={projectContext}
+                    onChange={setProjectContext}
+                  />
+                  <MeetingResearchConsole
+                    data={intelligenceData}
+                    hasProject={!!projectContext?.enabled && !!projectContext.path}
+                    allowWeb={projectContext?.allowWebResearch !== false}
+                    onAsk={async (question, scope) => { setIsIntelligencePanelOpen(true); await handleAskAgents(question, scope) }}
+                    onCancel={handleCancelResearch}
+                    onExport={handleExportResearch}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. Banner de Feedback de Pesquisa e Perguntas ao Vivo */}
           <LiveSearchContextBanner
             data={intelligenceData}
             isRecording={isRecording}
           />
 
-          {/* Barra de Ações em Massa (Exclusão / Cópia / Destaques) */}
-          {selectedSegmentIds.length > 0 && <WhisperBulkActionsBar
-            selectedCount={selectedSegmentIds.length}
-            totalCount={displaySegments.length}
-            onSelectAll={handleSelectAllSegments}
-            onBulkCopy={handleBulkCopySelected}
-            onBulkHighlight={handleBulkHighlightSelected}
-            onDeleteSelected={handleDeleteSelectedSegments}
-            onClearSelection={() => setSelectedSegmentIds([])}
-          />}
+          {/* 4. Barra de Ações em Massa (Exclusão / Cópia / Destaques) */}
+          {selectedSegmentIds.length > 0 && (
+            <WhisperBulkActionsBar
+              selectedCount={selectedSegmentIds.length}
+              totalCount={displaySegments.length}
+              onSelectAll={handleSelectAllSegments}
+              onBulkCopy={handleBulkCopySelected}
+              onBulkHighlight={handleBulkHighlightSelected}
+              onDeleteSelected={handleDeleteSelectedSegments}
+              onClearSelection={() => setSelectedSegmentIds([])}
+            />
+          )}
 
-          {/* Timeline Principal da Transcrição com Listener de Seleção de Texto */}
-          <div style={{ flex: 1, minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-              <span>Transcrição</span>
+          {/* 5. Timeline Principal Dominante da Transcrição */}
+          <div className="whisper-timeline-section">
+            <div className="whisper-timeline-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileText size={13} />
+                <span>Transcrição ({displaySegments.length} falas)</span>
+              </div>
             </div>
 
-            <div style={{ flex: 1, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="whisper-timeline-card">
               <SpeakerTimeline
                 segments={displaySegments}
                 selectedSegmentId={selectedSegmentId}
@@ -337,28 +372,24 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
         </div>
       </div>
 
-      {/* Painel Secundário Compacto de Inteligência (Retrátil no Desktop) */}
+      {/* Painel Lateral Direito de Inteligência (Retrátil no Desktop) */}
       <div
+        className="whisper-drawer-sidebar"
         style={{
-          width: isIntelligencePanelOpen ? '340px' : '0px',
+          width: isIntelligencePanelOpen ? '350px' : '0px',
           display: 'flex',
           flexDirection: 'column',
-          height: '100%',
           borderLeft: isIntelligencePanelOpen ? '1px solid var(--color-border)' : 'none',
-          background: 'var(--color-surface)',
-          flexShrink: 0,
-          overflow: 'hidden',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {/* Selector de Abas do Painel Secundário */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', flexShrink: 0 }}>
           <button
             onClick={() => setActiveSideTab('intelligence')}
             style={{
               flex: 1,
-              padding: '12px 10px',
-              fontSize: '12px',
+              padding: '11px 10px',
+              fontSize: '11.5px',
               fontWeight: 700,
               border: 'none',
               background: activeSideTab === 'intelligence' ? 'var(--color-background)' : 'transparent',
@@ -369,11 +400,10 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
+              transition: 'all 0.16s ease',
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
+            <Sparkles size={13} />
             <span>Inteligência</span>
           </button>
 
@@ -381,8 +411,8 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
             onClick={() => setActiveSideTab('summary')}
             style={{
               flex: 1,
-              padding: '12px 10px',
-              fontSize: '12px',
+              padding: '11px 10px',
+              fontSize: '11.5px',
               fontWeight: 700,
               border: 'none',
               background: activeSideTab === 'summary' ? 'var(--color-background)' : 'transparent',
@@ -393,12 +423,10 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
+              transition: 'all 0.16s ease',
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
+            <FileText size={13} />
             <span>Ata & Resumo</span>
           </button>
         </div>
