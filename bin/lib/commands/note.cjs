@@ -5,6 +5,12 @@ function handleNoteList(options = {}) {
   const notesData = store.getNotesData();
   let notes = notesData.notes || [];
 
+  if (!options.all && !options.trash) {
+    notes = notes.filter(n => !n.deletedAt && !n.isDeleted);
+  } else if (options.trash) {
+    notes = notes.filter(n => n.deletedAt || n.isDeleted);
+  }
+
   if (options.search) {
     const q = options.search.toLowerCase();
     notes = notes.filter(n => (n.title || '').toLowerCase().includes(q));
@@ -34,11 +40,23 @@ function handleNoteList(options = {}) {
 function findNote(query) {
   const notesData = store.getNotesData();
   const queryLower = (query || '').toLowerCase().trim();
-  const found = notesData.notes.find(n =>
+  const activeNotes = notesData.notes.filter(n => !n.deletedAt && !n.isDeleted);
+  let found = activeNotes.find(n =>
     n.id.toLowerCase() === queryLower ||
     n.id.toLowerCase().startsWith(queryLower) ||
-    n.title.toLowerCase().includes(queryLower)
+    n.title.toLowerCase() === queryLower
   );
+  if (!found) {
+    found = activeNotes.find(n => n.title.toLowerCase().includes(queryLower));
+  }
+  // Fallback to all notes if not found in active
+  if (!found) {
+    found = notesData.notes.find(n =>
+      n.id.toLowerCase() === queryLower ||
+      n.id.toLowerCase().startsWith(queryLower) ||
+      n.title.toLowerCase().includes(queryLower)
+    );
+  }
   return { notesData, note: found };
 }
 
@@ -254,8 +272,9 @@ function handleNoteSet(idOrTitle, options = {}) {
 
 function handleFolderList() {
   const notesData = store.getNotesData();
-  return (notesData.noteFolders || []).map(f => {
-    const count = (notesData.notes || []).filter(n => n.folderId === f.id).length;
+  const folders = (notesData.noteFolders || []).filter(f => !f.deletedAt && !f.isDeleted);
+  return folders.map(f => {
+    const count = (notesData.notes || []).filter(n => !n.deletedAt && !n.isDeleted && n.folderId === f.id).length;
     return {
       id: f.id,
       name: f.name,
