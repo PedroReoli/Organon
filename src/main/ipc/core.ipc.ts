@@ -319,69 +319,99 @@ export const registerCoreIpcHandlers = (): void => {
 
   ipcMain.handle('reports:run', (_event, scriptPath: string): Promise<{ ok: boolean; output: string; error: string }> => {
     return new Promise((resolve) => {
-      if (!scriptPath) {
-        resolve({ ok: false, output: '', error: 'Caminho do script nao informado' })
+      let targetScript = scriptPath && fs.existsSync(scriptPath) ? scriptPath : ''
+      let configDir = targetScript ? path.dirname(targetScript) : ''
+
+      if (!targetScript) {
+        if (app.isPackaged) {
+          const pyScript = path.join(process.resourcesPath, 'dist-python', 'generate_report.py')
+          if (fs.existsSync(pyScript)) {
+            targetScript = pyScript
+          }
+        } else {
+          const candidates = [
+            path.resolve(process.cwd(), 'dist-python', 'generate_report.py'),
+            path.resolve(__dirname, '..', '..', 'dist-python', 'generate_report.py'),
+            path.resolve(__dirname, '..', '..', '..', 'dist-python', 'generate_report.py'),
+            path.resolve(app.getAppPath(), 'dist-python', 'generate_report.py'),
+            path.resolve(process.cwd(), 'data', 'reports', 'generate_report.py'),
+            path.resolve(__dirname, '..', '..', '..', '..', 'data', 'reports', 'generate_report.py'),
+          ]
+          const found = candidates.find(c => fs.existsSync(c))
+          if (found) targetScript = found
+        }
+      }
+
+      if (!targetScript) {
+        _event.sender.send('reports:progress', { percent: -1, message: 'Script generate_report.py não encontrado.' })
+        resolve({ ok: false, output: '', error: 'Script nao encontrado: generate_report.py' })
         return
       }
 
-      const configDir = path.dirname(scriptPath)
-      let cmd: string
-      let args: string[]
-      let cwd: string
-
-      if (fs.existsSync(scriptPath)) {
-        const pythonCmd = os.platform() === 'win32' ? 'python' : 'python3'
-        cmd = pythonCmd
-        args = [scriptPath]
-        cwd = configDir
-      } else if (app.isPackaged) {
-        const pyScript = path.join(process.resourcesPath, 'dist-python', 'generate_report.py')
-        if (!fs.existsSync(pyScript)) {
-          resolve({ ok: false, output: '', error: 'Script nao encontrado: ' + pyScript })
-          return
-        }
-        const pythonCmd = os.platform() === 'win32' ? 'python' : 'python3'
-        cmd = pythonCmd
-        args = [pyScript]
-        cwd = path.join(process.resourcesPath, 'dist-python')
-      } else {
-        const candidates = [
-          path.resolve(process.cwd(), 'data', 'reports', 'generate_report.py'),
-          path.resolve(__dirname, '..', '..', '..', '..', 'data', 'reports', 'generate_report.py'),
-          path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'reports', 'generate_report.py'),
-        ]
-        const devScript = candidates.find(c => fs.existsSync(c)) || candidates[0]
-        if (fs.existsSync(devScript)) {
-          const pythonCmd = os.platform() === 'win32' ? 'python' : 'python3'
-          cmd = pythonCmd
-          args = [devScript]
-          cwd = path.dirname(devScript)
-        } else {
-          resolve({ ok: false, output: '', error: 'Script nao encontrado: ' + scriptPath + ' nem ' + devScript })
-          return
-        }
+      if (!configDir) {
+        configDir = scriptPath ? path.dirname(scriptPath) : path.dirname(targetScript)
       }
+
+      const pythonCmd = os.platform() === 'win32' ? 'python' : 'python3'
+      const cwd = path.dirname(targetScript)
 
       if (!fs.existsSync(cwd)) {
         fs.mkdirSync(cwd, { recursive: true })
       }
-
       if (!fs.existsSync(configDir)) {
         fs.mkdirSync(configDir, { recursive: true })
       }
 
-      const proc = spawn(cmd, args, {
+      _event.sender.send('reports:progress', { percent: 0, message: 'Iniciando varredura Git Engine...' })
+
+      const proc = spawn(pythonCmd, ['-u', targetScript], {
         cwd,
-        env: { ...process.env, REPORTS_BASE_DIR: configDir },
+        env: {
+          ...process.env,
+          REPORTS_BASE_DIR: configDir,
+          PROJETOS_BASE_DIR: process.env.PROJETOS_BASE_DIR || 'F:\\Projetos',
+          PYTHONUNBUFFERED: '1',
+        },
       })
+
       let stdout = ''
       let stderr = ''
-      proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
-      proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+
+      proc.stdout.on('data', (d: Buffer) => {
+        const text = d.toString()
+        stdout += text
+        const lines = text.split('\n')
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('PROGRESS:')) {
+            const parts = trimmed.slice(9).split('|')
+            const pct = parseInt(parts[0], 10)
+            const msg = parts.slice(1).join('|')
+            if (!isNaN(pct)) {
+              _event.sender.send('reports:progress', { percent: pct, message: msg || '' })
+            }
+          }
+        }
+      })
+
+      proc.stderr.on('data', (d: Buffer) => {
+        stderr += d.toString()
+      })
+
       proc.on('close', (code) => {
+        if (code === 0) {
+          _event.sender.send('reports:progress', { percent: 100, message: 'Varredura concluída com sucesso!' })
+        } else {
+          _event.sender.send('reports:progress', {
+            percent: -1,
+            message: stderr ? `Erro na varredura: ${stderr.slice(0, 100)}` : 'Falha na varredura',
+          })
+        }
         resolve({ ok: code === 0, output: stdout, error: stderr })
       })
+
       proc.on('error', (err) => {
+        _event.sender.send('reports:progress', { percent: -1, message: err.message })
         resolve({ ok: false, output: '', error: err.message })
       })
     })

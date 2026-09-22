@@ -6,10 +6,14 @@ node_modules/
 # Build outputs
 dist/
 dist-electron/
-dist-python/
 release/
 build/
 out/
+
+# Python cache
+__pycache__/
+*.py[cod]
+dist-python/**/__pycache__/
 
 # Environment and secrets
 .env

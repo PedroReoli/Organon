@@ -61,6 +61,32 @@ export const FullToolbar = ({
 
   const toolbarBody = (
     <div className="editor-toolbar editor-toolbar-full">
+      {/* Desfazer / Refazer */}
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+        className={`editor-toolbar-btn ${!editor.can().undo() ? 'opacity-30 cursor-not-allowed' : ''}`}
+        title="Desfazer (Ctrl+Z)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+          <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+        className={`editor-toolbar-btn ${!editor.can().redo() ? 'opacity-30 cursor-not-allowed' : ''}`}
+        title="Refazer (Ctrl+Y)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+          <path d="M21 7v6h-6" /><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+        </svg>
+      </button>
+
+      <div className="editor-toolbar-divider" />
+
       <div className="editor-toolbar-dropdown">
         <button type="button" className="editor-toolbar-btn editor-toolbar-btn-wide" onClick={() => setShowHeading(!showHeading)} title="Tipo de texto">
           {getActiveHeadingLabel()}

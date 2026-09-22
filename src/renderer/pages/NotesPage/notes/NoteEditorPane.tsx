@@ -23,6 +23,10 @@ import {
   MoreHorizontal,
   Smile,
   Image as ImageIcon,
+  Undo2,
+  Redo2,
+  LayoutTemplate,
+  Minimize2,
 } from 'lucide-react'
 
 const EMOJI_PRESETS = ['📝', '💡', '🚀', '⭐', '🎯', '📂', '🔥', '⚡', '🧠', '💻', '🎨', '📚', '⚙️', '✨', '🔒', '📊', '🌐', '☕', '🏷️', '💎']
@@ -242,11 +246,18 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
     setPreviewRevision(null)
   }, [selectedNote.id])
 
+  const handleUndo = useCallback(() => {
+    document.dispatchEvent(new CustomEvent('editor-undo'))
+  }, [])
+
+  const handleRedo = useCallback(() => {
+    document.dispatchEvent(new CustomEvent('editor-redo'))
+  }, [])
+
   return (
     <div
       style={{
-        background: 'transparent',
-        color: 'var(--color-text)',
+        background: 'var(--color-background)',
       }}
       className="w-full h-full flex flex-col overflow-hidden relative"
     >
@@ -286,10 +297,57 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
         </div>
 
         {/* Quick Actions & Menu ··· */}
-        <div className="flex items-center gap-1 shrink-0 relative">
+        <div className="flex items-center gap-1.5 shrink-0 relative">
           <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
 
           <div className="h-3.5 w-px bg-white/10 mx-1 hidden sm:block" />
+
+          {/* Desfazer & Refazer */}
+          {!selectedNoteLocked && (
+            <div className="flex items-center gap-0.5 bg-white/[0.04] p-0.5 rounded-lg border border-white/[0.06]">
+              <button
+                type="button"
+                onClick={handleUndo}
+                title="Desfazer (Ctrl+Z)"
+                className="p-1 rounded-md text-[var(--color-text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                title="Refazer (Ctrl+Y / Ctrl+Shift+Z)"
+                className="p-1 rounded-md text-[var(--color-text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Alternar Modo Página (Folha) / Largura Total */}
+          <button
+            type="button"
+            onClick={toggleFullWidth}
+            title={isFullWidth ? 'Mudar para Modo Página (Folha Centralizada A4)' : 'Mudar para Modo Tela Cheia (Largura Total)'}
+            style={{
+              background: isFullWidth ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              borderColor: isFullWidth ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255, 255, 255, 0.1)',
+              color: isFullWidth ? 'var(--color-primary)' : 'var(--color-text)',
+            }}
+            className="px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-[11px] font-medium transition-all cursor-pointer hover:border-[var(--color-primary)]"
+          >
+            {isFullWidth ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Modo Página</span>
+              </>
+            ) : (
+              <>
+                <LayoutTemplate className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <span className="hidden sm:inline font-semibold">Página A4</span>
+              </>
+            )}
+          </button>
 
           {onToggleOutline && (
             <button
@@ -311,7 +369,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
             <button
               type="button"
               onClick={onToggleBacklinksPanel}
-              title="Visualizar Backlinks / Conexões"
+              title="Painel de Backlinks"
               style={{
                 background: showBacklinks ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent',
                 color: showBacklinks ? 'var(--color-primary)' : 'var(--color-text-muted)',
@@ -477,44 +535,61 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
       {/* ========================================================
           CORPO DO CANVAS NOTION (SCROLL PRINCIPAL)
           ======================================================== */}
-      <div className="flex-1 overflow-y-auto">
-        {/* BANNER DE CAPA (PAGE COVER) */}
-        {selectedNote.cover && (
-          <div
-            style={{
-              background: selectedNote.cover.startsWith('http') || selectedNote.cover.startsWith('data:')
-                ? `url(${selectedNote.cover}) center/cover no-repeat`
-                : selectedNote.cover,
-            }}
-            className="w-full h-36 sm:h-44 relative group/cover transition-all"
-          >
-            {!selectedNoteLocked && (
-              <div className="absolute right-4 bottom-3 flex items-center gap-1.5 opacity-0 group-hover/cover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={() => setIsCoverPickerOpen(prev => !prev)}
-                  className="px-2.5 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <ImageIcon size={12} />
-                  <span>Mudar Capa</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetCover(null)}
-                  className="px-2 py-1 rounded-md bg-black/60 hover:bg-rose-900/80 text-rose-300 text-[11px] font-medium backdrop-blur-xs transition-all cursor-pointer"
-                  title="Remover Capa"
-                >
-                  Remover
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      <div
+        className={`flex-1 overflow-y-auto ${
+          isFullWidth
+            ? 'px-4 sm:px-8 py-6'
+            : 'px-3 sm:px-8 py-6 sm:py-10 bg-gradient-to-b from-[#080d1a]/80 via-[#0b1120]/40 to-[#070b14]/90'
+        }`}
+      >
+        <div className={`mx-auto transition-all duration-300 ${isFullWidth ? 'w-full max-w-none' : 'max-w-4xl'}`}>
+          {/* BANNER DE CAPA (PAGE COVER) */}
+          {selectedNote.cover && (
+            <div
+              style={{
+                background: selectedNote.cover.startsWith('http') || selectedNote.cover.startsWith('data:')
+                  ? `url(${selectedNote.cover}) center/cover no-repeat`
+                  : selectedNote.cover,
+              }}
+              className="w-full h-36 sm:h-48 relative group/cover transition-all rounded-t-2xl overflow-hidden mb-[-2rem] z-0"
+            >
+              {!selectedNoteLocked && (
+                <div className="absolute right-4 bottom-3 flex items-center gap-1.5 opacity-0 group-hover/cover:opacity-100 transition-opacity z-10">
+                  <button
+                    type="button"
+                    onClick={() => setIsCoverPickerOpen(prev => !prev)}
+                    className="px-2.5 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ImageIcon size={12} />
+                    <span>Mudar Capa</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetCover(null)}
+                    className="px-2 py-1 rounded-md bg-black/60 hover:bg-rose-900/80 text-rose-300 text-[11px] font-medium backdrop-blur-xs transition-all cursor-pointer"
+                    title="Remover Capa"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* CONTAINER DO DOCUMENTO */}
-        <div className={`transition-all duration-200 py-6 ${isFullWidth ? 'w-full max-w-none px-6 sm:px-12' : 'max-w-3xl mx-auto w-full px-4 sm:px-8'}`}>
-          {/* HEADER DE CONTROLES: ÍCONE & HOVER ACTIONS */}
-          <div className="relative group/headerActions mb-2">
+          {/* CONTAINER DA FOLHA DE PÁGINA (DOCUMENT SHEET) */}
+          <div
+            className={`transition-all duration-300 relative z-10 flex flex-col ${
+              isFullWidth
+                ? 'w-full px-6 sm:px-12 py-8 min-h-[88vh] bg-[#0f172a]/60 border border-white/[0.05] rounded-2xl shadow-xl'
+                : 'w-full px-6 sm:px-14 py-10 sm:py-14 min-h-[90vh] bg-[#0f172a]/95 border border-white/[0.09] rounded-2xl shadow-2xl shadow-black/80 backdrop-blur-md'
+            }`}
+            style={{
+              boxShadow: isFullWidth
+                ? '0 10px 30px -5px rgba(0, 0, 0, 0.3)'
+                : '0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <div className="relative group/headerActions mb-2">
             {/* Ícone da Página */}
             {selectedNote.icon ? (
               <div className={`relative inline-block ${selectedNote.cover ? '-mt-12 sm:-mt-14 mb-2 z-10' : 'mb-3'}`}>
@@ -807,6 +882,7 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
           )}
         </div>
       </div>
+    </div>
 
       {/* Modal de Exportação */}
       <NoteExportModal

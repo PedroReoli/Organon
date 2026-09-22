@@ -39,6 +39,10 @@ export const getExtensions = (
   const base = [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
+      history: {
+        depth: 300,
+        newGroupDelay: 300,
+      },
     }),
     HeadingIds,
     ListExit,

@@ -269,6 +269,16 @@ const electronAPI = {
   unwatchReportsDir: (dirPath: string) => ipcRenderer.invoke('reports:unwatch', dirPath),
   onReportsChanged: (cb: () => void) => ipcRenderer.on('reports:changed', cb),
   offReportsChanged: (cb: () => void) => ipcRenderer.off('reports:changed', cb),
+  onReportsProgress: (callback: (data: { percent: number; message: string }) => void) => {
+    const handler = (_event: any, data: { percent: number; message: string }) => callback(data)
+    ipcRenderer.on('reports:progress', handler)
+    return () => {
+      ipcRenderer.removeListener('reports:progress', handler)
+    }
+  },
+  gitEngine: {
+    scan: () => ipcRenderer.invoke('reports:run', ''),
+  },
   runReportScript: (scriptPath: string) => ipcRenderer.invoke('reports:run', scriptPath),
   getReportsLastRun: (lastRunPath: string) => ipcRenderer.invoke('reports:lastRun', lastRunPath),
   readReportsConfig: (configPath: string) => ipcRenderer.invoke('reports:readConfig', configPath),

@@ -9,7 +9,6 @@ import {
   ChevronDown,
   GripVertical,
   MoreHorizontal,
-  Copy,
 } from 'lucide-react'
 import type { Note, TreeItemKey, TreeItemKind } from '@types'
 import { noteTreeKey } from '../utils'
@@ -76,8 +75,8 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
         data-tree-id={note.id}
         title={note.title || 'Sem título'}
         style={{
-          paddingLeft: `${10 + depth * 14}px`,
-          paddingRight: '60px',
+          paddingLeft: `${8 + depth * 12}px`,
+          paddingRight: '8px',
           background: isActive
             ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))'
             : isSelected
@@ -120,8 +119,8 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
           openCtxMenu(e, { kind: 'note', id: note.id })
         }}
       >
-        {/* Drag Grip Handle */}
-        <span className="opacity-0 group-hover:opacity-40 hover:opacity-100 transition-opacity cursor-grab shrink-0">
+        {/* Drag Grip Handle - zero width when not hovering */}
+        <span className="w-0 opacity-0 group-hover:w-3.5 group-hover:opacity-60 hover:!opacity-100 transition-all duration-150 cursor-grab shrink-0 overflow-hidden flex items-center justify-center -ml-0.5">
           <GripVertical className="w-3 h-3" />
         </span>
 
@@ -142,7 +141,7 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
             )}
           </button>
         ) : (
-          <span className="w-3 shrink-0" />
+          <span className="w-0.5 shrink-0" />
         )}
 
         {/* Emoji / File Icon */}
@@ -155,42 +154,26 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
           />
         )}
 
-        {/* Label Truncated with ellipsis */}
+        {/* Label Truncated with ellipsis & full title tooltip */}
         <span
+          title={note.title || 'Sem título'}
           style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text)' }}
-          className="truncate flex-1 min-w-0 font-medium text-[12px]"
+          className="truncate flex-1 min-w-0 font-medium text-[12px] leading-tight"
         >
           {(cleanTitle && cleanTitle.trim()) || (note.title && note.title.trim()) || 'Sem título'}
         </span>
 
-        {/* Status Badges */}
-        <div className="flex items-center gap-1 shrink-0">
-          {note.isFavorite && <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />}
-          {note.isPinned && <Pin className="w-2.5 h-2.5 text-emerald-400" />}
-          {note.isLocked && <Lock className="w-2.5 h-2.5 text-rose-400" />}
+        {/* Status Badges - cleanly hidden on hover to avoid any icon collision */}
+        <div className="flex items-center gap-1 shrink-0 group-hover:opacity-0 transition-opacity duration-150 pr-1">
+          {note.isFavorite && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
+          {note.isPinned && <Pin className="w-3 h-3 text-emerald-400" />}
+          {note.isLocked && <Lock className="w-3 h-3 text-rose-400" />}
         </div>
 
-        {/* Hover Action Buttons */}
+        {/* Hover Action Buttons - elegant floating pill on right */}
         <div
-          style={{
-            background: 'linear-gradient(90deg, transparent, var(--color-surface) 30%)',
-          }}
-          className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 px-1 py-0.5 rounded-md bg-[#1e293b]/95 backdrop-blur border border-white/10 shadow-md z-10 transition-all duration-150"
         >
-          {onDuplicateNote && (
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation()
-                onDuplicateNote(note.id)
-              }}
-              title="Duplicar nota"
-              className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            >
-              <Copy className="w-3 h-3" />
-            </button>
-          )}
-
           <button
             type="button"
             onClick={e => {
@@ -198,7 +181,7 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
               handleAddNote(note.folderId, note.id)
             }}
             title="Nova subpágina"
-            className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="p-1 rounded hover:bg-white/15 text-[var(--color-text-muted)] hover:text-white transition-colors"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -209,8 +192,8 @@ export const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
               e.stopPropagation()
               openCtxMenu(e, { kind: 'note', id: note.id })
             }}
-            title="Mais opções"
-            className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            title="Mais opções (duplicar, renomear, trancar...)"
+            className="p-1 rounded hover:bg-white/15 text-[var(--color-text-muted)] hover:text-white transition-colors"
           >
             <MoreHorizontal className="w-3 h-3" />
           </button>

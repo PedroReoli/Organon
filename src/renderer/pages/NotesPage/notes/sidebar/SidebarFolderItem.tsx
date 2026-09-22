@@ -126,8 +126,8 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
         data-tree-id={folder.id}
         title={folder.name || 'Sem nome'}
         style={{
-          paddingLeft: `${10 + depth * 14}px`,
-          paddingRight: '60px',
+          paddingLeft: `${8 + depth * 12}px`,
+          paddingRight: '8px',
           background: isActive
             ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))'
             : isSelected
@@ -174,8 +174,8 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
           openFolder(folder.id)
         }}
       >
-        {/* Drag Grip Handle */}
-        <span className="opacity-0 group-hover:opacity-40 hover:opacity-100 transition-opacity cursor-grab shrink-0">
+        {/* Drag Grip Handle - zero width when not hovering */}
+        <span className="w-0 opacity-0 group-hover:w-3.5 group-hover:opacity-60 hover:!opacity-100 transition-all duration-150 cursor-grab shrink-0 overflow-hidden flex items-center justify-center -ml-0.5">
           <GripVertical className="w-3 h-3" />
         </span>
 
@@ -217,26 +217,24 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
           />
         ) : (
           <span
+            title={folder.name || 'Sem nome'}
             style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text)' }}
-            className="truncate flex-1 min-w-0 font-semibold text-[12px]"
+            className="truncate flex-1 min-w-0 font-semibold text-[12px] leading-tight"
           >
             {(cleanTitle && cleanTitle.trim()) || (folder.name && folder.name.trim()) || 'Sem nome'}
           </span>
         )}
 
-        {/* Note count badge */}
+        {/* Note count badge - hidden on hover to make clean room for buttons */}
         {noteCount > 0 && renamingFolderId !== folder.id && (
-          <span className="text-[10px] text-[var(--color-text-muted)] font-mono px-1 rounded bg-black/20 shrink-0">
+          <span className="text-[10px] text-[var(--color-text-muted)] font-mono px-1 rounded bg-black/20 shrink-0 group-hover:opacity-0 transition-opacity duration-150 pr-1">
             {noteCount}
           </span>
         )}
 
-        {/* Hover Actions for Folders */}
+        {/* Hover Actions for Folders - clean floating pill */}
         <div
-          style={{
-            background: 'linear-gradient(90deg, transparent, var(--color-surface) 30%)',
-          }}
-          className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 px-1 py-0.5 rounded-md bg-[#1e293b]/95 backdrop-blur border border-white/10 shadow-md z-10 transition-all duration-150"
         >
           <button
             type="button"
@@ -245,7 +243,7 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
               handleAddNote(folder.id, null)
             }}
             title="Nova nota nesta pasta"
-            className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="p-1 rounded hover:bg-white/15 text-[var(--color-text-muted)] hover:text-white transition-colors"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -260,7 +258,7 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
                 setTimeout(() => newFolderInputRef.current?.focus(), 50)
               }}
               title="Nova subpasta"
-              className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+              className="p-1 rounded hover:bg-white/15 text-[var(--color-text-muted)] hover:text-white transition-colors"
             >
               <FolderPlus className="w-3 h-3" />
             </button>
@@ -273,7 +271,7 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = (props) => {
               openCtxMenu(e, { kind: 'folder', id: folder.id })
             }}
             title="Mais opções"
-            className="p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            className="p-1 rounded hover:bg-white/15 text-[var(--color-text-muted)] hover:text-white transition-colors"
           >
             <MoreHorizontal className="w-3 h-3" />
           </button>

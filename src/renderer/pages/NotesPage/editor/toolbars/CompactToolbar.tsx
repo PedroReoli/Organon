@@ -2,6 +2,32 @@ import type { Editor } from '@tiptap/react'
 
 export const CompactToolbar = ({ editor }: { editor: Editor }) => (
   <div className="editor-toolbar">
+    {/* Desfazer / Refazer */}
+    <button
+      type="button"
+      onClick={() => editor.chain().focus().undo().run()}
+      disabled={!editor.can().undo()}
+      className={`editor-toolbar-btn ${!editor.can().undo() ? 'opacity-30 cursor-not-allowed' : ''}`}
+      title="Desfazer (Ctrl+Z)"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+        <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      onClick={() => editor.chain().focus().redo().run()}
+      disabled={!editor.can().redo()}
+      className={`editor-toolbar-btn ${!editor.can().redo() ? 'opacity-30 cursor-not-allowed' : ''}`}
+      title="Refazer (Ctrl+Y)"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+        <path d="M21 7v6h-6" /><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+      </svg>
+    </button>
+
+    <div className="editor-toolbar-divider" />
+
     <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`editor-toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'is-active' : ''}`} title="Titulo 1">
       H1
     </button>

@@ -61,12 +61,15 @@ function printHelp() {
     organon note list [--folder="Trabalho"] [--search="termo"]
     organon note read <id_ou_titulo>
     organon note create --title="Ideias" --content="# Conteúdo" [--folder="Geral"]
+    organon note update <id_ou_titulo> [--content="..."] [--append="..."] [--prepend="..."]
+    organon note polish [<id_ou_titulo>] [--all] [--ensureTitle] \x1b[90m(Padroniza markdown, títulos e quebras)\x1b[0m
     organon note move <id_ou_titulo> [--folder="Pasta"] [--parent="NotaPai"]
     organon note rename <id_ou_titulo> --title="Novo Título"
     organon note organize [--by=alphabet|recent|created]
     organon note folder [list|create|delete]
     organon note set <id_ou_titulo> [--icon="🚀"] [--favorite=true] [--pinned=true]
     organon note delete <id_ou_titulo>
+    organon note empty-trash                \x1b[90m(Esvazia lixeira e apaga notas e pastas excluídas permanentemente)\x1b[0m
 
   \x1b[36m⚡ HÁBITOS & ROTINA (habit / habits)\x1b[0m
     organon habit list
@@ -346,6 +349,27 @@ function execute(args, context = {}) {
       const res = noteCmd.handleNoteOrganize(opts);
       if (isJson) console.log(JSON.stringify(res, null, 2));
       else console.log(`\x1b[32m✔ Reorganização concluída:\x1b[0m ${res.totalNotes} notas ordenadas por "${res.organizedBy}".`);
+      return;
+    }
+    if (secondary === 'polish' || secondary === 'format') {
+      const targetQuery = opts._[2];
+      const res = noteCmd.handleNotePolish(targetQuery, opts);
+      if (isJson) {
+        console.log(JSON.stringify(res, null, 2));
+      } else if (res.all || res.total !== undefined) {
+        console.log(`\x1b[32m✔ Formatação concluída:\x1b[0m ${res.polishedCount} de ${res.total} notas foram padronizadas e limpas.`);
+      } else {
+        console.log(`\x1b[32m✔ Nota "${res.title}" polida:\x1b[0m ${res.charsBefore} -> ${res.charsAfter} caracteres (${res.diff >= 0 ? '+' : ''}${res.diff}).`);
+      }
+      return;
+    }
+    if (secondary === 'empty-trash' || secondary === 'trash-empty' || (secondary === 'trash' && (opts._[2] === 'empty' || opts.empty))) {
+      const res = noteCmd.handleNoteEmptyTrash();
+      if (isJson) {
+        console.log(JSON.stringify(res, null, 2));
+      } else {
+        console.log(`\x1b[32m✔ Lixeira esvaziada:\x1b[0m ${res.purgedNotes} notas e ${res.purgedFolders} pastas excluídas definitivamente (${res.filesRemoved} arquivos físicos removidos).`);
+      }
       return;
     }
     if (secondary === 'set') {

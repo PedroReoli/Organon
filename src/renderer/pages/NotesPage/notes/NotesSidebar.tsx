@@ -168,6 +168,47 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
   const [privateCollapsed, setPrivateCollapsed] = useState(false)
 
+  // Resizable sidebar width (default 310px, stored in localStorage)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem('organon_notes_sidebar_width')
+      if (saved) {
+        const parsed = parseInt(saved, 10)
+        if (!isNaN(parsed) && parsed >= 240 && parsed <= 550) return parsed
+      }
+    } catch {}
+    return 310
+  })
+  const [isResizing, setIsResizing] = useState(false)
+
+  const startResizing = React.useCallback((mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault()
+    setIsResizing(true)
+
+    const startX = mouseDownEvent.clientX
+    const startWidth = sidebarWidth
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(240, Math.min(550, startWidth + (moveEvent.clientX - startX)))
+      setSidebarWidth(newWidth)
+    }
+
+    const onMouseUp = () => {
+      setIsResizing(false)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      setSidebarWidth(current => {
+        try {
+          localStorage.setItem('organon_notes_sidebar_width', current.toString())
+        } catch {}
+        return current
+      })
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }, [sidebarWidth])
+
   const handleAddFolder = () => {
     const name = newFolderName.trim()
     if (!name) return
@@ -243,14 +284,30 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
   return (
     <nav
       style={{
-        width: sidebarOpen ? '260px' : '0px',
+        width: sidebarOpen ? `${sidebarWidth}px` : '0px',
         background: 'color-mix(in srgb, var(--color-surface) 95%, var(--color-background))',
         borderColor: 'var(--color-border)',
       }}
-      className={`h-full border-r flex flex-col justify-between select-none relative transition-all duration-300 overflow-hidden ${
+      className={`h-full border-r flex flex-col justify-between select-none relative ${
+        isResizing ? '' : 'transition-[width] duration-200'
+      } overflow-hidden ${
         isSidebarCollapsed ? 'w-0 border-none' : ''
       }`}
     >
+      {/* Resizer Handle */}
+      {sidebarOpen && (
+        <div
+          onMouseDown={startResizing}
+          onDoubleClick={() => {
+            setSidebarWidth(310)
+            localStorage.setItem('organon_notes_sidebar_width', '310')
+          }}
+          title="Arraste para ajustar a largura da barra lateral (clique duplo para redefinir para 310px)"
+          className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[var(--color-primary)]/40 transition-colors z-30 group/resizer flex items-center justify-center"
+        >
+          <div className="w-[2px] h-8 bg-white/10 group-hover/resizer:bg-[var(--color-primary)] group-hover/resizer:h-16 rounded-full transition-all" />
+        </div>
+      )}
       {/* Top Header & Search */}
       <div className="p-2.5 border-b border-neutral-800/60 space-y-2 shrink-0">
         <div className="flex items-center justify-between gap-1">

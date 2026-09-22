@@ -198,6 +198,21 @@ function writeNoteContent(mdPath, content) {
   return true;
 }
 
+function deleteNoteFile(mdPath) {
+  if (!mdPath) return false;
+  const notesDir = getNotesDir(dataDir);
+  const filePath = path.join(notesDir, mdPath);
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 // -------------------------------------------------------------
 // SECTION HELPERS: PROJECTS
 // -------------------------------------------------------------
@@ -274,6 +289,7 @@ module.exports = {
   saveNotesData,
   readNoteContent,
   writeNoteContent,
+  deleteNoteFile,
   getProjectsData,
   saveProjectsData,
   getHabitsData,

@@ -364,6 +364,32 @@ export const WysiwygEditor = ({
       },
       handleKeyDown: (_view, event) => {
         if (!(editorRef.current?.isEditable ?? true)) return false
+
+        // 1. Atalhos robustos de Desfazer e Refazer (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+          if (event.shiftKey) {
+            if (editorRef.current?.can().redo()) {
+              event.preventDefault()
+              editorRef.current.chain().focus().redo().run()
+              return true
+            }
+          } else {
+            if (editorRef.current?.can().undo()) {
+              event.preventDefault()
+              editorRef.current.chain().focus().undo().run()
+              return true
+            }
+          }
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+          if (editorRef.current?.can().redo()) {
+            event.preventDefault()
+            editorRef.current.chain().focus().redo().run()
+            return true
+          }
+        }
+
         const menu = slashMenuRef.current
         if (!menu?.open) return false
         const items = getFilteredSlashItems(menu.query.toLowerCase())
@@ -438,11 +464,34 @@ export const WysiwygEditor = ({
     if (lastEmittedHtmlRef.current === nextContent) return
     const currentHtml = editor.getHTML()
     if (currentHtml === nextContent) { lastEmittedHtmlRef.current = nextContent; return }
+    // Evita resetar histórico se o usuário estiver ativamente com foco no editor
+    if (editor.isFocused && lastEmittedHtmlRef.current) return
     isApplyingExternalContentRef.current = true
     editor.commands.setContent(nextContent, false)
     lastEmittedHtmlRef.current = nextContent
     isApplyingExternalContentRef.current = false
   }, [editor, content])
+
+  // Listen to external undo/redo events
+  useEffect(() => {
+    if (!editor) return
+    const handleUndo = () => {
+      if (editor.isEditable && editor.can().undo()) {
+        editor.chain().focus().undo().run()
+      }
+    }
+    const handleRedo = () => {
+      if (editor.isEditable && editor.can().redo()) {
+        editor.chain().focus().redo().run()
+      }
+    }
+    document.addEventListener('editor-undo', handleUndo)
+    document.addEventListener('editor-redo', handleRedo)
+    return () => {
+      document.removeEventListener('editor-undo', handleUndo)
+      document.removeEventListener('editor-redo', handleRedo)
+    }
+  }, [editor])
 
   // Custom events for external inserts
   useEffect(() => {

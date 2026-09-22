@@ -37,6 +37,11 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
   const [watcherActive, setWatcherActive] = useState(false)
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [scanProgress, setScanProgress] = useState<{
+    percent: number
+    message: string
+    status: 'running' | 'success' | 'error'
+  } | null>(null)
 
   useEffect(() => {
     if (dataDir) {
@@ -57,6 +62,41 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
   const [selectedRepo, setSelectedRepo] = useState<RepoReport | null>(null)
 
   const baseDir = effectiveDir ? effectiveDir.replace(/[/\\]\.reportsjson[/\\]?$/, '') : null
+
+  useEffect(() => {
+    if (!isElectron()) return
+    const api = window.electronAPI as any
+    if (typeof api.onReportsProgress !== 'function') return
+
+    const cleanup = api.onReportsProgress((data: { percent: number; message: string }) => {
+      if (data.percent >= 0 && data.percent < 100) {
+        setScanProgress({
+          percent: data.percent,
+          message: data.message || 'Varrendo repositórios...',
+          status: 'running',
+        })
+      } else if (data.percent === 100) {
+        setScanProgress({
+          percent: 100,
+          message: data.message || 'Varredura concluída com sucesso!',
+          status: 'success',
+        })
+        reload()
+        setTimeout(() => setScanProgress(null), 4500)
+      } else if (data.percent < 0) {
+        setScanProgress({
+          percent: 100,
+          message: data.message || 'Erro na varredura',
+          status: 'error',
+        })
+        setTimeout(() => setScanProgress(null), 6000)
+      }
+    })
+
+    return () => {
+      if (typeof cleanup === 'function') cleanup()
+    }
+  }, [reload])
 
   useEffect(() => {
     if (!isElectron() || !effectiveDir || !baseDir) return
@@ -207,12 +247,30 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
     const s = baseDir.includes('/') && !baseDir.includes('\\') ? '/' : '\\'
     const scriptPath = baseDir + s + 'generate_report.py'
     setScriptRunning(true)
+    setScanProgress({
+      percent: 0,
+      message: 'Iniciando varredura Git Engine...',
+      status: 'running',
+    })
     try {
       const result = await api.runReportScript(scriptPath)
       if (result.ok) {
         const now = new Date()
         setLastRunTime(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+        reload()
+      } else {
+        setScanProgress({
+          percent: 100,
+          message: result.error || 'Erro ao executar varredura',
+          status: 'error',
+        })
       }
+    } catch (err: any) {
+      setScanProgress({
+        percent: 100,
+        message: err?.message || 'Erro ao executar varredura',
+        status: 'error',
+      })
     } finally {
       setScriptRunning(false)
     }
@@ -345,6 +403,123 @@ export const CodeReportsView: React.FC<CodeReportsViewProps> = ({ reportsDir, da
           {renderContent()}
         </div>
       </main>
+
+      {/* Toast Notificação de Varredura Git Engine */}
+      {scanProgress && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            minWidth: 320,
+            maxWidth: 420,
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: scanProgress.status === 'error'
+              ? '1px solid rgba(244, 63, 94, 0.4)'
+              : scanProgress.status === 'success'
+              ? '1px solid rgba(16, 185, 129, 0.4)'
+              : '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: 14,
+            boxShadow: '0 20px 35px -8px rgba(0, 0, 0, 0.7), 0 0 15px rgba(16, 185, 129, 0.15)',
+            padding: '14px 18px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {scanProgress.status === 'running' && (
+                <div style={{
+                  width: 15,
+                  height: 15,
+                  border: '2px solid rgba(52, 211, 153, 0.25)',
+                  borderTopColor: '#34d399',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+              )}
+              {scanProgress.status === 'success' && (
+                <span style={{ color: '#10b981', fontSize: 16 }}>✔</span>
+              )}
+              {scanProgress.status === 'error' && (
+                <span style={{ color: '#f43f5e', fontSize: 16 }}>✖</span>
+              )}
+              <span style={{ fontWeight: 600, fontSize: 13, letterSpacing: '-0.01em' }}>
+                {scanProgress.status === 'running'
+                  ? 'Varredura Git Engine'
+                  : scanProgress.status === 'success'
+                  ? 'Varredura Concluída!'
+                  : 'Falha na Varredura'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                fontSize: 13,
+                color: scanProgress.status === 'error' ? '#f43f5e' : '#34d399'
+              }}>
+                {scanProgress.status === 'error' ? '!' : `${scanProgress.percent}%`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setScanProgress(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  cursor: 'pointer',
+                  padding: 2,
+                  lineHeight: 1,
+                  fontSize: 14,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Barra de Progresso com Preenchimento Dinâmico 0% -> 100% */}
+          <div style={{
+            width: '100%',
+            height: 6,
+            background: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: 999,
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.max(3, Math.min(100, scanProgress.percent))}%`,
+              background: scanProgress.status === 'error'
+                ? '#f43f5e'
+                : 'linear-gradient(90deg, #10b981, #06b6d4)',
+              borderRadius: 999,
+              transition: 'width 0.2s ease-out',
+            }} />
+          </div>
+
+          {/* Detalhe do repositório / etapa atual */}
+          <div style={{
+            fontSize: 11.5,
+            color: 'rgba(255, 255, 255, 0.75)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            marginTop: 1,
+          }}>
+            {scanProgress.message}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

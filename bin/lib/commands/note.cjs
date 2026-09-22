@@ -114,6 +114,12 @@ function handleNoteUpdate(idOrTitle, options = {}) {
   }
   if (options.content !== undefined) {
     store.writeNoteContent(note.mdPath, options.content);
+  } else if (options.append !== undefined) {
+    const existing = store.readNoteContent(note);
+    store.writeNoteContent(note.mdPath, existing.trimEnd() + '\n\n' + options.append + '\n');
+  } else if (options.prepend !== undefined) {
+    const existing = store.readNoteContent(note);
+    store.writeNoteContent(note.mdPath, options.prepend + '\n\n' + existing.trimStart());
   }
 
   note.updatedAt = new Date().toISOString();
@@ -304,6 +310,101 @@ function handleFolderDelete(idOrName) {
   return { deletedId: folder.id, name: folder.name };
 }
 
+function polishMarkdown(rawContent, title, options = {}) {
+  let content = rawContent || '';
+  // Normalizar quebras de linha Windows/Unix
+  content = content.replace(/\r\n/g, '\n');
+
+  // Remover espaços em branco no final de cada linha
+  content = content.split('\n').map(line => line.trimEnd()).join('\n');
+
+  // Corrigir títulos sem espaço: ex: "###Título" -> "### Título"
+  content = content.replace(/^(#{1,6})([^#\s\n])/gm, '$1 $2');
+
+  // Corrigir listas sem espaço: ex: "-Item" -> "- Item"
+  content = content.replace(/^([*-])([^\s*-])/gm, '$1 $2');
+
+  // Corrigir listas numeradas: ex: "1.Item" -> "1. Item"
+  content = content.replace(/^(\d+\.)([^\s])/gm, '$1 $2');
+
+  // Reduzir 3 ou mais quebras de linhas consecutivas para no máximo 2
+  content = content.replace(/\n{3,}/g, '\n\n');
+
+  // Se solicitado ou se a nota não tiver H1 inicial, garante cabeçalho
+  if (options.ensureTitle && title && !content.trim().startsWith('#')) {
+    content = `# ${title}\n\n` + content.trim();
+  }
+
+  // Finalizar com quebra de linha limpa
+  return content.trim() + '\n';
+}
+
+function handleNotePolish(idOrTitle, options = {}) {
+  const notesData = store.getNotesData();
+
+  if (idOrTitle === '--all' || options.all || !idOrTitle) {
+    let polishedCount = 0;
+    const details = [];
+
+    for (const note of notesData.notes) {
+      const original = store.readNoteContent(note);
+      const polished = polishMarkdown(original, note.title, options);
+      if (polished !== original) {
+        store.writeNoteContent(note.mdPath, polished);
+        note.updatedAt = new Date().toISOString();
+        polishedCount++;
+        details.push({ id: note.id, title: note.title, diff: polished.length - original.length });
+      }
+    }
+    if (polishedCount > 0) {
+      store.saveNotesData(notesData);
+    }
+    return { total: notesData.notes.length, polishedCount, details };
+  }
+
+  const { note } = findNote(idOrTitle);
+  if (!note) {
+    throw new Error(`Nota não encontrada para: "${idOrTitle}"`);
+  }
+
+  const original = store.readNoteContent(note);
+  const polished = polishMarkdown(original, note.title, options);
+  store.writeNoteContent(note.mdPath, polished);
+  note.updatedAt = new Date().toISOString();
+  store.saveNotesData(notesData);
+
+  return {
+    id: note.id,
+    title: note.title,
+    charsBefore: original.length,
+    charsAfter: polished.length,
+    diff: polished.length - original.length
+  };
+}
+
+function handleNoteEmptyTrash() {
+  const notesData = store.getNotesData();
+  const trashedNotes = notesData.notes.filter(n => n.deletedAt || n.isDeleted);
+  const trashedFolders = notesData.noteFolders.filter(f => f.deletedAt || f.isDeleted);
+
+  let filesRemoved = 0;
+  for (const n of trashedNotes) {
+    if (n.mdPath && store.deleteNoteFile) {
+      if (store.deleteNoteFile(n.mdPath)) filesRemoved++;
+    }
+  }
+
+  notesData.notes = notesData.notes.filter(n => !n.deletedAt && !n.isDeleted);
+  notesData.noteFolders = notesData.noteFolders.filter(f => !f.deletedAt && !f.isDeleted);
+  store.saveNotesData(notesData);
+
+  return {
+    purgedNotes: trashedNotes.length,
+    purgedFolders: trashedFolders.length,
+    filesRemoved
+  };
+}
+
 module.exports = {
   handleNoteList,
   handleNoteRead,
@@ -313,6 +414,8 @@ module.exports = {
   handleNoteMove,
   handleNoteRename,
   handleNoteOrganize,
+  handleNotePolish,
+  handleNoteEmptyTrash,
   handleNoteSet,
   handleFolderList,
   handleFolderCreate,
