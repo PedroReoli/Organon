@@ -38,9 +38,12 @@ const c = {
 // Ler package.json
 const packageJsonPath = path.resolve(__dirname, '../package.json');
 let pkg = { name: 'organon', version: '6.x', scripts: {} };
-try {
-  pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-} catch {}
+function reloadPkg() {
+  try {
+    pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  } catch {}
+}
+reloadPkg();
 
 // Itens principais do menu
 const MENU_ITEMS = [
@@ -59,7 +62,7 @@ const MENU_ITEMS = [
     script: 'build:full',
     tag: 'BUILD FULL',
     tagColor: c.brightYellow,
-    desc: 'Compila TypeScript, Vite e gera instalador Electron',
+    desc: 'Compila, empacota e pergunta se deseja dar bump & instalar',
     icon: '📦'
   },
   {
@@ -261,24 +264,146 @@ function runScript(scriptName) {
       console.log(`${c.brightRed}${c.bold}✖ Finalizado com código: ${code}${c.reset}`);
     }
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+    // Se foi build completa com sucesso (opção [2]), perguntar se deseja dar bump e instalar
+    if (code === 0 && (scriptName === 'build:full' || scriptName === 'build:electron')) {
+      const rlInstall = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
 
-    rl.question(`\n${c.cyan}[Enter] voltar ao menu Ops ou [Q + Enter] sair: ${c.reset}`, (answer) => {
-      rl.close();
-      if (answer.trim().toLowerCase() === 'q') {
-        exitMenu();
-      } else {
-        startInteractiveMode();
-      }
-    });
+      console.log(`\n${c.brightYellow}${c.bold}📦 Build concluída com sucesso!${c.reset}`);
+      rlInstall.question(`\n${c.brightCyan}${c.bold}Deseja dar bump na versão e instalar na sua máquina agora? (S/n): ${c.reset}`, (answer) => {
+        rlInstall.close();
+        const ans = answer.trim().toLowerCase();
+        const shouldInstall = ans === '' || ans === 's' || ans === 'sim' || ans === 'y' || ans === 'yes';
+
+        if (shouldInstall) {
+          handleBumpAndInstall(() => {
+            askReturnToMenu();
+          });
+        } else {
+          console.log(`${c.dim}Instalação ignorada.${c.reset}`);
+          askReturnToMenu();
+        }
+      });
+      return;
+    }
+
+    askReturnToMenu();
   });
 
   child.on('error', (err) => {
     console.error(`\n${c.brightRed}Erro ao executar: ${err.message}${c.reset}`);
     exitMenu(1);
+  });
+}
+
+function findLatestInstaller() {
+  const candidateDirs = [
+    path.resolve(__dirname, '../release'),
+    path.resolve(__dirname, '../../release'),
+    path.resolve(__dirname, '../../../release')
+  ];
+
+  let latestInstaller = null;
+  let latestMtime = 0;
+
+  function scanDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scanDir(fullPath);
+        } else if (entry.isFile() && entry.name.endsWith('.exe') && entry.name.includes('Setup')) {
+          const stat = fs.statSync(fullPath);
+          if (stat.mtimeMs > latestMtime) {
+            latestMtime = stat.mtimeMs;
+            latestInstaller = fullPath;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  for (const cDir of candidateDirs) {
+    scanDir(cDir);
+  }
+
+  return latestInstaller;
+}
+
+function handleBumpAndInstall(callback) {
+  console.log(`\n${c.brightMagenta}${c.bold}⚡ Executando bump de versão...${c.reset}`);
+
+  const bumpChild = spawn(process.execPath, [path.resolve(__dirname, 'bump-version.js')], {
+    stdio: 'inherit',
+    cwd: path.resolve(__dirname, '..'),
+    shell: process.platform === 'win32'
+  });
+
+  bumpChild.on('close', () => {
+    reloadPkg();
+
+    const installer = findLatestInstaller();
+    if (!installer) {
+      console.error(`\n${c.brightRed}${c.bold}✖ Instalador .exe não encontrado nas pastas de release.${c.reset}`);
+      return callback ? callback() : null;
+    }
+
+    console.log(`\n${c.brightCyan}${c.bold}🚀 Iniciando instalador:${c.reset} ${c.brightWhite}${installer}${c.reset}`);
+    console.log(`${c.dim}Executando processo de instalação no Windows...${c.reset}\n`);
+
+    if (process.platform === 'win32') {
+      const installChild = spawn('powershell.exe', [
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command',
+        `Start-Process -FilePath "${installer}" -Wait`
+      ], {
+        stdio: 'inherit',
+        shell: true
+      });
+
+      installChild.on('close', (installCode) => {
+        if (installCode === 0) {
+          console.log(`\n${c.brightGreen}${c.bold}✔ Organon instalado com sucesso!${c.reset}`);
+        } else {
+          console.log(`\n${c.yellow}Instalador finalizado (código: ${installCode}).${c.reset}`);
+        }
+        if (callback) callback();
+      });
+
+      installChild.on('error', (err) => {
+        console.error(`\n${c.brightRed}Erro ao disparar instalador: ${err.message}${c.reset}`);
+        if (callback) callback();
+      });
+    } else {
+      console.log(`\n${c.yellow}Instalador disponível em: ${installer}${c.reset}`);
+      if (callback) callback();
+    }
+  });
+
+  bumpChild.on('error', (err) => {
+    console.error(`\n${c.brightRed}Erro ao executar bump: ${err.message}${c.reset}`);
+    if (callback) callback();
+  });
+}
+
+function askReturnToMenu() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  rl.question(`\n${c.cyan}[Enter] voltar ao menu Ops ou [Q + Enter] sair: ${c.reset}`, (answer) => {
+    rl.close();
+    if (answer.trim().toLowerCase() === 'q') {
+      exitMenu();
+    } else {
+      startInteractiveMode();
+    }
   });
 }
 
