@@ -104,6 +104,8 @@ interface NotesSidebarProps {
 
 export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
   const {
+    notes = [],
+    folders = [],
     activeView,
     onGoHome,
     onOpenTrash,
