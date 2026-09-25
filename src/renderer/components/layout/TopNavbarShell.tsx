@@ -57,6 +57,10 @@ export const TopNavbarShell: React.FC<Props> = ({
   isChatOpen = false,
   lastSyncAt,
   syncStatus: _syncStatus = 'synced',
+  unreadAiCount,
+  isAiDrawerOpen,
+  onToggleAiDrawer,
+  onOpenCliRunner,
 }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false)
 
