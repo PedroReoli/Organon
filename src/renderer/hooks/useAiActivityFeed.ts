@@ -18,11 +18,20 @@ export interface AiActivityNotification {
 }
 
 const STORAGE_KEY = 'organon-ai-activity-feed'
+const MUTE_STORAGE_KEY = 'organon-ai-sound-muted'
 
 export const useAiActivityFeed = (
   onNavigateView?: (view: string) => void,
   onSelectNote?: (noteId: string) => void
 ) => {
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(MUTE_STORAGE_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
   const [notifications, setNotifications] = useState<AiActivityNotification[]>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -33,6 +42,16 @@ export const useAiActivityFeed = (
   })
   const [isOpen, setIsOpen] = useState(false)
   const [diffModalItem, setDiffModalItem] = useState<AiActivityNotification | null>(null)
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(MUTE_STORAGE_KEY, String(next))
+      } catch {}
+      return next
+    })
+  }, [])
 
   // Salvar no localStorage sempre que mudar
   useEffect(() => {
@@ -67,11 +86,12 @@ export const useAiActivityFeed = (
       const changes = customEvent.detail?.changes || []
 
       if (changes.length > 0) {
-        // Tocar micro som suave de notificação de IA
-        try {
-          playSound('gentle')
-        } catch {
-          // Ignore audio error
+        if (!isMuted) {
+          try {
+            playSound('gentle', 0.2)
+          } catch {
+            // Ignore audio error
+          }
         }
 
         const newItems: AiActivityNotification[] = changes.map((c) => ({
@@ -90,7 +110,7 @@ export const useAiActivityFeed = (
     return () => {
       window.removeEventListener('organon:external-changes', handleExternalChanges)
     }
-  }, [])
+  }, [isMuted])
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -149,6 +169,8 @@ export const useAiActivityFeed = (
     unreadCount,
     isOpen,
     setIsOpen,
+    isMuted,
+    toggleMute,
     diffModalItem,
     setDiffModalItem,
     markAllAsRead,

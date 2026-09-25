@@ -327,7 +327,7 @@ export const WeeklyView = ({
   };
 
   const openAddModal = (dayKey?: Day, shiftId?: Period, dateStr?: string, dayLabel?: string) => {
-    const defaultTime = shiftId === 'morning' ? '09:00' : shiftId === 'afternoon' ? '14:00' : shiftId === 'night' ? '19:00' : '';
+    const defaultTime = shiftId === 'morning' ? '09:00' : shiftId === 'afternoon' ? '14:00' : shiftId === 'night' ? '19:00' : '10:00';
     setQuickAddModal({
       isOpen: true,
       dayKey,
@@ -335,12 +335,17 @@ export const WeeklyView = ({
       dateStr,
       dayLabel: dayLabel ? `${dayLabel} (${dateStr?.slice(8)}/${dateStr?.slice(5, 7)})` : 'Backlog',
       title: '',
+      description: '',
       projectId: '',
       priority: 'P3',
       hasTime: !!shiftId,
       time: defaultTime,
       hasReminder: false,
-      reminderOffset: 15,
+      reminderMode: !!shiftId ? 'before' : 'interval',
+      reminderInterval: 10,
+      reminderOffset: 10,
+      reminderSound: 'bell',
+      repeatUntilDone: true,
       storyPoints: 0,
       tagsInput: '',
     });
@@ -354,12 +359,17 @@ export const WeeklyView = ({
       shiftId,
       dateStr,
       title,
+      description,
       projectId,
       priority,
       hasTime,
       time,
       hasReminder,
+      reminderMode,
+      reminderInterval,
       reminderOffset,
+      reminderSound,
+      repeatUntilDone,
       storyPoints,
       tagsInput,
     } = quickAddModal;
@@ -369,28 +379,40 @@ export const WeeklyView = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const isInterval = reminderOffset < 0
-    const reminder = hasReminder
-      ? {
-          enabled: true,
-          mode: (isInterval ? 'interval' : 'before') as const,
-          offsetMinutes: isInterval ? 0 : reminderOffset,
-          intervalMinutes: isInterval ? Math.abs(reminderOffset) : 10,
-          repeatUntilDone: isInterval,
-          triggerAt: isInterval
-            ? new Date(Date.now() + Math.abs(reminderOffset) * 60 * 1000).toISOString()
-            : null,
-          sound: 'bell' as const,
-          nativeToast: true,
-          alertType: 'alarm' as const,
-          hasFired: false,
-          fireCount: 0,
-        }
-      : null;
+    let reminder = null;
+    if (hasReminder) {
+      let triggerAt = null;
+      const now = Date.now();
+      if (reminderMode === 'interval') {
+        triggerAt = new Date(now + (reminderInterval || 10) * 60 * 1000).toISOString();
+      } else if (reminderMode === 'before' && hasTime && time && dateStr) {
+        const evMs = new Date(`${dateStr}T${time}:00`).getTime();
+        triggerAt = new Date(evMs - (reminderOffset || 10) * 60 * 1000).toISOString();
+      } else {
+        triggerAt = new Date(now + 10 * 60 * 1000).toISOString();
+      }
+
+      reminder = {
+        enabled: true,
+        mode: reminderMode || 'interval',
+        offsetMinutes: reminderOffset || 10,
+        intervalMinutes: reminderInterval || 10,
+        repeatUntilDone: repeatUntilDone ?? true,
+        triggerAt,
+        sound: reminderSound || 'bell',
+        nativeToast: true,
+        alertType: 'alarm' as const,
+        hasFired: false,
+        fireCount: 0,
+      };
+    }
+
+    const descHtml = description ? `<p>${description.replace(/\n/g, '<br/>')}</p>` : '';
 
     if (dayKey && shiftId && dateStr) {
       onAddTask?.({
         title: title.trim(),
+        descriptionHtml: descHtml,
         date: dateStr,
         hasDate: true,
         location: { day: dayKey, period: shiftId },
@@ -407,6 +429,7 @@ export const WeeklyView = ({
     } else {
       onAddTask?.({
         title: title.trim(),
+        descriptionHtml: descHtml,
         hasDate: false,
         date: null,
         location: { day: null, period: null },

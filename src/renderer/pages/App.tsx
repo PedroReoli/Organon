@@ -619,6 +619,8 @@ export const App = () => {
         isOpen={aiActivity.isOpen}
         notifications={aiActivity.notifications}
         unreadCount={aiActivity.unreadCount}
+        isMuted={aiActivity.isMuted}
+        onToggleMute={aiActivity.toggleMute}
         onClose={() => aiActivity.setIsOpen(false)}
         onClearAll={aiActivity.clearAll}
         onMarkAllAsRead={aiActivity.markAllAsRead}

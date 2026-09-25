@@ -9,9 +9,10 @@ import {
   ClockCounterClockwise,
   CheckCircle,
   Trash,
-  Funnel,
   GitDiff,
   Terminal,
+  SpeakerHigh,
+  SpeakerSlash,
 } from '@phosphor-icons/react'
 import { AiActivityNotification } from '../../hooks/useAiActivityFeed'
 
@@ -19,6 +20,8 @@ interface AiActivityDrawerProps {
   isOpen: boolean
   notifications: AiActivityNotification[]
   unreadCount: number
+  isMuted?: boolean
+  onToggleMute?: () => void
   onClose: () => void
   onClearAll: () => void
   onMarkAllAsRead: () => void
@@ -32,6 +35,8 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
   isOpen,
   notifications,
   unreadCount,
+  isMuted = false,
+  onToggleMute,
   onClose,
   onClearAll,
   onMarkAllAsRead,
@@ -67,13 +72,13 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'task':
-        return <Kanban size={14} weight="duotone" className="text-blue-400" />
+        return <Kanban size={13} weight="duotone" className="text-blue-400" />
       case 'note':
-        return <Notebook size={14} weight="duotone" className="text-amber-400" />
+        return <Notebook size={13} weight="duotone" className="text-amber-400" />
       case 'project':
-        return <GitFork size={14} weight="duotone" className="text-purple-400" />
+        return <GitFork size={13} weight="duotone" className="text-purple-400" />
       default:
-        return <Sparkle size={14} weight="duotone" className="text-emerald-400" />
+        return <Sparkle size={13} weight="duotone" className="text-emerald-400" />
     }
   }
 
@@ -95,26 +100,27 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
     <div
       style={{
         position: 'fixed',
-        top: 58,
-        right: 18,
-        width: 420,
-        maxHeight: 'calc(100vh - 80px)',
+        top: 56,
+        right: 16,
+        width: 540,
+        maxWidth: 'calc(100vw - 32px)',
+        maxHeight: 'calc(100vh - 76px)',
         backgroundColor: 'var(--color-surface, #181825)',
         border: '1px solid var(--color-border, rgba(255,255,255,0.12))',
-        borderRadius: 16,
+        borderRadius: 14,
         boxShadow: '0 20px 48px rgba(0, 0, 0, 0.55)',
         backdropFilter: 'blur(20px)',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        animation: 'fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+        animation: 'fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       {/* Top Header */}
       <div
         style={{
-          padding: '14px 18px',
+          padding: '10px 14px',
           borderBottom: '1px solid var(--color-border, rgba(255,255,255,0.08))',
           display: 'flex',
           alignItems: 'center',
@@ -125,8 +131,8 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
             style={{
-              padding: 6,
-              borderRadius: 8,
+              padding: 5,
+              borderRadius: 6,
               background: 'color-mix(in srgb, var(--color-primary, #6366f1) 20%, transparent)',
               color: 'var(--color-primary, #818cf8)',
               display: 'flex',
@@ -134,19 +140,44 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
               justifyContent: 'center',
             }}
           >
-            <Sparkle size={16} weight="duotone" />
+            <Sparkle size={15} weight="duotone" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #fff)' }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--color-text, #fff)' }}>
               Central de Atividades & IA
             </h3>
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted, #a1a1aa)' }}>
+            <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #a1a1aa)' }}>
               Sincronização em tempo real ativa
             </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {onToggleMute && (
+            <button
+              type="button"
+              onClick={onToggleMute}
+              title={isMuted ? 'Ativar sons de notificação' : 'Mutar sons de notificação'}
+              style={{
+                background: isMuted ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                border: '1px solid',
+                borderColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'transparent',
+                color: isMuted ? '#f87171' : 'var(--color-text-muted, #a1a1aa)',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: 11,
+              }}
+              className="hover:text-white"
+            >
+              {isMuted ? <SpeakerSlash size={14} weight="bold" /> : <SpeakerHigh size={14} weight="bold" />}
+              <span>{isMuted ? 'Mudo' : 'Som'}</span>
+            </button>
+          )}
+
           {unreadCount > 0 && (
             <button
               type="button"
@@ -162,7 +193,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
               }}
               className="hover:text-white"
             >
-              <CheckCircle size={16} weight="duotone" />
+              <CheckCircle size={15} weight="duotone" />
             </button>
           )}
 
@@ -181,7 +212,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
               }}
               className="hover:text-red-400"
             >
-              <Trash size={16} weight="duotone" />
+              <Trash size={15} weight="duotone" />
             </button>
           )}
 
@@ -198,7 +229,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
             }}
             className="hover:text-white"
           >
-            <X size={16} weight="bold" />
+            <X size={15} weight="bold" />
           </button>
         </div>
       </div>
@@ -206,7 +237,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
       {/* Filter Tabs & Quick Action */}
       <div
         style={{
-          padding: '8px 14px',
+          padding: '6px 12px',
           borderBottom: '1px solid var(--color-border, rgba(255,255,255,0.06))',
           display: 'flex',
           alignItems: 'center',
@@ -225,10 +256,10 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                 type="button"
                 onClick={() => setFilter(tab)}
                 style={{
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: 600,
-                  padding: '4px 8px',
-                  borderRadius: 6,
+                  padding: '3px 8px',
+                  borderRadius: 5,
                   border: '1px solid',
                   borderColor: active
                     ? 'var(--color-primary, #6366f1)'
@@ -250,15 +281,15 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
           <button
             type="button"
             onClick={onOpenCliRunner}
-            title="Abrir Terminal CLI Integrado"
+            title="Abrir Terminal CLI Integrado (Ctrl+')"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: 600,
-              padding: '4px 8px',
-              borderRadius: 6,
+              padding: '3px 8px',
+              borderRadius: 5,
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.1)',
               color: 'var(--color-text, #fff)',
@@ -272,36 +303,36 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
         )}
       </div>
 
-      {/* Notifications List */}
+      {/* Notifications List (Compact Grid) */}
       <div
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 14px',
+          padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
+          gap: 6,
         }}
         className="custom-scrollbar"
       >
         {filtered.length === 0 ? (
           <div
             style={{
-              padding: '40px 20px',
+              padding: '32px 16px',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 8,
+              gap: 6,
               color: 'var(--color-text-muted, #71717a)',
             }}
           >
-            <Sparkle size={32} weight="duotone" className="text-zinc-600" />
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500 }}>
-              Nenhuma atividade recente registrada.
+            <Sparkle size={26} weight="duotone" className="text-zinc-600" />
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 500 }}>
+              Nenhuma atividade registrada no momento.
             </p>
-            <span style={{ fontSize: 11 }}>
-              Alterações feitas por IAs ou CLI aparecerão aqui em tempo real.
+            <span style={{ fontSize: 10.5 }}>
+              Alterações feitas por IAs ou comandos CLI aparecerão aqui em tempo real.
             </span>
           </div>
         ) : (
@@ -311,8 +342,8 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
               <div
                 key={item.id}
                 style={{
-                  padding: 12,
-                  borderRadius: 10,
+                  padding: '8px 10px',
+                  borderRadius: 8,
                   background: item.read
                     ? 'rgba(255, 255, 255, 0.02)'
                     : 'color-mix(in srgb, var(--color-primary, #6366f1) 8%, rgba(255,255,255,0.03))',
@@ -321,20 +352,20 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                     ? 'rgba(255, 255, 255, 0.06)'
                     : 'color-mix(in srgb, var(--color-primary, #6366f1) 30%, rgba(255,255,255,0.08))',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  position: 'relative',
-                  transition: 'all 0.15s ease',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                  transition: 'all 0.12s ease',
                 }}
               >
-                {/* Item Top row: Agent badge + Time */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {/* Left info */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span
                       style={{
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: 700,
-                        padding: '2px 6px',
+                        padding: '1px 5px',
                         borderRadius: 4,
                         background: badge.bg,
                         color: badge.text,
@@ -343,52 +374,49 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                     >
                       {item.agent}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       {getCategoryIcon(item.category)}
-                      <span style={{ fontSize: 11, color: 'var(--color-text-muted, #a1a1aa)', fontWeight: 500 }}>
+                      <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #a1a1aa)', fontWeight: 500 }}>
                         {item.category === 'task' ? 'Planejamento' : item.category === 'note' ? 'Notas' : 'Geral'}
                       </span>
                     </div>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted, #71717a)', marginLeft: 'auto' }}>
+                      {formatRelativeTime(item.timestamp)}
+                    </span>
                   </div>
 
-                  <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #71717a)' }}>
-                    {formatRelativeTime(item.timestamp)}
-                  </span>
-                </div>
-
-                {/* Item Title & Description */}
-                <div>
-                  <h4 style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #fff)' }}>
+                  <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text, #fff)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {item.title}
                   </h4>
-                  <p style={{ margin: '3px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #a1a1aa)', lineHeight: 1.4 }}>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--color-text-muted, #a1a1aa)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {item.description}
                   </p>
                 </div>
 
-                {/* Actions Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
+                {/* Actions Right */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, shrink: 0 }}>
                   {item.previousSnapshot && (
                     <button
                       type="button"
                       onClick={() => onOpenDiffModal(item)}
+                      title="Ver o que mudou"
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: 6,
+                        padding: '4px 6px',
+                        borderRadius: 5,
                         background: 'rgba(255,255,255,0.06)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         color: 'var(--color-text-muted, #e4e4e7)',
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 3,
                       }}
                       className="hover:bg-white/10"
                     >
                       <GitDiff size={12} weight="bold" />
-                      <span>Ver Diff</span>
+                      <span>Diff</span>
                     </button>
                   )}
 
@@ -398,17 +426,17 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                       onClick={() => onRollback(item)}
                       title="Desfazer alteração da IA"
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: 6,
+                        padding: '4px 6px',
+                        borderRadius: 5,
                         background: 'rgba(239, 68, 68, 0.12)',
                         border: '1px solid rgba(239, 68, 68, 0.25)',
                         color: '#f87171',
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 3,
                       }}
                       className="hover:bg-red-500/20"
                     >
@@ -421,23 +449,24 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenItem(item)}
+                      title="Abrir item no app"
                       style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
+                        padding: '4px 8px',
+                        borderRadius: 5,
                         background: 'var(--color-primary, #6366f1)',
                         border: 'none',
                         color: '#ffffff',
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 3,
                       }}
                       className="hover:brightness-110"
                     >
                       <span>Abrir</span>
-                      <ArrowSquareOut size={12} weight="bold" />
+                      <ArrowSquareOut size={11} weight="bold" />
                     </button>
                   )}
                 </div>

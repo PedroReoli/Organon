@@ -93,10 +93,6 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
       const minsStr = String(now.getMinutes()).padStart(2, '0')
       setStartTime(`${hoursStr}:${minsStr}`)
       setReminderToast(`Tarefa adiada em +${minutesOrTomorrow} min! (Adiada ${nextCount}x)`)
-    }
-  }
-
-    }
   }
 
   const [reminder, setReminder] = useState<CardReminder | null | undefined>(card.reminder)

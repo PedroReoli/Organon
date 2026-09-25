@@ -44,10 +44,10 @@ function printHelp() {
 
   \x1b[36m📋 TAREFAS & PLANEJAMENTO (task / plan)\x1b[0m
     organon task list [--today] [--status=todo|in_progress|done] [--priority=urgent|high] [--json]
-    organon task create --title="Minha Tarefa" [--date=YYYY-MM-DD] [--time=HH:mm] [--priority=urgent] [--tags=dev,ai]
+    organon task create --title="Minha Tarefa" [--desc="..."] [--date=YYYY-MM-DD] [--time=HH:mm] [--remind-interval=10] [--remind-before=15] [--remind-sound=bell] [--priority=urgent] [--tags=dev,ai]
     organon task done <id_ou_titulo>        \x1b[90m(Alterna status concluído/pendente)\x1b[0m
-    organon task get <id_ou_titulo>         \x1b[90m(Exibe detalhes completos)\x1b[0m
-    organon task update <id_ou_titulo> [--title=...] [--status=...] [--priority=...]
+    organon task get <id_ou_titulo>         \x1b[90m(Exibe detalhes completos, notas e alarmes)\x1b[0m
+    organon task update <id_ou_titulo> [--title=...] [--desc=...] [--status=...] [--priority=...] [--date=...] [--time=...]
     organon task delete <id_ou_titulo>
 
   \x1b[36m🏃 SPRINTS & PROJETOS (sprint / project)\x1b[0m
@@ -233,7 +233,11 @@ function execute(args, context = {}) {
       else {
         console.log(`\n\x1b[1m${res.title}\x1b[0m`);
         console.log(`  ID: ${res.id} | Status: ${res.status} | Prioridade: ${res.priority}`);
+        if (res.description || res.descriptionHtml) console.log(`  Descrição: ${res.description || res.descriptionHtml}`);
         if (res.date) console.log(`  Agendamento: ${res.date} ${res.time || ''} (${res.durationMinutes || 30}m)`);
+        if (res.reminder) {
+          console.log(`  🔔 Lembrete: Modo [${res.reminder.mode}] ${res.reminder.intervalMinutes ? `a cada ${res.reminder.intervalMinutes}m` : ''} ${res.reminder.offsetMinutes ? `${res.reminder.offsetMinutes}m antes` : ''} | Som: ${res.reminder.sound || 'bell'}`);
+        }
         if (res.tags && res.tags.length) console.log(`  Tags: ${res.tags.join(', ')}`);
       }
       return;

@@ -262,16 +262,21 @@ export const DailyView: React.FC<DailyViewProps> = ({
   }, [activeTaskId]);
 
   const openQuickAdd = (hour?: number) => {
-    const time = hour !== undefined ? `${hour.toString().padStart(2, '0')}:00` : '09:00';
+    const time = hour !== undefined ? `${hour.toString().padStart(2, '0')}:00` : '10:00';
     setQuickAddModal({
       isOpen: true,
       time,
       title: '',
+      description: '',
       projectId: '',
       priority: 'P3',
       hasTime: hour !== undefined,
       hasReminder: false,
-      reminderOffset: 15,
+      reminderMode: hour !== undefined ? 'before' : 'interval',
+      reminderInterval: 10,
+      reminderOffset: 10,
+      reminderSound: 'bell',
+      repeatUntilDone: true,
       storyPoints: 0,
       tagsInput: '',
     });
@@ -283,11 +288,16 @@ export const DailyView: React.FC<DailyViewProps> = ({
     const {
       time,
       title,
+      description,
       projectId,
       priority,
       hasTime,
       hasReminder,
+      reminderMode,
+      reminderInterval,
       reminderOffset,
+      reminderSound,
+      repeatUntilDone,
       storyPoints,
       tagsInput,
     } = quickAddModal;
@@ -297,27 +307,37 @@ export const DailyView: React.FC<DailyViewProps> = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const isInterval = reminderOffset < 0
-    const reminder = hasReminder
-      ? {
-          enabled: true,
-          mode: (isInterval ? 'interval' : 'before') as const,
-          offsetMinutes: isInterval ? 0 : reminderOffset,
-          intervalMinutes: isInterval ? Math.abs(reminderOffset) : 10,
-          repeatUntilDone: isInterval,
-          triggerAt: isInterval
-            ? new Date(Date.now() + Math.abs(reminderOffset) * 60 * 1000).toISOString()
-            : null,
-          sound: 'bell' as const,
-          nativeToast: true,
-          alertType: 'alarm' as const,
-          hasFired: false,
-          fireCount: 0,
-        }
-      : null;
+    let reminder = null;
+    if (hasReminder) {
+      let triggerAt = null;
+      const now = Date.now();
+      if (reminderMode === 'interval') {
+        triggerAt = new Date(now + (reminderInterval || 10) * 60 * 1000).toISOString();
+      } else if (reminderMode === 'before' && hasTime && time) {
+        const evMs = new Date(`${selectedDateStr}T${time}:00`).getTime();
+        triggerAt = new Date(evMs - (reminderOffset || 10) * 60 * 1000).toISOString();
+      } else {
+        triggerAt = new Date(now + 10 * 60 * 1000).toISOString();
+      }
+
+      reminder = {
+        enabled: true,
+        mode: reminderMode || 'interval',
+        offsetMinutes: reminderOffset || 10,
+        intervalMinutes: reminderInterval || 10,
+        repeatUntilDone: repeatUntilDone ?? true,
+        triggerAt,
+        sound: reminderSound || 'bell',
+        nativeToast: true,
+        alertType: 'alarm' as const,
+        hasFired: false,
+        fireCount: 0,
+      };
+    }
 
     onAddTask?.({
       title: title.trim(),
+      descriptionHtml: description ? `<p>${description.replace(/\n/g, '<br/>')}</p>` : '',
       date: selectedDateStr,
       hasDate: true,
       time: hasTime && time.trim() ? time.trim() : null,

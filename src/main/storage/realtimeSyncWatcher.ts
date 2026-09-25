@@ -168,19 +168,6 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
     }
   }
 
-  // 3. Fallback generic event if other sections changed
-  if (events.length === 0 && prev.storeUpdatedAt !== curr.storeUpdatedAt) {
-    events.push({
-      id: randomUUID(),
-      timestamp: now,
-      agent: 'CLI Organon',
-      category: 'sync',
-      type: 'updated',
-      title: 'Sincronização em Tempo Real',
-      description: 'Estruturas de dados atualizadas externamente.',
-    })
-  }
-
   return events
 }
 
@@ -210,8 +197,8 @@ export const startRealtimeSyncWatcher = (): void => {
     })
 
     const onFileOrDirChange = (_eventType: string, _filename: string | null) => {
-      // Ignore if change was triggered by internal save in the last 400ms
-      if (Date.now() - lastInternalSaveTimestamp < 400) {
+      // Ignore if change was triggered by internal save in the last 800ms
+      if (Date.now() - lastInternalSaveTimestamp < 800) {
         return
       }
 
@@ -225,27 +212,27 @@ export const startRealtimeSyncWatcher = (): void => {
           const changes = detectChanges(lastStoreSnapshot, freshStore)
           lastStoreSnapshot = freshStore
 
-          if (changes.length > 0) {
-            // Keep recent 50 events in memory
-            recentEvents.unshift(...changes)
-            if (recentEvents.length > 50) {
-              recentEvents.splice(50)
-            }
+          const win = getMainWindow()
+          if (win && !win.isDestroyed()) {
+            // Sempre sincroniza o store silenciosamente se houver novidade
+            win.webContents.send('store:external-update', {
+              store: freshStore,
+              changes,
+              timestamp: new Date().toISOString(),
+            })
+            win.webContents.send('planning:sync-cli')
 
-            const win = getMainWindow()
-            if (win && !win.isDestroyed()) {
-              win.webContents.send('store:external-update', {
-                store: freshStore,
-                changes,
-                timestamp: new Date().toISOString(),
-              })
-              win.webContents.send('planning:sync-cli')
+            if (changes.length > 0) {
+              recentEvents.unshift(...changes)
+              if (recentEvents.length > 50) {
+                recentEvents.splice(50)
+              }
             }
           }
         } catch (err) {
           console.error('[RealtimeSyncWatcher] Erro ao sincronizar store externo:', err)
         }
-      }, 120)
+      }, 350)
     }
 
     for (const dir of uniqueDirs) {

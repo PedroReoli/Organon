@@ -78,15 +78,51 @@ function handleTaskCreate(options = {}) {
     isLocked: false,
     storyPoints: options.storyPoints ? Number(options.storyPoints) : undefined,
     iconEmoji: options.iconEmoji || options.emoji || undefined,
-    coverColor: options.coverColor || options.color || undefined
+    coverColor: options.coverColor || options.color || undefined,
+    descriptionHtml: options.descriptionHtml || options.description || options.desc || undefined,
+    description: options.description || options.desc || undefined
   };
 
-  if (options.reminder) {
+  const hasReminder = Boolean(
+    options.reminder ||
+    options.remind ||
+    options.remindMode ||
+    options['remind-mode'] ||
+    options['reminder-mode'] ||
+    options.remindInterval ||
+    options['remind-interval'] ||
+    options.remindBefore ||
+    options['remind-before']
+  );
+
+  if (hasReminder) {
+    const mode = options.remindMode || options['remind-mode'] || options['reminder-mode'] || (options.time ? 'before' : 'interval');
+    const intervalMinutes = parseInt(options.remindInterval || options['remind-interval'] || options.interval, 10) || 10;
+    const offsetMinutes = parseInt(options.remindBefore || options['remind-before'] || options.offset, 10) || 10;
+    const sound = options.remindSound || options['remind-sound'] || options.sound || 'bell';
+    const repeatUntilDone = options.repeat !== undefined ? Boolean(options.repeat) : true;
+
+    let triggerAt = new Date().toISOString();
+    const now = Date.now();
+    if (mode === 'interval') {
+      triggerAt = new Date(now + intervalMinutes * 60 * 1000).toISOString();
+    } else if (mode === 'before' && options.date && options.time) {
+      const evMs = new Date(`${options.date}T${options.time}:00`).getTime();
+      if (!isNaN(evMs)) {
+        triggerAt = new Date(evMs - offsetMinutes * 60 * 1000).toISOString();
+      }
+    } else if (options.date && options.time) {
+      triggerAt = `${options.date}T${options.time}:00`;
+    }
+
     newTask.reminder = {
-      preset: options.reminder,
-      triggerAt: options.time && options.date
-        ? `${options.date}T${options.time}:00`
-        : new Date().toISOString(),
+      mode,
+      intervalMinutes,
+      offsetMinutes,
+      sound,
+      repeatUntilDone,
+      preset: options.reminder && typeof options.reminder === 'string' ? options.reminder : undefined,
+      triggerAt,
       hasFired: false
     };
   }
@@ -138,6 +174,11 @@ function handleTaskUpdate(idOrTitle, options = {}) {
   if (options.title) task.title = options.title;
   if (options.status) task.status = options.status;
   if (options.priority) task.priority = options.priority;
+  if (options.desc !== undefined || options.description !== undefined) {
+    const desc = options.description || options.desc || '';
+    task.description = desc;
+    task.descriptionHtml = desc;
+  }
   if (options.date !== undefined) {
     task.date = options.date === 'none' || options.date === 'null' ? null : options.date;
     task.hasDate = Boolean(task.date);
@@ -151,6 +192,20 @@ function handleTaskUpdate(idOrTitle, options = {}) {
   if (options.sprint !== undefined) task.sprintId = options.sprint;
   if (options.project !== undefined) task.projectId = options.project;
   if (options.storyPoints !== undefined) task.storyPoints = Number(options.storyPoints);
+  if (options.reminder !== undefined) {
+    if (options.reminder === 'none' || options.reminder === false || options.reminder === 'false') {
+      task.reminder = null;
+    } else {
+      task.reminder = {
+        mode: options.remindMode || options['remind-mode'] || 'interval',
+        intervalMinutes: parseInt(options.remindInterval || options['remind-interval'] || 10, 10),
+        offsetMinutes: parseInt(options.remindBefore || options['remind-before'] || 10, 10),
+        sound: options.remindSound || options['remind-sound'] || 'bell',
+        triggerAt: new Date().toISOString(),
+        hasFired: false
+      };
+    }
+  }
 
   task.updatedAt = new Date().toISOString();
   store.savePlanningData(planning);
