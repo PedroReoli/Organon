@@ -66,25 +66,24 @@ export const rollbackCliAction = async (actionId: string): Promise<boolean> => {
     if (target.targetType === 'card') {
       const existingIdx = (store.cards || []).findIndex((c: any) => c.id === target.targetId)
       if (target.type === 'created') {
-        // Rollback created card -> remove it
         store.cards = (store.cards || []).filter((c: any) => c.id !== target.targetId)
-      } else if (target.type === 'updated' && target.previousSnapshot) {
+      } else if (target.previousSnapshot) {
         if (existingIdx >= 0) {
           store.cards[existingIdx] = target.previousSnapshot
+        } else {
+          store.cards.push(target.previousSnapshot)
         }
-      } else if (target.type === 'deleted' && target.previousSnapshot) {
-        store.cards.push(target.previousSnapshot)
       }
     } else if (target.targetType === 'note') {
       const existingIdx = (store.notes || []).findIndex((n: any) => n.id === target.targetId)
       if (target.type === 'created') {
         store.notes = (store.notes || []).filter((n: any) => n.id !== target.targetId)
-      } else if (target.type === 'updated' && target.previousSnapshot) {
+      } else if (target.previousSnapshot) {
         if (existingIdx >= 0) {
           store.notes[existingIdx] = target.previousSnapshot
+        } else {
+          store.notes.push(target.previousSnapshot)
         }
-      } else if (target.type === 'deleted' && target.previousSnapshot) {
-        store.notes.push(target.previousSnapshot)
       }
     }
 

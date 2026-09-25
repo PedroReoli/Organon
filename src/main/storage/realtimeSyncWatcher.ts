@@ -148,20 +148,23 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
     }
   }
 
-  for (const prevNote of prevNotes) {
-    if (!currNoteMap.has(prevNote.id)) {
-      events.push({
-        id: randomUUID(),
-        timestamp: now,
-        agent: 'Claude',
-        category: 'note',
-        type: 'deleted',
-        title: `Nota Excluída: "${prevNote.title}"`,
-        description: `Nota movida para lixeira ou removida.`,
-        targetId: prevNote.id,
-        targetType: 'note',
-        previousSnapshot: prevNote,
-      })
+  // Apenas detecta exclusões se a lista atual não estiver vazia por leitura parcial
+  if (currNotes.length > 0 || prevNotes.length <= 2) {
+    for (const prevNote of prevNotes) {
+      if (!currNoteMap.has(prevNote.id)) {
+        events.push({
+          id: randomUUID(),
+          timestamp: now,
+          agent: 'Antigravity',
+          category: 'note',
+          type: 'deleted',
+          title: `Nota Removida: "${prevNote.title}"`,
+          description: `Nota removida ou realocada.`,
+          targetId: prevNote.id,
+          targetType: 'note',
+          previousSnapshot: prevNote,
+        })
+      }
     }
   }
 
