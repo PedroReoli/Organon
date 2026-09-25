@@ -10,6 +10,7 @@ import {
   getConfig,
   getDataPath,
   getDedicatedDefaultDataPath,
+  getStoreDir,
   loadStore,
   loadStoreFromPath,
   normalizeStore,
@@ -27,10 +28,15 @@ export const registerCoreIpcHandlers = (): void => {
   const startPlanningCliWatcher = () => {
     try {
       const dataDir = getDataPath()
-      const syncFlag = path.join(dataDir, 'store', '.cli-sync-flag')
-      if (fs.existsSync(path.dirname(syncFlag))) {
-        fs.watch(path.dirname(syncFlag), (eventType, filename) => {
-          if (filename === '.cli-sync-flag') {
+      const watchDirs = [
+        getStoreDir(dataDir),
+        path.join(dataDir, 'store'),
+        dataDir
+      ].filter(d => fs.existsSync(d))
+
+      for (const dir of watchDirs) {
+        fs.watch(dir, (eventType, filename) => {
+          if (filename === '.cli-sync-flag' || filename === 'planning.json') {
              getMainWindow()?.webContents.send('planning:sync-cli')
           }
         })

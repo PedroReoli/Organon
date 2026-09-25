@@ -321,33 +321,62 @@
   color: var(--color-text-muted);
 }
 
-/* ---- Tabelas ---- */
-.tiptap-editor .ProseMirror table {
-  border-collapse: collapse;
-  table-layout: fixed;
-  width: 100%;
+/* ---- Tabelas & TableWrapper ---- */
+.tiptap-editor .ProseMirror .tableWrapper,
+.ProseMirror .tableWrapper {
+  max-width: 100%;
+  overflow-x: auto;
   margin: 16px 0;
-  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface, rgba(255, 255, 255, 0.02));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tiptap-editor .ProseMirror table,
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  table-layout: auto;
+  font-size: 13.5px;
 }
 
 .tiptap-editor .ProseMirror table td,
-.tiptap-editor .ProseMirror table th {
+.tiptap-editor .ProseMirror table th,
+.ProseMirror table td,
+.ProseMirror table th {
   border: 1px solid var(--color-border);
-  padding: 8px 12px;
-  min-width: 80px;
-  vertical-align: top;
+  padding: 8px 14px;
+  min-width: 100px;
+  vertical-align: middle;
   position: relative;
+  line-height: 1.5;
 }
 
-.tiptap-editor .ProseMirror table th {
-  background: var(--color-background-tertiary);
-  font-weight: 600;
+.tiptap-editor .ProseMirror table th,
+.ProseMirror table th {
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-primary) 10%);
+  font-weight: 700;
   font-size: 13px;
+  color: var(--color-text);
+  text-align: left;
+  letter-spacing: 0.02em;
+}
+
+.tiptap-editor .ProseMirror table tbody tr:hover,
+.ProseMirror table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .tiptap-editor .ProseMirror table td p,
-.tiptap-editor .ProseMirror table th p {
+.tiptap-editor .ProseMirror table th p,
+.ProseMirror table td p,
+.ProseMirror table th p {
   margin: 0;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .tiptap-editor .ProseMirror table .selectedCell::after {
@@ -368,11 +397,6 @@
   background: var(--color-primary);
   cursor: col-resize;
   z-index: 10;
-}
-
-.tiptap-editor .ProseMirror .tableWrapper {
-  overflow-x: auto;
-  margin: 12px 0;
 }
 
 .tiptap-editor .ProseMirror table .resize-cursor {

@@ -31,17 +31,22 @@ Você está conectado à CLI & Bridge Operacional do Organon — a central unifi
 | Objetivo do Agente | Comando CLI | Descrição |
 |---|---|---|
 | Diagnóstico do Sistema | \`organon status --json\` | Exibe contagens, versão, diretório ativo e pendências |
-| Verificação de Saúde | \`organon doctor --json\` | Valida integridade do banco SQLite, tabelas e modelos |
+| Verificação de Saúde | \`organon doctor --json\` | Valida integridade do banco SQLite, diretórios e modelos |
 | Listar Tarefas de Hoje | \`organon task list --today --json\` | Retorna tarefas agendadas para o dia com prioridade |
 | Listar Tarefas Pendentes | \`organon task list --status=todo --json\` | Lista backlog ou pendências gerais |
 | Criar Tarefa | \`organon task create --title="..." [--priority=urgent] [--date=YYYY-MM-DD]\` | Cria tarefa atômica no planejamento |
 | Concluir Tarefa | \`organon task done <id_ou_titulo>\` | Alterna status para concluído (\`done\`) |
 | Buscar/Ler Nota | \`organon note read <id_ou_titulo>\` | Retorna o conteúdo Markdown da nota |
-| Criar Nova Nota | \`organon note create --title="..." --content="..." [--folder="Geral"]\` | Cria nota no cofre |
+| Criar Nova Nota | \`organon note create --title="..." [--content="..." \\| --file="path.md"] [--folder="Geral"]\` | Cria nota no cofre (suporta arquivo ou stdin) |
+| Atualizar Nota | \`organon note update <id_ou_titulo> [--content="..." \\| --file="path.md"] [--append="..."]\` | Atualiza ou acrescenta conteúdo em nota existente |
+| Mover Nota | \`organon note move <id_ou_titulo> --folder="NomePasta" \\| --parent="NotaPai"\` | Move para pasta ou transforma em subpágina |
+| Renomear Nota | \`organon note rename <id_ou_titulo> --title="Novo Título"\` | Altera título da nota |
+| Listar Pastas | \`organon note folder list --json\` | Lista pastas e contagem de notas |
+| Criar Pasta | \`organon note folder create --name="Nova Pasta"\` | Cria pasta no cofre de notas |
 | Listar Sprints | \`organon sprint list --json\` | Retorna sprints ativas e métricas |
 | Listar Hábitos | \`organon habit list --json\` | Lista hábitos e status de conclusão hoje |
 | Marcar Hábito | \`organon habit check <id_ou_nome>\` | Alterna realização do hábito no dia |
-| Sincronizar App | \`organon sync\` | Notifica o renderer do Electron via IPC |
+| Sincronizar App | \`organon sync\` | Notifica e sincroniza o app desktop instantaneamente |
 | Schema de Ferramentas | \`organon schema\` | Emite Tool Calling Schema (JSON) para LLMs |
 
 ---

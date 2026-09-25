@@ -61,18 +61,40 @@ function findNote(query) {
 }
 
 function handleNoteRead(idOrTitle) {
-  const { note } = findNote(idOrTitle);
+  const { notesData, note } = findNote(idOrTitle);
   if (!note) {
     throw new Error(`Note not found matching: "${idOrTitle}"`);
   }
+  const folder = note.folderId ? (notesData.noteFolders || []).find(f => f.id === note.folderId) : null;
   const content = store.readNoteContent(note);
   return {
     id: note.id,
     title: note.title,
+    folder: folder ? folder.name : 'Raiz',
+    folderId: note.folderId || null,
     mdPath: note.mdPath,
     updatedAt: note.updatedAt,
     content
   };
+}
+
+function resolveContentFromOptions(options = {}) {
+  const fs = require('fs');
+  if (options.file || options.f) {
+    const targetFile = options.file || options.f;
+    if (fs.existsSync(targetFile)) {
+      return fs.readFileSync(targetFile, 'utf8');
+    }
+    throw new Error(`Arquivo não encontrado: "${targetFile}"`);
+  }
+  if (options.stdin || options.content === '-') {
+    try {
+      return fs.readFileSync(0, 'utf8');
+    } catch {
+      // Falha ao ler stdin
+    }
+  }
+  return options.content;
 }
 
 function handleNoteCreate(options = {}) {
@@ -82,10 +104,11 @@ function handleNoteCreate(options = {}) {
 
   const notesData = store.getNotesData();
   let folderId = null;
+  let folderName = 'Raiz';
 
   if (options.folder) {
     let folder = notesData.noteFolders.find(f =>
-      f.name.toLowerCase() === options.folder.toLowerCase()
+      f.name.toLowerCase() === options.folder.toLowerCase() || f.id === options.folder
     );
     if (!folder) {
       folder = {
@@ -97,6 +120,7 @@ function handleNoteCreate(options = {}) {
       notesData.noteFolders.push(folder);
     }
     folderId = folder.id;
+    folderName = folder.name;
   }
 
   const noteId = store.randomUUID();
@@ -114,11 +138,16 @@ function handleNoteCreate(options = {}) {
     updatedAt: new Date().toISOString()
   };
 
+  const resolvedContent = resolveContentFromOptions(options);
+
   notesData.notes.push(newNote);
-  store.writeNoteContent(mdPath, options.content || `# ${options.title}\n\n`);
+  store.writeNoteContent(mdPath, resolvedContent !== undefined ? resolvedContent : `# ${options.title}\n\n`);
   store.saveNotesData(notesData);
 
-  return newNote;
+  return {
+    ...newNote,
+    folder: folderName
+  };
 }
 
 function handleNoteUpdate(idOrTitle, options = {}) {
@@ -130,8 +159,11 @@ function handleNoteUpdate(idOrTitle, options = {}) {
   if (options.title) {
     note.title = options.title;
   }
-  if (options.content !== undefined) {
-    store.writeNoteContent(note.mdPath, options.content);
+
+  const resolvedContent = resolveContentFromOptions(options);
+
+  if (resolvedContent !== undefined) {
+    store.writeNoteContent(note.mdPath, resolvedContent);
   } else if (options.append !== undefined) {
     const existing = store.readNoteContent(note);
     store.writeNoteContent(note.mdPath, existing.trimEnd() + '\n\n' + options.append + '\n');

@@ -228,6 +228,65 @@ const AI_TOOLS_SCHEMA = [
     }
   },
   {
+    name: "organon_note_update",
+    description: "Update existing note content, append, prepend or rename title.",
+    parameters: {
+      type: "object",
+      required: ["idOrTitle"],
+      properties: {
+        idOrTitle: { type: "string", description: "Note ID or title to update." },
+        title: { type: "string", description: "New title (optional)." },
+        content: { type: "string", description: "Full markdown content replacement." },
+        append: { type: "string", description: "Append text to end of note." },
+        prepend: { type: "string", description: "Prepend text to start of note." }
+      }
+    }
+  },
+  {
+    name: "organon_note_delete",
+    description: "Delete a note by ID or title.",
+    parameters: {
+      type: "object",
+      required: ["idOrTitle"],
+      properties: {
+        idOrTitle: { type: "string", description: "Note ID or title." }
+      }
+    }
+  },
+  {
+    name: "organon_note_move",
+    description: "Move a note to a folder or make it a subpage of another note.",
+    parameters: {
+      type: "object",
+      required: ["idOrTitle"],
+      properties: {
+        idOrTitle: { type: "string", description: "Note ID or title." },
+        folder: { type: "string", description: "Target folder name." },
+        parent: { type: "string", description: "Parent note ID or title." }
+      }
+    }
+  },
+  {
+    name: "organon_folder_list",
+    description: "List all folders in the note vault with note counts.",
+    parameters: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "organon_folder_create",
+    description: "Create a new note folder.",
+    parameters: {
+      type: "object",
+      required: ["name"],
+      properties: {
+        name: { type: "string", description: "Folder name." },
+        parent: { type: "string", description: "Parent folder name or ID." }
+      }
+    }
+  },
+  {
     name: "organon_project_list",
     description: "List all active projects in Organon.",
     parameters: {

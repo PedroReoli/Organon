@@ -34,6 +34,28 @@ function handleTaskCreate(options = {}) {
     throw new Error("Task title is required (--title=\"...\")");
   }
 
+  // Normalize priority to P1, P2, P3, P4
+  let priority = 'P3';
+  if (options.priority) {
+    const p = options.priority.toLowerCase();
+    if (p === 'urgent' || p === 'p1' || p === '1') priority = 'P1';
+    else if (p === 'high' || p === 'p2' || p === '2') priority = 'P2';
+    else if (p === 'medium' || p === 'normal' || p === 'p3' || p === '3') priority = 'P3';
+    else if (p === 'low' || p === 'p4' || p === '4') priority = 'P4';
+    else priority = options.priority;
+  }
+
+  // Calculate day and period for Weekly Matrix visibility
+  let dayKey = options.day || null;
+  if (!dayKey && options.date) {
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const d = new Date(options.date + 'T12:00:00');
+    if (!isNaN(d.getTime())) {
+      dayKey = days[d.getDay()];
+    }
+  }
+  const period = options.period || (dayKey ? 'morning' : null);
+
   const planning = store.getPlanningData();
   const newTask = {
     id: store.randomUUID(),
@@ -41,7 +63,7 @@ function handleTaskCreate(options = {}) {
     date: options.date || null,
     time: options.time || null,
     durationMinutes: parseInt(options.duration || options.durationMinutes, 10) || 30,
-    priority: options.priority || 'medium',
+    priority,
     projectId: options.project || options.projectId || null,
     sprintId: options.sprint || options.sprintId || null,
     tags: Array.isArray(options.tags)
@@ -51,8 +73,8 @@ function handleTaskCreate(options = {}) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     status: options.status || 'todo',
-    location: { day: null, period: null },
-    order: planning.cards.length,
+    location: { day: dayKey, period: period },
+    order: Date.now(),
     isLocked: false,
     storyPoints: options.storyPoints ? Number(options.storyPoints) : undefined,
     iconEmoji: options.iconEmoji || options.emoji || undefined,

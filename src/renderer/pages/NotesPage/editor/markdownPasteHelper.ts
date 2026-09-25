@@ -50,7 +50,7 @@ function parseTableBlock(tableLines: string[]): string {
   const isSeparator = /^[\s|:-]+$/.test(tableLines[1])
   const startIndex = isSeparator ? 2 : 1
 
-  let html = '<table><thead><tr>'
+  let html = '<div class="tableWrapper"><table><thead><tr>'
   for (const h of headerCells) {
     html += `<th><p>${parseInlineMarkdown(h)}</p></th>`
   }
@@ -66,7 +66,7 @@ function parseTableBlock(tableLines: string[]): string {
     }
     html += '</tr>'
   }
-  html += '</tbody></table>'
+  html += '</tbody></table></div>'
   return html
 }
 

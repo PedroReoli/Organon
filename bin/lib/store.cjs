@@ -138,6 +138,28 @@ function writeSection(sectionFileName, data) {
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
   fs.renameSync(tmpPath, filePath);
 
+  // Synchronize with unified store.json if present
+  const unifiedPaths = [
+    path.join(storeFolder, 'store.json'),
+    path.join(dataDir, 'store.json')
+  ];
+  for (const up of unifiedPaths) {
+    if (fs.existsSync(up)) {
+      try {
+        const fullStore = JSON.parse(fs.readFileSync(up, 'utf8'));
+        if (typeof data === 'object' && data !== null) {
+          Object.assign(fullStore, data);
+        }
+        fullStore.storeUpdatedAt = new Date().toISOString();
+        const tmpUnified = `${up}.tmp`;
+        fs.writeFileSync(tmpUnified, JSON.stringify(fullStore, null, 2), 'utf8');
+        fs.renameSync(tmpUnified, up);
+      } catch {
+        // Ignore unified store update error
+      }
+    }
+  }
+
   touchSyncFlag();
   return true;
 }
