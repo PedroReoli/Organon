@@ -40,7 +40,8 @@ export const getDefaultConfig = (): AppConfig => ({
 
 const loadConfig = (): AppConfig => {
   const configPath = getConfigPath()
-  const candidates = [configPath, `${configPath}.bak`]
+  const prodConfigPath = path.join(app.getPath('appData'), 'Organon', 'config.json')
+  const candidates = [configPath, `${configPath}.bak`, prodConfigPath, `${prodConfigPath}.bak`]
   for (const candidate of candidates) {
     try {
       if (fs.existsSync(candidate)) {

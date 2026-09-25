@@ -208,7 +208,24 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
     ensureDataDir(integrityDir)
     ensureDataDir(snapshotsDir)
 
-    const currentCanonical = readJsonFile(storePath)
+    // Proteção contra sobrescrita acidental de notas vazias
+    const currentCanonical = readJsonFile(storePath) as Partial<Store> | null
+    const currentSectioned = readSectionedStoreFromDir(storeDir)
+    const existingNotes = (currentCanonical?.notes && currentCanonical.notes.length > 0)
+      ? currentCanonical.notes
+      : (currentSectioned?.notes && currentSectioned.notes.length > 0)
+        ? currentSectioned.notes
+        : []
+
+    if (normalized.notes.length === 0 && existingNotes.length > 0) {
+      normalized.notes = existingNotes
+      normalized.noteFolders = (currentCanonical?.noteFolders && currentCanonical.noteFolders.length > 0)
+        ? currentCanonical.noteFolders
+        : (currentSectioned?.noteFolders && currentSectioned.noteFolders.length > 0)
+          ? currentSectioned.noteFolders
+          : normalized.noteFolders
+    }
+
     if (currentCanonical && typeof currentCanonical === 'object') {
       fs.copyFileSync(storePath, lastKnownGoodPath)
     }

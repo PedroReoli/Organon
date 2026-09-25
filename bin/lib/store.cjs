@@ -185,7 +185,14 @@ function savePlanningData(planning) {
 // -------------------------------------------------------------
 
 function getNotesData() {
-  const raw = readSection('notes.json', { noteFolders: [], notes: [] });
+  let raw = readSection('notes.json', { noteFolders: [], notes: [] });
+  if ((!raw.notes || raw.notes.length === 0)) {
+    const store = getStoreData();
+    if (store.notes && store.notes.length > 0) {
+      raw = { noteFolders: store.noteFolders || [], notes: store.notes };
+      writeSection('notes.json', raw);
+    }
+  }
   return {
     noteFolders: Array.isArray(raw.noteFolders) ? raw.noteFolders : [],
     notes: Array.isArray(raw.notes) ? raw.notes : []
@@ -193,7 +200,15 @@ function getNotesData() {
 }
 
 function saveNotesData(notesObj) {
-  return writeSection('notes.json', notesObj);
+  const normalized = {
+    noteFolders: Array.isArray(notesObj?.noteFolders) ? notesObj.noteFolders : [],
+    notes: Array.isArray(notesObj?.notes) ? notesObj.notes : []
+  };
+  const store = getStoreData();
+  store.noteFolders = normalized.noteFolders;
+  store.notes = normalized.notes;
+  saveStoreData(store);
+  return writeSection('notes.json', normalized);
 }
 
 function readNoteContent(note) {
