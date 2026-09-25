@@ -98,7 +98,26 @@ export interface Card {
   iconEmoji?: string | null
   storyPoints?: number | null
   tags?: string[]
-  reminder?: any
+  reminder?: CardReminder | null
+}
+
+export type ReminderMode = 'exact' | 'before' | 'relative' | 'interval'
+export type ReminderSound = 'alarm' | 'bell' | 'chime' | 'digital' | 'gentle' | 'none'
+
+export interface CardReminder {
+  enabled: boolean
+  mode: ReminderMode
+  triggerAt: string | null         // ISO date/time string of next trigger
+  offsetMinutes?: number           // For 'before' mode (e.g. 15 min before card.time)
+  intervalMinutes?: number         // For 'interval' mode (e.g. every 10, 15, 30 min)
+  repeatUntilDone?: boolean        // If true, repeats at every interval until status === 'done'
+  snoozedUntil?: string | null     // ISO string when snoozed
+  hasFired?: boolean               // Flag if fired for non-repeating
+  sound?: ReminderSound            // Alert sound
+  nativeToast?: boolean            // Windows Notification
+  alertType?: 'alarm' | 'toast'    // Full alarm modal vs subtle toast
+  fireCount?: number               // How many times it has fired/reminded
+  createdAt?: string
 }
 
 export interface PlannerPreferences {

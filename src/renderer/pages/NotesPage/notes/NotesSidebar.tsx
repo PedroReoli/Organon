@@ -167,6 +167,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
   const [favoritesCollapsed, setFavoritesCollapsed] = useState(false)
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
   const [privateCollapsed, setPrivateCollapsed] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'all' | 'favorites' | 'pinned'>('all')
 
   // Resizable sidebar width (default 310px, stored in localStorage)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -342,15 +343,23 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
             )}
           </div>
 
-          {/* Quick actions top icons */}
+            {/* Quick actions top icons */}
           <div className="flex items-center gap-0.5 text-[var(--color-text-muted)] shrink-0">
             <button
               type="button"
               onClick={() => handleAddNote()}
-              title="Nova nota rápida"
+              title="Nova nota rápida (Ctrl+N)"
               className="p-1.5 rounded-lg hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewFolderParentId(null)}
+              title="Nova pasta"
+              className="p-1.5 rounded-lg hover:bg-white/10 hover:text-[var(--color-text)] transition-colors cursor-pointer"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
@@ -369,6 +378,50 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
               <PanelLeftClose className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
+
+        {/* Quick Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+          <button
+            type="button"
+            onClick={() => setActiveFilter('all')}
+            style={{
+              background: activeFilter === 'all' ? 'var(--color-primary, #6366f1)' : 'rgba(255, 255, 255, 0.05)',
+              color: activeFilter === 'all' ? '#fff' : 'var(--color-text-muted)',
+              borderColor: activeFilter === 'all' ? 'transparent' : 'var(--color-border)',
+            }}
+            className="px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap transition-all cursor-pointer"
+          >
+            Todas ({notes.filter(n => !n.isDeleted).length})
+          </button>
+          {favorites.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveFilter(activeFilter === 'favorites' ? 'all' : 'favorites')}
+              style={{
+                background: activeFilter === 'favorites' ? '#eab308' : 'rgba(255, 255, 255, 0.05)',
+                color: activeFilter === 'favorites' ? '#000' : '#eab308',
+                borderColor: activeFilter === 'favorites' ? 'transparent' : 'rgba(234, 179, 8, 0.2)',
+              }}
+              className="px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Star className="w-2.5 h-2.5 fill-current" /> Favoritas ({favorites.length})
+            </button>
+          )}
+          {pinned.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveFilter(activeFilter === 'pinned' ? 'all' : 'pinned')}
+              style={{
+                background: activeFilter === 'pinned' ? '#3b82f6' : 'rgba(255, 255, 255, 0.05)',
+                color: activeFilter === 'pinned' ? '#fff' : '#60a5fa',
+                borderColor: activeFilter === 'pinned' ? 'transparent' : 'rgba(59, 130, 246, 0.2)',
+              }}
+              className="px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Pin className="w-2.5 h-2.5" /> Fixadas ({pinned.length})
+            </button>
+          )}
         </div>
       </div>
 
@@ -469,116 +522,159 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
           </div>
         ) : (
           <>
-            {/* FAVORITAS */}
-            {favorites.length > 0 && (
+            {/* MODO FILTRO: FAVORITAS */}
+            {activeFilter === 'favorites' && (
               <div className="space-y-0.5">
-                <SectionHeader
-                  label="Favoritas"
-                  icon={<Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
-                  count={favorites.length}
-                  isCollapsed={favoritesCollapsed}
-                  onToggle={() => setFavoritesCollapsed(v => !v)}
-                />
-                {!favoritesCollapsed && (
-                  <div className="space-y-0.5">
-                    {favorites.map(n => (
-                      <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* FIXADAS */}
-            {pinned.length > 0 && (
-              <div className="space-y-0.5">
-                <SectionHeader
-                  label="Fixadas"
-                  icon={<Pin className="w-3 h-3 text-emerald-400" />}
-                  count={pinned.length}
-                  isCollapsed={pinnedCollapsed}
-                  onToggle={() => setPinnedCollapsed(v => !v)}
-                />
-                {!pinnedCollapsed && (
-                  <div className="space-y-0.5">
-                    {pinned.map(n => (
-                      <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* MAIN FOLDERS & NOTES */}
-            <div className="space-y-0.5 pt-1">
-              <SectionHeader
-                label={dragCount > 0 ? `Mover ${dragCount} para Raiz` : 'Minhas Pastas'}
-                icon={<Folder className="w-3 h-3 text-[var(--color-primary)]" />}
-                count={rootFolders.length + rootNotes.length}
-                isCollapsed={privateCollapsed}
-                isDropTarget={dropTargetId === 'root-zone'}
-                onToggle={() => setPrivateCollapsed(v => !v)}
-                onDragOver={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDropTargetId('root-zone')
-                }}
-                onDragLeave={e => {
-                  e.stopPropagation()
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetId(null)
-                }}
-                onDrop={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleDropOnRoot()
-                }}
-              />
-
-              {!privateCollapsed && (
-                <div className="space-y-0.5">
-                  {rootFolders.map(f => (
-                    <SidebarFolderItem key={f.id} folder={f} depth={0} {...folderItemSharedProps} />
-                  ))}
-                  {rootNotes.map(n => (
+                <div className="text-[11px] font-bold text-amber-400 px-2 py-1 uppercase flex items-center gap-1.5">
+                  <Star className="w-3 h-3 fill-amber-400" />
+                  Notas Favoritas ({favorites.length})
+                </div>
+                {favorites.length > 0 ? (
+                  favorites.map(n => (
                     <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
-                  ))}
+                  ))
+                ) : (
+                  <div className="text-xs text-[var(--color-text-muted)] text-center py-6">
+                    Nenhuma nota marcada como favorita.
+                  </div>
+                )}
+              </div>
+            )}
 
-                  {/* Inline New Root Folder creation */}
-                  {newFolderParentId === null && (
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 my-1 rounded-lg border border-[var(--color-primary)] bg-[var(--color-background)]">
-                      <FolderPlus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                      <input
-                        ref={newFolderInputRef}
-                        className="bg-transparent text-xs text-[var(--color-text)] flex-1 outline-none font-medium"
-                        value={newFolderName}
-                        onChange={e => setNewFolderName(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleAddFolder()
-                          if (e.key === 'Escape') {
-                            setNewFolderParentId(undefined)
-                            setNewFolderName('')
-                          }
-                        }}
-                        onBlur={() => {
-                          if (newFolderName.trim()) handleAddFolder()
-                          else {
-                            setNewFolderParentId(undefined)
-                            setNewFolderName('')
-                          }
-                        }}
-                        placeholder="Nome da pasta..."
-                      />
-                    </div>
-                  )}
+            {/* MODO FILTRO: FIXADAS */}
+            {activeFilter === 'pinned' && (
+              <div className="space-y-0.5">
+                <div className="text-[11px] font-bold text-blue-400 px-2 py-1 uppercase flex items-center gap-1.5">
+                  <Pin className="w-3 h-3 text-blue-400" />
+                  Notas Fixadas ({pinned.length})
+                </div>
+                {pinned.length > 0 ? (
+                  pinned.map(n => (
+                    <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
+                  ))
+                ) : (
+                  <div className="text-xs text-[var(--color-text-muted)] text-center py-6">
+                    Nenhuma nota fixada no topo.
+                  </div>
+                )}
+              </div>
+            )}
 
-                  {rootFolders.length === 0 && rootNotes.length === 0 && (
-                    <div className="text-xs text-[var(--color-text-muted)] text-center py-6">
-                      Nenhuma pasta criada.
+            {/* MODO COMPLETO (TODAS AS NOTAS E PASTAS) */}
+            {activeFilter === 'all' && (
+              <>
+                {/* FAVORITAS */}
+                {favorites.length > 0 && (
+                  <div className="space-y-0.5">
+                    <SectionHeader
+                      label="Favoritas"
+                      icon={<Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                      count={favorites.length}
+                      isCollapsed={favoritesCollapsed}
+                      onToggle={() => setFavoritesCollapsed(v => !v)}
+                    />
+                    {!favoritesCollapsed && (
+                      <div className="space-y-0.5">
+                        {favorites.map(n => (
+                          <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* FIXADAS */}
+                {pinned.length > 0 && (
+                  <div className="space-y-0.5">
+                    <SectionHeader
+                      label="Fixadas"
+                      icon={<Pin className="w-3 h-3 text-emerald-400" />}
+                      count={pinned.length}
+                      isCollapsed={pinnedCollapsed}
+                      onToggle={() => setPinnedCollapsed(v => !v)}
+                    />
+                    {!pinnedCollapsed && (
+                      <div className="space-y-0.5">
+                        {pinned.map(n => (
+                          <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* MAIN FOLDERS & NOTES */}
+                <div className="space-y-0.5 pt-1">
+                  <SectionHeader
+                    label={dragCount > 0 ? `Mover ${dragCount} para Raiz` : 'Minhas Pastas'}
+                    icon={<Folder className="w-3 h-3 text-[var(--color-primary)]" />}
+                    count={rootFolders.length + rootNotes.length}
+                    isCollapsed={privateCollapsed}
+                    isDropTarget={dropTargetId === 'root-zone'}
+                    onToggle={() => setPrivateCollapsed(v => !v)}
+                    onDragOver={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setDropTargetId('root-zone')
+                    }}
+                    onDragLeave={e => {
+                      e.stopPropagation()
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetId(null)
+                    }}
+                    onDrop={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleDropOnRoot()
+                    }}
+                  />
+
+                  {!privateCollapsed && (
+                    <div className="space-y-0.5">
+                      {rootFolders.map(f => (
+                        <SidebarFolderItem key={f.id} folder={f} depth={0} {...folderItemSharedProps} />
+                      ))}
+                      {rootNotes.map(n => (
+                        <SidebarNoteItem key={n.id} note={n} depth={0} {...noteItemSharedProps} />
+                      ))}
+
+                      {/* Inline New Root Folder creation */}
+                      {newFolderParentId === null && (
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 my-1 rounded-lg border border-[var(--color-primary)] bg-[var(--color-background)]">
+                          <FolderPlus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                          <input
+                            ref={newFolderInputRef}
+                            className="bg-transparent text-xs text-[var(--color-text)] flex-1 outline-none font-medium"
+                            value={newFolderName}
+                            onChange={e => setNewFolderName(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleAddFolder()
+                              if (e.key === 'Escape') {
+                                setNewFolderParentId(undefined)
+                                setNewFolderName('')
+                              }
+                            }}
+                            onBlur={() => {
+                              if (newFolderName.trim()) handleAddFolder()
+                              else {
+                                setNewFolderParentId(undefined)
+                                setNewFolderName('')
+                              }
+                            }}
+                            placeholder="Nome da pasta..."
+                          />
+                        </div>
+                      )}
+
+                      {rootFolders.length === 0 && rootNotes.length === 0 && (
+                        <div className="text-xs text-[var(--color-text-muted)] text-center py-6">
+                          Nenhuma pasta criada.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </>
         )}
       </div>

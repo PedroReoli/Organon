@@ -23,6 +23,8 @@ import {
 } from './app/app.constants'
 import { useAppDebugHud } from './app/useAppDebugHud'
 import { useCalendarReminders } from './app/useCalendarReminders'
+import { usePlanningTaskReminders } from './app/usePlanningTaskReminders'
+import { TaskAlarmAlertModal } from '../components/modals/TaskAlarmAlertModal'
 import { AppGlobalModals } from './app/AppGlobalModals'
 import { AppViewRouter } from './app/AppViewRouter'
 import { useSidebarShortcuts } from '../hooks/useSidebarShortcuts'
@@ -293,6 +295,12 @@ export const App = () => {
 
   // Lembretes de eventos do calendário
   useCalendarReminders({ calendarEvents })
+
+  // Lembretes & Alarmes de Tarefas de Planejamento (Sons + Toast Windows + Modal)
+  const { activeAlarm, dismissAlarm, snoozeAlarm, completeAlarmTask } = usePlanningTaskReminders({
+    cards,
+    onUpdateCard: editCard,
+  })
 
   // Atalhos globais
   useGlobalShortcuts({
@@ -568,6 +576,14 @@ export const App = () => {
         onSetActiveView={setActiveView}
         onSetPendingNoteId={setPendingNoteId}
         onIncrementCopyCount={incrementClipboardCopyCount}
+      />
+
+      {/* Modal de Alarme / Lembrete de Tarefa em Tempo Real */}
+      <TaskAlarmAlertModal
+        alarm={activeAlarm}
+        onDismiss={dismissAlarm}
+        onSnooze={snoozeAlarm}
+        onComplete={completeAlarmTask}
       />
     </div>
   )

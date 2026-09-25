@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import type { Card, CardPriority, CardStatus, Project } from '@types'
+import type { Card, CardPriority, CardStatus, Project, CardReminder } from '@types'
 import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_ORDER } from '@types'
 import { WysiwygEditor } from '@Notes/editor/WysiwygEditor'
 import { getTodayISO } from '@utils'
 import { Button } from '@shared/components/primitives'
 import { Check } from 'lucide-react'
+import { TaskReminderConfig } from '../../../components/planner/TaskReminderConfig'
 
 interface CardModalProps {
   card: Card
@@ -20,6 +21,7 @@ interface CardModalProps {
     status: CardStatus
     projectId: string | null
     durationMinutes: number | null
+    reminder?: CardReminder | null
   }) => void
   onDelete: () => void
 }
@@ -94,76 +96,10 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
     }
   }
 
-  const [reminderMode, setReminderMode] = useState<'relative' | 'before' | 'exact'>('relative')
-  const [customHours, setCustomHours] = useState('')
-  const [customMins, setCustomMins] = useState('')
-  const [exactReminderDate, setExactReminderDate] = useState(date || getTodayISO())
-  const [exactReminderTime, setExactReminderTime] = useState('12:00')
-
-  const scheduleNotificationMs = (delayMs: number, toastText: string) => {
-    if (delayMs <= 0) {
-      alert('A data e horário escolhidos já passaram.')
-      return
-    }
-
-    const triggerNotification = () => {
-      new Notification(`Lembrete Organon: ${title || 'Tarefa'}`, {
-        body: `Lembrete do Planejamento: "${title || 'Tarefa'}"`,
-      })
-    }
-
-    const startTimer = () => {
-      setTimeout(triggerNotification, delayMs)
-      setReminderToast(toastText)
-    }
-
-    if (!('Notification' in window)) {
-      alert('Notificações de sistema não são suportadas neste ambiente.')
-      return
-    }
-
-    if (Notification.permission === 'granted') {
-      startTimer()
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') startTimer()
-      })
     }
   }
 
-  const handleScheduleRelative = (hoursStr: string, minsStr: string) => {
-    const h = parseInt(hoursStr || '0', 10) || 0
-    const m = parseInt(minsStr || '0', 10) || 0
-    const totalMinutes = h * 60 + m
-    if (totalMinutes <= 0) {
-      alert('Informe um número válido de horas ou minutos.')
-      return
-    }
-    const delayMs = totalMinutes * 60 * 1000
-    const label = h > 0 && m > 0 ? `${h}h e ${m}min` : h > 0 ? `${h}h` : `${m}min`
-    scheduleNotificationMs(delayMs, `Lembrete agendado no Windows para daqui a ${label}!`)
-  }
-
-  const handleScheduleBeforeEvent = (offsetMinutes: number) => {
-    if (!startTime) {
-      alert('Por favor, defina o horário inicial da tarefa acima para usar lembrete de antecedência.')
-      return
-    }
-    const targetDate = hasDate && date ? date : getTodayISO()
-    const eventDt = new Date(`${targetDate}T${startTime}:00`)
-    const notifyDt = new Date(eventDt.getTime() - offsetMinutes * 60 * 1000)
-    const delayMs = notifyDt.getTime() - Date.now()
-    const label = offsetMinutes === 0 ? 'no horário do evento' : `${offsetMinutes} min antes do evento`
-    scheduleNotificationMs(delayMs, `Lembrete agendado no Windows para ${label}!`)
-  }
-
-  const handleScheduleExact = (dStr: string, tStr: string) => {
-    if (!dStr || !tStr) return
-    const notifyDt = new Date(`${dStr}T${tStr}:00`)
-    const delayMs = notifyDt.getTime() - Date.now()
-    const formattedDate = new Date(notifyDt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-    scheduleNotificationMs(delayMs, `Lembrete agendado no Windows para ${formattedDate} às ${tStr}!`)
-  }
+  const [reminder, setReminder] = useState<CardReminder | null | undefined>(card.reminder)
 
   const titleRef = useRef<HTMLInputElement>(null)
 
@@ -196,6 +132,7 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
       cancelReason: status === 'cancelled' ? cancelReason : null,
       completedAt: status === 'done' ? (card.completedAt ?? new Date().toISOString()) : null,
       startedAt: status === 'in_progress' ? (card.startedAt ?? new Date().toISOString()) : null,
+      reminder: reminder ?? null,
     })
   }
 
@@ -429,160 +366,12 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
             </div>
           </div>
 
-          <div className="card-modal-section">
-            <div className="card-modal-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                Lembrete no Windows
-              </div>
-
-              {/* Seletor de modo */}
-              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setReminderMode('relative')}
-                  style={{
-                    border: 'none',
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    background: reminderMode === 'relative' ? 'var(--color-primary, #6366f1)' : 'transparent',
-                    color: reminderMode === 'relative' ? '#fff' : 'var(--color-text-muted)',
-                  }}
-                >
-                  Daqui a X tempo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReminderMode('before')}
-                  style={{
-                    border: 'none',
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    background: reminderMode === 'before' ? 'var(--color-primary, #6366f1)' : 'transparent',
-                    color: reminderMode === 'before' ? '#fff' : 'var(--color-text-muted)',
-                  }}
-                >
-                  Antes da tarefa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReminderMode('exact')}
-                  style={{
-                    border: 'none',
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    background: reminderMode === 'exact' ? 'var(--color-primary, #6366f1)' : 'transparent',
-                    color: reminderMode === 'exact' ? '#fff' : 'var(--color-text-muted)',
-                  }}
-                >
-                  Data & Hora
-                </button>
-              </div>
-            </div>
-
-            {/* Modo 1: Relativo (Daqui a X tempo) */}
-            {reminderMode === 'relative' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleRelative('0', '5')} type="button">+ 5 min</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleRelative('0', '15')} type="button">+ 15 min</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleRelative('0', '30')} type="button">+ 30 min</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleRelative('1', '0')} type="button">+ 1 hora</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleRelative('2', '0')} type="button">+ 2 horas</Button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Horas"
-                    value={customHours}
-                    onChange={e => setCustomHours(e.target.value)}
-                    style={{ width: '64px', padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
-                  />
-                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>h</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    placeholder="Min"
-                    value={customMins}
-                    onChange={e => setCustomMins(e.target.value)}
-                    style={{ width: '64px', padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
-                  />
-                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>min</span>
-
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => handleScheduleRelative(customHours, customMins)}
-                    type="button"
-                    style={{ marginLeft: 'auto' }}
-                  >
-                    Agendar Avisos
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Modo 2: Antecedência */}
-            {reminderMode === 'before' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(0)} type="button">Na hora</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(15)} type="button">15 min antes</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(30)} type="button">30 min antes</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(60)} type="button">1 hora antes</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(120)} type="button">2 horas antes</Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleScheduleBeforeEvent(1440)} type="button">1 dia antes</Button>
-                </div>
-              </div>
-            )}
-
-            {/* Modo 3: Data & Hora Específicas */}
-            {reminderMode === 'exact' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                <input
-                  type="date"
-                  value={exactReminderDate}
-                  onChange={e => setExactReminderDate(e.target.value)}
-                  style={{ flex: 1, padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
-                />
-                <input
-                  type="time"
-                  value={exactReminderTime}
-                  onChange={e => setExactReminderTime(e.target.value)}
-                  style={{ width: '100px', padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
-                />
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => handleScheduleExact(exactReminderDate, exactReminderTime)}
-                  type="button"
-                >
-                  Agendar Lembrete
-                </Button>
-              </div>
-            )}
-
-            {reminderToast && (
-              <span style={{ fontSize: '11px', color: '#22c55e', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Check size={13} /> {reminderToast}
-              </span>
-            )}
-          </div>
+          <TaskReminderConfig
+            reminder={reminder}
+            onChange={setReminder}
+            taskDate={hasDate ? date : null}
+            taskTime={startTime || null}
+          />
 
           <div className="card-modal-section">
             <button

@@ -297,10 +297,22 @@ export const DailyView: React.FC<DailyViewProps> = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const isInterval = reminderOffset < 0
     const reminder = hasReminder
       ? {
           enabled: true,
-          offsetMinutes: reminderOffset,
+          mode: (isInterval ? 'interval' : 'before') as const,
+          offsetMinutes: isInterval ? 0 : reminderOffset,
+          intervalMinutes: isInterval ? Math.abs(reminderOffset) : 10,
+          repeatUntilDone: isInterval,
+          triggerAt: isInterval
+            ? new Date(Date.now() + Math.abs(reminderOffset) * 60 * 1000).toISOString()
+            : null,
+          sound: 'bell' as const,
+          nativeToast: true,
+          alertType: 'alarm' as const,
+          hasFired: false,
+          fireCount: 0,
         }
       : null;
 

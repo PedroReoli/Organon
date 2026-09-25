@@ -202,10 +202,11 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
     [notes],
   )
 
-  const { wordCount, readingTime } = useMemo(() => {
+  const { wordCount, charCount, readingTime } = useMemo(() => {
     const text = noteContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     const words = text ? text.split(' ').filter(Boolean).length : 0
-    return { wordCount: words, readingTime: Math.max(1, Math.ceil(words / 200)) }
+    const chars = text ? text.length : 0
+    return { wordCount: words, charCount: chars, readingTime: Math.max(1, Math.ceil(words / 200)) }
   }, [noteContent])
 
   // ── Revision history ───────────────────────────────────────────────────────
@@ -883,6 +884,48 @@ export const NoteEditorPane: React.FC<NoteEditorPaneProps> = ({
         </div>
       </div>
     </div>
+
+      {/* Barra de Status e Métricas de Escrita no Rodapé */}
+      <div
+        style={{
+          background: 'color-mix(in srgb, var(--color-surface) 92%, var(--color-background))',
+          borderColor: 'var(--color-border)',
+        }}
+        className="px-4 py-1.5 border-t flex items-center justify-between text-[11px] text-[var(--color-text-muted)] select-none shrink-0 z-20"
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-medium text-[var(--color-text)] flex items-center gap-1.5">
+            <FileText size={12} className="text-[var(--color-primary)]" />
+            {wordCount} palavras
+          </span>
+          <span>•</span>
+          <span>{charCount} caracteres</span>
+          <span>•</span>
+          <span>⏱ ~{readingTime} min de leitura</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {autoSaveStatus && (
+            <NoteAutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
+          )}
+          <button
+            type="button"
+            onClick={toggleFullWidth}
+            className="hover:text-[var(--color-text)] px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer"
+            title={isFullWidth ? 'Modo centralizado' : 'Modo tela cheia / largura total'}
+          >
+            {isFullWidth ? '⇥ Centrado' : '⇤ Largura Total'}
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleSmallText}
+            className="hover:text-[var(--color-text)] px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer"
+            title="Alternar tamanho da fonte"
+          >
+            {isSmallText ? 'A+ Padrão' : 'A- Compacto'}
+          </button>
+        </div>
+      </div>
 
       {/* Modal de Exportação */}
       <NoteExportModal

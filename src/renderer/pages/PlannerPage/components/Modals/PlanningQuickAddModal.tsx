@@ -232,11 +232,15 @@ export const PlanningQuickAddModal: React.FC<PlanningQuickAddModalProps> = ({
                 }
                 className="px-2 py-0.5 rounded bg-[#0b1120] border border-white/10 text-[11px] text-white focus:outline-hidden cursor-pointer"
               >
-                <option value={0}>Na hora exata</option>
-                <option value={5}>5 min antes</option>
-                <option value={10}>10 min antes</option>
-                <option value={15}>15 min antes</option>
-                <option value={30}>30 min antes</option>
+                <option value={-10}>🔁 A cada 10 min (até concluir)</option>
+                <option value={-15}>🔁 A cada 15 min (até concluir)</option>
+                <option value={-30}>🔁 A cada 30 min (até concluir)</option>
+                <option value={-60}>🔁 A cada 1 hora (até concluir)</option>
+                <option value={0}>🔔 Na hora exata</option>
+                <option value={5}>⏰ 5 min antes</option>
+                <option value={10}>⏰ 10 min antes</option>
+                <option value={15}>⏰ 15 min antes</option>
+                <option value={30}>⏰ 30 min antes</option>
               </select>
             )}
           </div>
