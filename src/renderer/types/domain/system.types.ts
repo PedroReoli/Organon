@@ -693,6 +693,11 @@ declare global {
       saveConversation?: (id: string, content: string) => Promise<string | null>
       setContentProtection?: (enabled: boolean) => Promise<boolean>
       onPlanningSync?: (callback: () => void) => () => void
+      onStoreExternalUpdate?: (callback: (payload: { store: Store; changes: any[]; timestamp: string }) => void) => () => void
+      executeCliCommand?: (command: string) => Promise<{ success: boolean; output: string; error?: string }>
+      getCliStatus?: () => Promise<{ dataPath: string; storeDir: string; realtimeActive: boolean; timestamp: string }>
+      rollbackCliAction?: (actionId: string) => Promise<boolean>
+      getCliRecentEvents?: () => Promise<any[]>
       gitRepoLiveStatus?: (repoPath: string, forceRefresh?: boolean) => Promise<GitRepoLiveStatus>
       gitAmendCommit?: (repoPath: string, newMsg: string) => Promise<{ ok: boolean; stdout?: string; error?: string }>
       gitUndoLastCommit?: (repoPath: string) => Promise<{ ok: boolean; stdout?: string; error?: string }>

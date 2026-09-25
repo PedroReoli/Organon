@@ -19,35 +19,37 @@ import {
   migrateToDedicatedStorage,
   assessCatastrophicDataLoss,
 } from '../storage'
+import { startRealtimeSyncWatcher, notifyInternalSave, getRecentCliEvents } from '../storage/realtimeSyncWatcher'
+import { executeCliCommand, rollbackCliAction } from '../storage/cliRunner'
 import { installWhisperModelBundle } from '../whisper'
 import type { Canvas, Store, ThemeName } from '../types'
 import { getMainWindow, openDirectoryPicker, openFolderPicker } from '../core'
 
 export const registerCoreIpcHandlers = (): void => {
-  // Start CLI Watcher for planning sync
-  const startPlanningCliWatcher = () => {
-    try {
-      const dataDir = getDataPath()
-      const watchDirs = [
-        getStoreDir(dataDir),
-        path.join(dataDir, 'store'),
-        dataDir
-      ].filter(d => fs.existsSync(d))
+  // Inicializa o watcher em tempo real de sincronização com debounce e diff
+  setTimeout(startRealtimeSyncWatcher, 1200)
 
-      for (const dir of watchDirs) {
-        fs.watch(dir, (eventType, filename) => {
-          if (filename === '.cli-sync-flag' || filename === 'planning.json') {
-             getMainWindow()?.webContents.send('planning:sync-cli')
-          }
-        })
-      }
-    } catch (e) {
-      console.error("Could not start CLI watcher", e)
+  // CLI & Realtime IPC handlers
+  ipcMain.handle('cli:executeCommand', async (_event, cmd: string) => {
+    return executeCliCommand(cmd)
+  })
+
+  ipcMain.handle('cli:getStatus', async () => {
+    return {
+      dataPath: getDataPath(),
+      storeDir: getStoreDir(getDataPath()),
+      realtimeActive: true,
+      timestamp: new Date().toISOString(),
     }
-  }
+  })
 
-  // Start the watcher on boot
-  setTimeout(startPlanningCliWatcher, 2000)
+  ipcMain.handle('cli:rollback', async (_event, actionId: string) => {
+    return rollbackCliAction(actionId)
+  })
+
+  ipcMain.handle('cli:getRecentEvents', async () => {
+    return getRecentCliEvents()
+  })
 
   ipcMain.handle('window:setContentProtection', (_event, enabled: boolean) => {
     const win = getMainWindow()
@@ -70,6 +72,7 @@ export const registerCoreIpcHandlers = (): void => {
       console.error('Gravacao bloqueada por risco de perda catastrofica:', { ...assessment, safety })
       return false
     }
+    notifyInternalSave()
     const saved = saveStore(normalized)
     const settings = normalized.settings
     const backupEnabled = settings.backupEnabled ?? false

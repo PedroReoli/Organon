@@ -374,7 +374,18 @@ const electronAPI = {
     const listener = () => cb()
     ipcRenderer.on('planning:sync-cli', listener)
     return () => ipcRenderer.removeListener('planning:sync-cli', listener)
-  }
+  },
+
+  // Real-time Storage Sync & CLI / IA Integration
+  onStoreExternalUpdate: (cb: (payload: { store: any; changes: any[]; timestamp: string }) => void) => {
+    const listener = (_event: any, payload: any) => cb(payload)
+    ipcRenderer.on('store:external-update', listener)
+    return () => ipcRenderer.removeListener('store:external-update', listener)
+  },
+  executeCliCommand: (cmd: string) => ipcRenderer.invoke('cli:executeCommand', cmd),
+  getCliStatus: () => ipcRenderer.invoke('cli:getStatus'),
+  rollbackCliAction: (actionId: string) => ipcRenderer.invoke('cli:rollback', actionId),
+  getCliRecentEvents: () => ipcRenderer.invoke('cli:getRecentEvents'),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

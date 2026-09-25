@@ -147,6 +147,29 @@ export const useStore = () => {
     loadInitialStore()
   }, [])
 
+  // ─── Real-time External Store Watcher (CLI / IA / Background edits) ──────────
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI?.onStoreExternalUpdate) return
+
+    const unsubscribe = window.electronAPI.onStoreExternalUpdate((payload) => {
+      if (payload?.store) {
+        const normalized = normalizeStore(payload.store)
+        setStore(normalized)
+        setStoreVersion((v) => v + 1)
+
+        if (payload.changes && payload.changes.length > 0) {
+          window.dispatchEvent(
+            new CustomEvent('organon:external-changes', { detail: payload })
+          )
+        }
+      }
+    })
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [])
+
   const pendingStoreRef = useRef<Store | null>(null)
 
   const saveStore = useCallback((nextStore: Store) => {

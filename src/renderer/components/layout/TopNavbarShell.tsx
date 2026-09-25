@@ -16,6 +16,8 @@ import {
   CaretDown,
   FileText,
 } from '@phosphor-icons/react'
+import { AiCliStatusPill } from '../ai/AiCliStatusPill'
+import { AiNotificationBell } from '../ai/AiNotificationBell'
 
 interface Props {
   activeView: AppView
@@ -33,6 +35,10 @@ interface Props {
   isChatOpen?: boolean
   lastSyncAt?: string
   syncStatus?: string
+  unreadAiCount?: number
+  isAiDrawerOpen?: boolean
+  onToggleAiDrawer?: () => void
+  onOpenCliRunner?: () => void
 }
 
 export const TopNavbarShell: React.FC<Props> = ({
@@ -146,6 +152,18 @@ export const TopNavbarShell: React.FC<Props> = ({
           FLANCO DIREITO: FERRAMENTAS + HERO CTA + CONFIGS
           ======================================================== */}
       <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+        {/* STATUS DA IA & CLI */}
+        <AiCliStatusPill onOpenCliRunner={() => onOpenCliRunner?.()} />
+
+        {/* CENTRAL DE NOTIFICAÇÕES & IA */}
+        {onToggleAiDrawer && (
+          <AiNotificationBell
+            unreadCount={unreadAiCount ?? 0}
+            isOpen={isAiDrawerOpen ?? false}
+            onClick={onToggleAiDrawer}
+          />
+        )}
+
         {/* BOTÃO DE BUSCA (CMD+K) */}
         <button
           type="button"

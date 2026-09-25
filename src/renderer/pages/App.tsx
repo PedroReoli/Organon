@@ -30,6 +30,11 @@ import { AppViewRouter } from './app/AppViewRouter'
 import { useSidebarShortcuts } from '../hooks/useSidebarShortcuts'
 import { useAppLifecycle } from './app/useAppLifecycle'
 import { useAppShellConfig } from './app/useAppShellConfig'
+import { useAiActivityFeed } from '../hooks/useAiActivityFeed'
+import { AiActivityDrawer } from '../components/ai/AiActivityDrawer'
+import { DiffViewerModal } from '../components/ai/DiffViewerModal'
+import { QuickCliRunnerModal } from '../components/ai/QuickCliRunnerModal'
+import { AiLiveToast } from '../components/ai/AiLiveToast'
 
 export const App = () => {
   useSidebarShortcuts()
@@ -184,8 +189,27 @@ export const App = () => {
   const [showInstaller, setShowInstaller] = useState<boolean | null>(null)
   const [showViewsNavigator, setShowViewsNavigator] = useState(false)
   const [showClipboardModal, setShowClipboardModal] = useState(false)
+  const [showCliRunnerModal, setShowCliRunnerModal] = useState(false)
   const [reduceModeSignal, setReduceModeSignal] = useState(0)
   const [pendingNoteId, setPendingNoteId] = useState<string | null>(null)
+
+  // ── Central de Atividades e Sincronização em Tempo Real de IA & CLI ──────────
+  const aiActivity = useAiActivityFeed(
+    (view) => setActiveView(view as AppView),
+    (noteId) => setPendingNoteId(noteId)
+  )
+
+  // Atalho global para abrir o Quick CLI Runner (Ctrl + ' ou Ctrl + Shift + K)
+  useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "'" || (e.shiftKey && e.key.toLowerCase() === 'k'))) {
+        e.preventDefault()
+        setShowCliRunnerModal((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKey)
+    return () => window.removeEventListener('keydown', handleGlobalKey)
+  }, [])
 
   // Escuta contínua de comando de voz "Oi Organon" em segundo plano
   useWakeWordListener({
@@ -456,6 +480,10 @@ export const App = () => {
           isChatOpen={isChatOpen}
           lastSyncAt={lastSyncAt}
           syncStatus={sync.syncStatus}
+          unreadAiCount={aiActivity.unreadCount}
+          isAiDrawerOpen={aiActivity.isOpen}
+          onToggleAiDrawer={() => aiActivity.setIsOpen((prev) => !prev)}
+          onOpenCliRunner={() => setShowCliRunnerModal(true)}
         />
 
         <AppViewRouter
@@ -584,6 +612,39 @@ export const App = () => {
         onDismiss={dismissAlarm}
         onSnooze={snoozeAlarm}
         onComplete={completeAlarmTask}
+      />
+
+      {/* Drawer da Central de Atividades & IA */}
+      <AiActivityDrawer
+        isOpen={aiActivity.isOpen}
+        notifications={aiActivity.notifications}
+        unreadCount={aiActivity.unreadCount}
+        onClose={() => aiActivity.setIsOpen(false)}
+        onClearAll={aiActivity.clearAll}
+        onMarkAllAsRead={aiActivity.markAllAsRead}
+        onOpenItem={aiActivity.openItem}
+        onRollback={aiActivity.rollback}
+        onOpenDiffModal={(item) => aiActivity.setDiffModalItem(item)}
+        onOpenCliRunner={() => setShowCliRunnerModal(true)}
+      />
+
+      {/* Modal de Diff Viewer e Rollback de IA */}
+      <DiffViewerModal
+        item={aiActivity.diffModalItem}
+        onClose={() => aiActivity.setDiffModalItem(null)}
+        onRollback={aiActivity.rollback}
+      />
+
+      {/* Modal Quick CLI Runner (Command Palette) */}
+      <QuickCliRunnerModal
+        isOpen={showCliRunnerModal}
+        onClose={() => setShowCliRunnerModal(false)}
+      />
+
+      {/* Toast flutuante discreto de atividades em tempo real */}
+      <AiLiveToast
+        onOpenActivityFeed={() => aiActivity.setIsOpen(true)}
+        onOpenItem={aiActivity.openItem}
       />
     </div>
   )
