@@ -164,6 +164,46 @@ function writeSection(sectionFileName, data) {
   return true;
 }
 
+function getStoreData() {
+  const unifiedPaths = [
+    path.join(getStoreDir(dataDir), 'store.json'),
+    path.join(dataDir, 'store.json')
+  ];
+  for (const up of unifiedPaths) {
+    if (fs.existsSync(up)) {
+      try {
+        return JSON.parse(fs.readFileSync(up, 'utf8'));
+      } catch {
+        // Ignore JSON parse error
+      }
+    }
+  }
+  return {};
+}
+
+function saveStoreData(data) {
+  const storeFolder = getStoreDir(dataDir);
+  if (!fs.existsSync(storeFolder)) {
+    fs.mkdirSync(storeFolder, { recursive: true });
+  }
+  const unifiedPaths = [
+    path.join(storeFolder, 'store.json'),
+    path.join(dataDir, 'store.json')
+  ];
+  for (const up of unifiedPaths) {
+    if (fs.existsSync(up)) {
+      try {
+        const tmp = `${up}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+        fs.renameSync(tmp, up);
+      } catch {
+        // Ignore error
+      }
+    }
+  }
+  return true;
+}
+
 // -------------------------------------------------------------
 // SECTION HELPERS: PLANNING (Tasks & Sprints)
 // -------------------------------------------------------------
@@ -331,6 +371,8 @@ module.exports = {
   saveProjectsData,
   getHabitsData,
   saveHabitsData,
+  getStoreData,
+  saveStoreData,
   getSystemStatus,
   randomUUID
 };
