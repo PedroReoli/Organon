@@ -5,7 +5,7 @@ const path = require('path')
 
 const fail = (message) => { throw new Error(message) }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'organon-storage-v2-'))
   const userData = path.join(sandbox, 'user-data')
   const documents = path.join(sandbox, 'Documents')
@@ -125,6 +125,9 @@ app.whenReady().then(() => {
   if (!dirtyUpdate.success) fail(dirtyUpdate.error || 'Commit incremental falhou.')
   if (dirtyUpdate.metrics?.changedSections.join(',') !== 'planning.json') fail('Dirty-set nao isolou a secao planning.json.')
   if (!dirtyUpdate.metrics || dirtyUpdate.metrics.payloadBytesReused <= 0) fail('Commit incremental nao reutilizou secoes imutaveis.')
+  const workerRoot = path.join(sandbox, 'worker-commit')
+  const workerSaved = await storeModule.saveStoreToPathAsync(store, workerRoot, { expectedRevision: 0, source: 'worker-test' })
+  if (!workerSaved || generationStore.getStorageRevision(workerRoot) !== 1) fail('Worker nao publicou a geracao esperada.')
   const legacyStorePath = filesystem.getStorePath(legacyRoot)
   const fixedMtime = new Date('2001-01-01T00:00:00.000Z')
   fs.utimesSync(legacyStorePath, fixedMtime, fixedMtime)
@@ -166,7 +169,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', dirtySections: 'ok', immutableSidecars: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', dirtySections: 'ok', immutableSidecars: 'ok', workerCommit: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })

@@ -17,6 +17,7 @@ import {
 } from './filesystem'
 import { getDefaultStore, normalizeStore } from './storeModel'
 import { commitStoreGeneration, loadCommittedGeneration, STORE_SECTIONS } from './generationStore'
+import { commitStoreGenerationAsync } from './generationCoordinator'
 import type { GenerationCommitMetrics, GenerationCommitOptions } from './generationStore'
 import type { Store } from '../types'
 
@@ -294,10 +295,102 @@ export const saveStoreToPath = (store: Store, dataPath: string, options: Generat
   }
 }
 
+export const saveStoreToPathAsync = async (store: Store, dataPath: string, options: GenerationCommitOptions = {}): Promise<boolean> => {
+  ensureDataDir(dataPath)
+  ensureDataDir(getStoreDir(dataPath))
+  ensureBackupDir(dataPath)
+  const storePath = getStorePath(dataPath)
+  const storeDir = getStoreDir(dataPath)
+  const integrityDir = getIntegrityDir(dataPath)
+  const snapshotsDir = getIntegritySnapshotsDir(dataPath)
+  const lastKnownGoodPath = path.join(integrityDir, 'ultimo-indice-integro.json')
+  const lastKnownGoodDir = path.join(integrityDir, 'ultimo-indice-integro')
+  const safetySnapshotMarkerPath = path.join(integrityDir, '.ultimo-snapshot-em')
+  let generationCommitted = false
+
+  try {
+    const normalized = normalizeStore(store)
+    ensureDataDir(integrityDir)
+    ensureDataDir(snapshotsDir)
+
+    const currentGeneration = loadCommittedGeneration(dataPath)?.store
+    const currentCanonical = readJsonFile(storePath) as Partial<Store> | null
+    const currentSectioned = readSectionedStoreFromDir(storeDir)
+    const existingNotes = (currentGeneration?.notes && currentGeneration.notes.length > 0)
+      ? currentGeneration.notes
+      : (currentCanonical?.notes && currentCanonical.notes.length > 0)
+      ? currentCanonical.notes
+      : (currentSectioned?.notes && currentSectioned.notes.length > 0)
+        ? currentSectioned.notes
+        : []
+
+    if (normalized.notes.length === 0 && existingNotes.length > 0) {
+      normalized.notes = existingNotes
+      normalized.noteFolders = (currentGeneration?.noteFolders && currentGeneration.noteFolders.length > 0)
+        ? currentGeneration.noteFolders
+        : (currentCanonical?.noteFolders && currentCanonical.noteFolders.length > 0)
+        ? currentCanonical.noteFolders
+        : (currentSectioned?.noteFolders && currentSectioned.noteFolders.length > 0)
+          ? currentSectioned.noteFolders
+          : normalized.noteFolders
+    }
+
+    if (currentCanonical && typeof currentCanonical === 'object') fs.copyFileSync(storePath, lastKnownGoodPath)
+    if (readSectionedStoreFromDir(storeDir, true)) copyDirReplace(storeDir, lastKnownGoodDir)
+
+    const commit = await commitStoreGenerationAsync(normalized, dataPath, {
+      source: options.source ?? 'desktop-worker',
+      expectedRevision: options.expectedRevision,
+    })
+    if (!commit.success) {
+      console.error('Commit transacional assincrono rejeitado:', commit.error)
+      return false
+    }
+    lastStorageCommitMetrics = commit.metrics ?? null
+    generationCommitted = true
+
+    const sectionMirrorSaved = writeSectionedStoreToDir(normalized, storeDir)
+    const canonicalMirrorSaved = writeTextFileAtomic(storePath, JSON.stringify(normalized, null, 2))
+    if (!sectionMirrorSaved || !canonicalMirrorSaved) console.warn('Commit concluido, mas um espelho legado nao foi atualizado.')
+
+    const now = Date.now()
+    let shouldCreateSafetySnapshot = true
+    if (fs.existsSync(safetySnapshotMarkerPath)) {
+      const last = Number(fs.readFileSync(safetySnapshotMarkerPath, 'utf-8').trim())
+      if (!Number.isNaN(last) && now - last < 2 * 60 * 1000) shouldCreateSafetySnapshot = false
+    }
+
+    if (shouldCreateSafetySnapshot) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      const safetyBackupPath = path.join(snapshotsDir, `store-safety-${timestamp}`)
+      ensureDataDir(safetyBackupPath)
+      writeSectionedStoreToDir(normalized, safetyBackupPath)
+      writeTextFileAtomic(path.join(safetyBackupPath, 'store.json'), JSON.stringify(normalized, null, 2))
+      fs.writeFileSync(safetySnapshotMarkerPath, String(now), 'utf-8')
+
+      const safetyBackups = fs.readdirSync(snapshotsDir)
+        .filter(fileName => fileName.startsWith('store-safety-'))
+        .map(fileName => ({ path: path.join(snapshotsDir, fileName), time: fs.statSync(path.join(snapshotsDir, fileName)).mtimeMs }))
+        .sort((a, b) => b.time - a.time)
+      for (const oldBackup of safetyBackups.slice(200)) {
+        try { deletePathIfExists(oldBackup.path) } catch { /* limpeza nao invalida commit */ }
+      }
+    }
+    return true
+  } catch (error) {
+    console.error(generationCommitted ? 'Erro de manutencao apos commit assincrono:' : 'Erro ao salvar store no worker:', error)
+    return generationCommitted
+  }
+}
+
 export const loadStore = (): Store => {
   return loadStoreFromPath(getDataPath())
 }
 
 export const saveStore = (store: Store, options: GenerationCommitOptions = {}): boolean => {
   return saveStoreToPath(store, getDataPath(), options)
+}
+
+export const saveStoreAsync = (store: Store, options: GenerationCommitOptions = {}): Promise<boolean> => {
+  return saveStoreToPathAsync(store, getDataPath(), options)
 }

@@ -13,6 +13,8 @@ const expectedFiles = [
   'meeting/research.js',
   'storage/filePrimitives.js',
   'storage/generationStore.js',
+  'storage/generationWorker.js',
+  'storage/generationCoordinator.js',
   'storage/store.js',
   'whisper/localTranscriber.js',
 ]

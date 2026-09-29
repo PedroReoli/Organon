@@ -19,6 +19,7 @@ import {
   loadStoreFromPath,
   normalizeStore,
   saveStore,
+  saveStoreAsync,
   getInstallerStatus,
   getLastStorageCommitMetrics,
   migrateToDedicatedStorage,
@@ -128,7 +129,7 @@ export const registerCoreIpcHandlers = (): void => {
     }
   })
 
-  ipcMain.handle('store:save', (event, request: StoreSaveRequest): StoreSaveResponse => {
+  ipcMain.handle('store:save', async (event, request: StoreSaveRequest): Promise<StoreSaveResponse> => {
     const startedAt = performance.now()
     try {
     const currentRevision = getStorageRevision(getDataPath())
@@ -159,7 +160,7 @@ export const registerCoreIpcHandlers = (): void => {
       console.error('Gravacao bloqueada por risco de perda catastrofica:', { ...assessment, safety })
       return { success: false, revision: currentRevision, error: 'Gravacao bloqueada por risco de perda de dados.' }
     }
-    const saved = saveStore(normalized, { source: 'renderer', expectedRevision: request.expectedRevision })
+    const saved = await saveStoreAsync(normalized, { source: 'renderer', expectedRevision: request.expectedRevision })
     const revision = getStorageRevision(getDataPath())
     if (!saved) {
       return {
