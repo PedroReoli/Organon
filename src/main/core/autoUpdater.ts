@@ -5,11 +5,23 @@ import { getMainWindow } from './window'
 
 let autoUpdaterInstance: any = null
 
+type UpdateChannel = 'stable' | 'canary'
+
+function getUpdateChannel(): UpdateChannel {
+  const configured = process.env.ORGANON_UPDATE_CHANNEL
+  if (configured === 'canary' || configured === 'stable') return configured
+  return /-canary\.\d+$/.test(app.getVersion()) ? 'canary' : 'stable'
+}
+
 function getAutoUpdater() {
   if (!autoUpdaterInstance) {
     const { autoUpdater } = require('electron-updater')
+    const channel = getUpdateChannel()
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = true
+    autoUpdater.channel = channel
+    autoUpdater.allowPrerelease = channel === 'canary'
+    autoUpdater.allowDowngrade = false
 
     autoUpdater.on('download-progress', (progressObj: any) => {
       const win = getMainWindow()
@@ -44,6 +56,7 @@ export function registerAutoUpdaterIpc(): void {
           isDev: true,
           updateAvailable: false,
           currentVersion: app.getVersion(),
+          channel: getUpdateChannel(),
         }
       }
 
@@ -56,12 +69,14 @@ export function registerAutoUpdaterIpc(): void {
         updateAvailable: isNewer,
         updateInfo: updateInfo || null,
         currentVersion: app.getVersion(),
+        channel: getUpdateChannel(),
       }
     } catch (err: any) {
       return {
         updateAvailable: false,
         error: err.message || 'Erro ao verificar atualizações.',
         currentVersion: app.getVersion(),
+        channel: getUpdateChannel(),
       }
     }
   })
