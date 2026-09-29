@@ -12,6 +12,8 @@ import {
   getWhisperDownloadProgress,
   listLocalModels,
   transcribeLocalAudio,
+  transcribeLocalAudioDetailed,
+  type WhisperTranscriptionResult,
 } from '../whisper'
 import {
   getDataPath,
@@ -177,7 +179,50 @@ type CloudTranscriptionRequest = {
   initialPrompt?: string
 }
 
-async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise<string> {
+function normalizeCloudTranscription(
+  payload: Record<string, unknown>,
+  provider: 'groq' | 'openai' | 'custom',
+  model: string,
+): WhisperTranscriptionResult {
+  const text = payload.text ?? payload.transcription
+  if (typeof text !== 'string') throw new Error('Resposta do provedor sem transcricao valida.')
+  const rawSegments = Array.isArray(payload.segments) ? payload.segments : []
+  const segments = rawSegments.flatMap(rawSegment => {
+    if (!rawSegment || typeof rawSegment !== 'object') return []
+    const segment = rawSegment as Record<string, unknown>
+    if (typeof segment.text !== 'string' || typeof segment.start !== 'number' || typeof segment.end !== 'number') return []
+    const words = (Array.isArray(segment.words) ? segment.words : []).flatMap(rawWord => {
+      if (!rawWord || typeof rawWord !== 'object') return []
+      const word = rawWord as Record<string, unknown>
+      const wordText = typeof word.word === 'string' ? word.word : typeof word.text === 'string' ? word.text : ''
+      if (!wordText || typeof word.start !== 'number' || typeof word.end !== 'number') return []
+      return [{
+        text: wordText,
+        startMs: Math.round(word.start * 1000),
+        endMs: Math.round(word.end * 1000),
+        ...(typeof word.probability === 'number' ? { confidence: word.probability } : {}),
+      }]
+    })
+    return [{
+      text: segment.text.trim(),
+      startMs: Math.round(segment.start * 1000),
+      endMs: Math.round(segment.end * 1000),
+      ...(typeof segment.avg_logprob === 'number' ? { confidence: Math.exp(segment.avg_logprob) } : {}),
+      ...(words.length > 0 ? { words } : {}),
+    }]
+  })
+  const hasWords = segments.some(segment => segment.words?.length)
+  return {
+    text: text.trim(),
+    provider,
+    model,
+    language: typeof payload.language === 'string' ? payload.language : undefined,
+    timingPrecision: hasWords ? 'word' : segments.length > 0 ? 'segment' : 'none',
+    segments,
+  }
+}
+
+async function transcribeCloudAudioDetailed(request: CloudTranscriptionRequest): Promise<WhisperTranscriptionResult> {
   const audio = decodeWavBase64(request?.audioBase64)
   const provider = request?.provider
   if (!['groq', 'openai', 'custom'].includes(provider)) throw new Error('Provedor cloud invalido.')
@@ -206,7 +251,8 @@ async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise
   formData.append('file', new Blob([Uint8Array.from(audio)], { type: 'audio/wav' }), 'speech.wav')
   formData.append('model', model)
   formData.append('language', 'pt')
-  if (provider === 'groq') formData.append('response_format', 'json')
+  if (provider === 'groq' || provider === 'openai') formData.append('response_format', 'verbose_json')
+  if (provider === 'openai') formData.append('timestamp_granularities[]', 'segment')
   const prompt = trimPrompt(request.initialPrompt)
   if (prompt) formData.append('prompt', prompt)
   const response = await fetch(endpoint, {
@@ -219,10 +265,12 @@ async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise
     const payload = await response.json().catch(() => ({})) as { error?: { message?: string } }
     throw new Error(payload.error?.message || `Provedor cloud respondeu com HTTP ${response.status}.`)
   }
-  const payload = await response.json() as { text?: string; transcription?: string }
-  const text = payload.text ?? payload.transcription
-  if (typeof text !== 'string') throw new Error('Resposta do provedor sem transcricao valida.')
-  return text.trim()
+  const payload = await response.json() as Record<string, unknown>
+  return normalizeCloudTranscription(payload, provider, model)
+}
+
+async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise<string> {
+  return (await transcribeCloudAudioDetailed(request)).text
 }
 
 function resolveTranscriptionInput(input: string): { path: string; cleanup: boolean } {
@@ -564,6 +612,9 @@ export const registerContentIpcHandlers = (): void => {
   ipcMain.handle('whisper:transcribeCloud', (_event, request: CloudTranscriptionRequest) => {
     return transcribeCloudAudio(request)
   })
+  ipcMain.handle('whisper:transcribeCloudDetailed', (_event, request: CloudTranscriptionRequest) => {
+    return transcribeCloudAudioDetailed(request)
+  })
 
   ipcMain.handle('meetings:transcribe', async (
     _event,
@@ -591,6 +642,26 @@ export const registerContentIpcHandlers = (): void => {
             fs.unlinkSync(resolved.path)
           }
         } catch {}
+      }
+    }
+  })
+
+  ipcMain.handle('meetings:transcribeDetailed', async (
+    _event,
+    audioPath: string,
+    modelId?: string,
+    options?: TranscriptionRequestOptions
+  ) => {
+    const resolved = resolveTranscriptionInput(audioPath)
+    try {
+      if (!fs.existsSync(resolved.path)) throw new Error('Arquivo de audio nao encontrado.')
+      return await transcribeLocalAudioDetailed(resolved.path, modelId, trimPrompt(options?.initialPrompt))
+    } catch (error) {
+      console.error('Erro na transcricao detalhada:', error)
+      throw new Error(error instanceof Error ? error.message : 'Erro ao transcrever áudio')
+    } finally {
+      if (resolved.cleanup) {
+        try { if (fs.existsSync(resolved.path)) fs.unlinkSync(resolved.path) } catch {}
       }
     }
   })

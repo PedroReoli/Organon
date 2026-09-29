@@ -1,0 +1,23 @@
+{
+  "result": { "language": "pt" },
+  "transcription": [
+    {
+      "offsets": { "from": 0, "to": 1250 },
+      "text": " Olá, equipe.",
+      "tokens": [
+        { "text": "[_BEG_]", "offsets": { "from": 0, "to": 0 }, "p": 0.99 },
+        { "text": " Olá", "offsets": { "from": 0, "to": 600 }, "p": 0.92 },
+        { "text": ", equipe.", "offsets": { "from": 600, "to": 1250 }, "p": 0.84 }
+      ]
+    },
+    {
+      "offsets": { "from": 1250, "to": 2600 },
+      "text": " Vamos começar.",
+      "tokens": [
+        { "text": " Vamos", "offsets": { "from": 1250, "to": 1900 }, "p": 0.88 },
+        { "text": " começar.", "offsets": { "from": 1900, "to": 2600 }, "p": 0.94 },
+        { "text": "[_TT_130]", "offsets": { "from": 2600, "to": 2600 }, "p": 0.99 }
+      ]
+    }
+  ]
+}

@@ -43,7 +43,7 @@
     "build:full": "npm run build:electron",
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false",
     "typecheck:node": "tsc -p tsconfig.node.json --pretty false",
-    "test": "npm run typecheck && npm run test:storage:v2 && npm run test:whisper:installer && npm run test:mcp && electron scripts/validate-coherence.cjs",
+    "test": "npm run typecheck && npm run test:storage:v2 && npm run test:whisper:installer && npm run test:whisper:transcription && npm run test:mcp && electron scripts/validate-coherence.cjs",
     "test:coherence": "npm run build && electron scripts/validate-coherence.cjs",
     "test:storage:v2": "npm run build && electron scripts/validate-storage-v2.cjs && node scripts/validate-cli-storage.cjs",
     "test:mcp": "node scripts/validate-mcp.cjs",
@@ -58,7 +58,8 @@
     "setup:api": "echo 'Configura token via Settings > API e Sincronização'",
     "setup:whisper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1",
     "test:whisper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-whisper-validation.ps1 && electron scripts/validate-whisper.cjs",
-    "test:whisper:installer": "electron scripts/validate-whisper-model-installer.cjs"
+    "test:whisper:installer": "electron scripts/validate-whisper-model-installer.cjs",
+    "test:whisper:transcription": "electron scripts/validate-whisper-transcription.cjs"
   },
   "keywords": [
     "electron",

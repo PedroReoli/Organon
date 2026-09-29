@@ -2,7 +2,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
 import { getMainWindow } from '../core/window'
-import { transcribeAudioLocally } from './localTranscriber'
+import { transcribeAudioLocally, transcribeAudioLocallyDetailed } from './localTranscriber'
+import type { WhisperTranscriptionResult } from './transcription'
 
 export interface WhisperModelInfo {
   id: string
@@ -87,6 +88,16 @@ export async function transcribeLocalAudio(audioPath: string, modelId?: string, 
   const preferred = resolvePreferredLocalModel(modelId)
   if (!preferred) throw new Error('Nenhum modelo local instalado. Baixe Whisper Tiny ou Base em Configurações e modelos.')
   return transcribeAudioLocally(audioPath, path.join(ensureModelsDir(), `${preferred.id}.bin`), initialPrompt)
+}
+
+export async function transcribeLocalAudioDetailed(
+  audioPath: string,
+  modelId?: string,
+  initialPrompt?: string,
+): Promise<WhisperTranscriptionResult> {
+  const preferred = resolvePreferredLocalModel(modelId)
+  if (!preferred) throw new Error('Nenhum modelo local instalado. Baixe Whisper Tiny ou Base em Configurações e modelos.')
+  return transcribeAudioLocallyDetailed(audioPath, path.join(ensureModelsDir(), `${preferred.id}.bin`), initialPrompt)
 }
 
 export async function selectBestWhisperModel(requiredVramMb: number): Promise<WhisperModelInfo | null> {

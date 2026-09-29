@@ -8,6 +8,7 @@ import { MeetingIntelligenceData, ProjectContextConfig, ResearchScope } from '..
 import { MeetingOrchestrator } from '../../../services/meetingIntelligence/MeetingOrchestrator'
 import {
   transcribeAudioBlobWithFallback,
+  transcribeAudioBlobDetailedWithFallback,
   loadWhisperConfig,
   getWhisperTranscriptionTuning,
   WhisperTranscriptionContext,
@@ -322,15 +323,17 @@ export function useWhisperRecording({
       }
 
       let finalMicTranscript = ''
+      let finalTranscription: Awaited<ReturnType<typeof transcribeAudioBlobDetailedWithFallback>> | undefined
       let micBlob: Blob | null = null
+      const whisperCfg = loadWhisperConfig()
 
       if (audioChunksRef.current.length > 0) {
         const micMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
         micBlob = new Blob(audioChunksRef.current, { type: micMimeType })
-        const whisperCfg = loadWhisperConfig()
         const whisperContext = buildWhisperContext('')
 
-        finalMicTranscript = await transcribeAudioBlobWithFallback(micBlob, whisperCfg, whisperContext)
+        finalTranscription = await transcribeAudioBlobDetailedWithFallback(micBlob, whisperCfg, whisperContext)
+        finalMicTranscript = finalTranscription.text
       }
 
       const hasMicSegments = liveSegments.some(segment => segment.sourceKind === 'microphone')
@@ -348,7 +351,6 @@ export function useWhisperRecording({
         : recordingMode === 'interview'
           ? `Entrevista (${new Date().toLocaleTimeString('pt-BR')})`
           : `Prompt por voz (${new Date().toLocaleTimeString('pt-BR')})`
-      const segmentId = `seg-${Date.now()}`
       const rawTranscript = combinedText.trim()
       const cleanTranscript = rawTranscript.replace(/\s+/g, ' ')
       const durationMs = Math.max(0, durationSeconds * 1000)
@@ -367,6 +369,35 @@ export function useWhisperRecording({
         mode: recordingMode,
       })
       const synthesizedAt = new Date().toISOString()
+      const providerSegments = finalTranscription?.segments ?? []
+      const transcriptSegments: SpeakerSegment[] = providerSegments.length > 0
+        ? providerSegments.map((segment, index) => ({
+          id: `seg-${recordId}-${index}`,
+          speaker: 'user',
+          speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
+          timestamp: new Date(segment.startMs).toISOString().slice(11, 19),
+          text: segment.text,
+          textRaw: segment.text,
+          textClean: segment.text.replace(/\s+/g, ' ').trim(),
+          startMs: segment.startMs,
+          endMs: segment.endMs,
+          confidence: segment.confidence,
+          words: segment.words,
+          sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
+        }))
+        : [{
+          id: `seg-${recordId}-0`,
+          speaker: 'user',
+          speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
+          timestamp: '00:00:00',
+          text: cleanTranscript,
+          textRaw: rawTranscript,
+          textClean: cleanTranscript,
+          startMs: 0,
+          endMs: durationMs,
+          sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
+        }]
+      const sourceSegmentIds = transcriptSegments.map(segment => segment.id)
       const baseIntelligence = orchestratorRef.current?.getData() || {
         questions: [], findings: [], decisions: [], actionItems: [], auditLog: [], tasks: [],
       }
@@ -379,7 +410,7 @@ export function useWhisperRecording({
             id: `decision-${recordId}-${index}`,
             text,
             timestamp: synthesizedAt,
-            sourceSegmentIds: [segmentId],
+            sourceSegmentIds,
             confirmed: false,
           })),
         ],
@@ -390,7 +421,7 @@ export function useWhisperRecording({
             task,
             timestamp: synthesizedAt,
             status: 'pending' as const,
-            sourceSegmentIds: [segmentId],
+            sourceSegmentIds,
             confirmed: false,
           })),
         ],
@@ -400,7 +431,7 @@ export function useWhisperRecording({
             id: `synthesis-${recordId}`,
             timestamp: synthesizedAt,
             action: 'automatic_synthesis',
-            details: `Síntese automática criada a partir do segmento ${segmentId}.`,
+            details: `Síntese automática criada a partir de ${sourceSegmentIds.length} segmento(s).`,
           },
         ],
       }
@@ -416,21 +447,32 @@ export function useWhisperRecording({
         fullTranscript: cleanTranscript,
         rawTranscript,
         cleanTranscript,
-        timingPrecision: 'none',
-        segments: [
-          {
-            id: segmentId,
-            speaker: 'user',
-            speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
-            timestamp: new Date().toLocaleTimeString('pt-BR'),
-            text: cleanTranscript,
-            textRaw: rawTranscript,
-            textClean: cleanTranscript,
-            startMs: 0,
-            endMs: durationMs,
-            sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
+        timingPrecision: finalTranscription?.timingPrecision ?? 'none',
+        segments: transcriptSegments,
+        transcriptionProvenance: {
+          schemaVersion: 1,
+          raw: {
+            version: 1,
+            createdAt: synthesizedAt,
+            provider: finalTranscription?.provider ?? 'local',
+            model: finalTranscription?.model ?? whisperCfg.model ?? 'unknown',
+            language: finalTranscription?.language,
+            timingPrecision: finalTranscription?.timingPrecision ?? 'none',
+            sourceAudioSha256: audio?.sha256,
           },
-        ],
+          clean: {
+            version: 1,
+            createdAt: synthesizedAt,
+            derivedFromRawVersion: 1,
+            pipeline: 'normalize-whitespace-v1',
+          },
+          intelligence: {
+            version: 1,
+            createdAt: synthesizedAt,
+            derivedFromSegmentIds: sourceSegmentIds,
+            pipeline: 'organon-transcript-note-v1',
+          },
+        },
         liveReport,
         intelligenceData: mergedIntelligence,
         mode: recordingMode,

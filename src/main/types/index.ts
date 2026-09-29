@@ -306,6 +306,7 @@ export interface Meeting {
   liveReport?: Record<string, unknown>
   mode?: 'meeting' | 'interview' | 'prompt'
   timingPrecision?: 'word' | 'segment' | 'none'
+  transcriptionProvenance?: WhisperTranscriptionProvenance
   isFavorite?: boolean
   isArchived?: boolean
   audio?: {
@@ -315,6 +316,31 @@ export interface Meeting {
     codec: string
     durationMs: number
   } | null
+}
+
+export interface WhisperTranscriptionProvenance {
+  schemaVersion: 1
+  raw: {
+    version: 1
+    createdAt: string
+    provider: 'local' | 'groq' | 'openai' | 'custom'
+    model: string
+    language?: string
+    timingPrecision: 'word' | 'segment' | 'none'
+    sourceAudioSha256?: string
+  }
+  clean: {
+    version: 1
+    createdAt: string
+    derivedFromRawVersion: 1
+    pipeline: 'normalize-whitespace-v1'
+  }
+  intelligence: {
+    version: 1
+    createdAt: string
+    derivedFromSegmentIds: string[]
+    pipeline: 'organon-transcript-note-v1'
+  }
 }
 
 export interface StudyChecklistItem {

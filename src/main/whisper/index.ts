@@ -1,4 +1,5 @@
 export * from './engine'
 export * from './localTranscriber'
 export * from './modelInstaller'
+export * from './transcription'
 export * from './wakeWord'

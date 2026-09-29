@@ -47,6 +47,7 @@ const normalizeRecord = (meeting: Meeting): WhisperRecord => ({
   liveReport: meeting.liveReport as WhisperRecord['liveReport'],
   mode: meeting.mode,
   timingPrecision: meeting.timingPrecision ?? 'none',
+  transcriptionProvenance: meeting.transcriptionProvenance,
   isFavorite: meeting.isFavorite,
   isArchived: meeting.isArchived,
 })
@@ -70,6 +71,7 @@ const toMeeting = (record: WhisperRecord, previous?: Meeting): Meeting => ({
   liveReport: record.liveReport as unknown as Record<string, unknown>,
   mode: record.mode,
   timingPrecision: record.timingPrecision ?? 'none',
+  transcriptionProvenance: record.transcriptionProvenance,
   audio: record.audio ?? previous?.audio ?? null,
   isFavorite: record.isFavorite,
   isArchived: record.isArchived,

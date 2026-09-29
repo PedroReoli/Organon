@@ -1,4 +1,6 @@
 import { normalizeWhisperAudio, splitWhisperWav } from './whisperAudio'
+import type { WhisperTranscriptionResult } from '@types'
+export type { WhisperTranscriptionResult } from '@types'
 export type WhisperTranscriptionProfile = 'pc-fraco' | 'equilibrado' | 'openwhisper'
 export type WhisperTranscriptMode = 'meeting' | 'interview' | 'prompt'
 
@@ -243,24 +245,35 @@ function isBenignOfflineNotice(result: string): boolean {
   )
 }
 
-async function tryElectronFallback(
+const fallbackResult = (text: string, model = 'unknown'): WhisperTranscriptionResult => ({
+  text,
+  provider: 'local',
+  model,
+  timingPrecision: 'none',
+  segments: [],
+})
+
+async function tryElectronFallbackDetailed(
   audioBlob: Blob,
   modelId?: string,
   context?: WhisperTranscriptionContext
-): Promise<string | null> {
+): Promise<WhisperTranscriptionResult | null> {
   if (!window.electronAPI?.transcribeAudio) return null
 
   try {
     const arrayBuffer = await audioBlob.arrayBuffer()
     const base64 = arrayBufferToBase64(arrayBuffer)
-    const res = await window.electronAPI.transcribeAudio(base64, modelId, {
+    const options = {
       mode: context?.mode,
       initialPrompt: buildWhisperInitialPrompt(context),
       hotwords: collectHotwords(context),
       projectName: context?.projectName,
-    })
-    if (res && !res.startsWith('[Erro') && !isBenignOfflineNotice(res)) {
-      return res
+    }
+    const result = window.electronAPI.transcribeAudioDetailed
+      ? await window.electronAPI.transcribeAudioDetailed(base64, modelId, options)
+      : fallbackResult(await window.electronAPI.transcribeAudio(base64, modelId, options), modelId)
+    if (result.text && !result.text.startsWith('[Erro') && !isBenignOfflineNotice(result.text)) {
+      return result
     }
   } catch (err) {
     console.warn('[WhisperService] Fallback Electron IPC falhou:', err)
@@ -269,37 +282,49 @@ async function tryElectronFallback(
   return null
 }
 
-async function transcribePreparedAudio(
+async function transcribePreparedAudioDetailed(
   audioBlob: Blob,
   config?: WhisperServiceConfig,
   context?: WhisperTranscriptionContext
-): Promise<string> {
+): Promise<WhisperTranscriptionResult> {
   const cfg = config || loadWhisperConfig()
   const prompt = buildWhisperInitialPrompt(context)
 
   if (cfg.provider === 'local' || cfg.provider === 'webspeech') {
     if (!window.electronAPI?.transcribeAudio) throw new Error('O motor local requer o aplicativo desktop.')
-    return window.electronAPI.transcribeAudio(arrayBufferToBase64(await audioBlob.arrayBuffer()), cfg.model, { initialPrompt: prompt })
+    const base64 = arrayBufferToBase64(await audioBlob.arrayBuffer())
+    return window.electronAPI.transcribeAudioDetailed
+      ? window.electronAPI.transcribeAudioDetailed(base64, cfg.model, { initialPrompt: prompt })
+      : fallbackResult(await window.electronAPI.transcribeAudio(base64, cfg.model, { initialPrompt: prompt }), cfg.model)
   }
 
   if (!window.electronAPI?.transcribeCloudAudio) {
     throw new Error('A transcrição cloud requer o aplicativo desktop seguro.')
   }
   await initializeWhisperSecrets(cfg)
-  return window.electronAPI.transcribeCloudAudio({
+  const request = {
     audioBase64: arrayBufferToBase64(await audioBlob.arrayBuffer()),
     provider: cfg.provider,
     model: cfg.model,
     customEndpoint: cfg.customEndpoint,
     initialPrompt: prompt,
-  })
+  }
+  return window.electronAPI.transcribeCloudAudioDetailed
+    ? window.electronAPI.transcribeCloudAudioDetailed(request)
+    : {
+      text: await window.electronAPI.transcribeCloudAudio(request),
+      provider: cfg.provider,
+      model: cfg.model || 'unknown',
+      timingPrecision: 'none',
+      segments: [],
+    }
 }
 
-async function transcribePreparedWithFallback(
+async function transcribePreparedDetailedWithFallback(
   audioBlob: Blob,
   config?: WhisperServiceConfig,
   context?: WhisperTranscriptionContext
-): Promise<string> {
+): Promise<WhisperTranscriptionResult> {
   const cfg = config || loadWhisperConfig()
   const candidates = [{ ...cfg, provider: cfg.provider === 'webspeech' ? 'local' as const : cfg.provider }]
 
@@ -307,8 +332,8 @@ async function transcribePreparedWithFallback(
 
   for (const candidate of candidates) {
     try {
-      const result = await transcribePreparedAudio(audioBlob, candidate, context)
-      if (!result.startsWith('[Erro') && !isBenignOfflineNotice(result)) {
+      const result = await transcribePreparedAudioDetailed(audioBlob, candidate, context)
+      if (!result.text.startsWith('[Erro') && !isBenignOfflineNotice(result.text)) {
         return result
       }
     } catch (err) {
@@ -318,7 +343,7 @@ async function transcribePreparedWithFallback(
 
   if (cfg.provider === 'local' || cfg.provider === 'webspeech') throw lastError || new Error('Falha no motor local.')
 
-  const electronFallback = await tryElectronFallback(audioBlob, cfg.model, context)
+  const electronFallback = await tryElectronFallbackDetailed(audioBlob, cfg.model, context)
   if (electronFallback) {
     return electronFallback
   }
@@ -330,15 +355,63 @@ async function transcribePreparedWithFallback(
   throw new Error('Nenhum motor conseguiu transcrever. Verifique o provedor e os modelos instalados.')
 }
 
-export async function transcribeAudioBlobWithFallback(audioBlob: Blob, config?: WhisperServiceConfig, context?: WhisperTranscriptionContext): Promise<string> {
+async function getWavDurationMs(blob: Blob): Promise<number> {
+  const bytes = await blob.slice(0, 44).arrayBuffer()
+  if (bytes.byteLength < 44) return 0
+  const view = new DataView(bytes)
+  const byteRate = view.getUint32(28, true)
+  const dataBytes = view.getUint32(40, true)
+  return byteRate > 0 ? Math.round((dataBytes / byteRate) * 1000) : 0
+}
+
+export async function transcribeAudioBlobDetailedWithFallback(
+  audioBlob: Blob,
+  config?: WhisperServiceConfig,
+  context?: WhisperTranscriptionContext,
+): Promise<WhisperTranscriptionResult> {
   const cfg = config || loadWhisperConfig()
   const wav = await normalizeWhisperAudio(audioBlob)
-  const texts: string[] = []
+  const results: WhisperTranscriptionResult[] = []
+  let offsetMs = 0
   for (const part of await splitWhisperWav(wav)) {
-    texts.push(await transcribePreparedWithFallback(part, cfg, context))
+    const result = await transcribePreparedDetailedWithFallback(part, cfg, context)
+    results.push({
+      ...result,
+      segments: result.segments.map(segment => ({
+        ...segment,
+        startMs: segment.startMs + offsetMs,
+        endMs: segment.endMs + offsetMs,
+        words: segment.words?.map(word => ({
+          ...word,
+          startMs: word.startMs + offsetMs,
+          endMs: word.endMs + offsetMs,
+        })),
+      })),
+    })
+    offsetMs += await getWavDurationMs(part)
   }
-  const text = texts.filter(Boolean).join('\n').trim()
-  return cfg.cleanupDictation && context?.mode === 'prompt' ? cleanDictation(text) : text
+  const first = results[0] ?? fallbackResult('', cfg.model)
+  const segments = results.flatMap(result => result.segments)
+  const timingPrecision = results.every(result => result.timingPrecision === 'word') && results.length > 0
+    ? 'word'
+    : segments.length > 0 ? 'segment' : 'none'
+  return {
+    ...first,
+    text: results.map(result => result.text).filter(Boolean).join('\n').trim(),
+    model: Array.from(new Set(results.map(result => result.model))).join(', ') || first.model,
+    timingPrecision,
+    segments,
+  }
+}
+
+export async function transcribeAudioBlobWithFallback(
+  audioBlob: Blob,
+  config?: WhisperServiceConfig,
+  context?: WhisperTranscriptionContext,
+): Promise<string> {
+  const cfg = config || loadWhisperConfig()
+  const result = await transcribeAudioBlobDetailedWithFallback(audioBlob, cfg, context)
+  return cfg.cleanupDictation && context?.mode === 'prompt' ? cleanDictation(result.text) : result.text
 }
 
 export const transcribeAudioBlob = transcribeAudioBlobWithFallback

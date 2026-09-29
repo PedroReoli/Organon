@@ -1,3 +1,5 @@
+import type { WhisperTranscriptionProvenance } from '@types'
+
 export type SpeakerRole = 'user' | 'system' | 'interviewer' | 'candidate'
 export type WhisperAudioSourceKind = 'microphone' | 'system' | 'mixed'
 
@@ -53,6 +55,7 @@ export interface WhisperRecord {
   rawTranscript?: string
   cleanTranscript?: string
   timingPrecision?: 'word' | 'segment' | 'none'
+  transcriptionProvenance?: WhisperTranscriptionProvenance
   segments: SpeakerSegment[]
   liveReport?: LiveReport
   isFavorite?: boolean
