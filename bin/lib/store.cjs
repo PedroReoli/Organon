@@ -8,24 +8,30 @@ const { randomUUID } = require('crypto');
  * Locates the active data directory and provides atomic CRUD operations for all sections.
  */
 
-function resolveDataDir() {
+function resolveDataDir(options = {}) {
+  const runtimeEnv = options.env || process.env;
+  const runtimePlatform = options.platform || os.platform();
+  const runtimeHomeDir = options.homeDir || os.homedir();
+  const runtimeCwd = options.cwd || process.cwd();
+
   // 1. Explicit environment variable
-  if (process.env.ORGANON_DATA_DIR && fs.existsSync(process.env.ORGANON_DATA_DIR)) {
-    return path.resolve(process.env.ORGANON_DATA_DIR);
+  if (runtimeEnv.ORGANON_DATA_DIR && fs.existsSync(runtimeEnv.ORGANON_DATA_DIR)) {
+    return path.resolve(runtimeEnv.ORGANON_DATA_DIR);
   }
 
   // 2. Electron userData config.json
-  const userDataDir = os.platform() === 'win32'
-    ? path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Organon')
-    : os.platform() === 'darwin'
-      ? path.join(os.homedir(), 'Library', 'Application Support', 'Organon')
-      : path.join(os.homedir(), '.config', 'Organon');
+  const userDataDir = runtimePlatform === 'win32'
+    ? path.join(runtimeEnv.APPDATA || path.join(runtimeHomeDir, 'AppData', 'Roaming'), 'Organon')
+    : runtimePlatform === 'darwin'
+      ? path.join(runtimeHomeDir, 'Library', 'Application Support', 'Organon')
+      : path.join(runtimeHomeDir, '.config', 'Organon');
 
   const configPath = path.join(userDataDir, 'config.json');
-  if (fs.existsSync(configPath)) {
+  for (const candidate of [configPath, `${configPath}.bak`]) {
     try {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (config.dataDir && fs.existsSync(config.dataDir)) {
+      if (!fs.existsSync(candidate)) continue;
+      const config = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      if (typeof config.dataDir === 'string' && config.dataDir.trim()) {
         return path.resolve(config.dataDir);
       }
     } catch {
@@ -34,18 +40,18 @@ function resolveDataDir() {
   }
 
   // 3. Dedicated v2 Storage in Documents/Organon
-  const documentsDir = path.join(os.homedir(), 'Documents', 'Organon');
-  if (fs.existsSync(documentsDir)) {
+  const documentsDir = path.join(runtimeHomeDir, 'Documents', 'Organon');
+  if (isDedicatedStorage(documentsDir)) {
     return documentsDir;
   }
 
   // 4. Local workspace relative dirs (dev environment)
-  const localDataV2 = path.resolve(process.cwd(), 'data-v2');
-  if (fs.existsSync(localDataV2)) {
+  const localDataV2 = path.resolve(runtimeCwd, 'data-v2');
+  if (isDedicatedStorage(localDataV2)) {
     return localDataV2;
   }
 
-  const localData = path.resolve(process.cwd(), 'data');
+  const localData = path.resolve(runtimeCwd, 'data');
   if (fs.existsSync(localData)) {
     return localData;
   }
@@ -58,7 +64,13 @@ const dataDir = resolveDataDir();
 
 function isDedicatedStorage(dir) {
   const marker = path.join(dir, '_sistema', 'storage-layout.json');
-  return fs.existsSync(marker);
+  try {
+    if (!fs.existsSync(marker)) return false;
+    const parsed = JSON.parse(fs.readFileSync(marker, 'utf8'));
+    return parsed && parsed.version === 2;
+  } catch {
+    return false;
+  }
 }
 
 function getStoreDir(dir) {
@@ -357,6 +369,7 @@ function getSystemStatus() {
 module.exports = {
   dataDir,
   resolveDataDir,
+  isDedicatedStorage,
   getStoreDir,
   getNotesDir,
   touchSyncFlag,

@@ -17,7 +17,7 @@
     "build": "tsc -p tsconfig.node.json && vite build",
     "build:electron": "npm run build && electron-builder",
     "build:full": "npm run build:electron",
-    "test:storage:v2": "npm run build && electron scripts/validate-storage-v2.cjs",
+    "test:storage:v2": "npm run build && electron scripts/validate-storage-v2.cjs && node scripts/validate-cli-storage.cjs",
     "bump": "node scripts/bump-version.js",
     "bump:v": "node scripts/bump-version.js --version",
     "install:all": "node scripts/install-all.cjs",

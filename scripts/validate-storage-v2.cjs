@@ -33,6 +33,24 @@ app.whenReady().then(() => {
   hydrationGuard.revoke(7)
   if (hydrationGuard.canWrite(7)) fail('Guard manteve permissao depois da revogacao.')
 
+  const discoveryDedicated = path.join(sandbox, 'discovery-dedicated')
+  const discoveryLegacy = path.join(sandbox, 'discovery-legacy')
+  fs.mkdirSync(path.join(discoveryDedicated, '_sistema'), { recursive: true })
+  fs.writeFileSync(
+    path.join(discoveryDedicated, '_sistema', 'storage-layout.json'),
+    JSON.stringify({ version: 2, state: 'completed' }),
+    'utf8'
+  )
+  const discoveredPath = filesystem.resolveDataPath(filesystem.getDefaultConfig(), discoveryDedicated, discoveryLegacy)
+  if (discoveredPath !== discoveryDedicated) fail('Desktop nao redescobriu o root dedicado valido.')
+  const explicitPath = path.join(sandbox, 'explicit-root')
+  const configuredPath = filesystem.resolveDataPath(
+    { ...filesystem.getDefaultConfig(), dataDir: explicitPath },
+    discoveryDedicated,
+    discoveryLegacy
+  )
+  if (configuredPath !== explicitPath) fail('Desktop ignorou o root configurado explicitamente.')
+
   filesystem.setConfig({
     version: 1,
     dataDir: legacyRoot,
@@ -84,7 +102,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })

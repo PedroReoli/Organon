@@ -99,12 +99,21 @@ export const setConfig = (nextConfig: AppConfig): boolean => {
   return true
 }
 
+export const resolveDataPath = (
+  config: AppConfig,
+  dedicatedDefaultPath: string,
+  legacyDefaultPath: string
+): string => {
+  if (config.dataDir) return config.dataDir
+  if (isDedicatedStorageRoot(dedicatedDefaultPath)) return dedicatedDefaultPath
+  return config.storageLayoutVersion === CURRENT_STORAGE_LAYOUT_VERSION
+    ? dedicatedDefaultPath
+    : legacyDefaultPath
+}
+
 export const getDataPath = (): string => {
   const config = getConfig()
-  if (config.dataDir) return config.dataDir
-  return config.storageLayoutVersion === CURRENT_STORAGE_LAYOUT_VERSION
-    ? getDedicatedDefaultDataPath()
-    : getDefaultDataPath()
+  return resolveDataPath(config, getDedicatedDefaultDataPath(), getDefaultDataPath())
 }
 
 export const getStorageMarkerPath = (dataPath: string): string => path.join(dataPath, STORAGE_MARKER_RELATIVE_PATH)
