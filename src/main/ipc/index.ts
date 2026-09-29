@@ -7,6 +7,7 @@ import { registerMeetingResearchIpc } from './meeting.ipc'
 import { registerSuperWhisperIpc, registerAutoUpdaterIpc } from '../core'
 import { registerProjectGraphIpc } from '../services'
 import { registerWakeWordIpc } from '../whisper'
+import { registerRuntimeMetricsIpc } from '../diagnostics/runtimeMetrics'
 
 export * from './backup.ipc'
 export * from './content.ipc'
@@ -25,4 +26,5 @@ export const registerIpcHandlers = (): void => {
   registerLocalSyncIpc()
   registerAutoUpdaterIpc()
   registerWakeWordIpc()
+  registerRuntimeMetricsIpc()
 }

@@ -5,6 +5,7 @@ import * as fs from 'fs'
 import { getMainWindow } from './window'
 import { getDevServerUrl } from './devServerUrl'
 import { loadStore } from '../storage/store'
+import { recordRuntimeEvent } from '../diagnostics/runtimeMetrics'
 
 let tray: Tray | null = null
 let superWhisperWindow: BrowserWindow | null = null
@@ -61,6 +62,7 @@ function setSuperWhisperLayout(layout: SuperWhisperLayout): void {
     width,
     height,
   }, false)
+  recordRuntimeEvent('window.whisper.layout', { layout, width, height })
 }
 
 /**
@@ -179,6 +181,11 @@ export function createSuperWhisperWindow(): BrowserWindow {
       sandbox: true,
     },
   })
+  recordRuntimeEvent('window.whisper.created')
+  superWhisperWindow.webContents.on('render-process-gone', (_event, details) => {
+    recordRuntimeEvent('window.whisper.render-process-gone', { reason: details.reason, exitCode: details.exitCode })
+  })
+  superWhisperWindow.on('unresponsive', () => recordRuntimeEvent('window.whisper.unresponsive'))
 
   // Posição: canto inferior direito (respeitando offset da taskbar)
   setSuperWhisperLayout('compact')
@@ -200,6 +207,7 @@ export function createSuperWhisperWindow(): BrowserWindow {
   superWhisperWindow.once('ready-to-show', () => superWhisperWindow?.showInactive())
 
   superWhisperWindow.on('closed', () => {
+    recordRuntimeEvent('window.whisper.destroyed')
     superWhisperWindow = null
   })
 
@@ -215,6 +223,7 @@ export function showSuperWhisperWindow(): void {
     win.webContents.once('did-finish-load', () => win.webContents.send('super-whisper:toggle-recording'))
   } else {
     superWhisperWindow.showInactive()
+    recordRuntimeEvent('window.whisper.shown')
     superWhisperWindow.webContents.send('super-whisper:toggle-recording')
   }
 }
@@ -225,6 +234,7 @@ export function showSuperWhisperWindow(): void {
 export function hideSuperWhisperWindow(): void {
   if (superWhisperWindow && !superWhisperWindow.isDestroyed()) {
     superWhisperWindow.hide()
+    recordRuntimeEvent('window.whisper.hidden')
   }
 }
 

@@ -3,6 +3,7 @@ import type { OpenDialogOptions } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { getDevServerUrl } from './devServerUrl'
+import { recordRuntimeEvent } from '../diagnostics/runtimeMetrics'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -128,6 +129,13 @@ export const createWindow = (): void => {
     backgroundColor: '#0f172a',
     show: false,
   })
+  recordRuntimeEvent('window.main.created')
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    recordRuntimeEvent('window.main.render-process-gone', { reason: details.reason, exitCode: details.exitCode })
+  })
+  mainWindow.on('unresponsive', () => recordRuntimeEvent('window.main.unresponsive'))
+  mainWindow.on('responsive', () => recordRuntimeEvent('window.main.responsive'))
 
   // Hardening: Previne abertura arbitrária de janelas internas/popups
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -190,6 +198,7 @@ export const createWindow = (): void => {
   }
 
   mainWindow.on('closed', () => {
+    recordRuntimeEvent('window.main.destroyed')
     mainWindow = null
   })
 
@@ -198,6 +207,7 @@ export const createWindow = (): void => {
     if (!appQuitting) {
       event.preventDefault()
       mainWindow?.hide()
+      recordRuntimeEvent('window.main.hidden')
     }
   })
 }

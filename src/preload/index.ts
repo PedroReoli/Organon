@@ -347,6 +347,11 @@ const electronAPI = {
   setNativeZoom: (factor: number) => webFrame.setZoomFactor(factor),
   getNativeZoom: () => webFrame.getZoomFactor(),
 
+  // Runtime diagnostics
+  getRuntimeMetrics: () => ipcRenderer.invoke('diagnostics:runtimeMetrics'),
+  reportRuntimeEvent: (name: string, details?: Record<string, unknown>) =>
+    ipcRenderer.invoke('diagnostics:runtimeEvent', name, details),
+
   // Reports
   readTextFile: (filePath: string) => ipcRenderer.invoke('reports:readFile', filePath),
   watchReportsDir: (dirPath: string) => ipcRenderer.invoke('reports:watch', dirPath),

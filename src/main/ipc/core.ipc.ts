@@ -29,6 +29,7 @@ import { executeCliCommand, rollbackCliAction } from '../storage/cliRunner'
 import { installWhisperModelBundle } from '../whisper'
 import type { Canvas, Store, ThemeName } from '../types'
 import { getMainWindow, openDirectoryPicker, openFolderPicker } from '../core'
+import { recordRuntimeDuration } from '../diagnostics/runtimeMetrics'
 
 const storageHydrationGuard = new StorageHydrationGuard()
 const hydrationCleanupRegistered = new Set<number>()
@@ -93,6 +94,8 @@ export const registerCoreIpcHandlers = (): void => {
     return false
   })
   ipcMain.handle('store:load', (event) => {
+    const startedAt = performance.now()
+    try {
     const dataPath = getDataPath()
     const generationState = inspectCommittedGeneration(dataPath)
     const store = generationState?.generation.store ?? loadStore()
@@ -119,9 +122,14 @@ export const registerCoreIpcHandlers = (): void => {
       hydrationToken,
       warnings: generationState ? [] : ['Root ainda sem geracao transacional; o primeiro save fara a conversao.'],
     }
+    } finally {
+      recordRuntimeDuration('store.load', performance.now() - startedAt)
+    }
   })
 
   ipcMain.handle('store:save', (event, request: StoreSaveRequest): StoreSaveResponse => {
+    const startedAt = performance.now()
+    try {
     const currentRevision = getStorageRevision(getDataPath())
     if (!request || typeof request !== 'object' || !request.store) {
       return { success: false, revision: currentRevision, error: 'Payload de gravacao invalido.' }
@@ -174,6 +182,9 @@ export const registerCoreIpcHandlers = (): void => {
     }
 
     return { success: true, revision }
+    } finally {
+      recordRuntimeDuration('store.commit', performance.now() - startedAt)
+    }
   })
 
   ipcMain.handle('external:open', (_event, url: string) => {

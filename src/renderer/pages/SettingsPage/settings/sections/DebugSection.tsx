@@ -1,5 +1,6 @@
 import type { Settings } from '@types'
 import { Switch } from '@shared/components/primitives'
+import { useState } from 'react'
 
 interface DebugSectionProps {
   activeSection: string
@@ -8,6 +9,8 @@ interface DebugSectionProps {
 }
 
 export const DebugSection = ({ activeSection, settings, onUpdateSettings }: DebugSectionProps) => {
+  const [runtimeMetrics, setRuntimeMetrics] = useState<Record<string, any> | null>(null)
+  const [metricsLoading, setMetricsLoading] = useState(false)
   if (activeSection !== 'debug') return null
 
   const isDev = import.meta.env.DEV
@@ -68,6 +71,43 @@ export const DebugSection = ({ activeSection, settings, onUpdateSettings }: Debu
           <div>- Ctrl+K: focar busca (CRM)</div>
           <div>- Ctrl+F: alternar filtros (CRM)</div>
         </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-label">Diagnóstico de runtime</div>
+        <div className="settings-field-help">Captura memória por processo, janelas, webContents, gravadores ativos e p50/p95/p99 de I/O e event-loop lag.</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            type="button"
+            disabled={metricsLoading}
+            onClick={async () => {
+              setMetricsLoading(true)
+              try { setRuntimeMetrics(await window.electronAPI.getRuntimeMetrics()) }
+              finally { setMetricsLoading(false) }
+            }}
+            className="settings-button"
+          >
+            {metricsLoading ? 'Capturando...' : 'Capturar métricas'}
+          </button>
+          {runtimeMetrics && (
+            <button type="button" className="settings-button" onClick={() => { void navigator.clipboard.writeText(JSON.stringify(runtimeMetrics, null, 2)) }}>
+              Copiar JSON
+            </button>
+          )}
+        </div>
+        {runtimeMetrics && (
+          <pre style={{ marginTop: 10, maxHeight: 260, overflow: 'auto', padding: 10, borderRadius: 8, background: 'var(--color-background)', border: '1px solid var(--color-border)', fontSize: 10, whiteSpace: 'pre-wrap' }}>
+            {JSON.stringify({
+              capturedAt: runtimeMetrics.capturedAt,
+              windows: runtimeMetrics.windows,
+              webContents: runtimeMetrics.webContents,
+              activeWhisperRecorders: runtimeMetrics.activeWhisperRecorders,
+              mainMemory: runtimeMetrics.mainMemory,
+              durations: runtimeMetrics.durations,
+              counters: runtimeMetrics.counters,
+            }, null, 2)}
+          </pre>
+        )}
       </div>
     </section>
   )

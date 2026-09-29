@@ -55,6 +55,7 @@ export class WhisperPcmRecorder extends EventTarget {
   start(_timeslice?: number): void {
     this.state = 'recording'
     this.tap.port.postMessage('start')
+    void window.electronAPI?.reportRuntimeEvent?.('whisper.recorder.started', { sampleRate: this.context.sampleRate })
   }
 
   stop(): void {
@@ -64,6 +65,7 @@ export class WhisperPcmRecorder extends EventTarget {
   }
 
   private async finish(): Promise<void> {
+    let failed = false
     try {
       const pcm = new Float32Array(this.chunks.reduce((total, chunk) => total + chunk.length, 0))
       let offset = 0
@@ -72,12 +74,19 @@ export class WhisperPcmRecorder extends EventTarget {
       const event = new BlobEvent('dataavailable', { data: encodeWhisperPcm(pcm, this.context.sampleRate) })
       this.ondataavailable?.(event)
       this.dispatchEvent(event)
+    } catch (error) {
+      failed = true
+      void window.electronAPI?.reportRuntimeEvent?.('whisper.recorder.error', {
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
     } finally {
       this.source.disconnect(); this.tap.disconnect()
       await this.context.close()
       this.state = 'inactive'
       this.onstop?.()
       this.dispatchEvent(new Event('stop'))
+      if (!failed) void window.electronAPI?.reportRuntimeEvent?.('whisper.recorder.stopped')
     }
   }
 }

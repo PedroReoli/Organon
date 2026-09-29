@@ -760,6 +760,8 @@ declare global {
       getWakeWordConfig: () => Promise<{ enabled: boolean; keyword: string; sensitivity: number }>
       setWakeWordConfig: (config: { enabled?: boolean; keyword?: string; sensitivity?: number }) => Promise<{ enabled: boolean; keyword: string; sensitivity: number }>
       triggerWakeWord: () => Promise<{ triggered: boolean }>
+      getRuntimeMetrics: () => Promise<Record<string, unknown>>
+      reportRuntimeEvent: (name: 'whisper.recorder.started' | 'whisper.recorder.stopped' | 'whisper.recorder.error', details?: Record<string, unknown>) => Promise<boolean>
       saveConversation?: (id: string, content: string) => Promise<string | null>
       setContentProtection?: (enabled: boolean) => Promise<boolean>
       onPlanningSync?: (callback: () => void) => () => void
