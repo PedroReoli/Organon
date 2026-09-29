@@ -3,6 +3,9 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 import type { AppConfig } from '../types'
+import { ensureDataDir, readJsonFile, writeTextFileAtomic } from './filePrimitives'
+
+export { ensureDataDir, readJsonFile, writeTextFileAtomic } from './filePrimitives'
 
 export const CURRENT_STORAGE_LAYOUT_VERSION = 2
 const STORAGE_MARKER_RELATIVE_PATH = path.join('_sistema', 'storage-layout.json')
@@ -165,12 +168,6 @@ export const getIntegritySnapshotsDir = (dataPath: string): string => {
     : getBackupDir(dataPath)
 }
 
-export const ensureDataDir = (dataPath: string): void => {
-  if (!fs.existsSync(dataPath)) {
-    fs.mkdirSync(dataPath, { recursive: true })
-  }
-}
-
 export const ensureBackupDir = (dataPath: string): void => {
   const backupDir = getBackupDir(dataPath)
   if (!fs.existsSync(backupDir)) {
@@ -284,26 +281,6 @@ export const copyDirReplace = (sourceDir: string, destDir: string): void => {
   copyDirMerge(sourceDir, destDir, true)
 }
 
-export const writeTextFileAtomic = (filePath: string, content: string): boolean => {
-  const tempPath = filePath + '.tmp'
-  try {
-    ensureDataDir(path.dirname(filePath))
-    fs.writeFileSync(tempPath, content, 'utf-8')
-    fs.renameSync(tempPath, filePath)
-    return true
-  } catch (error) {
-    console.error('Erro ao salvar arquivo:', error)
-    try {
-      if (fs.existsSync(tempPath)) {
-        fs.unlinkSync(tempPath)
-      }
-    } catch {
-      // Ignora erro ao limpar.
-    }
-    return false
-  }
-}
-
 export const deletePathIfExists = (targetPath: string): void => {
   if (!fs.existsSync(targetPath)) return
   const stat = fs.statSync(targetPath)
@@ -311,16 +288,6 @@ export const deletePathIfExists = (targetPath: string): void => {
     fs.rmSync(targetPath, { recursive: true, force: true })
   } else {
     fs.unlinkSync(targetPath)
-  }
-}
-
-export const readJsonFile = (filePath: string): unknown | null => {
-  try {
-    if (!fs.existsSync(filePath)) return null
-    const raw = fs.readFileSync(filePath, 'utf-8')
-    return JSON.parse(raw) as unknown
-  } catch {
-    return null
   }
 }
 

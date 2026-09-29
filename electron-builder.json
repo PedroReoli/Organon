@@ -8,7 +8,7 @@
   "publish": {
     "provider": "github",
     "owner": "PedroReoli",
-    "repo": "Ecossistema",
+    "repo": "Organon",
     "releaseType": "release"
   },
   "files": [
@@ -49,6 +49,7 @@
     "perMachine": false,
     "allowElevation": true,
     "allowToChangeInstallationDirectory": false,
+    "deleteAppDataOnUninstall": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Organon",

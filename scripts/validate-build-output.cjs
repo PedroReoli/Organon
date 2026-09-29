@@ -11,6 +11,7 @@ const expectedFiles = [
   'core/autoUpdater.js',
   'ipc/content.ipc.js',
   'meeting/research.js',
+  'storage/filePrimitives.js',
   'storage/generationStore.js',
   'storage/store.js',
   'whisper/localTranscriber.js',

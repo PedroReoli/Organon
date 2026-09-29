@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 import type { Store } from '../types'
-import { ensureDataDir, readJsonFile, writeTextFileAtomic } from './filesystem'
+import { ensureDataDir, readJsonFile, writeTextFileAtomic } from './filePrimitives'
 import { normalizeStore } from './storeModel'
 
 export const STORE_SECTIONS: Array<{ fileName: string; keys: Array<keyof Store> }> = [

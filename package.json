@@ -3,6 +3,30 @@
   "version": "6.23.10",
   "description": "Organon - App desktop local com Electron",
   "main": "dist/main/index.js",
+  "author": "Pedro Reoli",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PedroReoli/Organon.git"
+  },
+  "homepage": "https://github.com/PedroReoli/Organon#readme",
+  "bugs": {
+    "url": "https://github.com/PedroReoli/Organon/issues"
+  },
+  "files": [
+    "bin/",
+    "dist/main/",
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "organon": "./bin/organon.cjs"
   },
@@ -17,7 +41,12 @@
     "build": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && vite build && node scripts/validate-build-output.cjs",
     "build:electron": "npm run build && electron-builder",
     "build:full": "npm run build:electron",
+    "typecheck": "tsc -p tsconfig.json --noEmit --pretty false",
+    "typecheck:node": "tsc -p tsconfig.node.json --pretty false",
+    "test": "npm run typecheck && npm run test:storage:v2 && electron scripts/validate-coherence.cjs",
+    "test:coherence": "npm run build && electron scripts/validate-coherence.cjs",
     "test:storage:v2": "npm run build && electron scripts/validate-storage-v2.cjs && node scripts/validate-cli-storage.cjs",
+    "prepack": "npm run build",
     "bump": "node scripts/bump-version.js",
     "bump:v": "node scripts/bump-version.js --version",
     "install:all": "node scripts/install-all.cjs",
@@ -35,8 +64,6 @@
     "weekly-planner",
     "drag-and-drop"
   ],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/react": "^18.3.28",

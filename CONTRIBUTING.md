@@ -30,9 +30,9 @@ Utilizamos o padrão de commits convencionais em português:
    ```bash
    git checkout -b feat/minha-nova-funcionalidade
    ```
-3. Realize suas alterações e teste localmente com:
+3. Realize suas alterações e execute a validação local:
    ```bash
-   npm run build
+   npm test
    ```
 4. Faça o commit das suas alterações:
    ```bash
@@ -52,3 +52,10 @@ Utilizamos o padrão de commits convencionais em português:
 - Evite variáveis `any`; use os tipos já declarados em `src/renderer/types`.
 - Componentes visuais devem ser organizados em arquivos limpos com CSS Modules ou estilos isolados.
 - Respeite a privacidade do usuário: nenhuma funcionalidade deve enviar dados do usuário a servidores externos sem consentimento explícito.
+- Leituras do data root devem ser livres de efeitos colaterais. Escritas precisam passar pelo motor transacional e declarar a revisão esperada.
+- Não inclua segredos, dumps de dados, worktrees locais ou artefatos privados em commits e pacotes.
+- Mudanças visuais exigem validação visual; build e typecheck, isoladamente, não substituem essa verificação.
+
+## Segurança
+
+Vulnerabilidades não devem ser detalhadas em issues públicas. Siga o processo descrito em [SECURITY.md](SECURITY.md).

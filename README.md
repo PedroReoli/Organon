@@ -37,7 +37,6 @@ O **Organon Desktop** é um ambiente integrado de produtividade e gestão do con
 ### 📚 3. Conhecimento & Documentação
 - **Editor Rico (Wysiwyg)**: Suporte completo a Markdown, listas de tarefas, blocos de código e diagramas Mermaid.
 - **Canvas Infinito**: Desenhe diagramas arquiteturais e fluxogramas diretamente no app integrado com Excalidraw.
-- **Playbooks de Comunicação**: Crie e reuse scripts e fluxos estruturados com facilidade.
 - **Biblioteca Local**: Centralize documentos e referências.
 
 ### 🎙️ 4. Whisper Transcrições & Ditado por Voz
@@ -63,8 +62,8 @@ O **Organon Desktop** é um ambiente integrado de produtividade e gestão do con
 ## 📦 Como Instalar e Rodar Localmente
 
 ### Pré-requisitos
-- [Node.js](https://nodejs.org/) (versão 18 ou superior)
-- [npm](https://www.npmjs.com/) ou [pnpm](https://pnpm.io/)
+- [Node.js](https://nodejs.org/) 20 ou superior
+- [npm](https://www.npmjs.com/)
 
 ### Passo a Passo
 
@@ -84,10 +83,26 @@ O **Organon Desktop** é um ambiente integrado de produtividade e gestão do con
    npm run dev
    ```
 
-4. **Para gerar o instalador de produção:**
+4. **Valide o armazenamento, a CLI e o build:**
    ```bash
-   npm run dist
+   npm test
    ```
+
+5. **Para gerar o instalador de produção:**
+   ```bash
+   npm run build:electron
+   ```
+
+## ⌨️ CLI local
+
+Após `npm run build`, a CLI usa o mesmo data root e o mesmo motor transacional do desktop:
+
+```bash
+npm run cli -- status --json
+npm run cli -- task list --json
+```
+
+Mutações usam lock entre processos, revisão compare-and-swap e journal. Se os artefatos compilados não estiverem disponíveis, a CLI recusa a escrita em vez de cair silenciosamente para um formato inseguro.
 
 ---
 
@@ -96,6 +111,8 @@ O **Organon Desktop** é um ambiente integrado de produtividade e gestão do con
 - **100% Local-First**: Todos os cartões, notas, transcrições e dados permanecem no seu disco local por padrão.
 - **Sem Rastreamento**: Zero telemetria invasiva ou envio não autorizado de dados a servidores externos.
 - **Sync Opcional**: A sincronização com backend é puramente opcional.
+- **Persistência por geração**: alterações de estado só ficam visíveis após a publicação atômica de uma geração validada.
+- **Relatos de segurança**: consulte [SECURITY.md](SECURITY.md) antes de divulgar uma vulnerabilidade.
 
 ---
 

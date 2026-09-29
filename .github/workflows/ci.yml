@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: node-${{ matrix.node }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 24]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate
+        run: npm test
+
+      - name: Verify public package boundary
+        if: matrix.node == 24
+        shell: pwsh
+        run: |
+          $package = npm pack --dry-run --ignore-scripts --json | ConvertFrom-Json
+          $paths = @($package.files.path)
+          $private = @($paths | Where-Object { $_ -match '^(\.kilo|\.privado|!reoli|\.claude)/' })
+          if ($private.Count -gt 0) {
+            throw "Private paths in npm package: $($private -join ', ')"
+          }
+          if ($paths -notcontains 'dist/main/storage/generationStore.js') {
+            throw 'Transactional storage engine is missing from npm package.'
+          }
+          if ($paths -notcontains 'bin/organon.cjs') {
+            throw 'CLI entry point is missing from npm package.'
+          }

@@ -1,0 +1,11 @@
+*
+!bin/
+!bin/**
+!dist/
+!dist/main/
+!dist/main/**
+!README.md
+!CONTRIBUTING.md
+!SECURITY.md
+!LICENSE
+!package.json
