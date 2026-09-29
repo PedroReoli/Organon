@@ -289,6 +289,77 @@
   flex-wrap: wrap;
 }
 
+.whisper-live-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.whisper-live-waveform {
+  height: 24px;
+  width: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.whisper-live-waveform span {
+  width: 2px;
+  flex: 0 0 2px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  opacity: 0.82;
+  transition: height 80ms linear;
+}
+
+.whisper-quality-badge {
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.13);
+  white-space: nowrap;
+}
+
+.whisper-quality-badge.silent,
+.whisper-quality-badge.low {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.whisper-quality-badge.clipping {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.whisper-audio-playback {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.whisper-audio-playback audio {
+  width: 100%;
+  height: 30px;
+}
+
+.whisper-audio-playback small {
+  max-width: 280px;
+  color: var(--color-text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
 .whisper-audio-spec-badge {
   font-size: 12px;
   font-weight: 500;

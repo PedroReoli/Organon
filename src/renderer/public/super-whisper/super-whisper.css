@@ -202,7 +202,6 @@ body {
 
 .sw-waveform.recording .sw-waveform-bar {
   background: var(--sw-primary);
-  animation: sw-wave 0.6s ease-in-out infinite;
 }
 
 .sw-waveform.recording .sw-waveform-bar:nth-child(1) { animation-delay: 0s; }
@@ -480,6 +479,85 @@ body {
   font-size: 9px;
   font-weight: 500;
   margin-right: 3px;
+}
+
+/* ---- Layouts da janela rápida ---- */
+html[data-layout="compact"] .sw-app,
+html[data-layout="recording"] .sw-app {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px;
+  gap: 6px;
+  border-radius: 18px;
+}
+
+html[data-layout="compact"] .sw-header,
+html[data-layout="recording"] .sw-header {
+  width: 28px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+}
+
+html[data-layout="compact"] .sw-header-left,
+html[data-layout="recording"] .sw-header-left,
+html[data-layout="compact"] .sw-transcription,
+html[data-layout="recording"] .sw-transcription,
+html[data-layout="compact"] .sw-history,
+html[data-layout="recording"] .sw-history,
+html[data-layout="compact"] .sw-hint,
+html[data-layout="recording"] .sw-hint {
+  display: none;
+}
+
+html[data-layout="compact"] .sw-status,
+html[data-layout="recording"] .sw-status {
+  min-width: 68px;
+  height: 44px;
+  padding: 6px 8px;
+}
+
+html[data-layout="compact"] .sw-status-message {
+  display: none;
+}
+
+html[data-layout="recording"] .sw-status {
+  min-width: 142px;
+}
+
+html[data-layout="recording"] .sw-status-message {
+  max-width: 72px;
+}
+
+html[data-layout="compact"] .sw-waveform,
+html[data-layout="recording"] .sw-waveform {
+  width: 72px;
+  height: 44px;
+  padding: 4px 6px;
+  gap: 2px;
+}
+
+html[data-layout="recording"] .sw-waveform {
+  width: 92px;
+}
+
+html[data-layout="compact"] .sw-toolbar,
+html[data-layout="recording"] .sw-toolbar {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+html[data-layout="compact"] .sw-toolbar .sw-btn:not(:first-child),
+html[data-layout="recording"] .sw-toolbar .sw-btn:not(:first-child) {
+  display: none;
+}
+
+html[data-layout="compact"] .sw-toolbar .sw-btn:first-child,
+html[data-layout="recording"] .sw-toolbar .sw-btn:first-child {
+  width: 100%;
+  height: 44px;
+  padding-inline: 10px;
 }
 
 /* ---- Scrollbar customizada ---- */

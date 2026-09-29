@@ -387,6 +387,8 @@ const electronAPI = {
   superWhisperHide: () => ipcRenderer.invoke('super-whisper:hide'),
   superWhisperToggle: () => ipcRenderer.invoke('super-whisper:toggle'),
   superWhisperIsOpen: () => ipcRenderer.invoke('super-whisper:is-open'),
+  superWhisperSetLayout: (layout: 'compact' | 'recording' | 'expanded') =>
+    ipcRenderer.invoke('super-whisper:set-layout', layout),
   onSuperWhisperTranscript: (cb: (text: string) => void) =>
     ipcRenderer.on('super-whisper:transcription', (_event, text) => cb(text)),
   offSuperWhisperTranscript: () => ipcRenderer.removeAllListeners('super-whisper:transcription'),

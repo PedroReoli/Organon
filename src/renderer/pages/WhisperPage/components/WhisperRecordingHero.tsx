@@ -1,5 +1,6 @@
 import React from 'react'
 import { Circle, Square, Sparkles, ExternalLink, Mic, Loader2, Radio } from 'lucide-react'
+import type { WhisperAudioMetrics } from '../types/whisper.types'
 
 export type RecordingModeType = 'meeting' | 'interview' | 'prompt'
 
@@ -16,6 +17,7 @@ interface Props {
   displayCaptureReady: boolean
   interimText: string
   durationSeconds: number
+  audioMetrics: WhisperAudioMetrics
   onGenerateNotes: () => void
   isGeneratingNote?: boolean
 }
@@ -32,6 +34,7 @@ export const WhisperRecordingHero: React.FC<Props> = ({
   displayCaptureReady,
   interimText,
   durationSeconds,
+  audioMetrics,
   onGenerateNotes,
   isGeneratingNote = false,
 }) => {
@@ -67,6 +70,13 @@ export const WhisperRecordingHero: React.FC<Props> = ({
       ? 'Microfone + Captura de Sistema Prontos'
       : 'Apenas Microfone Disponível'
 
+  const qualityLabel = {
+    silent: 'Sem sinal',
+    low: 'Sinal baixo',
+    good: 'Sinal bom',
+    clipping: 'Áudio saturando',
+  }[audioMetrics.quality]
+
   return (
     <section className={`whisper-hero-card ${isRecording ? 'recording' : ''}`} aria-label="Controle de Gravação">
       {/* Barra de Progresso Animada quando Gravando */}
@@ -88,10 +98,18 @@ export const WhisperRecordingHero: React.FC<Props> = ({
           )}
 
           {isRecording && (
-            <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <Radio size={12} style={{ color: '#ef4444' }} />
-              <span>Gravando ao vivo ({modeDetails[recordingMode].label})</span>
-            </span>
+            <div className="whisper-live-meter" aria-label={`Qualidade do áudio: ${qualityLabel}`}>
+              <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Radio size={12} style={{ color: '#ef4444' }} />
+                <span>Gravando ao vivo ({modeDetails[recordingMode].label})</span>
+              </span>
+              <div className="whisper-live-waveform" aria-hidden="true">
+                {(audioMetrics.waveform.length ? audioMetrics.waveform : Array(18).fill(0.08)).map((value, index) => (
+                  <span key={index} style={{ height: `${Math.max(3, value * 22)}px` }} />
+                ))}
+              </div>
+              <span className={`whisper-quality-badge ${audioMetrics.quality}`}>{qualityLabel}</span>
+            </div>
           )}
 
           {isTranscribing && (

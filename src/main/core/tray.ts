@@ -42,6 +42,27 @@ const THEMES: Record<string, { primary: string; background: string; surface: str
 
 export const getSuperWhisperWindow = (): BrowserWindow | null => superWhisperWindow
 
+type SuperWhisperLayout = 'compact' | 'recording' | 'expanded'
+
+const SUPER_WHISPER_LAYOUTS: Record<SuperWhisperLayout, { width: number; height: number }> = {
+  compact: { width: 360, height: 84 },
+  recording: { width: 420, height: 96 },
+  expanded: { width: 420, height: 420 },
+}
+
+function setSuperWhisperLayout(layout: SuperWhisperLayout): void {
+  if (!superWhisperWindow || superWhisperWindow.isDestroyed()) return
+  const { width, height } = SUPER_WHISPER_LAYOUTS[layout]
+  const display = screen.getDisplayMatching(superWhisperWindow.getBounds())
+  const workArea = display.workArea
+  superWhisperWindow.setBounds({
+    x: workArea.x + workArea.width - width - 20,
+    y: workArea.y + workArea.height - height - 20,
+    width,
+    height,
+  }, false)
+}
+
 /**
  * Cria um ícone profissional para o tray
  * Usa o PNG customizado do Organon se existir, senão gera fallback
@@ -143,8 +164,8 @@ export function createSuperWhisperWindow(): BrowserWindow {
   const resolvedPreload = preloadCandidates.find(p => fs.existsSync(p)) || preloadCandidates[0]
 
   superWhisperWindow = new BrowserWindow({
-    width: 420,
-    height: 420,
+    width: SUPER_WHISPER_LAYOUTS.compact.width,
+    height: SUPER_WHISPER_LAYOUTS.compact.height,
     frame: false,
     resizable: false,
     alwaysOnTop: true,
@@ -159,13 +180,7 @@ export function createSuperWhisperWindow(): BrowserWindow {
   })
 
   // Posição: canto inferior direito (respeitando offset da taskbar)
-  const primaryDisplay = screen.getPrimaryDisplay()
-  const { x: workX, y: workY, width: workW, height: workH } = primaryDisplay.workArea
-
-  superWhisperWindow.setPosition(
-    workX + workW - 440,   // 420 width + 20 margin
-    workY + workH - 440    // 420 height + 20 margin
-  )
+  setSuperWhisperLayout('compact')
 
   // Carrega a página do Super Whisper
   if (app.isPackaged) {
@@ -304,7 +319,18 @@ export function registerSuperWhisperIpc(): void {
   })
 
   ipcMain.handle('super-whisper:toggle', () => {
+    if (superWhisperWindow && !superWhisperWindow.isDestroyed() && superWhisperWindow.isVisible()) {
+      hideSuperWhisperWindow()
+      return
+    }
     showSuperWhisperWindow()
+  })
+
+  ipcMain.handle('super-whisper:set-layout', (_event, layout: SuperWhisperLayout) => {
+    if (!Object.prototype.hasOwnProperty.call(SUPER_WHISPER_LAYOUTS, layout)) {
+      throw new Error('Layout da janela rapida invalido.')
+    }
+    setSuperWhisperLayout(layout)
   })
 
   ipcMain.handle('super-whisper:is-open', () => {

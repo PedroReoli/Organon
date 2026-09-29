@@ -719,6 +719,7 @@ declare global {
       superWhisperHide: () => Promise<void>
       superWhisperToggle: () => Promise<void>
       superWhisperIsOpen: () => Promise<boolean>
+      superWhisperSetLayout: (layout: 'compact' | 'recording' | 'expanded') => Promise<void>
       superWhisperSend: (text: string) => Promise<void>
       superWhisperGetTheme: () => Promise<{ primary: string; background: string; surface: string; text: string } | null>
       onSuperWhisperTranscript: (cb: (text: string) => void) => void

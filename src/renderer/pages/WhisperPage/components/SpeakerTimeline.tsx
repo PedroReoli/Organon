@@ -16,6 +16,8 @@ interface Props {
   onMarkDecision?: (text: string) => void
   onSearchProject?: (query: string) => void
   onSearchWeb?: (query: string) => void
+  activePlaybackSegmentId?: string | null
+  onSeekSegment?: (segment: SpeakerSegment) => void
 }
 
 type SegmentActionId =
@@ -50,6 +52,8 @@ export const SpeakerTimeline: React.FC<Props> = ({
   onMarkDecision,
   onSearchProject,
   onSearchWeb,
+  activePlaybackSegmentId = null,
+  onSeekSegment,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -218,6 +222,7 @@ export const SpeakerTimeline: React.FC<Props> = ({
         const sourceKind = seg.sourceKind ?? (isUser ? 'microphone' : 'mixed')
         const isMultiSelected = selectedSegmentIds.includes(seg.id)
         const isSelected = selectedSegmentId === seg.id || isMultiSelected
+        const isPlaying = activePlaybackSegmentId === seg.id
         const isCopied = copiedId === seg.id
         const isHovered = hoveredId === seg.id
         const isActionsVisible = isHovered || openMenuId === seg.id || isSelected
@@ -277,12 +282,14 @@ export const SpeakerTimeline: React.FC<Props> = ({
               borderWidth: '1px 1px 1px 3.5px',
               borderColor: isMultiSelected
                 ? 'var(--color-primary)'
-                : isSelected
+                : isSelected || isPlaying
                   ? sourceTheme.border
                   : (isHovered ? 'color-mix(in srgb, var(--color-primary) 28%, var(--color-border))' : 'var(--color-border)'),
               background: isMultiSelected
                 ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))'
-                : isSelected
+                : isPlaying
+                  ? 'color-mix(in srgb, var(--color-primary) 13%, var(--color-surface))'
+                  : isSelected
                   ? 'color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))'
                   : isHovered
                     ? 'color-mix(in srgb, var(--color-primary) 3%, var(--color-surface))'
@@ -373,9 +380,28 @@ export const SpeakerTimeline: React.FC<Props> = ({
                   </span>
                 )}
 
-                <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                <button
+                  type="button"
+                  disabled={!onSeekSegment}
+                  onClick={event => {
+                    event.stopPropagation()
+                    onSeekSegment?.(seg)
+                  }}
+                  title={onSeekSegment ? 'Reproduzir a partir deste trecho' : undefined}
+                  style={{
+                    padding: 0,
+                    border: 'none',
+                    background: 'transparent',
+                    font: 'inherit',
+                    fontSize: '10.5px',
+                    color: isPlaying ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                    fontWeight: isPlaying ? 800 : 500,
+                    whiteSpace: 'nowrap',
+                    cursor: onSeekSegment ? 'pointer' : 'default',
+                  }}
+                >
                   {seg.timestamp}
-                </span>
+                </button>
               </div>
 
               {/* Botão de Ações em Hover */}

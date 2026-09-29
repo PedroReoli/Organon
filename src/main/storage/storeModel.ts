@@ -9,6 +9,7 @@ import type {
   ShortcutFolder,
   ShortcutItem,
   ShortcutItemInput,
+  Settings,
   Store,
   StudyGoal,
   StudyMediaItem,

@@ -1,5 +1,5 @@
 import { MeetingResearchConsole } from './components/MeetingResearchConsole'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { Meeting, Settings } from '@types'
 import { WhisperSidebar } from './components/WhisperSidebar'
 import { SpeakerTimeline } from './components/SpeakerTimeline'
@@ -90,6 +90,7 @@ export const WhisperPage: React.FC<Props> = ({
     interimText,
     systemCaptureActive,
     durationSeconds,
+    audioMetrics,
     liveSegments,
     setLiveSegments,
     liveReport,
@@ -111,6 +112,30 @@ export const WhisperPage: React.FC<Props> = ({
   })
 
   const displaySegments = isRecording || isTranscribing ? liveSegments : selectedRecord?.segments || records[0]?.segments || []
+  const playbackRecord = selectedRecord || records[0]
+  const audioElementRef = useRef<HTMLAudioElement | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [playbackMs, setPlaybackMs] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    setAudioUrl(null)
+    setPlaybackMs(0)
+    const audioPath = playbackRecord?.audio?.path || playbackRecord?.audioUrl
+    if (!audioPath || !window.electronAPI?.getMeetingAudioUrl) return () => { active = false }
+    void window.electronAPI.getMeetingAudioUrl(audioPath).then(url => {
+      if (active) setAudioUrl(url)
+    })
+    return () => { active = false }
+  }, [playbackRecord?.id, playbackRecord?.audio?.path, playbackRecord?.audioUrl])
+
+  const activePlaybackSegmentId = audioUrl
+    ? displaySegments.find(segment => {
+      const start = segment.startMs ?? 0
+      const end = segment.endMs ?? start
+      return playbackMs >= start && playbackMs <= end
+    })?.id ?? null
+    : null
 
   // 4. Hook de Seleção Múltipla, Ações e Geração de Nota
   const {
@@ -150,6 +175,17 @@ export const WhisperPage: React.FC<Props> = ({
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false)
   const [activeSideTab, setActiveSideTab] = useState<'intelligence' | 'summary'>('intelligence')
   const [isContextBarOpen, setIsContextBarOpen] = useState(false)
+  const [quickWindowOpen, setQuickWindowOpen] = useState(false)
+
+  useEffect(() => {
+    void window.electronAPI?.superWhisperIsOpen?.().then(setQuickWindowOpen)
+  }, [])
+
+  const handleToggleQuickWindow = async () => {
+    await window.electronAPI?.superWhisperToggle?.()
+    const isOpen = await window.electronAPI?.superWhisperIsOpen?.()
+    setQuickWindowOpen(Boolean(isOpen))
+  }
 
   const activeTasksCount = (intelligenceData.tasks || []).filter(
     (t) => t.status === 'running' || t.status === 'queued'
@@ -287,6 +323,9 @@ export const WhisperPage: React.FC<Props> = ({
             displayCaptureReady={captureReadiness.displayCaptureReady}
             interimText={interimText}
             durationSeconds={durationSeconds}
+            audioMetrics={audioMetrics}
+            onToggleQuickWindow={() => { void handleToggleQuickWindow() }}
+            quickWindowOpen={quickWindowOpen}
             onGenerateNotes={() => { setIsIntelligencePanelOpen(true); void handleAskAgents('Gere notas desta reunião com respostas pesquisadas, decisões e próximos passos.', 'report') }}
             isGeneratingNote={isGeneratingNote}
           />
@@ -372,8 +411,31 @@ export const WhisperPage: React.FC<Props> = ({
             </div>
 
             <div className="whisper-timeline-card">
+              {audioUrl && (
+                <div className="whisper-audio-playback">
+                  <span>Áudio original</span>
+                  <audio
+                    ref={audioElementRef}
+                    controls
+                    preload="metadata"
+                    src={audioUrl}
+                    onTimeUpdate={event => setPlaybackMs(event.currentTarget.currentTime * 1000)}
+                  />
+                  <small>
+                    {playbackRecord?.timingPrecision === 'none'
+                      ? 'Transcrição sem timestamps precisos; o replay usa a faixa disponível.'
+                      : 'Clique no horário de uma fala para buscar no áudio.'}
+                  </small>
+                </div>
+              )}
               <SpeakerTimeline
                 segments={displaySegments}
+                activePlaybackSegmentId={activePlaybackSegmentId}
+                onSeekSegment={segment => {
+                  if (!audioElementRef.current) return
+                  audioElementRef.current.currentTime = Math.max(0, (segment.startMs ?? 0) / 1000)
+                  void audioElementRef.current.play()
+                }}
                 selectedSegmentId={selectedSegmentId}
                 selectedSegmentIds={selectedSegmentIds}
                 onSelectSegment={handleSelectSegmentWithModifier}

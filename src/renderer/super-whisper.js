@@ -36,6 +36,12 @@ const charCount = $('charCount')
 const historyList = $('historyList')
 const historyCount = $('historyCount')
 const historyDetails = $('historyDetails')
+const waveformBars = [...waveform.querySelectorAll('.sw-waveform-bar')]
+
+async function setLayout(layout) {
+  document.documentElement.dataset.layout = layout
+  await window.electronAPI?.superWhisperSetLayout?.(layout)
+}
 
 // ============================================================
 // TEMA DINÂMICO (sincronizado com o app)
@@ -130,8 +136,28 @@ let mediaRecorder = null
 let mediaChunks = []
 
 let busy = false
-let meterContext = null
-let meterFrame = 0
+let lastSignalAt = 0
+
+function updateAudioMeter({ rms, peak }) {
+  const amplitude = Math.min(1, Math.max(rms * 7, peak * 0.72))
+  waveformBars.forEach((bar, index) => {
+    const shape = 0.45 + Math.sin((index + 1) * 1.7) * 0.18 + (index % 3) * 0.08
+    bar.style.height = `${Math.max(4, amplitude * 30 * shape)}px`
+  })
+
+  if (peak >= 0.98) {
+    setStatus('error', 'Áudio saturando — afaste o microfone')
+  } else if (rms >= 0.03) {
+    lastSignalAt = Date.now()
+    setStatus('listening', 'Sinal bom')
+  } else if (rms >= 0.006) {
+    lastSignalAt = Date.now()
+    setStatus('listening', 'Sinal baixo')
+  } else if (Date.now() - lastSignalAt > 1500) {
+    setStatus('listening', 'Sem voz detectada')
+  }
+}
+
 async function startRecording() {
   if (busy || isRecording) return
   busy = true
@@ -140,19 +166,11 @@ async function startRecording() {
     mediaChunks = []
     mediaRecorder = await WhisperPcmRecorder.create(stream)
     mediaRecorder.ondataavailable = e => { if (e.data.size) mediaChunks.push(e.data) }
+    mediaRecorder.onlevel = updateAudioMeter
     mediaRecorder.start(250)
     isRecording = true
-    meterContext = new AudioContext()
-    const analyser = meterContext.createAnalyser()
-    meterContext.createMediaStreamSource(stream).connect(analyser)
-    const samples = new Uint8Array(analyser.frequencyBinCount)
-    const draw = () => {
-      analyser.getByteFrequencyData(samples)
-      const level = samples.reduce((a, b) => a + b, 0) / samples.length / 128
-      waveform.style.transform = `scaleY(${0.15 + Math.min(1, level)})`
-      meterFrame = requestAnimationFrame(draw)
-    }
-    draw()
+    lastSignalAt = Date.now()
+    await setLayout('recording')
     recordBtn.dataset.recording = 'true'
     recordBtnText.textContent = 'Parar'
     waveform.classList.add('recording')
@@ -160,7 +178,10 @@ async function startRecording() {
     timerInterval = setInterval(updateTimer, 1000)
     setStatus('listening', 'Ouvindo…')
     sendBtn.disabled = copyBtn.disabled = true
-  } catch (error) { setStatus('error', error.message || 'Não foi possível acessar o microfone.') }
+  } catch (error) {
+    await setLayout('expanded')
+    setStatus('error', error.message || 'Não foi possível acessar o microfone.')
+  }
   finally { busy = false }
 }
 
@@ -172,9 +193,8 @@ async function stopRecording() {
   try {
     await stopRecorder(mediaRecorder)
     mediaRecorder.stream.getTracks().forEach(track => track.stop())
-    cancelAnimationFrame(meterFrame)
-    await meterContext?.close()
     clearInterval(timerInterval)
+    await setLayout('expanded')
     setStatus('listening', 'Transcrevendo…')
     const blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType })
     transcriptionText.value = await transcribeAudioBlobWithFallback(blob, undefined, { mode: 'prompt' })
@@ -189,6 +209,7 @@ async function stopRecording() {
     recordBtn.dataset.recording = 'false'
     recordBtnText.textContent = 'Gravar'
     waveform.classList.remove('recording')
+    waveformBars.forEach(bar => { bar.style.height = '6px' })
   }
 }
 
@@ -224,13 +245,14 @@ function updateCharCount() {
   charCount.textContent = `${count} caractere${count !== 1 ? 's' : ''}`
 }
 
-function clearAll() {
-  if (isRecording) stopRecording()
+async function clearAll() {
+  if (isRecording) await stopRecording()
   transcriptionText.value = ''
   sendBtn.disabled = true
   copyBtn.disabled = true
   setStatus('ready', 'Pronto para gravar')
   updateCharCount()
+  await setLayout('compact')
 }
 
 // ============================================================
@@ -309,6 +331,7 @@ function renderHistory() {
     div.title = item.text
 
     div.addEventListener('click', () => {
+      void setLayout('expanded')
       transcriptionText.value = item.text
       updateCharCount()
       sendBtn.disabled = false
@@ -379,7 +402,11 @@ async function sendToAI() {
 
 async function closeWindow() {
   if (busy) return
-  if (isRecording) await stopRecording()
+  if (isRecording) {
+    const shouldStop = confirm('Há uma gravação ativa. Deseja encerrar e processar antes de fechar?')
+    if (!shouldStop) return
+    await stopRecording()
+  }
   await window.electronAPI?.superWhisperHide()
 }
 
@@ -422,9 +449,12 @@ document.addEventListener('keydown', (e) => {
 recordBtn.addEventListener('click', toggleRecording)
 sendBtn.addEventListener('click', sendToAI)
 copyBtn.addEventListener('click', copyText)
-clearBtn.addEventListener('click', clearAll)
+clearBtn.addEventListener('click', () => { void clearAll() })
 closeBtn.addEventListener('click', closeWindow)
 transcriptionText.addEventListener('input', updateCharCount)
+historyDetails.addEventListener('toggle', () => {
+  if (historyDetails.open) void setLayout('expanded')
+})
 
 // ============================================================
 // INIT
@@ -432,6 +462,7 @@ transcriptionText.addEventListener('input', updateCharCount)
 
 ;(async () => {
   await loadTheme()
+  await setLayout('compact')
   setStatus('ready', 'Pronto para gravar (R)')
   renderHistory()
   updateCharCount()
