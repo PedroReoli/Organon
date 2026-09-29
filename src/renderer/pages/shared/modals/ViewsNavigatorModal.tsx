@@ -4,6 +4,10 @@ import type { Card, Note } from '@types'
 import { DEFAULT_NAVBAR_ITEMS, renderNavIcon } from '../navConfig'
 import { FileText, Plus, Bot, RefreshCw, LayoutGrid, CheckSquare } from 'lucide-react'
 import { CommandDefinition, rankCommands } from '../../../commands/commandRegistry'
+import { computeVirtualWindow } from '../../../utils/virtualWindow'
+
+const PALETTE_VIRTUAL_THRESHOLD = 100
+const PALETTE_ROW_HEIGHT = 52
 
 export interface ViewsNavigatorModalProps {
   notes?: Note[]
@@ -41,10 +45,20 @@ export const ViewsNavigatorModal = ({
 }: ViewsNavigatorModalProps) => {
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(420)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  useEffect(() => {
+    const element = listRef.current
+    if (!element) return
+    const observer = new ResizeObserver(entries => setViewportHeight(entries[0]?.contentRect.height || 420))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   // Build items list
   const paletteItems = useMemo<CommandDefinition[]>(() => {
@@ -162,9 +176,35 @@ export const ViewsNavigatorModal = ({
   useEffect(() => { setCursor(0) }, [query])
 
   useEffect(() => {
-    const el = listRef.current?.querySelector(`[data-idx="${cursor}"]`) as HTMLElement | null
-    el?.scrollIntoView({ block: 'nearest' })
-  }, [cursor])
+    setScrollTop(0)
+    if (listRef.current) listRef.current.scrollTop = 0
+  }, [query])
+
+  const virtualWindow = useMemo(() => computeVirtualWindow({
+    itemCount: paletteItems.length,
+    scrollOffset: scrollTop,
+    viewportSize: viewportHeight,
+    itemSize: PALETTE_ROW_HEIGHT,
+    threshold: PALETTE_VIRTUAL_THRESHOLD,
+  }), [paletteItems.length, scrollTop, viewportHeight])
+
+  const visiblePaletteItems = virtualWindow.virtualized
+    ? paletteItems.slice(virtualWindow.start, virtualWindow.end)
+    : paletteItems
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    if (virtualWindow.virtualized) {
+      const top = cursor * PALETTE_ROW_HEIGHT
+      const bottom = top + PALETTE_ROW_HEIGHT
+      if (top < list.scrollTop) list.scrollTop = top
+      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+      return
+    }
+    const element = list.querySelector(`[data-idx="${cursor}"]`) as HTMLElement | null
+    element?.scrollIntoView({ block: 'nearest' })
+  }, [cursor, virtualWindow.virtualized])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -205,8 +245,17 @@ export const ViewsNavigatorModal = ({
           <kbd className="vn-kbd">Esc</kbd>
         </div>
 
-        <div className="vn-list" ref={listRef}>
-          {paletteItems.map((item, idx) => {
+        <div
+          className="vn-list"
+          ref={listRef}
+          role="listbox"
+          aria-label="Resultados da paleta"
+          aria-setsize={paletteItems.length}
+          onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
+        >
+          {virtualWindow.before > 0 && <div aria-hidden="true" style={{ height: virtualWindow.before }} />}
+          {visiblePaletteItems.map((item, visibleIndex) => {
+            const idx = virtualWindow.start + visibleIndex
             const isActive = cursor === idx
             const view = item.id.startsWith('view:') ? item.id.slice(5) : null
             const iconId = view ? DEFAULT_NAVBAR_ITEMS.find(entry => entry.view === view)?.iconId : null
@@ -225,8 +274,12 @@ export const ViewsNavigatorModal = ({
               <button
                 key={item.id}
                 type="button"
+                role="option"
+                aria-selected={isActive}
+                aria-posinset={idx + 1}
                 data-idx={idx}
                 className={`vn-item ${isActive ? 'is-active' : ''}`}
+                style={virtualWindow.virtualized ? { height: PALETTE_ROW_HEIGHT, minHeight: PALETTE_ROW_HEIGHT } : undefined}
                 onMouseEnter={() => setCursor(idx)}
                 onClick={() => {
                   void item.run()
@@ -248,6 +301,7 @@ export const ViewsNavigatorModal = ({
               </button>
             )
           })}
+          {virtualWindow.after > 0 && <div aria-hidden="true" style={{ height: virtualWindow.after }} />}
 
           {paletteItems.length === 0 && (
             <div className="vn-empty">Nenhum resultado encontrado para "{query}"</div>
