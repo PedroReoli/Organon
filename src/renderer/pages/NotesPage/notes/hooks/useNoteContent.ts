@@ -10,6 +10,7 @@ interface UseNoteContentParams {
   folders: NoteFolder[]
   onUpdateNote:   (noteId: string, updates: Partial<Pick<Note, 'title'>>) => void
   onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name'>>) => void
+  onSaveStateChange?: (status: 'idle' | 'saving' | 'saved' | 'conflict', savedAt?: string) => void
 }
 
 export interface NoteContentApi {
@@ -33,7 +34,7 @@ export interface NoteContentApi {
 }
 
 export function useNoteContent({
-  selectedNoteId, selectedFolderId, notes, folders, onUpdateNote, onUpdateFolder,
+  selectedNoteId, selectedFolderId, notes, folders, onUpdateNote, onUpdateFolder, onSaveStateChange,
 }: UseNoteContentParams): NoteContentApi {
   const [noteContent,     setNoteContent]     = useState('')
   const [noteTitle,       setNoteTitle]       = useState('')
@@ -137,6 +138,7 @@ export function useNoteContent({
 
   const handleContentChange = useCallback((noteId: string, html: string) => {
     if (currentNoteIdRef.current !== noteId) return
+    onSaveStateChange?.('saving')
     
     // Backup instantâneo em memória/localStorage para prevenir perda por fechamento súbito
     if (typeof localStorage !== 'undefined') {
@@ -154,14 +156,22 @@ export function useNoteContent({
       if (!note || note.isLocked) return
       if (isElectron() && note.mdPath) {
         window.electronAPI.writeNote(note.mdPath, html)
-          .then(() => {
-            // Sucesso na escrita no disco
+          .then(saved => {
+            if (currentNoteIdRef.current !== noteId) return
+            if (!saved) {
+              onSaveStateChange?.('conflict')
+              return
+            }
+            localStorage.removeItem(`organon:note-backup:${noteId}`)
+            onSaveStateChange?.('saved', new Date().toISOString())
           })
-          .catch(() => {})
+          .catch(() => onSaveStateChange?.('conflict'))
+      } else {
+        onSaveStateChange?.('saved', new Date().toISOString())
       }
       onUpdateNote(note.id, { title: note.title })
     }, 450)
-  }, [notes, onUpdateNote])
+  }, [notes, onUpdateNote, onSaveStateChange])
 
   const handleTitleBlur = useCallback(() => {
     if (!selectedNote || !noteTitle.trim() || selectedNote.isLocked) return

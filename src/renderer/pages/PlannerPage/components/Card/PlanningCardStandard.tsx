@@ -22,6 +22,8 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
         return (
             <div
                 ref={setNodeRef}
+                data-planning-task-id={task.id}
+                aria-label={`Tarefa ${task.title}`}
                 style={{
                     ...style,
                     padding: '12px',
@@ -62,6 +64,10 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
 
     return (
         <div
+            data-planning-task-id={task.id}
+            tabIndex={0}
+            role="button"
+            aria-label={`Tarefa ${task.title}`}
             onClick={onEdit}
             onContextMenu={(e) => {
                 e.preventDefault();

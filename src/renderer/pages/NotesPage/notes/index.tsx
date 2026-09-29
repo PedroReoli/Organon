@@ -35,7 +35,6 @@ export const NotesView = ({
   const [showOutline, setShowOutline] = React.useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = React.useState<AutoSaveStatus>('idle')
   const [lastSavedAt, setLastSavedAt] = React.useState<string | null>(null)
-  const autoSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showBacklinks, setShowBacklinks] = React.useState(false)
   const [showGraph, setShowGraph] = React.useState(false)
   const [graphMode, setGraphMode] = React.useState<'notes' | 'projects'>('notes')
@@ -94,6 +93,10 @@ export const NotesView = ({
     selectedNoteId:   tree.selectedNoteId,
     selectedFolderId: tree.selectedFolderId,
     notes: visibleNotes, folders: visibleFolders, onUpdateNote, onUpdateFolder,
+    onSaveStateChange: (status, savedAt) => {
+      setAutoSaveStatus(status)
+      if (savedAt) setLastSavedAt(savedAt)
+    },
   })
 
   // Listener para aplicar texto do assistente diretamente na nota ativa
@@ -130,20 +133,6 @@ export const NotesView = ({
     () => tree.selectedNote?.bookmarks ?? [],
     [tree.selectedNote],
   )
-
-  // Auto-save indicator: marca 'saving' ao mudar conteudo, 'saved' apos 1.5s sem nova mudanca
-  React.useEffect(() => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
-    setAutoSaveStatus('saving')
-    autoSaveTimerRef.current = setTimeout(() => {
-      setLastSavedAt(new Date().toISOString())
-      setAutoSaveStatus('saved')
-      setTimeout(() => setAutoSaveStatus('idle'), 3000)
-    }, 1500)
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
-    }
-  }, [content.noteContent])
 
   // Bookmark management
   const addBookmark = React.useCallback(() => {

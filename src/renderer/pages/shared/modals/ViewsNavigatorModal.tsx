@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppView } from '../InternalNav'
-import type { Note } from '@types'
+import type { Card, Note } from '@types'
 import { DEFAULT_NAVBAR_ITEMS, renderNavIcon } from '../navConfig'
-import { FileText, Plus, Bot, RefreshCw, LayoutGrid } from 'lucide-react'
+import { FileText, Plus, Bot, RefreshCw, LayoutGrid, CheckSquare } from 'lucide-react'
+import { CommandDefinition, rankCommands } from '../../../commands/commandRegistry'
 
 export interface ViewsNavigatorModalProps {
   notes?: Note[]
+  cards?: Card[]
   onNavigate: (view: AppView) => void
   onSelectNote?: (noteId: string) => void
   onAddNote?: (title: string) => void
@@ -13,16 +15,6 @@ export interface ViewsNavigatorModalProps {
   onOpenChat?: () => void
   onOpenSync?: () => void
   onClose: () => void
-}
-
-interface PaletteItem {
-  id: string
-  type: 'view' | 'note' | 'action'
-  label: string
-  sublabel?: string
-  badge: string
-  icon: React.ReactNode
-  onSelect: () => void
 }
 
 const ALL_VIEWS = [
@@ -38,6 +30,7 @@ const ALL_VIEWS = [
 
 export const ViewsNavigatorModal = ({
   notes = [],
+  cards = [],
   onNavigate,
   onSelectNote,
   onAddNote,
@@ -54,32 +47,34 @@ export const ViewsNavigatorModal = ({
   useEffect(() => { inputRef.current?.focus() }, [])
 
   // Build items list
-  const paletteItems = useMemo<PaletteItem[]>(() => {
+  const paletteItems = useMemo<CommandDefinition[]>(() => {
     const q = query.trim().toLowerCase()
-    const items: PaletteItem[] = []
+    const items: CommandDefinition[] = []
 
     // 1. Quick Actions when query is typed
     if (q) {
       if (onAddNote) {
         items.push({
           id: `action:add-note`,
-          type: 'action',
-          label: `Criar nota "${query.trim()}"`,
-          sublabel: 'Abre no editor de notas',
-          badge: 'AÇÃO',
-          icon: <Plus className="w-4 h-4 text-emerald-400" />,
-          onSelect: () => onAddNote(query.trim()),
+          group: 'action',
+          title: `Criar nota "${query.trim()}"`,
+          description: 'Abre no editor de notas',
+          keywords: ['criar', 'nova', 'nota'],
+          mutates: true,
+          preview: `Criará uma nota com o título "${query.trim()}".`,
+          run: () => { onAddNote(query.trim()); return { ok: true } },
         })
       }
       if (onAddCard) {
         items.push({
           id: `action:add-card`,
-          type: 'action',
-          label: `Criar tarefa "${query.trim()}"`,
-          sublabel: 'Adiciona no planejamento',
-          badge: 'AÇÃO',
-          icon: <Plus className="w-4 h-4 text-indigo-400" />,
-          onSelect: () => onAddCard(query.trim()),
+          group: 'action',
+          title: `Criar tarefa "${query.trim()}"`,
+          description: 'Adiciona no planejamento',
+          keywords: ['criar', 'nova', 'tarefa', 'card'],
+          mutates: true,
+          preview: `Criará uma tarefa com o título "${query.trim()}".`,
+          run: () => { onAddCard(query.trim()); return { ok: true } },
         })
       }
     } else {
@@ -87,23 +82,24 @@ export const ViewsNavigatorModal = ({
       if (onOpenChat) {
         items.push({
           id: 'action:open-chat',
-          type: 'action',
-          label: 'Conversar com Assistente IA',
-          sublabel: 'Abre o chatbot lateral',
-          badge: 'IA',
-          icon: <Bot className="w-4 h-4 text-indigo-400" />,
-          onSelect: () => onOpenChat(),
+          group: 'action',
+          title: 'Conversar com Assistente IA',
+          description: 'Abre o chatbot lateral',
+          keywords: ['chat', 'ia', 'assistente'],
+          shortcut: 'Ctrl+\'',
+          mutates: false,
+          run: () => onOpenChat(),
         })
       }
       if (onOpenSync) {
         items.push({
           id: 'action:open-sync',
-          type: 'action',
-          label: 'Sincronização Local & Rede',
-          sublabel: 'Status do servidor e pareamento',
-          badge: 'SYNC',
-          icon: <RefreshCw className="w-4 h-4 text-cyan-400" />,
-          onSelect: () => onOpenSync(),
+          group: 'action',
+          title: 'Sincronização Local & Rede',
+          description: 'Status do servidor e pareamento',
+          keywords: ['sync', 'sincronizar', 'rede'],
+          mutates: false,
+          run: () => onOpenSync(),
         })
       }
     }
@@ -113,15 +109,14 @@ export const ViewsNavigatorModal = ({
       !q || v.label.toLowerCase().includes(q) || v.description.toLowerCase().includes(q)
     )
     for (const v of filteredViews) {
-      const iconId = DEFAULT_NAVBAR_ITEMS.find(i => i.view === v.view)?.iconId
       items.push({
         id: `view:${v.view}`,
-        type: 'view',
-        label: v.label,
-        sublabel: v.description || undefined,
-        badge: 'TELA',
-        icon: iconId ? renderNavIcon(iconId) : <LayoutGrid className="w-4 h-4 text-slate-400" />,
-        onSelect: () => onNavigate(v.view),
+        group: 'view',
+        title: v.label,
+        description: v.description || undefined,
+        keywords: [v.view, v.label, v.description],
+        mutates: false,
+        run: () => onNavigate(v.view),
       })
     }
 
@@ -134,12 +129,12 @@ export const ViewsNavigatorModal = ({
       for (const n of matchingNotes) {
         items.push({
           id: `note:${n.id}`,
-          type: 'note',
-          label: n.title || 'Nota sem título',
-          sublabel: n.content ? n.content.replace(/[#*`\n]/g, ' ').slice(0, 50) : undefined,
-          badge: 'NOTA',
-          icon: <FileText className="w-4 h-4 text-amber-400" />,
-          onSelect: () => {
+          group: 'note',
+          title: n.title || 'Nota sem título',
+          description: n.content ? n.content.replace(/[#*`\n]/g, ' ').slice(0, 80) : undefined,
+          keywords: [n.title || '', n.content || '', 'nota'],
+          mutates: false,
+          run: () => {
             if (onSelectNote) onSelectNote(n.id)
             else onNavigate('notes')
           },
@@ -147,8 +142,22 @@ export const ViewsNavigatorModal = ({
       }
     }
 
-    return items
-  }, [query, notes, onNavigate, onSelectNote, onAddNote, onAddCard, onOpenChat, onOpenSync])
+    if (q && cards.length > 0) {
+      for (const card of cards.slice(0, 500)) {
+        items.push({
+          id: `task:${card.id}`,
+          group: 'task',
+          title: card.title || 'Tarefa sem título',
+          description: card.description || 'Abrir no Planejador',
+          keywords: [card.title || '', card.description || '', card.priority || '', 'tarefa', 'card'],
+          mutates: false,
+          run: () => onNavigate('planner'),
+        })
+      }
+    }
+
+    return rankCommands(items, query)
+  }, [query, notes, cards, onNavigate, onSelectNote, onAddNote, onAddCard, onOpenChat, onOpenSync])
 
   useEffect(() => { setCursor(0) }, [query])
 
@@ -170,7 +179,7 @@ export const ViewsNavigatorModal = ({
       e.preventDefault()
       const item = paletteItems[cursor]
       if (item) {
-        item.onSelect()
+        void item.run()
         onClose()
       }
     }
@@ -199,6 +208,19 @@ export const ViewsNavigatorModal = ({
         <div className="vn-list" ref={listRef}>
           {paletteItems.map((item, idx) => {
             const isActive = cursor === idx
+            const view = item.id.startsWith('view:') ? item.id.slice(5) : null
+            const iconId = view ? DEFAULT_NAVBAR_ITEMS.find(entry => entry.view === view)?.iconId : null
+            const icon = item.group === 'note'
+              ? <FileText className="w-4 h-4 text-amber-400" />
+              : item.group === 'task'
+                ? <CheckSquare className="w-4 h-4 text-indigo-400" />
+                : item.id === 'action:open-chat'
+                  ? <Bot className="w-4 h-4 text-indigo-400" />
+                  : item.id === 'action:open-sync'
+                    ? <RefreshCw className="w-4 h-4 text-cyan-400" />
+                    : item.mutates
+                      ? <Plus className="w-4 h-4 text-emerald-400" />
+                      : iconId ? renderNavIcon(iconId) : <LayoutGrid className="w-4 h-4 text-slate-400" />
             return (
               <button
                 key={item.id}
@@ -207,21 +229,21 @@ export const ViewsNavigatorModal = ({
                 className={`vn-item ${isActive ? 'is-active' : ''}`}
                 onMouseEnter={() => setCursor(idx)}
                 onClick={() => {
-                  item.onSelect()
+                  void item.run()
                   onClose()
                 }}
               >
-                <span className="vn-item-icon">{item.icon}</span>
+                <span className="vn-item-icon">{icon}</span>
                 <div className="flex-1 flex flex-col text-left min-w-0">
-                  <span className="vn-item-label truncate">{item.label}</span>
-                  {item.sublabel && (
+                  <span className="vn-item-label truncate">{item.title}</span>
+                  {item.description && (
                     <span className="text-[11px] text-slate-400 truncate leading-tight">
-                      {item.sublabel}
+                      {item.description}
                     </span>
                   )}
                 </div>
                 <span className="text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/5 text-slate-400 shrink-0 ml-2">
-                  {item.badge}
+                  {item.shortcut || item.group.toUpperCase()}
                 </span>
               </button>
             )

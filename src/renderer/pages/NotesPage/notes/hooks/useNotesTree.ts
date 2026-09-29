@@ -85,12 +85,46 @@ export function useNotesTree({
 
   const favorites  = useMemo(() => notes.filter(n => n.isFavorite), [notes])
   const pinned     = useMemo(() => notes.filter(n => n.isPinned && !n.isFavorite), [notes])
-  const rootFolders = useMemo(() => folders.filter(f => !f.parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [folders])
-  const rootNotes   = useMemo(() => notes.filter(n => !n.folderId && !n.parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [notes])
+  const folderChildrenIndex = useMemo(() => {
+    const index = new Map<string, NoteFolder[]>()
+    for (const folder of folders) {
+      const key = folder.parentId || '__root__'
+      const entries = index.get(key) || []
+      entries.push(folder)
+      index.set(key, entries)
+    }
+    for (const entries of index.values()) entries.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    return index
+  }, [folders])
+  const noteChildrenIndex = useMemo(() => {
+    const byFolder = new Map<string, Note[]>()
+    const byParentNote = new Map<string, Note[]>()
+    const root: Note[] = []
+    for (const note of notes) {
+      if (note.parentNoteId) {
+        const entries = byParentNote.get(note.parentNoteId) || []
+        entries.push(note)
+        byParentNote.set(note.parentNoteId, entries)
+      } else if (note.folderId) {
+        const entries = byFolder.get(note.folderId) || []
+        entries.push(note)
+        byFolder.set(note.folderId, entries)
+      } else {
+        root.push(note)
+      }
+    }
+    const sort = (entries: Note[]) => entries.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    for (const entries of byFolder.values()) sort(entries)
+    for (const entries of byParentNote.values()) sort(entries)
+    sort(root)
+    return { byFolder, byParentNote, root }
+  }, [notes])
+  const rootFolders = folderChildrenIndex.get('__root__') || []
+  const rootNotes = noteChildrenIndex.root
 
-  const childFolders  = useCallback((parentId: string) => folders.filter(f => f.parentId === parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [folders])
-  const notesInFolder = useCallback((folderId: string) => notes.filter(n => n.folderId === folderId && !n.parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [notes])
-  const subNotes      = useCallback((parentNoteId: string) => notes.filter(n => n.parentNoteId === parentNoteId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [notes])
+  const childFolders  = useCallback((parentId: string) => folderChildrenIndex.get(parentId) || [], [folderChildrenIndex])
+  const notesInFolder = useCallback((folderId: string) => noteChildrenIndex.byFolder.get(folderId) || [], [noteChildrenIndex])
+  const subNotes      = useCallback((parentNoteId: string) => noteChildrenIndex.byParentNote.get(parentNoteId) || [], [noteChildrenIndex])
 
   const searchResults = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
@@ -162,10 +196,10 @@ export function useNotesTree({
     const stack = [selectedFolder.id]
     while (stack.length > 0) {
       const cur = stack.pop(); if (!cur || ids.has(cur)) continue; ids.add(cur)
-      folders.forEach(f => { if (f.parentId === cur) stack.push(f.id) })
+      childFolders(cur).forEach(folder => stack.push(folder.id))
     }
     return ids
-  }, [folders, selectedFolder])
+  }, [childFolders, selectedFolder])
 
   const folderNotesWithPath = useMemo(() => {
     if (!selectedFolder) return []

@@ -73,6 +73,9 @@ export const ContinuousTaskCard = ({ task, project, onEdit, onUpdateTask }: Cont
   return (
     <article
       ref={setNodeRef}
+      data-planning-task-id={task.id}
+      tabIndex={0}
+      aria-label={`Tarefa ${task.title}`}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1, borderTopColor: project?.color || priority.color }}
       onClick={() => onEdit(task.id)}
       className="group relative min-h-[120px] rounded-xl border border-white/5 border-t-2 bg-[#131B2E] p-3 shadow-[0_8px_24px_rgba(0,0,0,.16)] transition-colors duration-150 hover:border-indigo-400/35 hover:bg-[#172139] focus-within:border-indigo-400/50"

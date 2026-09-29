@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Popover } from '../../shared/components/primitives/Popover'
 import { SpeakerSegment } from '../types/whisper.types'
@@ -58,6 +58,32 @@ export const SpeakerTimeline: React.FC<Props> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(600)
+
+  useEffect(() => {
+    const element = listRef.current
+    if (!element) return
+    const observer = new ResizeObserver(entries => setViewportHeight(entries[0]?.contentRect.height || 600))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  const virtualWindow = useMemo(() => {
+    const threshold = 250
+    const estimatedRowHeight = 92
+    if (segments.length <= threshold) return { items: segments, top: 0, bottom: 0 }
+    const overscan = 8
+    const start = Math.max(0, Math.floor(scrollTop / estimatedRowHeight) - overscan)
+    const visibleCount = Math.ceil(viewportHeight / estimatedRowHeight) + overscan * 2
+    const end = Math.min(segments.length, start + visibleCount)
+    return {
+      items: segments.slice(start, end),
+      top: start * estimatedRowHeight,
+      bottom: Math.max(0, (segments.length - end) * estimatedRowHeight),
+    }
+  }, [segments, scrollTop, viewportHeight])
 
   const handleCopy = (id: string, text: string) => {
     void navigator.clipboard.writeText(text)
@@ -205,7 +231,10 @@ export const SpeakerTimeline: React.FC<Props> = ({
 
   return (
     <div
+      ref={listRef}
       onMouseUp={handleMouseUp}
+      onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
+      aria-rowcount={segments.length}
       style={{
         flex: 1,
         overflowY: 'auto',
@@ -217,7 +246,8 @@ export const SpeakerTimeline: React.FC<Props> = ({
         WebkitUserSelect: 'text',
       }}
     >
-      {segments.map(seg => {
+      {virtualWindow.top > 0 && <div aria-hidden="true" style={{ height: virtualWindow.top, flexShrink: 0 }} />}
+      {virtualWindow.items.map(seg => {
         const isUser = seg.speaker === 'user' || seg.speaker === 'candidate'
         const sourceKind = seg.sourceKind ?? (isUser ? 'microphone' : 'mixed')
         const isMultiSelected = selectedSegmentIds.includes(seg.id)
@@ -554,6 +584,7 @@ export const SpeakerTimeline: React.FC<Props> = ({
           </div>
         )
       })}
+      {virtualWindow.bottom > 0 && <div aria-hidden="true" style={{ height: virtualWindow.bottom, flexShrink: 0 }} />}
     </div>
   )
 }

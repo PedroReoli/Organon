@@ -8,6 +8,10 @@ export const PlanningCardExpanded = ({ task, onEdit }: { task: PlanningTask, onE
 
     return (
         <div
+            data-planning-task-id={task.id}
+            tabIndex={0}
+            role="button"
+            aria-label={`Tarefa ${task.title}`}
             onClick={onEdit}
             style={{
                 padding: '16px',

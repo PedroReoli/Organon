@@ -89,6 +89,7 @@ export const AppGlobalModals: React.FC<AppGlobalModalsProps> = ({
       {showViewsNavigator && (
         <ViewsNavigatorModal
           notes={notes}
+          cards={cards}
           onNavigate={(view: AppView) => {
             onSetActiveView(view)
             setShowViewsNavigator(false)

@@ -12,7 +12,7 @@
 import React from 'react'
 import { Check, AlertCircle } from 'lucide-react'
 
-export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict'
 
 interface NoteAutoSaveIndicatorProps {
   status: AutoSaveStatus
@@ -47,6 +47,12 @@ export const NoteAutoSaveIndicator: React.FC<NoteAutoSaveIndicatorProps> = ({ st
         <>
           <AlertCircle size={12} className="note-autosave-error" />
           Erro ao salvar
+        </>
+      )}
+      {status === 'conflict' && (
+        <>
+          <AlertCircle size={12} className="note-autosave-error" />
+          Conflito ao salvar — backup local preservado
         </>
       )}
     </div>

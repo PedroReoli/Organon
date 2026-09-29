@@ -160,6 +160,8 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
     return (
       <div
         ref={setNodeRef}
+        data-planning-task-id={task.id}
+        aria-label={`Tarefa ${task.title}`}
         style={style}
         {...attributes}
         {...listeners}
@@ -174,6 +176,10 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
 
   return (
     <div
+      data-planning-task-id={task.id}
+      tabIndex={0}
+      role="button"
+      aria-label={`Tarefa ${task.title}`}
       onClick={onEdit}
       onContextMenu={handleContextMenu}
       className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] border border-white/5 rounded-md shadow-xs"
