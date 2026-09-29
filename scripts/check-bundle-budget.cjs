@@ -18,6 +18,7 @@ const budgets = [
   { prefix: 'subset-shared', maxBytes: 1_900_000 },
   { prefix: 'flowchart-elk', maxBytes: 1_500_000 },
   { prefix: 'excalidraw-', maxBytes: 1_200_000 },
+  { prefix: 'mermaid-', maxBytes: 850_000 },
 ];
 const defaultChunkBudget = 800_000;
 const totalBudget = 18_000_000;

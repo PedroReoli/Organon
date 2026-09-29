@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
 import type {
   Card,
   CardLocation,
@@ -18,7 +17,7 @@ import type {
 } from '../types'
 
 // Gera um novo ID único para cards
-export const generateId = (): string => uuidv4()
+export const generateId = (): string => crypto.randomUUID()
 
 // Cria um novo card com valores padrão
 export const createCard = (title: string, date?: string | null): Card => {

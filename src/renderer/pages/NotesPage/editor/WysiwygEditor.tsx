@@ -467,7 +467,7 @@ export const WysiwygEditor = ({
     // Evita resetar histórico se o usuário estiver ativamente com foco no editor
     if (editor.isFocused && lastEmittedHtmlRef.current) return
     isApplyingExternalContentRef.current = true
-    editor.commands.setContent(nextContent, false)
+    editor.commands.setContent(nextContent, { emitUpdate: false })
     lastEmittedHtmlRef.current = nextContent
     isApplyingExternalContentRef.current = false
   }, [editor, content])

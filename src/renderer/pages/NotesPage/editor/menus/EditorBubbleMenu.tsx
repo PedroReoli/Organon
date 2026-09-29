@@ -1,5 +1,5 @@
 import React from 'react'
-import { BubbleMenu } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/react'
 import {
   Bold,
@@ -23,7 +23,7 @@ export const EditorBubbleMenu: React.FC<EditorBubbleMenuProps> = ({ editor, onOp
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{ duration: 100, placement: 'top-start' }}
+      options={{ placement: 'top-start' }}
       shouldShow={({ state, from, to }) => {
         const { doc, selection } = state
         const { empty } = selection

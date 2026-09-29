@@ -2,7 +2,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-import Table from '@tiptap/extension-table'
+import { Table } from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
@@ -12,7 +12,7 @@ import Subscript from '@tiptap/extension-subscript'
 import Superscript from '@tiptap/extension-superscript'
 import TextAlign from '@tiptap/extension-text-align'
 import Link from '@tiptap/extension-link'
-import TextStyle from '@tiptap/extension-text-style'
+import { TextStyle } from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import Typography from '@tiptap/extension-typography'
 import { ReactRenderer } from '@tiptap/react'
@@ -39,7 +39,7 @@ export const getExtensions = (
   const base = [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
-      history: {
+      undoRedo: {
         depth: 300,
         newGroupDelay: 300,
       },

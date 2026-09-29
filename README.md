@@ -62,7 +62,7 @@ O **Organon Desktop** é um ambiente integrado de produtividade e gestão do con
 ## 📦 Como Instalar e Rodar Localmente
 
 ### Pré-requisitos
-- [Node.js](https://nodejs.org/) 20 ou superior
+- [Node.js](https://nodejs.org/) 22.12 ou superior
 - [npm](https://www.npmjs.com/)
 
 ### Passo a Passo
