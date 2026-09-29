@@ -665,6 +665,7 @@ declare global {
       }>
       readNote: (mdPath: string) => Promise<string>
       writeNote: (mdPath: string, content: string) => Promise<boolean>
+      writeNoteVersion: (mdPath: string, content: string) => Promise<{ success: boolean; mdPath?: string; error?: string }>
       deleteNote: (mdPath: string) => Promise<boolean>
       analyzeTranscriptSelection: (request: { text: string; mode?: 'meeting' | 'interview' | 'prompt' }) => Promise<{
         intent: 'question' | 'decision' | 'action_item' | 'note' | 'prompt'

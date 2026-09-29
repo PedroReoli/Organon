@@ -8,7 +8,7 @@ interface UseNoteContentParams {
   selectedFolderId: string | null
   notes:   Note[]
   folders: NoteFolder[]
-  onUpdateNote:   (noteId: string, updates: Partial<Pick<Note, 'title'>>) => void
+  onUpdateNote:   (noteId: string, updates: Partial<Pick<Note, 'title' | 'mdPath'>>) => void
   onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name'>>) => void
   onSaveStateChange?: (status: 'idle' | 'saving' | 'saved' | 'conflict', savedAt?: string) => void
 }
@@ -155,13 +155,14 @@ export function useNoteContent({
       const note = notes.find(n => n.id === noteId)
       if (!note || note.isLocked) return
       if (isElectron() && note.mdPath) {
-        window.electronAPI.writeNote(note.mdPath, html)
-          .then(saved => {
+        window.electronAPI.writeNoteVersion(note.mdPath, html)
+          .then(result => {
             if (currentNoteIdRef.current !== noteId) return
-            if (!saved) {
+            if (!result.success || !result.mdPath) {
               onSaveStateChange?.('conflict')
               return
             }
+            onUpdateNote(note.id, { mdPath: result.mdPath })
             localStorage.removeItem(`organon:note-backup:${noteId}`)
             onSaveStateChange?.('saved', new Date().toISOString())
           })
@@ -169,7 +170,7 @@ export function useNoteContent({
       } else {
         onSaveStateChange?.('saved', new Date().toISOString())
       }
-      onUpdateNote(note.id, { title: note.title })
+      if (!isElectron()) onUpdateNote(note.id, { title: note.title })
     }, 450)
   }, [notes, onUpdateNote, onSaveStateChange])
 

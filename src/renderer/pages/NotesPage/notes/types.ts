@@ -12,7 +12,7 @@ export interface NotesViewProps {
   notes: Note[]
   folders: NoteFolder[]
   onAddNote: (title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) => Note
-  onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => void
+  onUpdateNote: (noteId: string, updates: Partial<Pick<Note, 'title' | 'mdPath' | 'folderId' | 'order' | 'isPinned' | 'isFavorite' | 'parentNoteId'>>) => void
   onUpdateFolder: (folderId: string, updates: Partial<Pick<NoteFolder, 'name' | 'parentId' | 'isHome'>>) => void
   onRemoveNote: (noteId: string) => void
   onAddFolder: (name: string, parentId?: string | null) => string

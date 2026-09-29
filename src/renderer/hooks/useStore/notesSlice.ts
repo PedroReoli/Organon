@@ -123,7 +123,7 @@ export const createNotesSlice = (updateStore: UpdateStoreFn) => {
     return createdNote
   }
 
-  const updateNote = (noteId: string, updates: Partial<Pick<Note, 'title' | 'content' | 'folderId' | 'projectId' | 'parentNoteId' | 'isPinned' | 'isFavorite' | 'isLocked'>>) => {
+  const updateNote = (noteId: string, updates: Partial<Pick<Note, 'title' | 'content' | 'mdPath' | 'folderId' | 'projectId' | 'parentNoteId' | 'isPinned' | 'isFavorite' | 'isLocked'>>) => {
     updateStore(prev => ({
       ...prev,
       notes: prev.notes.map((note: any) => {

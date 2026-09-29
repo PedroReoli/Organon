@@ -19,6 +19,7 @@ app.whenReady().then(() => {
   const filesystem = require('../dist/main/storage/filesystem.js')
   const storeModule = require('../dist/main/storage/store.js')
   const generationStore = require('../dist/main/storage/generationStore.js')
+  const sidecarVersions = require('../dist/main/storage/sidecarVersions.js')
   const { StorageHydrationGuard } = require('../dist/main/storage/hydrationGuard.js')
   const migration = require('../dist/main/storage/storageMigration.js')
   const backup = require('../dist/main/backup/backupService.js')
@@ -26,6 +27,13 @@ app.whenReady().then(() => {
   const missingRoot = path.join(sandbox, 'missing-root')
   storeModule.loadStoreFromPath(missingRoot)
   if (fs.existsSync(missingRoot)) fail('Leitura de root ausente criou arquivos no disco.')
+  const firstNoteVersion = sidecarVersions.getVersionedNotePath('Projetos/plano.md', '# versao 1')
+  const repeatedNoteVersion = sidecarVersions.getVersionedNotePath(firstNoteVersion, '# versao 1')
+  const secondNoteVersion = sidecarVersions.getVersionedNotePath(firstNoteVersion, '# versao 2')
+  if (firstNoteVersion !== repeatedNoteVersion || firstNoteVersion === secondNoteVersion) fail('Versionamento de sidecar Markdown nao e idempotente.')
+  const firstAudioVersion = sidecarVersions.getVersionedMeetingAudioName('meeting-1', Buffer.from('wav-a'))
+  const secondAudioVersion = sidecarVersions.getVersionedMeetingAudioName('meeting-1', Buffer.from('wav-b'))
+  if (firstAudioVersion === secondAudioVersion) fail('Versionamento de audio sobrescreve conteudo anterior.')
 
   const hydrationGuard = new StorageHydrationGuard()
   if (hydrationGuard.canWrite(7, 'invalido')) fail('Guard liberou escrita antes da hidratacao.')
@@ -158,7 +166,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', dirtySections: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', dirtySections: 'ok', immutableSidecars: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })

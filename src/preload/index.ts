@@ -233,6 +233,8 @@ const electronAPI = {
   readNote: (mdPath: string): Promise<string> => ipcRenderer.invoke('notes:read', mdPath),
   writeNote: (mdPath: string, content: string): Promise<boolean> =>
     ipcRenderer.invoke('notes:write', mdPath, content),
+  writeNoteVersion: (mdPath: string, content: string): Promise<{ success: boolean; mdPath?: string; error?: string }> =>
+    ipcRenderer.invoke('notes:writeVersion', mdPath, content),
   deleteNote: (mdPath: string): Promise<boolean> => ipcRenderer.invoke('notes:delete', mdPath),
   analyzeTranscriptSelection: (request: { text: string; mode?: 'meeting' | 'interview' | 'prompt' }) =>
     ipcRenderer.invoke('transcript:analyzeSelection', request),

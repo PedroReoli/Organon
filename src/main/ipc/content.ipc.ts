@@ -23,6 +23,8 @@ import {
   listProjectFiles,
   readProjectFile,
   searchProjectText,
+  getVersionedMeetingAudioName,
+  getVersionedNotePath,
 } from '../storage'
 import { showOpenDialog } from '../core'
 import { analyzeTranscriptSelection, generateTranscriptNote } from '../meeting'
@@ -425,6 +427,22 @@ export const registerContentIpcHandlers = (): void => {
     }
   })
 
+  ipcMain.handle('notes:writeVersion', (_event, mdPath: string, content: string) => {
+    try {
+      const normalizedContent = content ?? ''
+      const versionedPath = getVersionedNotePath(mdPath, normalizedContent)
+      const absPath = safeResolveNotePath(versionedPath, getDataPath())
+      const existing = fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : null
+      if (existing !== normalizedContent && !writeTextFileAtomic(absPath, normalizedContent)) {
+        throw new Error('Falha ao publicar versao imutavel da nota.')
+      }
+      return { success: true, mdPath: versionedPath }
+    } catch (error) {
+      console.error('Erro ao versionar nota:', error)
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
   ipcMain.handle('notes:delete', (_event, mdPath: string) => {
     try {
       const absPath = safeResolveNotePath(mdPath, getDataPath())
@@ -485,9 +503,9 @@ export const registerContentIpcHandlers = (): void => {
     try {
       const dataPath = getDataPath()
       const meetingId = validateMeetingId(request?.meetingId)
-      const audioName = `${meetingId}.wav`
-      const absPath = safeResolveMeetingPath(audioName, dataPath)
       const buffer = decodeWavBase64(request?.audioBase64)
+      const audioName = getVersionedMeetingAudioName(meetingId, buffer)
+      const absPath = safeResolveMeetingPath(audioName, dataPath)
       const metadata: MeetingAudioMetadata = {
         path: audioName,
         sha256: createHash('sha256').update(buffer).digest('hex'),
@@ -496,7 +514,7 @@ export const registerContentIpcHandlers = (): void => {
         durationMs: Math.max(0, Math.round(Number(request?.durationMs) || 0)),
       }
       writeBufferAtomic(absPath, buffer)
-      const metadataPath = safeResolveMeetingPath(`${meetingId}.audio.json`, dataPath)
+      const metadataPath = safeResolveMeetingPath(`${path.parse(audioName).name}.audio.json`, dataPath)
       if (!writeTextFileAtomic(metadataPath, JSON.stringify(metadata, null, 2))) {
         throw new Error('Falha ao gravar metadados do audio.')
       }
@@ -509,8 +527,9 @@ export const registerContentIpcHandlers = (): void => {
 
   ipcMain.handle('meetings:saveAudio', (_event, meetingId: string, audioBase64: string) => {
     const normalizedId = validateMeetingId(meetingId)
-    const audioName = `${normalizedId}.wav`
-    writeBufferAtomic(safeResolveMeetingPath(audioName, getDataPath()), decodeWavBase64(audioBase64))
+    const buffer = decodeWavBase64(audioBase64)
+    const audioName = getVersionedMeetingAudioName(normalizedId, buffer)
+    writeBufferAtomic(safeResolveMeetingPath(audioName, getDataPath()), buffer)
     return audioName
   })
 
