@@ -16,28 +16,11 @@ import {
   deletePathIfExists,
 } from './filesystem'
 import { getDefaultStore, normalizeStore } from './storeModel'
+import { commitStoreGeneration, loadCommittedGeneration, STORE_SECTIONS } from './generationStore'
 import type { Store } from '../types'
 
 export { DEFAULT_STUDY_STATE, getDefaultStore, normalizeStore, normalizeStudyState } from './storeModel'
-
-export const STORE_SECTIONS: Array<{ fileName: string; keys: Array<keyof Store> }> = [
-  { fileName: 'meta.json', keys: ['version'] },
-  { fileName: 'planning.json', keys: ['cards', 'projectSprints'] },
-  { fileName: 'calendar.json', keys: ['calendarEvents'] },
-  { fileName: 'shortcuts.json', keys: ['shortcutFolders', 'shortcuts'] },
-  { fileName: 'projects.json', keys: ['projects', 'registeredIDEs'] },
-  { fileName: 'notes.json', keys: ['noteFolders', 'notes'] },
-  { fileName: 'colors.json', keys: ['colorPalettes'] },
-  { fileName: 'clipboard.json', keys: ['clipboardCategories', 'clipboardItems'] },
-  { fileName: 'apps.json', keys: ['apps', 'macros'] },
-  { fileName: 'financial.json', keys: ['bills', 'expenses', 'budgetCategories', 'incomes', 'financialConfig', 'savingsGoals', 'investments'] },
-  { fileName: 'today.json', keys: ['quickAccess'] },
-  { fileName: 'meetings.json', keys: ['meetings'] },
-  { fileName: 'study.json', keys: ['study'] },
-  { fileName: 'sync.json', keys: ['lastSyncAt', 'pendingDeletes', 'storeUpdatedAt'] },
-  { fileName: 'canvas.json', keys: ['canvases'] },
-  { fileName: 'settings.json', keys: ['settings'] },
-]
+export { STORE_SECTIONS } from './generationStore'
 
 const hasSectionFilesInDir = (dirPath: string): boolean => {
   if (!fs.existsSync(dirPath)) return false
@@ -114,6 +97,9 @@ export const loadStoreFromPath = (dataPath: string): Store => {
   if (!fs.existsSync(dataPath)) {
     return getDefaultStore()
   }
+
+  const committed = loadCommittedGeneration(dataPath)
+  if (committed) return committed.store
 
   const storePath = getStorePath(dataPath)
   const tryReadStoreFile = (filePath: string): Store | null => {
@@ -203,6 +189,7 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
   const lastKnownGoodPath = path.join(integrityDir, 'ultimo-indice-integro.json')
   const lastKnownGoodDir = path.join(integrityDir, 'ultimo-indice-integro')
   const safetySnapshotMarkerPath = path.join(integrityDir, '.ultimo-snapshot-em')
+  let generationCommitted = false
 
   try {
     const normalized = normalizeStore(store)
@@ -210,9 +197,12 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
     ensureDataDir(snapshotsDir)
 
     // Proteção contra sobrescrita acidental de notas vazias
+    const currentGeneration = loadCommittedGeneration(dataPath)?.store
     const currentCanonical = readJsonFile(storePath) as Partial<Store> | null
     const currentSectioned = readSectionedStoreFromDir(storeDir)
-    const existingNotes = (currentCanonical?.notes && currentCanonical.notes.length > 0)
+    const existingNotes = (currentGeneration?.notes && currentGeneration.notes.length > 0)
+      ? currentGeneration.notes
+      : (currentCanonical?.notes && currentCanonical.notes.length > 0)
       ? currentCanonical.notes
       : (currentSectioned?.notes && currentSectioned.notes.length > 0)
         ? currentSectioned.notes
@@ -220,7 +210,9 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
 
     if (normalized.notes.length === 0 && existingNotes.length > 0) {
       normalized.notes = existingNotes
-      normalized.noteFolders = (currentCanonical?.noteFolders && currentCanonical.noteFolders.length > 0)
+      normalized.noteFolders = (currentGeneration?.noteFolders && currentGeneration.noteFolders.length > 0)
+        ? currentGeneration.noteFolders
+        : (currentCanonical?.noteFolders && currentCanonical.noteFolders.length > 0)
         ? currentCanonical.noteFolders
         : (currentSectioned?.noteFolders && currentSectioned.noteFolders.length > 0)
           ? currentSectioned.noteFolders
@@ -234,12 +226,19 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
       copyDirReplace(storeDir, lastKnownGoodDir)
     }
 
-    if (!writeSectionedStoreToDir(normalized, storeDir)) {
+    const commit = commitStoreGeneration(normalized, dataPath, { source: 'desktop' })
+    if (!commit.success) {
+      console.error('Commit transacional rejeitado:', commit.error)
       return false
     }
+    generationCommitted = true
 
-    if (!writeTextFileAtomic(storePath, JSON.stringify(normalized, null, 2))) {
-      return false
+    // Espelhos de compatibilidade para consumidores ainda nao migrados. A geracao
+    // apontada por CURRENT ja e o estado canonico e nunca depende destes writes.
+    const sectionMirrorSaved = writeSectionedStoreToDir(normalized, storeDir)
+    const canonicalMirrorSaved = writeTextFileAtomic(storePath, JSON.stringify(normalized, null, 2))
+    if (!sectionMirrorSaved || !canonicalMirrorSaved) {
+      console.warn('Commit concluido, mas um espelho legado nao foi atualizado.')
     }
 
     const now = Date.now()
@@ -281,8 +280,8 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
 
     return true
   } catch (error) {
-    console.error('Erro ao salvar store:', error)
-    return false
+    console.error(generationCommitted ? 'Erro de manutencao apos commit do store:' : 'Erro ao salvar store:', error)
+    return generationCommitted
   }
 }
 

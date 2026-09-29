@@ -18,6 +18,7 @@ app.whenReady().then(() => {
 
   const filesystem = require('../dist/main/storage/filesystem.js')
   const storeModule = require('../dist/main/storage/store.js')
+  const generationStore = require('../dist/main/storage/generationStore.js')
   const { StorageHydrationGuard } = require('../dist/main/storage/hydrationGuard.js')
   const migration = require('../dist/main/storage/storageMigration.js')
   const backup = require('../dist/main/backup/backupService.js')
@@ -69,6 +70,41 @@ app.whenReady().then(() => {
   }]
   store.cards = [{ id: 'card-1' }]
   if (!storeModule.saveStoreToPath(store, legacyRoot)) fail('Não foi possível preparar o store legado.')
+  const firstGeneration = generationStore.loadCommittedGeneration(legacyRoot)
+  if (!firstGeneration || firstGeneration.revision !== 1) fail('Primeira geracao transacional nao foi publicada.')
+  const currentPath = path.join(legacyRoot, '_sistema', 'CURRENT')
+  const currentBeforeFault = fs.readFileSync(currentPath, 'utf8')
+  const faultedCommit = generationStore.commitStoreGeneration(store, legacyRoot, {
+    source: 'fault-injection',
+    expectedRevision: firstGeneration.revision,
+    faultAt: 'generation-published',
+  })
+  if (faultedCommit.success) fail('Falha injetada foi reportada como commit concluido.')
+  if (fs.readFileSync(currentPath, 'utf8') !== currentBeforeFault) fail('Falha antes de CURRENT alterou a geracao visivel.')
+  if (generationStore.loadCommittedGeneration(legacyRoot)?.revision !== firstGeneration.revision) fail('Leitura observou geracao parcial.')
+  const conflict = generationStore.commitStoreGeneration(store, legacyRoot, { expectedRevision: 999 })
+  if (conflict.success || !conflict.conflict) fail('Compare-and-swap nao rejeitou revisao divergente.')
+  const lockPath = path.join(legacyRoot, '_sistema', 'storage.lock')
+  fs.writeFileSync(lockPath, JSON.stringify({ token: 'other-writer', pid: process.pid, createdAt: new Date().toISOString() }), 'utf8')
+  const locked = generationStore.commitStoreGeneration(store, legacyRoot, { expectedRevision: firstGeneration.revision })
+  fs.unlinkSync(lockPath)
+  if (locked.success || !locked.error?.includes('ocupado')) fail('Lock entre processos nao bloqueou o segundo escritor.')
+  if (!storeModule.saveStoreToPath(store, legacyRoot)) fail('Retry apos falha transacional nao concluiu.')
+  const secondGeneration = generationStore.loadCommittedGeneration(legacyRoot)
+  if (!secondGeneration || secondGeneration.revision !== 2) fail('Revisao nao avancou apos commit valido.')
+  const journalPath = path.join(legacyRoot, '_sistema', 'transactions', secondGeneration.transactionId, 'transaction.json')
+  if (!fs.existsSync(journalPath)) fail('Journal duravel da transacao nao foi preservado.')
+  const committedAfterPointer = generationStore.commitStoreGeneration(store, legacyRoot, {
+    source: 'fault-injection',
+    expectedRevision: secondGeneration.revision,
+    faultAt: 'current-published',
+  })
+  if (!committedAfterPointer.success || committedAfterPointer.revision !== 3) fail('Commit publicado foi perdido apos falha tardia.')
+  const currentBeforeBoots = fs.readFileSync(currentPath, 'utf8')
+  for (let index = 0; index < 10; index++) {
+    if (generationStore.loadCommittedGeneration(legacyRoot)?.revision !== 3) fail('Boot repetido alterou a revisao.')
+  }
+  if (fs.readFileSync(currentPath, 'utf8') !== currentBeforeBoots) fail('Boot read-only alterou o ponteiro CURRENT.')
   const legacyStorePath = filesystem.getStorePath(legacyRoot)
   const fixedMtime = new Date('2001-01-01T00:00:00.000Z')
   fs.utimesSync(legacyStorePath, fixedMtime, fixedMtime)
@@ -86,10 +122,13 @@ app.whenReady().then(() => {
   if (!fs.existsSync(notePath) || !migrated.notes[0].mdPath.includes('Plano de produção--12345678.md')) fail('Nota legível não foi materializada.')
 
   if (!storeModule.saveStoreToPath(migrated, targetRoot)) fail('Não foi possível criar o último índice íntegro.')
+  const targetCurrentPath = path.join(targetRoot, '_sistema', 'CURRENT')
+  fs.writeFileSync(targetCurrentPath, '{invalido', 'utf8')
   fs.writeFileSync(filesystem.getStorePath(targetRoot), '{invalido', 'utf8')
   fs.writeFileSync(path.join(filesystem.getStoreDir(targetRoot), 'notes.json'), '{invalido', 'utf8')
   const recovered = storeModule.loadStoreFromPath(targetRoot)
   if (recovered.notes.length !== 1 || recovered.cards.length !== 1) fail('A recuperação pelo último índice íntegro falhou.')
+  if (fs.readFileSync(targetCurrentPath, 'utf8') !== '{invalido') fail('Recuperacao read-only reescreveu CURRENT.')
   if (fs.readFileSync(filesystem.getStorePath(targetRoot), 'utf8') !== '{invalido') fail('Leitura de recuperacao reescreveu o store corrompido.')
 
   const created = backup.createBackup(targetRoot, 'manual')
@@ -107,7 +146,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })
