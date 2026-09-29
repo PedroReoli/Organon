@@ -65,9 +65,12 @@ export const registerCoreIpcHandlers = (): void => {
   })
 
   ipcMain.handle('cli:getStatus', async () => {
+    const dataPath = getDataPath()
     return {
-      dataPath: getDataPath(),
-      storeDir: getStoreDir(getDataPath()),
+      dataPath,
+      storeDir: getStoreDir(dataPath),
+      rootId: getStorageRootId(dataPath),
+      revision: getStorageRevision(dataPath),
       realtimeActive: true,
       timestamp: new Date().toISOString(),
     }

@@ -94,7 +94,8 @@ const MAX_TRANSACTION_RECORDS = 500
 const GENERATION_ID_PATTERN = /^\d{10}-[0-9a-f-]{36}$/i
 const TRANSACTION_ID_PATTERN = /^[0-9a-f-]{36}$/i
 
-const getControlDir = (dataPath: string): string => path.join(dataPath, CONTROL_DIR_NAME)
+export const getStorageControlDir = (dataPath: string): string => path.join(dataPath, CONTROL_DIR_NAME)
+const getControlDir = getStorageControlDir
 const getGenerationsDir = (dataPath: string): string => path.join(getControlDir(dataPath), 'generations')
 const getTransactionsDir = (dataPath: string): string => path.join(getControlDir(dataPath), 'transactions')
 const getCurrentPath = (dataPath: string): string => path.join(getControlDir(dataPath), 'CURRENT')

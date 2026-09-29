@@ -3,6 +3,26 @@ const path = require('path');
 const os = require('os');
 const { randomUUID } = require('crypto');
 
+const EXPECTED_REVISION = Symbol('organonExpectedRevision');
+const SECTION_FILES = [
+  'meta.json',
+  'planning.json',
+  'calendar.json',
+  'shortcuts.json',
+  'projects.json',
+  'notes.json',
+  'colors.json',
+  'clipboard.json',
+  'apps.json',
+  'financial.json',
+  'today.json',
+  'meetings.json',
+  'study.json',
+  'sync.json',
+  'canvas.json',
+  'settings.json'
+];
+
 /**
  * Organon CLI Data Store Manager
  * Locates the active data directory and provides atomic CRUD operations for all sections.
@@ -62,6 +82,31 @@ function resolveDataDir(options = {}) {
 
 const dataDir = resolveDataDir();
 
+let generationEngine;
+
+function getGenerationEngine() {
+  if (generationEngine !== undefined) return generationEngine;
+  const modulePath = path.resolve(__dirname, '../../dist/main/storage/generationStore.js');
+  try {
+    generationEngine = fs.existsSync(modulePath) ? require(modulePath) : null;
+  } catch {
+    generationEngine = null;
+  }
+  return generationEngine;
+}
+
+function attachRevision(value, revision) {
+  if (value && typeof value === 'object') {
+    Object.defineProperty(value, EXPECTED_REVISION, {
+      configurable: true,
+      enumerable: false,
+      value: revision,
+      writable: true
+    });
+  }
+  return value;
+}
+
 function isDedicatedStorage(dir) {
   const marker = path.join(dir, '_sistema', 'storage-layout.json');
   try {
@@ -77,11 +122,7 @@ function getStoreDir(dir) {
   if (isDedicatedStorage(dir)) {
     return path.join(dir, '_sistema', 'indices');
   }
-  const storeSubdir = path.join(dir, 'store');
-  if (fs.existsSync(storeSubdir)) {
-    return storeSubdir;
-  }
-  return dir;
+  return path.join(dir, 'store');
 }
 
 function getNotesDir(dir) {
@@ -113,107 +154,113 @@ function touchSyncFlag() {
   }
 }
 
-function readSection(sectionFileName, defaultVal) {
-  const storeFolder = getStoreDir(dataDir);
-  const filePath = path.join(storeFolder, sectionFileName);
-
-  if (fs.existsSync(filePath)) {
-    try {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch {
-      return defaultVal;
-    }
+function readJson(filePath) {
+  try {
+    return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
+  } catch {
+    return null;
   }
-
-  // Fallback: check unified store.json
-  const unifiedPath = path.join(dataDir, 'store.json');
-  if (fs.existsSync(unifiedPath)) {
-    try {
-      const full = JSON.parse(fs.readFileSync(unifiedPath, 'utf8'));
-      return full;
-    } catch {
-      return defaultVal;
-    }
-  }
-
-  return defaultVal;
 }
 
-function writeSection(sectionFileName, data) {
+function readLegacyStoreData() {
   const storeFolder = getStoreDir(dataDir);
-  if (!fs.existsSync(storeFolder)) {
-    fs.mkdirSync(storeFolder, { recursive: true });
+  const merged = {};
+  const unifiedPaths = [path.join(dataDir, 'store.json'), path.join(storeFolder, 'store.json')];
+  for (const unifiedPath of [...new Set(unifiedPaths)]) {
+    const parsed = readJson(unifiedPath);
+    if (parsed && typeof parsed === 'object') Object.assign(merged, parsed);
   }
-
-  const filePath = path.join(storeFolder, sectionFileName);
-  const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmpPath, filePath);
-
-  // Synchronize with unified store.json if present
-  const unifiedPaths = [
-    path.join(storeFolder, 'store.json'),
-    path.join(dataDir, 'store.json')
-  ];
-  for (const up of unifiedPaths) {
-    if (fs.existsSync(up)) {
-      try {
-        const fullStore = JSON.parse(fs.readFileSync(up, 'utf8'));
-        if (typeof data === 'object' && data !== null) {
-          Object.assign(fullStore, data);
-        }
-        fullStore.storeUpdatedAt = new Date().toISOString();
-        const tmpUnified = `${up}.tmp`;
-        fs.writeFileSync(tmpUnified, JSON.stringify(fullStore, null, 2), 'utf8');
-        fs.renameSync(tmpUnified, up);
-      } catch {
-        // Ignore unified store update error
-      }
+  for (const sectionDir of [...new Set([dataDir, storeFolder])]) {
+    for (const sectionFileName of SECTION_FILES) {
+      const parsed = readJson(path.join(sectionDir, sectionFileName));
+      if (parsed && typeof parsed === 'object') Object.assign(merged, parsed);
     }
   }
+  return merged;
+}
 
+function getStoreSnapshot() {
+  const engine = getGenerationEngine();
+  const committed = engine?.loadCommittedGeneration(dataDir);
+  if (committed) return { store: committed.store, revision: committed.revision };
+  return { store: readLegacyStoreData(), revision: 0 };
+}
+
+function readSection(_sectionFileName, defaultVal) {
+  const snapshot = getStoreSnapshot();
+  const hasData = snapshot.store && Object.keys(snapshot.store).length > 0;
+  return attachRevision(hasData ? snapshot.store : defaultVal, snapshot.revision);
+}
+
+function writeJsonAtomic(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(value, null, 2), 'utf8');
+  fs.renameSync(tmpPath, filePath);
+}
+
+function mirrorCommittedStore(fullStore, sectionFileName, sectionData) {
+  const storeFolder = getStoreDir(dataDir);
+  fs.mkdirSync(storeFolder, { recursive: true });
+  writeJsonAtomic(path.join(storeFolder, sectionFileName), sectionData);
+
+  const canonicalPaths = isDedicatedStorage(dataDir)
+    ? [path.join(storeFolder, 'store.json')]
+    : [path.join(dataDir, 'store.json'), path.join(storeFolder, 'store.json')];
+  for (const canonicalPath of [...new Set(canonicalPaths)]) writeJsonAtomic(canonicalPath, fullStore);
+}
+
+function commitStoreData(nextStore, expectedRevision, sectionFileName, sectionData) {
+  const engine = getGenerationEngine();
+  if (!engine) {
+    throw new Error('Build transacional ausente; execute npm run build antes de usar a CLI.');
+  }
+
+  const result = engine.commitStoreGeneration(nextStore, dataDir, {
+    source: 'cli',
+    expectedRevision
+  });
+  if (!result.success) throw new Error(result.error || 'Commit transacional da CLI foi rejeitado.');
+  const committed = engine.loadCommittedGeneration(dataDir);
+  if (!committed || committed.revision !== result.revision) {
+    throw new Error('A CLI nao conseguiu reler a geracao publicada.');
+  }
+  mirrorCommittedStore(committed.store, sectionFileName, sectionData);
   touchSyncFlag();
   return true;
 }
 
-function getStoreData() {
-  const unifiedPaths = [
-    path.join(getStoreDir(dataDir), 'store.json'),
-    path.join(dataDir, 'store.json')
-  ];
-  for (const up of unifiedPaths) {
-    if (fs.existsSync(up)) {
-      try {
-        return JSON.parse(fs.readFileSync(up, 'utf8'));
-      } catch {
-        // Ignore JSON parse error
-      }
-    }
+function writeSection(sectionFileName, data) {
+  const snapshot = getStoreSnapshot();
+  const expectedRevision = Number.isSafeInteger(data?.[EXPECTED_REVISION])
+    ? data[EXPECTED_REVISION]
+    : snapshot.revision;
+  if (expectedRevision !== snapshot.revision) {
+    throw new Error(`Conflito de revisao: esperado ${expectedRevision}, atual ${snapshot.revision}.`);
   }
-  return {};
+
+  const nextStore = {
+    ...snapshot.store,
+    ...(data && typeof data === 'object' ? data : {}),
+    storeUpdatedAt: new Date().toISOString()
+  };
+  return commitStoreData(nextStore, expectedRevision, sectionFileName, data);
+}
+
+function getStoreData() {
+  const snapshot = getStoreSnapshot();
+  return attachRevision(snapshot.store, snapshot.revision);
 }
 
 function saveStoreData(data) {
-  const storeFolder = getStoreDir(dataDir);
-  if (!fs.existsSync(storeFolder)) {
-    fs.mkdirSync(storeFolder, { recursive: true });
+  const snapshot = getStoreSnapshot();
+  const expectedRevision = Number.isSafeInteger(data?.[EXPECTED_REVISION])
+    ? data[EXPECTED_REVISION]
+    : snapshot.revision;
+  if (expectedRevision !== snapshot.revision) {
+    throw new Error(`Conflito de revisao: esperado ${expectedRevision}, atual ${snapshot.revision}.`);
   }
-  const unifiedPaths = [
-    path.join(storeFolder, 'store.json'),
-    path.join(dataDir, 'store.json')
-  ];
-  for (const up of unifiedPaths) {
-    if (fs.existsSync(up)) {
-      try {
-        const tmp = `${up}.tmp`;
-        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-        fs.renameSync(tmp, up);
-      } catch {
-        // Ignore error
-      }
-    }
-  }
-  return true;
+  return commitStoreData(data, expectedRevision, 'store.json', data);
 }
 
 // -------------------------------------------------------------
@@ -222,10 +269,10 @@ function saveStoreData(data) {
 
 function getPlanningData() {
   const raw = readSection('planning.json', { cards: [], projectSprints: [] });
-  return {
+  return attachRevision({
     cards: Array.isArray(raw.cards) ? raw.cards : [],
     projectSprints: Array.isArray(raw.projectSprints) ? raw.projectSprints : []
-  };
+  }, raw[EXPECTED_REVISION] ?? 0);
 }
 
 function savePlanningData(planning) {
@@ -238,17 +285,18 @@ function savePlanningData(planning) {
 
 function getNotesData() {
   let raw = readSection('notes.json', { noteFolders: [], notes: [] });
+  let revision = raw[EXPECTED_REVISION] ?? 0;
   if ((!raw.notes || raw.notes.length === 0)) {
     const store = getStoreData();
     if (store.notes && store.notes.length > 0) {
       raw = { noteFolders: store.noteFolders || [], notes: store.notes };
-      writeSection('notes.json', raw);
+      revision = store[EXPECTED_REVISION] ?? revision;
     }
   }
-  return {
+  return attachRevision({
     noteFolders: Array.isArray(raw.noteFolders) ? raw.noteFolders : [],
     notes: Array.isArray(raw.notes) ? raw.notes : []
-  };
+  }, revision);
 }
 
 function saveNotesData(notesObj) {
@@ -256,10 +304,7 @@ function saveNotesData(notesObj) {
     noteFolders: Array.isArray(notesObj?.noteFolders) ? notesObj.noteFolders : [],
     notes: Array.isArray(notesObj?.notes) ? notesObj.notes : []
   };
-  const store = getStoreData();
-  store.noteFolders = normalized.noteFolders;
-  store.notes = normalized.notes;
-  saveStoreData(store);
+  attachRevision(normalized, notesObj?.[EXPECTED_REVISION] ?? 0);
   return writeSection('notes.json', normalized);
 }
 
@@ -308,10 +353,10 @@ function deleteNoteFile(mdPath) {
 
 function getProjectsData() {
   const raw = readSection('projects.json', { projects: [], registeredIDEs: [] });
-  return {
+  return attachRevision({
     projects: Array.isArray(raw.projects) ? raw.projects : [],
     registeredIDEs: Array.isArray(raw.registeredIDEs) ? raw.registeredIDEs : []
-  };
+  }, raw[EXPECTED_REVISION] ?? 0);
 }
 
 function saveProjectsData(data) {
@@ -324,10 +369,10 @@ function saveProjectsData(data) {
 
 function getHabitsData() {
   const raw = readSection('habits.json', { habits: [], habitEntries: [] });
-  return {
+  return attachRevision({
     habits: Array.isArray(raw.habits) ? raw.habits : [],
     habitEntries: Array.isArray(raw.habitEntries) ? raw.habitEntries : []
-  };
+  }, raw[EXPECTED_REVISION] ?? 0);
 }
 
 function saveHabitsData(data) {
@@ -343,14 +388,20 @@ function getSystemStatus() {
   const notes = getNotesData();
   const projects = getProjectsData();
   const habits = getHabitsData();
+  const engine = getGenerationEngine();
+  const snapshot = getStoreSnapshot();
+  const packageVersion = require('../../package.json').version;
 
   const todoTasks = planning.cards.filter(c => c.status !== 'done' && c.status !== 'archived').length;
   const doneTasks = planning.cards.filter(c => c.status === 'done').length;
 
   return {
     app: 'Organon',
-    version: '6.23.2',
+    version: packageVersion,
     dataDir,
+    rootId: engine?.getStorageRootId(dataDir) || null,
+    revision: snapshot.revision,
+    transactional: Boolean(engine),
     isDedicatedStorage: isDedicatedStorage(dataDir),
     storageLayout: isDedicatedStorage(dataDir) ? 'v2-dedicated' : 'v1-standard',
     counts: {

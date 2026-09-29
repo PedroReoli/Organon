@@ -3,7 +3,7 @@ import * as path from 'path'
 import { randomUUID } from 'crypto'
 import { getMainWindow } from '../core'
 import { getDataPath, getStoreDir, getNotesDir } from './filesystem'
-import { getStorageRevision } from './generationStore'
+import { getStorageControlDir, getStorageRevision } from './generationStore'
 import { loadStore } from './store'
 import type { Store } from '../types'
 
@@ -184,6 +184,7 @@ export const startRealtimeSyncWatcher = (): void => {
       getStoreDir(dataDir),
       getNotesDir(dataDir),
       path.join(dataDir, '_sistema', 'indices'),
+      getStorageControlDir(dataDir),
       path.join(dataDir, 'store'),
       path.join(dataDir, 'notes'),
       dataDir,
