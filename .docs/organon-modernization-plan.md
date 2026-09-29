@@ -5,6 +5,8 @@
 **Escopo:** instalação e resiliência de dados, Whisper, UX/performance e MCP  
 **Natureza:** diagnóstico e arquitetura; nenhuma mudança funcional foi implementada
 
+> Este documento preserva o retrato da auditoria original. A implementação posterior está consolidada em [Status de implementação](./implementation-status.md), com evidências automatizadas e limites de homologação separados.
+
 ## 1. Resumo executivo
 
 O Organon não precisa de uma reescrita. A base atual já contém migração em staging, backups, recuperação, atualização NSIS com `blockmap`, gravação Whisper local, janela rápida, atalhos globais, uma paleta `Ctrl+K` e um servidor MCP funcional. O problema é que esses recursos ainda não compartilham contratos arquiteturais fortes.
