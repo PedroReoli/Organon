@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import type { Settings, Note, NoteFolder, Card, ClipboardCategory, ClipboardItem } from '@types'
 import type { AppView } from '../shared/InternalNav'
 import { LocalSyncModal } from '../shared/modals/LocalSyncModal'
@@ -7,9 +7,10 @@ import { ViewsNavigatorModal } from '../shared/modals/ViewsNavigatorModal'
 import { ClipboardQuickModal } from '../ClipboardPage/clipboard/ClipboardQuickModal'
 import { SyncProgressModal } from '../shared/modals/SyncProgressModal'
 import { UpdateModal } from '../../components/UpdateModal'
-import { Chatbot } from '../NotesPage/notes/Chatbot'
 import { APP_VIEW_LABELS } from './app.constants'
 import { isElectron } from '@utils'
+
+const Chatbot = lazy(() => import('../NotesPage/notes/Chatbot').then(module => ({ default: module.Chatbot })))
 
 interface AppGlobalModalsProps {
   settings: Settings
@@ -138,7 +139,8 @@ export const AppGlobalModals: React.FC<AppGlobalModalsProps> = ({
         <SyncProgressModal settings={settings} />
       )}
 
-      <Chatbot
+      <Suspense fallback={null}>
+        <Chatbot
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         hideFloatingTrigger={true}
@@ -184,7 +186,8 @@ export const AppGlobalModals: React.FC<AppGlobalModalsProps> = ({
         onUpdateFolder={(folderId, updates) => onUpdateNoteFolder(folderId, updates)}
         onUpdateNote={(noteId, updates) => onUpdateNote(noteId, updates)}
         conversationsDir={settings.dataDir || undefined}
-      />
+        />
+      </Suspense>
 
       {showUpdateModal && (
         <UpdateModal onClose={() => setShowUpdateModal(false)} />

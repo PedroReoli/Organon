@@ -21,12 +21,6 @@ import type {
 import { DEFAULT_DASHBOARD_WIDGETS } from '@types'
 import type { AppView } from '../shared/InternalNav'
 import { DashboardPage, type DashboardHubCard, type DashboardSyncStatus } from '../DashboardPage/DashboardPage'
-import { PlannerPage } from '../PlannerPage'
-import { HubConhecimento } from '../DashboardPage/hubs/HubConhecimento'
-import { HubEstudos } from '../DashboardPage/hubs/HubEstudos'
-import { HubTrabalho } from '../DashboardPage/hubs/HubTrabalho'
-import { HubFerramentas } from '../DashboardPage/hubs/HubFerramentas'
-import { HubSistema } from '../DashboardPage/hubs/HubSistema'
 import { ViewLoadingSkeleton } from '../shared/components/display/ViewLoadingSkeleton'
 
 // Lazy loading com code splitting dos módulos pesados
@@ -35,6 +29,12 @@ const WhisperPage = lazy(() => import('../WhisperPage/WhisperPage').then(m => ({
 const AudioPage = lazy(() => import('../AudioPage/AudioPage').then(m => ({ default: m.AudioPage })))
 const OKRsPage = lazy(() => import('../OKRsPage/OKRsPage').then(m => ({ default: m.OKRsPage })))
 const SystemDesignPage = lazy(() => import('../SystemDesignPage/SystemDesignPage').then(m => ({ default: m.SystemDesignPage })))
+const PlannerPage = lazy(() => import('../PlannerPage').then(m => ({ default: m.PlannerPage })))
+const HubConhecimento = lazy(() => import('../DashboardPage/hubs/HubConhecimento').then(m => ({ default: m.HubConhecimento })))
+const HubEstudos = lazy(() => import('../DashboardPage/hubs/HubEstudos').then(m => ({ default: m.HubEstudos })))
+const HubTrabalho = lazy(() => import('../DashboardPage/hubs/HubTrabalho').then(m => ({ default: m.HubTrabalho })))
+const HubFerramentas = lazy(() => import('../DashboardPage/hubs/HubFerramentas').then(m => ({ default: m.HubFerramentas })))
+const HubSistema = lazy(() => import('../DashboardPage/hubs/HubSistema').then(m => ({ default: m.HubSistema })))
 
 interface AppViewRouterProps {
   activeView: AppView
@@ -271,11 +271,14 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
             style={activeZoom !== 1 ? { zoom: activeZoom } : undefined}
           >
             {(activeView === 'agenda' || activeView === 'planner' || activeView === 'calendar') && (
-              <PlannerPage />
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Planejador..." message="Preparando tarefas e calendário" />}>
+                <PlannerPage />
+              </Suspense>
             )}
 
             {activeView === 'notes' && (
-              <HubConhecimento
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Notas..." message="Preparando editor e árvore de conhecimento" />}>
+                <HubConhecimento
                 notes={notes}
                 folders={noteFolders}
                 onAddNote={(title: string, folderId?: string | null, projectId?: string | null, parentNoteId?: string | null) =>
@@ -304,11 +307,13 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
                 onEmptyTrash={onEmptyNotesTrash}
                 noteTemplates={noteTemplates}
                 onSetNoteBookmarks={onSetNoteBookmarks}
-              />
+                />
+              </Suspense>
             )}
 
             {activeView === 'study' && (
-              <HubEstudos
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Estudos..." message="Preparando foco e materiais" />}>
+                <HubEstudos
                 activeView={activeView}
                 cards={cards}
                 study={study}
@@ -316,16 +321,19 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
                 onUpdatePlanningCard={(cardId: string, updates: Partial<Pick<Card, 'title' | 'descriptionHtml' | 'priority' | 'status' | 'checklist'>>) =>
                   onEditCard(cardId, updates)
                 }
-              />
+                />
+              </Suspense>
             )}
 
             {activeView === 'projects' && (
-              <HubTrabalho
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Projetos..." message="Preparando relatórios locais" />}>
+                <HubTrabalho
                 activeView={activeView}
                 reportsDir={settings.reportsDir}
                 dataDir={settings.dataDir}
                 onUpdateReportsDir={(dir: string) => onUpdateSettings({ reportsDir: dir })}
-              />
+                />
+              </Suspense>
             )}
 
             {activeView === 'canvas' && (
@@ -413,7 +421,8 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
             )}
 
             {(['clipboard', 'colors'] as AppView[]).includes(activeView) && (
-              <HubFerramentas
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Ferramentas..." message="Preparando utilitários" />}>
+                <HubFerramentas
                 activeView={activeView}
                 categories={clipboardCategories}
                 items={clipboardItems}
@@ -430,11 +439,13 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
                 onAddPalette={onAddColorPalette}
                 onUpdatePalette={onUpdateColorPalette}
                 onRemovePalette={onRemoveColorPalette}
-              />
+                />
+              </Suspense>
             )}
 
             {(activeView === 'settings' || activeView === 'history') && (
-              <HubSistema
+              <Suspense fallback={<ViewLoadingSkeleton title="Carregando Sistema..." message="Preparando configurações" />}>
+                <HubSistema
                 activeView={activeView}
                 settings={settings}
                 onUpdateSettings={onUpdateSettings}
@@ -472,7 +483,8 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
                 meetings={meetings}
                 apps={apps}
                 colorPalettes={colorPalettes}
-              />
+                />
+              </Suspense>
             )}
           </div>
         )}

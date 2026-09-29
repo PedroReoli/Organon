@@ -38,7 +38,7 @@
     "dev:direct": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && electron .",
-    "build": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && vite build && node scripts/validate-build-output.cjs",
+    "build": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && vite build && node scripts/validate-build-output.cjs && node scripts/check-bundle-budget.cjs",
     "build:electron": "npm run build && electron-builder",
     "build:full": "npm run build:electron",
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false",

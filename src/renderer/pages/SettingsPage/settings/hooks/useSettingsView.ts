@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from '@types'
 import { isElectron } from '@utils'
 import type { SettingsViewProps } from '@types'
 import type { PingDiagnostics } from '../../../../../api/organon'
+import { organonEndpoints as organonApi } from '../../../../../api/organon/endpoints'
 
 export const useSettingsView = (props: SettingsViewProps) => {
   const { settings, onUpdateSettings, onAddRegisteredIDE, onUpdateRegisteredIDE, syncError } = props
@@ -82,7 +83,6 @@ export const useSettingsView = (props: SettingsViewProps) => {
     setPingStatus('testing')
     setPingReport(null)
     try {
-      const { organonApi } = await import('../../../../../api/organon')
       const report = await organonApi.pingDetailed()
       setPingReport(report)
       setPingStatus(report.ok ? 'ok' : 'error')
