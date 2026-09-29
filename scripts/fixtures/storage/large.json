@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "name": "large",
+  "seed": 3301,
+  "counts": { "cards": 10000, "notes": 5000, "meetings": 1000 }
+}

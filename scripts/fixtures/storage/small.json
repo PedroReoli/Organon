@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "name": "small",
+  "seed": 1103,
+  "counts": { "cards": 50, "notes": 25, "meetings": 10 }
+}

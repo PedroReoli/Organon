@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "name": "medium",
+  "seed": 2207,
+  "counts": { "cards": 2000, "notes": 1000, "meetings": 250 }
+}
