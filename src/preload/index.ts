@@ -301,6 +301,16 @@ const electronAPI = {
   ) => ipcRenderer.invoke('meetings:transcribe', audioPath, modelId, options),
   downloadWhisperModel: (modelId: string) => ipcRenderer.invoke('whisper:downloadModel', modelId),
   whisperDownloadProgress: () => ipcRenderer.invoke('whisper:downloadProgress'),
+  getWhisperSecretStatus: () => ipcRenderer.invoke('whisper:secretStatus'),
+  saveWhisperSecrets: (secrets: { groqApiKey?: string; openaiApiKey?: string; customApiKey?: string }) =>
+    ipcRenderer.invoke('whisper:saveSecrets', secrets),
+  transcribeCloudAudio: (request: {
+    audioBase64: string
+    provider: 'groq' | 'openai' | 'custom'
+    model?: string
+    customEndpoint?: string
+    initialPrompt?: string
+  }) => ipcRenderer.invoke('whisper:transcribeCloud', request),
   meetingAgentStatus: () => ipcRenderer.invoke('meeting-agent:status'),
   meetingAgentRun: (request: unknown) => ipcRenderer.invoke('meeting-agent:run', request),
   meetingAgentCancel: (id: string) => ipcRenderer.invoke('meeting-agent:cancel', id),

@@ -14,6 +14,9 @@ export interface WhisperServiceConfig {
   provider: 'groq' | 'openai' | 'custom' | 'local' | 'webspeech'
   groqApiKey?: string
   openaiApiKey?: string
+  groqApiKeyConfigured?: boolean
+  openaiApiKeyConfigured?: boolean
+  customApiKeyConfigured?: boolean
   customEndpoint?: string
   model?: string
   cleanupDictation?: boolean
@@ -84,12 +87,63 @@ export function loadWhisperConfig(): WhisperServiceConfig {
   return DEFAULT_WHISPER_CONFIG
 }
 
-export function saveWhisperConfig(config: WhisperServiceConfig): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-    if (config.groqApiKey) localStorage.setItem('organon_groq_api_key', config.groqApiKey)
-    if (config.openaiApiKey) localStorage.setItem('organon_openai_api_key', config.openaiApiKey)
-  } catch {}
+function persistWhisperConfigWithoutSecrets(
+  config: WhisperServiceConfig,
+  status: { groq: boolean; openai: boolean; custom: boolean }
+): void {
+  const sanitized: WhisperServiceConfig = {
+    ...config,
+    groqApiKey: '',
+    openaiApiKey: '',
+    groqApiKeyConfigured: status.groq,
+    openaiApiKeyConfigured: status.openai,
+    customApiKeyConfigured: status.custom,
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized))
+}
+
+let secretMigrationPromise: Promise<void> | null = null
+
+export function initializeWhisperSecrets(config: WhisperServiceConfig = loadWhisperConfig()): Promise<void> {
+  if (secretMigrationPromise) return secretMigrationPromise
+  secretMigrationPromise = (async () => {
+    if (!window.electronAPI?.getWhisperSecretStatus || !window.electronAPI?.saveWhisperSecrets) return
+    const legacyGroq = config.groqApiKey || localStorage.getItem('organon_groq_api_key') || ''
+    const legacyOpenAi = config.openaiApiKey || localStorage.getItem('organon_openai_api_key') || ''
+    let status = await window.electronAPI.getWhisperSecretStatus()
+    if (legacyGroq || legacyOpenAi) {
+      status = await window.electronAPI.saveWhisperSecrets({
+        groqApiKey: legacyGroq || undefined,
+        openaiApiKey: legacyOpenAi || undefined,
+        customApiKey: config.provider === 'custom' ? (legacyOpenAi || legacyGroq || undefined) : undefined,
+      })
+    }
+    persistWhisperConfigWithoutSecrets(config, status)
+    if (status.groq) localStorage.removeItem('organon_groq_api_key')
+    if (status.openai) localStorage.removeItem('organon_openai_api_key')
+  })().finally(() => { secretMigrationPromise = null })
+  return secretMigrationPromise
+}
+
+export async function saveWhisperConfig(config: WhisperServiceConfig): Promise<void> {
+  if (!window.electronAPI?.saveWhisperSecrets) {
+    throw new Error('O cofre seguro de credenciais requer o aplicativo desktop.')
+  }
+  const groqApiKey = config.groqApiKey?.trim() || undefined
+  const openaiApiKey = config.openaiApiKey?.trim() || undefined
+  const status = await window.electronAPI.saveWhisperSecrets({
+    groqApiKey,
+    openaiApiKey,
+    customApiKey: config.provider === 'custom'
+      ? (openaiApiKey || groqApiKey)
+      : undefined,
+  })
+  if ((groqApiKey || openaiApiKey) && !status.secureStorageAvailable) {
+    throw new Error('O cofre seguro do sistema operacional esta indisponivel.')
+  }
+  persistWhisperConfigWithoutSecrets(config, status)
+  if (status.groq) localStorage.removeItem('organon_groq_api_key')
+  if (status.openai) localStorage.removeItem('organon_openai_api_key')
 }
 
 export function getWhisperTranscriptionProfile(
@@ -228,112 +282,17 @@ async function transcribePreparedAudio(
     return window.electronAPI.transcribeAudio(arrayBufferToBase64(await audioBlob.arrayBuffer()), cfg.model, { initialPrompt: prompt })
   }
 
-  const mimeType = audioBlob.type || 'audio/webm'
-  const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('wav') ? 'wav' : 'webm'
-  const audioFile = new File([audioBlob], `speech.${extension}`, { type: mimeType })
-
-  try {
-    // 1. Groq Whisper API (Gratuito, ultra-rápido ~0.5s)
-    if (cfg.provider === 'groq') {
-      const apiKey = cfg.groqApiKey || localStorage.getItem('organon_groq_api_key') || ''
-      if (!apiKey) {
-        throw new Error(
-          'Chave de API Groq não configurada. Insira sua chave gratuita da Groq nas configurações para transcrição instantânea via Whisper Large v3.'
-        )
-      }
-
-      const formData = new FormData()
-      formData.append('file', audioFile)
-      formData.append('model', cfg.model?.startsWith('whisper-large-v3') ? cfg.model : 'whisper-large-v3-turbo')
-      formData.append('language', 'pt')
-      formData.append('response_format', 'json')
-      if (prompt) formData.append('prompt', prompt)
-
-      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
-      })
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}))
-        throw new Error(errJson.error?.message || `Groq API respondeu com HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data.text ? data.text.trim() : ''
-    }
-
-    // 2. OpenAI Whisper API
-    if (cfg.provider === 'openai') {
-      const apiKey = cfg.openaiApiKey || localStorage.getItem('organon_openai_api_key') || ''
-      if (!apiKey) {
-        throw new Error('Chave de API da OpenAI não configurada.')
-      }
-
-      const formData = new FormData()
-      formData.append('file', audioFile)
-      formData.append('model', 'whisper-1')
-      formData.append('language', 'pt')
-      if (prompt) formData.append('prompt', prompt)
-
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
-      })
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}))
-        throw new Error(errJson.error?.message || `OpenAI API respondeu com HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data.text ? data.text.trim() : ''
-    }
-
-    // 3. Endpoint Personalizado / Local (Self-Hosted / Ollama / Whisper Server)
-    if (cfg.provider === 'custom') {
-      const endpoint = cfg.customEndpoint || 'http://localhost:8080/v1/audio/transcriptions'
-      const apiKey = cfg.openaiApiKey || cfg.groqApiKey || ''
-
-      const formData = new FormData()
-      formData.append('file', audioFile)
-      formData.append('model', cfg.model || 'whisper-1')
-      formData.append('language', 'pt')
-      if (prompt) formData.append('prompt', prompt)
-
-      const headers: Record<string, string> = {}
-      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Endpoint customizado respondeu com HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      if (typeof data.text !== 'string' && typeof data.transcription !== 'string') throw new Error('Resposta sem transcrição válida.')
-      return (data.text ?? data.transcription).trim()
-    }
-
-    throw new Error('Nenhum motor de transcrição válido selecionado.')
-  } catch (err: any) {
-    console.warn('[WhisperService] Erro ao enviar áudio para API do Whisper:', err)
-
-    throw err
+  if (!window.electronAPI?.transcribeCloudAudio) {
+    throw new Error('A transcrição cloud requer o aplicativo desktop seguro.')
   }
+  await initializeWhisperSecrets(cfg)
+  return window.electronAPI.transcribeCloudAudio({
+    audioBase64: arrayBufferToBase64(await audioBlob.arrayBuffer()),
+    provider: cfg.provider,
+    model: cfg.model,
+    customEndpoint: cfg.customEndpoint,
+    initialPrompt: prompt,
+  })
 }
 
 async function transcribePreparedWithFallback(

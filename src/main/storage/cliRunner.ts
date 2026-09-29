@@ -1,4 +1,5 @@
-import { exec } from 'child_process'
+import { app } from 'electron'
+import { execFile } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
 import { getDataPath } from './filesystem'
@@ -11,6 +12,37 @@ export interface CliExecutionResult {
   error?: string
 }
 
+const ALLOWED_CLI_COMMANDS = new Set([
+  '--help', 'help', 'doctor', 'health', 'check', 'schema', 'ai-spec', 'status', 'info', 'sync',
+  'task', 'tasks', 'plan', 'sprint', 'sprints', 'note', 'notes', 'project', 'projects', 'habit', 'habits',
+])
+
+function tokenizeCliCommand(command: string): string[] {
+  const tokens: string[] = []
+  const pattern = /"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s]+)/g
+  let match: RegExpExecArray | null
+  let consumedUntil = 0
+  while ((match = pattern.exec(command))) {
+    if (command.slice(consumedUntil, match.index).trim()) throw new Error('Sintaxe de comando invalida.')
+    tokens.push((match[1] ?? match[2] ?? match[3]).replace(/\\"/g, '"'))
+    consumedUntil = pattern.lastIndex
+  }
+  if (command.slice(consumedUntil).trim()) throw new Error('Aspas nao balanceadas no comando.')
+  return tokens
+}
+
+function resolveCliPath(): string {
+  const appRoot = app.getAppPath ? app.getAppPath() : process.cwd()
+  const candidates = [
+    path.join(appRoot, 'bin', 'organon.cjs'),
+    path.join(__dirname, '..', '..', '..', 'bin', 'organon.cjs'),
+    path.join(process.cwd(), 'bin', 'organon.cjs'),
+  ]
+  const resolved = candidates.find(candidate => fs.existsSync(candidate))
+  if (!resolved) throw new Error('Executavel da CLI Organon nao encontrado.')
+  return resolved
+}
+
 export const executeCliCommand = async (command: string): Promise<CliExecutionResult> => {
   return new Promise((resolve) => {
     try {
@@ -19,18 +51,22 @@ export const executeCliCommand = async (command: string): Promise<CliExecutionRe
         return resolve({ success: false, output: '', error: 'Comando vazio.' })
       }
 
-      const rootDir = process.cwd()
-      const cliPath = path.join(rootDir, 'bin', 'organon.cjs')
-
-      // Normalize command arguments
-      let finalCmd = sanitized
-      if (!finalCmd.startsWith('organon') && !finalCmd.startsWith('node')) {
-        finalCmd = `node "${cliPath}" ${finalCmd}`
-      } else if (finalCmd.startsWith('organon')) {
-        finalCmd = `node "${cliPath}" ${finalCmd.replace(/^organon\s*/, '')}`
+      const cliPath = resolveCliPath()
+      const rootDir = path.dirname(path.dirname(cliPath))
+      const args = tokenizeCliCommand(sanitized)
+      if (args[0]?.toLowerCase() === 'organon') args.shift()
+      const primary = args[0]?.toLowerCase()
+      if (!primary || !ALLOWED_CLI_COMMANDS.has(primary)) {
+        return resolve({ success: false, output: '', error: 'Comando nao permitido pela interface desktop.' })
       }
 
-      exec(finalCmd, { cwd: rootDir, env: { ...process.env, ORGANON_DATA_DIR: getDataPath() } }, (error, stdout, stderr) => {
+      execFile(process.execPath, [cliPath, ...args], {
+        cwd: rootDir,
+        windowsHide: true,
+        timeout: 120_000,
+        maxBuffer: 5 * 1024 * 1024,
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ORGANON_DATA_DIR: getDataPath() },
+      }, (error, stdout, stderr) => {
         if (error) {
           return resolve({
             success: false,

@@ -24,6 +24,7 @@ import {
   WhisperServiceConfig,
   loadWhisperConfig,
   saveWhisperConfig,
+  initializeWhisperSecrets,
   WhisperTranscriptionProfile,
   WHISPER_TRANSCRIPTION_PROFILES,
 } from '../../../services/whisperService'
@@ -49,16 +50,21 @@ export const TranscriptPromptSettingsModal: React.FC<Props> = ({ isOpen = true, 
       const loadedWhisper = loadWhisperConfig()
       setConfig(loadedPrompt)
       setWhisperCfg(loadedWhisper)
+      void initializeWhisperSecrets(loadedWhisper).then(() => setWhisperCfg(loadWhisperConfig()))
       setIsCustomModel(!LIGHTWEIGHT_LOCAL_MODELS.some((m) => m.id === loadedPrompt.model))
     }
   }, [isOpen])
 
   if (!isOpen) return null
 
-  const handleSave = () => {
+  const handleSave = async () => {
     savePromptConfig(config)
-    saveWhisperConfig(whisperCfg)
-    onClose()
+    try {
+      await saveWhisperConfig(whisperCfg)
+      onClose()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Falha ao salvar credenciais no cofre seguro.')
+    }
   }
 
   const handlePresetChange = (preset: PresetType) => {
@@ -236,7 +242,11 @@ export const TranscriptPromptSettingsModal: React.FC<Props> = ({ isOpen = true, 
                 </label>
                 <input
                   type="password"
-                  placeholder={whisperCfg.provider === 'groq' ? 'gsk_xxxxxxxxxxxxxxxx' : 'sk-xxxxxxxxxxxxxxxx'}
+                  placeholder={
+                    whisperCfg.provider === 'groq'
+                      ? (whisperCfg.groqApiKeyConfigured ? 'Chave protegida — digite para substituir' : 'gsk_xxxxxxxxxxxxxxxx')
+                      : (whisperCfg.openaiApiKeyConfigured ? 'Chave protegida — digite para substituir' : 'sk-xxxxxxxxxxxxxxxx')
+                  }
                   value={
                     whisperCfg.provider === 'groq'
                       ? whisperCfg.groqApiKey || ''
@@ -252,7 +262,7 @@ export const TranscriptPromptSettingsModal: React.FC<Props> = ({ isOpen = true, 
                   className="wsm-input"
                 />
                 <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
-                  Sua chave é armazenada de forma segura e local nas preferências do Organon.
+                  A chave é criptografada pelo cofre do sistema operacional e nunca é devolvida ao renderer.
                 </span>
               </div>
             </div>

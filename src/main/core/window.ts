@@ -6,16 +6,32 @@ import { getDevServerUrl } from './devServerUrl'
 
 let mainWindow: BrowserWindow | null = null
 
-// Configura permissões globais de mídia e reconhecimento de voz no Electron
+const isTrustedAppUrl = (url: string): boolean => {
+  if (url.startsWith('file://')) return true
+  if (app.isPackaged) return false
+  try {
+    return new URL(url).origin === new URL(getDevServerUrl()).origin
+  } catch {
+    return false
+  }
+}
+
+// Permissões mínimas para as superfícies locais do Organon.
 app.whenReady().then(() => {
   if (session.defaultSession) {
-    session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
-      callback(true)
+    const allowedPermissions = new Set(['media', 'display-capture', 'speaker-selection'])
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      callback(isTrustedAppUrl(webContents.getURL()) && allowedPermissions.has(permission))
     })
-    session.defaultSession.setPermissionCheckHandler(() => {
-      return true
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+      return Boolean(webContents && isTrustedAppUrl(webContents.getURL()) && allowedPermissions.has(permission))
     })
-    session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      const requestUrl = request.frame?.url || ''
+      if (!isTrustedAppUrl(requestUrl)) {
+        callback({})
+        return
+      }
       desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
         const videoSource = sources[0]
         if (!videoSource) {
@@ -106,7 +122,7 @@ export const createWindow = (): void => {
       preload: resolvedPreload,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
     title: 'Organon',
     backgroundColor: '#0f172a',

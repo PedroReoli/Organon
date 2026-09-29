@@ -176,6 +176,7 @@ export function createSuperWhisperWindow(): BrowserWindow {
       preload: resolvedPreload,
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
     },
   })
 

@@ -43,7 +43,7 @@ export function useWhisperDiagnostics() {
 
   const whisperConfig = loadWhisperConfig()
   const webSpeechReady = captureReadiness.speechRecognitionReady
-  const groqReady = Boolean(whisperConfig.groqApiKey?.trim())
+  const groqReady = Boolean(whisperConfig.groqApiKeyConfigured || whisperConfig.groqApiKey?.trim())
   const endpointReady = Boolean(whisperConfig.customEndpoint?.trim())
   const localModelReady = localWhisperModels.some(model => model.downloaded)
 

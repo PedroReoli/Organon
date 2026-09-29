@@ -718,6 +718,20 @@ declare global {
         url: string
         downloaded: boolean
       }>>
+      getWhisperSecretStatus: () => Promise<{ groq: boolean; openai: boolean; custom: boolean; secureStorageAvailable: boolean }>
+      saveWhisperSecrets: (secrets: { groqApiKey?: string; openaiApiKey?: string; customApiKey?: string }) => Promise<{
+        groq: boolean
+        openai: boolean
+        custom: boolean
+        secureStorageAvailable: boolean
+      }>
+      transcribeCloudAudio: (request: {
+        audioBase64: string
+        provider: 'groq' | 'openai' | 'custom'
+        model?: string
+        customEndpoint?: string
+        initialPrompt?: string
+      }) => Promise<string>
       projectSelectFolder: () => Promise<{ name: string; path: string } | null>
       projectListFiles: (projectPath: string) => Promise<Array<{ relativePath: string; extension: string; sizeBytes: number }>>
       projectReadFile: (projectPath: string, relativePath: string) => Promise<string | null>

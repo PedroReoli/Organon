@@ -24,6 +24,7 @@ import {
 } from '../storage'
 import { showOpenDialog } from '../core'
 import { analyzeTranscriptSelection, generateTranscriptNote } from '../meeting'
+import { getSecret, getSecretStatus, setSecret } from '../security/secretStore'
 
 const launchExe = (exePath: string): boolean => {
   try {
@@ -166,6 +167,62 @@ function buildObsidianMeetingMarkdown(meeting: ObsidianMeetingExport, audioLink?
     lines.push(meeting.fullTranscript?.trim() || '_Sem transcricao._', '')
   }
   return `${lines.join('\n').trim()}\n`
+}
+
+type CloudTranscriptionRequest = {
+  audioBase64: string
+  provider: 'groq' | 'openai' | 'custom'
+  model?: string
+  customEndpoint?: string
+  initialPrompt?: string
+}
+
+async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise<string> {
+  const audio = decodeWavBase64(request?.audioBase64)
+  const provider = request?.provider
+  if (!['groq', 'openai', 'custom'].includes(provider)) throw new Error('Provedor cloud invalido.')
+
+  let endpoint: string
+  let apiKey: string | null
+  let model: string
+  if (provider === 'groq') {
+    endpoint = 'https://api.groq.com/openai/v1/audio/transcriptions'
+    apiKey = getSecret('whisper.groq')
+    model = request.model?.startsWith('whisper-large-v3') ? request.model : 'whisper-large-v3-turbo'
+  } else if (provider === 'openai') {
+    endpoint = 'https://api.openai.com/v1/audio/transcriptions'
+    apiKey = getSecret('whisper.openai')
+    model = 'whisper-1'
+  } else {
+    endpoint = request.customEndpoint?.trim() || 'http://localhost:8080/v1/audio/transcriptions'
+    const parsedEndpoint = new URL(endpoint)
+    if (!['http:', 'https:'].includes(parsedEndpoint.protocol)) throw new Error('Endpoint customizado invalido.')
+    apiKey = getSecret('whisper.custom')
+    model = request.model?.trim() || 'whisper-1'
+  }
+  if (provider !== 'custom' && !apiKey) throw new Error(`Chave de API ${provider} nao configurada no cofre seguro.`)
+
+  const formData = new FormData()
+  formData.append('file', new Blob([Uint8Array.from(audio)], { type: 'audio/wav' }), 'speech.wav')
+  formData.append('model', model)
+  formData.append('language', 'pt')
+  if (provider === 'groq') formData.append('response_format', 'json')
+  const prompt = trimPrompt(request.initialPrompt)
+  if (prompt) formData.append('prompt', prompt)
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
+    body: formData,
+    signal: AbortSignal.timeout(120_000),
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { error?: { message?: string } }
+    throw new Error(payload.error?.message || `Provedor cloud respondeu com HTTP ${response.status}.`)
+  }
+  const payload = await response.json() as { text?: string; transcription?: string }
+  const text = payload.text ?? payload.transcription
+  if (typeof text !== 'string') throw new Error('Resposta do provedor sem transcricao valida.')
+  return text.trim()
 }
 
 function resolveTranscriptionInput(input: string): { path: string; cleanup: boolean } {
@@ -489,6 +546,23 @@ export const registerContentIpcHandlers = (): void => {
       console.error('Erro ao listar modelos Whisper locais:', error)
       return []
     }
+  })
+
+  ipcMain.handle('whisper:secretStatus', () => getSecretStatus())
+
+  ipcMain.handle('whisper:saveSecrets', (_event, secrets: {
+    groqApiKey?: string
+    openaiApiKey?: string
+    customApiKey?: string
+  }) => {
+    if (secrets?.groqApiKey?.trim()) setSecret('whisper.groq', secrets.groqApiKey)
+    if (secrets?.openaiApiKey?.trim()) setSecret('whisper.openai', secrets.openaiApiKey)
+    if (secrets?.customApiKey?.trim()) setSecret('whisper.custom', secrets.customApiKey)
+    return getSecretStatus()
+  })
+
+  ipcMain.handle('whisper:transcribeCloud', (_event, request: CloudTranscriptionRequest) => {
+    return transcribeCloudAudio(request)
   })
 
   ipcMain.handle('meetings:transcribe', async (

@@ -33,6 +33,8 @@ if (isDevMode) {
   app.setPath('userData', path.join(app.getPath('appData'), devName))
 }
 
+app.setPath('sessionData', path.join(app.getPath('userData'), 'Chromium'))
+
 app.setAppUserModelId(isDevMode ? 'com.organon.dev' : 'com.organon')
 
 const gotLock = app.requestSingleInstanceLock()
