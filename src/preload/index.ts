@@ -6,6 +6,18 @@ interface CardLocation {
   period: 'morning' | 'afternoon' | 'night' | null
 }
 
+interface CardReminderItem {
+  id: string
+  label?: string
+  triggerAt: string
+  sound: 'gentle-chime' | 'digital-beep' | 'bell-focus' | 'urgent-alarm' | 'none'
+  channel: 'all' | 'toast-only' | 'sound-only' | 'banner-only'
+  repeatEveryMinutes?: number
+  hasFired: boolean
+  snoozedUntil?: string | null
+  createdAt: string
+}
+
 interface Card {
   id: string
   title: string
@@ -16,6 +28,7 @@ interface Card {
   hasDate: boolean
   createdAt: string
   updatedAt: string
+  reminders?: CardReminderItem[]
 }
 
 type ShortcutKind = 'url'

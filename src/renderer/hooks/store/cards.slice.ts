@@ -65,6 +65,7 @@ export function cardsAddWithDate(
 type CardEditableFields =
   | 'title'
   | 'descriptionHtml'
+  | 'description'
   | 'date'
   | 'time'
   | 'hasDate'
@@ -79,6 +80,11 @@ type CardEditableFields =
   | 'swimLaneId'
   | 'sprintSectionId'
   | 'location'
+  | 'storyPoints'
+  | 'tags'
+  | 'reminders'
+  | 'reminder'
+  | 'completedAt'
 
 export function cardsEdit(
   prev: Store,

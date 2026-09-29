@@ -353,6 +353,7 @@ export interface Settings {
   debugHudTitlebar?: boolean
   debugHudInline?: boolean
   debugHudHover?: boolean
+  reminderVolume?: number
 }
 
 export type SettingsDensity = 'compact' | 'default' | 'comfort'

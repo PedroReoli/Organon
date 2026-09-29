@@ -26,6 +26,8 @@ import type {
   SprintCard,
   SprintColumnSection,
   AgendaCategory,
+  CardReminder,
+  CardReminderItem,
 } from '../../renderer/types'
 import { SyncChange } from '../organon'
 import {
@@ -60,6 +62,8 @@ export function cardFromApi(id: string, p: Payload): Card {
     inSprint: b(p.in_sprint),
     sprintColumnId: p.sprint_column_id ? s(p.sprint_column_id) : null,
     sprintSectionId: p.sprint_section_id ? s(p.sprint_section_id) : null,
+    reminders: arr<CardReminderItem>(p.reminders),
+    reminder: (p.reminder as CardReminder) ?? null,
     createdAt: s(p.created_at) || now(),
     updatedAt: s(p.updated_at) || now(),
   }

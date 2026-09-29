@@ -2,7 +2,7 @@ import type { Card, CardLocation, Day, Period } from '../../types'
 import type { UpdateStoreFn } from './types'
 
 export const createCardsExtrasSlice = (updateStore: UpdateStoreFn, getStore: () => any) => {
-  const editCard = (cardId: string, updates: Partial<Pick<Card, 'title' | 'descriptionHtml' | 'date' | 'time' | 'hasDate' | 'isLocked' | 'priority' | 'status' | 'checklist' | 'projectId' | 'durationMinutes' | 'inSprint' | 'sprintColumnId' | 'swimLaneId' | 'sprintSectionId' | 'location'>>) => {
+  const editCard = (cardId: string, updates: Partial<Pick<Card, 'title' | 'descriptionHtml' | 'description' | 'date' | 'time' | 'hasDate' | 'isLocked' | 'priority' | 'status' | 'checklist' | 'projectId' | 'durationMinutes' | 'inSprint' | 'sprintColumnId' | 'swimLaneId' | 'sprintSectionId' | 'location' | 'storyPoints' | 'tags' | 'reminders' | 'reminder' | 'completedAt'>>) => {
     updateStore(prev => ({
       ...prev,
       cards: prev.cards.map((card: Card) =>

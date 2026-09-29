@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PlanningTask } from '../types/planning.types';
 import { useStore } from '../../shared/hooks';
 import { listenForCliSync } from '../cli/planningCliBridge';
+import { normalizeCard } from '../../../utils/factories';
 
 export const usePlanningTasks = () => {
   const { cards: globalTasks, projects, updateStore } = useStore();
@@ -37,7 +38,7 @@ export const usePlanningTasks = () => {
 
   const addTask = useCallback(
     (taskData: Partial<PlanningTask>) => {
-      const newTask: PlanningTask = {
+      const draftTask: PlanningTask = {
         id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: taskData.title || 'Nova tarefa',
         descriptionHtml: taskData.descriptionHtml || '',
@@ -56,8 +57,10 @@ export const usePlanningTasks = () => {
         durationMinutes: taskData.durationMinutes || 30,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        reminders: [],
         ...taskData,
       };
+      const newTask = normalizeCard(draftTask) as PlanningTask;
 
       setTasks((prev) => {
         const newTasks = [newTask, ...prev];

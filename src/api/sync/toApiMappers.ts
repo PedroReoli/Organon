@@ -38,6 +38,8 @@ export function cardToApi(c: Card): Payload {
     in_sprint: c.inSprint ?? false,
     sprint_column_id: c.sprintColumnId ?? null,
     sprint_section_id: c.sprintSectionId ?? null,
+    reminders: c.reminders ?? [],
+    reminder: c.reminder ?? null,
     created_at: c.createdAt,
     updated_at: c.updatedAt,
   }

@@ -23,7 +23,7 @@ import {
 } from './app/app.constants'
 import { useAppDebugHud } from './app/useAppDebugHud'
 import { useCalendarReminders } from './app/useCalendarReminders'
-import { usePlanningTaskReminders } from './app/usePlanningTaskReminders'
+import { usePlanningReminders } from './PlannerPage/hooks/usePlanningReminders'
 import { TaskAlarmAlertModal } from '../components/modals/TaskAlarmAlertModal'
 import { AppGlobalModals } from './app/AppGlobalModals'
 import { AppViewRouter } from './app/AppViewRouter'
@@ -320,10 +320,11 @@ export const App = () => {
   // Lembretes de eventos do calendário
   useCalendarReminders({ calendarEvents })
 
-  // Lembretes & Alarmes de Tarefas de Planejamento (Sons + Toast Windows + Modal)
-  const { activeAlarm, dismissAlarm, snoozeAlarm, completeAlarmTask } = usePlanningTaskReminders({
-    cards,
-    onUpdateCard: editCard,
+  // Motor global único: sons, toast do Windows e banner não bloqueante.
+  const { activeAlert, dismissAlert, snoozeAlert, completeAlertTask } = usePlanningReminders({
+    tasks: cards,
+    onUpdateTask: editCard,
+    volume: settings.reminderVolume,
   })
 
   // Atalhos globais
@@ -608,10 +609,10 @@ export const App = () => {
 
       {/* Modal de Alarme / Lembrete de Tarefa em Tempo Real */}
       <TaskAlarmAlertModal
-        alarm={activeAlarm}
-        onDismiss={dismissAlarm}
-        onSnooze={snoozeAlarm}
-        onComplete={completeAlarmTask}
+        alarm={activeAlert}
+        onDismiss={dismissAlert}
+        onSnooze={snoozeAlert}
+        onComplete={completeAlertTask}
       />
 
       {/* Drawer da Central de Atividades & IA */}

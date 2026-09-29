@@ -276,7 +276,7 @@ export const useStore = () => {
     return createdId
   }, [updateStore])
 
-  const editCard = useCallback((cardId: string, updates: Partial<Pick<Card, 'title' | 'descriptionHtml' | 'date' | 'time' | 'hasDate' | 'isLocked' | 'priority' | 'status' | 'checklist' | 'projectId' | 'durationMinutes' | 'inSprint' | 'sprintColumnId' | 'swimLaneId' | 'sprintSectionId' | 'location'>>) => {
+  const editCard = useCallback((cardId: string, updates: Partial<Pick<Card, 'title' | 'descriptionHtml' | 'description' | 'date' | 'time' | 'hasDate' | 'isLocked' | 'priority' | 'status' | 'checklist' | 'projectId' | 'durationMinutes' | 'inSprint' | 'sprintColumnId' | 'swimLaneId' | 'sprintSectionId' | 'location' | 'storyPoints' | 'tags' | 'reminders' | 'reminder' | 'completedAt'>>) => {
     updateStore(prev => cardsSlice.cardsEdit(prev, cardId, updates))
   }, [updateStore])
 

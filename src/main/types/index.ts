@@ -3,6 +3,18 @@ export interface CardLocation {
   period: 'morning' | 'afternoon' | 'night' | null
 }
 
+export interface CardReminderItem {
+  id: string
+  label?: string
+  triggerAt: string
+  sound: 'gentle-chime' | 'digital-beep' | 'bell-focus' | 'urgent-alarm' | 'none'
+  channel: 'all' | 'toast-only' | 'sound-only' | 'banner-only'
+  repeatEveryMinutes?: number
+  hasFired: boolean
+  snoozedUntil?: string | null
+  createdAt: string
+}
+
 export interface Card {
   id: string
   title: string
@@ -26,6 +38,7 @@ export interface Card {
   iconEmoji?: string | null
   tags?: string[]
   storyPoints?: number
+  reminders?: CardReminderItem[]
   checklist?: Array<{
     id: string
     title: string

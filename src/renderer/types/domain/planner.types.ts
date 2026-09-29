@@ -98,7 +98,24 @@ export interface Card {
   iconEmoji?: string | null
   storyPoints?: number | null
   tags?: string[]
+  reminders: CardReminderItem[]
+  /** @deprecated Mantido apenas para migração transparente de dados antigos. */
   reminder?: CardReminder | null
+}
+
+export type ReminderSoundType = 'gentle-chime' | 'digital-beep' | 'bell-focus' | 'urgent-alarm' | 'none'
+export type ReminderChannel = 'all' | 'toast-only' | 'sound-only' | 'banner-only'
+
+export interface CardReminderItem {
+  id: string
+  label?: string
+  triggerAt: string
+  sound: ReminderSoundType
+  channel: ReminderChannel
+  repeatEveryMinutes?: number
+  hasFired: boolean
+  snoozedUntil?: string | null
+  createdAt: string
 }
 
 export type ReminderMode = 'exact' | 'before' | 'relative' | 'interval'
