@@ -1,6 +1,6 @@
 {
   "name": "organon",
-  "version": "6.23.10",
+  "version": "6.23.11",
   "description": "Organon - App desktop local com Electron",
   "main": "dist/main/index.js",
   "author": "Pedro Reoli",
