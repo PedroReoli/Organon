@@ -20,6 +20,7 @@ const habitCmd = require('./lib/commands/habit.cjs');
 const statusCmd = require('./lib/commands/status.cjs');
 const doctorCmd = require('./lib/commands/doctor.cjs');
 const mcpServer = require('./lib/mcp.cjs');
+const mcpDomain = require('./lib/mcp-domain.cjs');
 
 const BANNER = `
 \x1b[38;2;99;102;241m ██████╗ ██████╗  ██████╗  █████╗ ███╗   ██╗ ██████╗ ███╗   ██╗\x1b[0m
@@ -79,6 +80,7 @@ function printHelp() {
     organon --ai                            \x1b[90m(Exibe o protocolo autônomo para agentes de IA)\x1b[0m
     organon doctor [--json]                 \x1b[90m(Diagnóstico completo de saúde do ambiente)\x1b[0m
     organon mcp                             \x1b[90m(Inicia servidor MCP stdio JSON-RPC 2.0)\x1b[0m
+    organon index rebuild [--json]          \x1b[90m(Recria o índice semântico local e descartável)\x1b[0m
     organon schema                          \x1b[90m(Emite JSON Tool Schema format para IAs)\x1b[0m
     organon ai "<prompt em linguagem natural>"
     organon status                          \x1b[90m(Diagnóstico do sistema e diretórios de dados)\x1b[0m
@@ -161,6 +163,13 @@ function execute(args, context = {}) {
   // MCP
   if (primary === 'mcp' || primary === 'mcp-server') {
     mcpServer.startMcpServer();
+    return;
+  }
+
+  if (primary === 'index' && (secondary === 'rebuild' || secondary === 'build')) {
+    const result = mcpDomain.rebuildNotesSemanticIndex();
+    if (isJson) console.log(JSON.stringify(result, null, 2));
+    else console.log(`\x1b[32m✔ Índice semântico reconstruído:\x1b[0m ${result.notes} nota(s), ${result.chunks} chunk(s), revisão ${result.revision}.`);
     return;
   }
 

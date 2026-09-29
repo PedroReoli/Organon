@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "key": "security",
+      "title": "Plano de hardening",
+      "tags": ["arquitetura", "proteção"],
+      "content": "# Plano de hardening\n\nMapear permissões, superfície de ataque e threat model. Corrigir falhas críticas antes da publicação e registrar controles de acesso."
+    },
+    {
+      "key": "meeting",
+      "title": "Reunião com a Acme",
+      "tags": ["comercial", "acme"],
+      "content": "# Reunião com a Acme\n\nO cliente aprovou o escopo. Ficou decidido que Ana prepara o protótipo e Bruno confirma os próximos passos."
+    },
+    {
+      "key": "delivery",
+      "title": "Cronograma da release",
+      "tags": ["produto", "planejamento"],
+      "content": "# Cronograma da release\n\nA entrega do pacote está prevista para 15 de outubro. A homologação antecede o vencimento em três dias."
+    },
+    {
+      "key": "proposal",
+      "title": "Proposta comercial",
+      "tags": ["vendas", "acme"],
+      "content": "# Proposta comercial\n\nO orçamento para o consumidor inclui implantação, treinamento e suporte. Valor total de R$ 18.000."
+    },
+    {
+      "key": "recording",
+      "title": "Pipeline de áudio",
+      "tags": ["whisper", "mídia"],
+      "content": "# Pipeline de áudio\n\nA gravação preserva o WAV original. Depois, a transcrição associa cada fala aos timestamps da reunião."
+    }
+  ],
+  "queries": [
+    { "query": "riscos e vulnerabilidades do sistema", "expected": "security" },
+    { "query": "decisões do encontro com o cliente", "expected": "meeting" },
+    { "query": "prazo da entrega", "expected": "delivery" },
+    { "query": "budget do customer", "expected": "proposal" },
+    { "query": "gravação e transcrição", "expected": "recording" }
+  ],
+  "thresholds": {
+    "precisionAt1": 0.8,
+    "recallAt3": 1
+  }
+}

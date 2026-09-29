@@ -8,6 +8,11 @@ const MAX_OPERATIONS = 50;
 const MAX_PAYLOAD_BYTES = 1024 * 1024;
 const MAX_NOTE_BYTES = 512 * 1024;
 const CHECKPOINT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const SEMANTIC_INDEX_SCHEMA_VERSION = 1;
+const SEMANTIC_EMBEDDING_MODEL = 'organon-feature-hash-pt-v1';
+const SEMANTIC_EMBEDDING_DIMENSION = 256;
+const SEMANTIC_CHUNK_SIZE = 720;
+const SEMANTIC_CHUNK_OVERLAP = 120;
 
 class McpDomainError extends Error {
   constructor(code, message, details = undefined) {
@@ -559,8 +564,134 @@ function fold(value) {
   return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+const SEARCH_STOP_WORDS = new Set([
+  'a', 'as', 'ao', 'aos', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'na', 'nas', 'no', 'nos',
+  'o', 'os', 'ou', 'para', 'por', 'que', 'um', 'uma', 'the', 'and', 'for', 'of', 'to', 'with',
+]);
+
 function tokens(value) {
-  return fold(value).match(/[a-z0-9_]{2,}/g) || [];
+  return (fold(value).match(/[a-z0-9_]{2,}/g) || []).filter(token => !SEARCH_STOP_WORDS.has(token));
+}
+
+const SEMANTIC_CONCEPTS = new Map(Object.entries({
+  tarefa: 'task', tarefas: 'task', atividade: 'task', atividades: 'task', acao: 'task', acoes: 'task', afazer: 'task',
+  reuniao: 'meeting', reunioes: 'meeting', encontro: 'meeting', encontros: 'meeting', call: 'meeting', calls: 'meeting',
+  cliente: 'customer', clientes: 'customer', customer: 'customer', consumidor: 'customer',
+  proposta: 'proposal', propostas: 'proposal', orcamento: 'proposal', orcamentos: 'proposal', budget: 'proposal',
+  seguranca: 'security', vulnerabilidade: 'security', vulnerabilidades: 'security', risco: 'security', riscos: 'security',
+  hardening: 'security', permissao: 'security', permissoes: 'security', ataque: 'security', ameaca: 'security', ameacas: 'security',
+  threat: 'security', falha: 'security', falhas: 'security', protecao: 'security',
+  prazo: 'deadline', prazos: 'deadline', deadline: 'deadline', entrega: 'deadline', entregas: 'deadline', vencimento: 'deadline',
+  decisao: 'decision', decisoes: 'decision', escolha: 'decision', escolhas: 'decision',
+  gravacao: 'recording', gravacoes: 'recording', audio: 'recording', transcricao: 'recording',
+}));
+
+function semanticTerms(value) {
+  const result = [];
+  for (const token of tokens(value)) {
+    result.push(SEMANTIC_CONCEPTS.get(token) || token);
+    if (token.length > 5 && token.endsWith('s')) result.push(token.slice(0, -1));
+  }
+  return result;
+}
+
+function featureVector(value) {
+  const vector = Array(SEMANTIC_EMBEDDING_DIMENSION).fill(0);
+  const frequencies = new Map();
+  for (const term of semanticTerms(value)) frequencies.set(term, (frequencies.get(term) || 0) + 1);
+  for (const [term, frequency] of frequencies) {
+    const digest = createHash('sha256').update(term).digest();
+    const index = digest.readUInt16BE(0) % SEMANTIC_EMBEDDING_DIMENSION;
+    const sign = (digest[2] & 1) === 0 ? 1 : -1;
+    vector[index] += sign * (1 + Math.log(frequency));
+  }
+  const norm = Math.sqrt(vector.reduce((sum, current) => sum + current * current, 0));
+  return norm > 0 ? vector.map(value => Number((value / norm).toFixed(6))) : vector;
+}
+
+function cosine(left, right) {
+  let score = 0;
+  for (let index = 0; index < Math.min(left.length, right.length); index += 1) score += left[index] * right[index];
+  return Math.max(0, score);
+}
+
+function chunkContent(content) {
+  if (!content) return [{ start: 0, end: 0, text: '' }];
+  const chunks = [];
+  let start = 0;
+  while (start < content.length) {
+    let end = Math.min(content.length, start + SEMANTIC_CHUNK_SIZE);
+    if (end < content.length) {
+      const boundary = Math.max(content.lastIndexOf('\n', end), content.lastIndexOf(' ', end));
+      if (boundary > start + Math.floor(SEMANTIC_CHUNK_SIZE / 2)) end = boundary;
+    }
+    chunks.push({ start, end, text: content.slice(start, end) });
+    if (end >= content.length) break;
+    start = Math.max(start + 1, end - SEMANTIC_CHUNK_OVERLAP);
+  }
+  return chunks;
+}
+
+function getSemanticIndexPath() {
+  return path.join(store.dataDir, '_sistema', 'indexes', 'notes-semantic-v1.json');
+}
+
+function buildSemanticIndex(snapshot) {
+  const notes = (snapshot.store.notes || [])
+    .filter(note => !note.deletedAt && !note.isDeleted)
+    .map(note => {
+      const content = store.readNoteContent(note);
+      return {
+        noteId: note.id,
+        title: note.title,
+        folderId: note.folderId || null,
+        tags: Array.isArray(note.tags) ? note.tags : [],
+        updatedAt: note.updatedAt || null,
+        contentHash: sha256(content),
+        chunks: chunkContent(content).map(chunk => ({
+          start: chunk.start,
+          end: chunk.end,
+          vector: featureVector(`${note.title}\n${chunk.text}`),
+        })),
+      };
+    });
+  return {
+    manifest: {
+      schemaVersion: SEMANTIC_INDEX_SCHEMA_VERSION,
+      embeddingModel: SEMANTIC_EMBEDDING_MODEL,
+      dimension: SEMANTIC_EMBEDDING_DIMENSION,
+      sourceRevision: snapshot.revision,
+      generatedAt: new Date().toISOString(),
+    },
+    notes,
+  };
+}
+
+function isUsableSemanticIndex(index, snapshot) {
+  return index?.manifest?.schemaVersion === SEMANTIC_INDEX_SCHEMA_VERSION
+    && index.manifest.embeddingModel === SEMANTIC_EMBEDDING_MODEL
+    && index.manifest.dimension === SEMANTIC_EMBEDDING_DIMENSION
+    && index.manifest.sourceRevision === snapshot.revision
+    && Array.isArray(index.notes);
+}
+
+function loadSemanticIndex(snapshot) {
+  const persisted = readJson(getSemanticIndexPath());
+  if (isUsableSemanticIndex(persisted, snapshot)) return { index: persisted, persisted: true };
+  return { index: buildSemanticIndex(snapshot), persisted: false };
+}
+
+function rebuildNotesSemanticIndex() {
+  const snapshot = store.getStoreSnapshot();
+  const index = buildSemanticIndex(snapshot);
+  writeJsonAtomic(getSemanticIndexPath(), index);
+  return {
+    path: getSemanticIndexPath(),
+    revision: snapshot.revision,
+    notes: index.notes.length,
+    chunks: index.notes.reduce((total, note) => total + note.chunks.length, 0),
+    ...index.manifest,
+  };
 }
 
 function trigrams(value) {
@@ -607,6 +738,9 @@ function handleNotesSearch(args = {}) {
   const queryTokens = [...new Set(tokens(query))];
   const averageLength = docs.reduce((sum, doc) => sum + doc.docTokens.length, 0) / Math.max(1, docs.length);
   const queryTrigrams = trigrams(query);
+  const queryVector = featureVector(query);
+  const semanticIndexState = loadSemanticIndex(snapshot);
+  const semanticNotes = new Map(semanticIndexState.index.notes.map(note => [note.noteId, note]));
   const scored = docs.map(doc => {
     let lexicalScore = 0;
     for (const token of queryTokens) {
@@ -617,7 +751,14 @@ function handleNotesSearch(args = {}) {
       const denominator = frequency + 1.2 * (0.25 + 0.75 * (doc.docTokens.length / Math.max(1, averageLength)));
       lexicalScore += idf * ((frequency * 2.2) / denominator);
     }
-    const semanticScore = jaccard(queryTrigrams, trigrams(doc.text));
+    const indexedNote = semanticNotes.get(doc.note.id);
+    const rankedChunks = (indexedNote?.chunks || []).map(chunk => ({
+      ...chunk,
+      score: cosine(queryVector, chunk.vector),
+    })).sort((left, right) => right.score - left.score);
+    const bestChunk = rankedChunks[0];
+    const trigramScore = jaccard(queryTrigrams, trigrams(doc.text));
+    const semanticScore = Math.max(bestChunk?.score || 0, trigramScore * 0.5);
     const titleBoost = fold(doc.note.title).includes(fold(query)) ? 1 : 0;
     return {
       noteId: doc.note.id,
@@ -626,12 +767,24 @@ function handleNotesSearch(args = {}) {
       updatedAt: doc.note.updatedAt,
       lexicalScore: Number(lexicalScore.toFixed(4)),
       semanticScore: Number(semanticScore.toFixed(4)),
-      score: Number((lexicalScore * 0.75 + semanticScore * 2 + titleBoost).toFixed(4)),
-      snippet: buildSnippet(doc.content, query),
+      score: Number((lexicalScore * 0.75 + semanticScore * 2.25 + titleBoost).toFixed(4)),
+      snippet: bestChunk
+        ? doc.content.slice(bestChunk.start, bestChunk.end).replace(/\s+/g, ' ').trim().slice(0, 320)
+        : buildSnippet(doc.content, query),
+      offsets: bestChunk ? { start: bestChunk.start, end: bestChunk.end } : null,
     };
   }).filter(item => item.score > 0).sort((left, right) => right.score - left.score);
   const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
-  return { query, revision: snapshot.revision, total: scored.length, results: scored.slice(0, limit) };
+  return {
+    query,
+    revision: snapshot.revision,
+    total: scored.length,
+    index: {
+      ...semanticIndexState.index.manifest,
+      persisted: semanticIndexState.persisted,
+    },
+    results: scored.slice(0, limit),
+  };
 }
 
 function dateRange(args) {
@@ -739,6 +892,7 @@ module.exports = {
   handleBatchMutate,
   handleUndo,
   handleNotesSearch,
+  rebuildNotesSemanticIndex,
   handleSchedulePressure,
   handlePendingDigest,
 };
