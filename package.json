@@ -1,6 +1,6 @@
 {
   "name": "organon",
-  "version": "6.23.9",
+  "version": "6.23.10",
   "description": "Organon - App desktop local com Electron",
   "main": "dist/main/index.js",
   "bin": {
