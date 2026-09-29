@@ -5,7 +5,7 @@ const assert = require('assert')
 
 console.log('=== INICIANDO VALIDAÇÃO DE COERÊNCIA E INTEGRIDADE ===')
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   console.log('[1/5] Electron app.whenReady disparado com sucesso.')
 
   const baseDir = path.resolve(__dirname, '../dist/main')
@@ -29,6 +29,23 @@ app.whenReady().then(() => {
   assert.ok(Array.isArray(defaultStore.notes), 'defaultStore.notes deve ser um array')
   assert.ok(Array.isArray(defaultStore.cards), 'defaultStore.cards deve ser um array')
   assert.ok(Array.isArray(defaultStore.noteFolders), 'defaultStore.noteFolders deve ser um array')
+
+  const fakeSender = { id: 9001, once: () => undefined }
+  const loadHandler = ipcMain._invokeHandlers.get('store:load')
+  const saveHandler = ipcMain._invokeHandlers.get('store:save')
+  assert.equal(typeof loadHandler, 'function', 'store:load deve estar registrado')
+  assert.equal(typeof saveHandler, 'function', 'store:save deve estar registrado')
+  const handshake = await loadHandler({ sender: fakeSender })
+  assert.ok(handshake?.store, 'Handshake deve incluir o store')
+  assert.match(handshake?.rootId ?? '', /^root-[0-9a-f]{16}$/)
+  assert.equal(Number.isSafeInteger(handshake?.revision), true, 'Handshake deve incluir revisao valida')
+  assert.equal(typeof handshake?.hydrationToken, 'string', 'Handshake deve incluir token de hidratacao')
+  const invalidTokenSave = await saveHandler({ sender: fakeSender }, {
+    store: defaultStore,
+    expectedRevision: handshake.revision,
+    hydrationToken: 'token-invalido',
+  })
+  assert.equal(invalidTokenSave.success, false, 'Save com token invalido deve ser rejeitado')
 
   // 3. Verificar Camada de Backup
   const { createBackup, listBackups } = require(path.join(baseDir, 'backup/index.js'))

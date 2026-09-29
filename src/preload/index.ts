@@ -144,10 +144,62 @@ interface Store {
   settings: Settings
 }
 
+interface StorageHandshake {
+  store: Store
+  rootId: string
+  canonicalPath: string
+  layoutVersion: number
+  revision: number
+  mode: 'read-only' | 'read-write' | 'recovery-required'
+  integrity: 'ok' | 'recovered' | 'degraded'
+  collectionCounts: Record<string, number>
+  hydrationToken: string
+  warnings: string[]
+}
+
+interface StoreSaveResponse {
+  success: boolean
+  revision: number
+  conflict?: boolean
+  error?: string
+}
+
+let storageSession: Pick<StorageHandshake, 'rootId' | 'revision' | 'hydrationToken'> | null = null
+let storageSaveQueue: Promise<void> = Promise.resolve()
+let storageSessionEpoch = 0
+
+const loadStore = async (): Promise<Store> => {
+  const handshake = await ipcRenderer.invoke('store:load') as StorageHandshake
+  storageSession = {
+    rootId: handshake.rootId,
+    revision: handshake.revision,
+    hydrationToken: handshake.hydrationToken,
+  }
+  storageSessionEpoch++
+  return handshake.store
+}
+
+const saveStore = (store: Store): Promise<boolean> => {
+  const enqueuedEpoch = storageSessionEpoch
+  const enqueuedRootId = storageSession?.rootId
+  const operation = storageSaveQueue.then(async () => {
+    if (!storageSession || storageSessionEpoch !== enqueuedEpoch || storageSession.rootId !== enqueuedRootId) return false
+    const response = await ipcRenderer.invoke('store:save', {
+      store,
+      expectedRevision: storageSession.revision,
+      hydrationToken: storageSession.hydrationToken,
+    }) as StoreSaveResponse
+    if (response.success) storageSession.revision = response.revision
+    return response.success
+  })
+  storageSaveQueue = operation.then(() => undefined, () => undefined)
+  return operation
+}
+
 // API exposta ao renderer de forma segura
 const electronAPI = {
-  loadStore: (): Promise<Store> => ipcRenderer.invoke('store:load'),
-  saveStore: (store: Store): Promise<boolean> => ipcRenderer.invoke('store:save', store),
+  loadStore,
+  saveStore,
 
   openExternal: (url: string): Promise<boolean> => ipcRenderer.invoke('external:open', url),
   openPath: (targetPath: string): Promise<boolean> => ipcRenderer.invoke('path:open', targetPath),
@@ -390,8 +442,14 @@ const electronAPI = {
   },
 
   // Real-time Storage Sync & CLI / IA Integration
-  onStoreExternalUpdate: (cb: (payload: { store: any; changes: any[]; timestamp: string }) => void) => {
-    const listener = (_event: any, payload: any) => cb(payload)
+  onStoreExternalUpdate: (cb: (payload: { store: any; changes: any[]; timestamp: string; revision: number }) => void) => {
+    const listener = (_event: any, payload: any) => {
+      if (storageSession && Number.isSafeInteger(payload?.revision) && payload.revision !== storageSession.revision) {
+        storageSession.revision = payload.revision
+        storageSessionEpoch++
+      }
+      cb(payload)
+    }
     ipcRenderer.on('store:external-update', listener)
     return () => ipcRenderer.removeListener('store:external-update', listener)
   },

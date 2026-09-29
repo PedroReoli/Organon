@@ -11,6 +11,10 @@ import {
   getDataPath,
   getDedicatedDefaultDataPath,
   getStoreDir,
+  getStorageRevision,
+  getStorageRootId,
+  inspectCommittedGeneration,
+  isDedicatedStorageRoot,
   loadStore,
   loadStoreFromPath,
   normalizeStore,
@@ -28,6 +32,28 @@ import { getMainWindow, openDirectoryPicker, openFolderPicker } from '../core'
 
 const storageHydrationGuard = new StorageHydrationGuard()
 const hydrationCleanupRegistered = new Set<number>()
+
+interface StoreSaveRequest {
+  store: Store
+  expectedRevision: number
+  hydrationToken: string
+}
+
+interface StoreSaveResponse {
+  success: boolean
+  revision: number
+  conflict?: boolean
+  error?: string
+}
+
+const countStoreCollections = (store: Store): Record<string, number> => ({
+  cards: store.cards.length,
+  calendarEvents: store.calendarEvents.length,
+  projects: store.projects.length,
+  notes: store.notes.length,
+  noteFolders: store.noteFolders.length,
+  meetings: store.meetings.length,
+})
 
 export const registerCoreIpcHandlers = (): void => {
   // Inicializa o watcher em tempo real de sincronização com debounce e diff
@@ -64,9 +90,11 @@ export const registerCoreIpcHandlers = (): void => {
     return false
   })
   ipcMain.handle('store:load', (event) => {
-    const store = loadStore()
+    const dataPath = getDataPath()
+    const generationState = inspectCommittedGeneration(dataPath)
+    const store = generationState?.generation.store ?? loadStore()
     const clientId = event.sender.id
-    storageHydrationGuard.markHydrated(clientId)
+    const hydrationToken = storageHydrationGuard.markHydrated(clientId)
 
     if (!hydrationCleanupRegistered.has(clientId)) {
       hydrationCleanupRegistered.add(clientId)
@@ -76,25 +104,62 @@ export const registerCoreIpcHandlers = (): void => {
       })
     }
 
-    return store
+    return {
+      store,
+      rootId: getStorageRootId(dataPath),
+      canonicalPath: dataPath,
+      layoutVersion: isDedicatedStorageRoot(dataPath) ? 2 : 1,
+      revision: generationState?.generation.revision ?? 0,
+      mode: 'read-write' as const,
+      integrity: generationState?.integrity ?? 'ok',
+      collectionCounts: countStoreCollections(store),
+      hydrationToken,
+      warnings: generationState ? [] : ['Root ainda sem geracao transacional; o primeiro save fara a conversao.'],
+    }
   })
 
-  ipcMain.handle('store:save', (event, store: Store) => {
-    if (!storageHydrationGuard.canWrite(event.sender.id)) {
+  ipcMain.handle('store:save', (event, request: StoreSaveRequest): StoreSaveResponse => {
+    const currentRevision = getStorageRevision(getDataPath())
+    if (!request || typeof request !== 'object' || !request.store) {
+      return { success: false, revision: currentRevision, error: 'Payload de gravacao invalido.' }
+    }
+    if (!storageHydrationGuard.canWrite(event.sender.id, request.hydrationToken)) {
       console.error('Gravacao bloqueada: renderer ainda nao hidratou o store persistido.')
-      return false
+      return { success: false, revision: currentRevision, error: 'Sessao de hidratacao invalida.' }
+    }
+    if (!Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 0) {
+      return { success: false, revision: currentRevision, error: 'Revisao esperada invalida.' }
+    }
+    if (request.expectedRevision !== currentRevision) {
+      return {
+        success: false,
+        revision: currentRevision,
+        conflict: true,
+        error: `Conflito de revisao: esperado ${request.expectedRevision}, atual ${currentRevision}.`,
+      }
     }
 
-    const normalized = normalizeStore(store)
+    const normalized = normalizeStore(request.store)
     const current = loadStore()
     const assessment = assessCatastrophicDataLoss(current, normalized)
     if (assessment.blocked) {
       const safety = createBackup(getDataPath(), 'emergency')
       console.error('Gravacao bloqueada por risco de perda catastrofica:', { ...assessment, safety })
-      return false
+      return { success: false, revision: currentRevision, error: 'Gravacao bloqueada por risco de perda de dados.' }
+    }
+    const saved = saveStore(normalized, { source: 'renderer', expectedRevision: request.expectedRevision })
+    const revision = getStorageRevision(getDataPath())
+    if (!saved) {
+      return {
+        success: false,
+        revision,
+        conflict: revision !== request.expectedRevision,
+        error: revision !== request.expectedRevision
+          ? `Conflito de revisao: esperado ${request.expectedRevision}, atual ${revision}.`
+          : 'O commit transacional foi rejeitado.',
+      }
     }
     notifyInternalSave()
-    const saved = saveStore(normalized)
     const settings = normalized.settings
     const backupEnabled = settings.backupEnabled ?? false
     const backupInterval = settings.backupIntervalMinutes ?? 15
@@ -105,7 +170,7 @@ export const registerCoreIpcHandlers = (): void => {
       stopBackupTimer()
     }
 
-    return saved
+    return { success: true, revision }
   })
 
   ipcMain.handle('external:open', (_event, url: string) => {

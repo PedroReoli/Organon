@@ -10,7 +10,7 @@ export const createStoreManagementSlice = (
     const defaultStore = getDefaultStore()
     setStore(() => defaultStore)
     if (isElectron()) {
-      await window.electronAPI.saveStore(defaultStore)
+      _saveStore(defaultStore)
     } else {
       localStorage.setItem('organon-store', JSON.stringify(defaultStore))
     }
@@ -25,7 +25,7 @@ export const createStoreManagementSlice = (
         lastSyncAt: undefined,
       }
       if (isElectron()) {
-        void window.electronAPI.saveStore(cleared)
+        _saveStore(cleared)
       } else {
         localStorage.setItem('organon-store', JSON.stringify(cleared))
       }

@@ -17,6 +17,7 @@ import {
 } from './filesystem'
 import { getDefaultStore, normalizeStore } from './storeModel'
 import { commitStoreGeneration, loadCommittedGeneration, STORE_SECTIONS } from './generationStore'
+import type { GenerationCommitOptions } from './generationStore'
 import type { Store } from '../types'
 
 export { DEFAULT_STUDY_STATE, getDefaultStore, normalizeStore, normalizeStudyState } from './storeModel'
@@ -178,7 +179,7 @@ export const loadStoreFromPath = (dataPath: string): Store => {
   return getDefaultStore()
 }
 
-export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
+export const saveStoreToPath = (store: Store, dataPath: string, options: GenerationCommitOptions = {}): boolean => {
   ensureDataDir(dataPath)
   ensureDataDir(getStoreDir(dataPath))
   ensureBackupDir(dataPath)
@@ -226,7 +227,10 @@ export const saveStoreToPath = (store: Store, dataPath: string): boolean => {
       copyDirReplace(storeDir, lastKnownGoodDir)
     }
 
-    const commit = commitStoreGeneration(normalized, dataPath, { source: 'desktop' })
+    const commit = commitStoreGeneration(normalized, dataPath, {
+      source: options.source ?? 'desktop',
+      expectedRevision: options.expectedRevision,
+    })
     if (!commit.success) {
       console.error('Commit transacional rejeitado:', commit.error)
       return false
@@ -289,6 +293,6 @@ export const loadStore = (): Store => {
   return loadStoreFromPath(getDataPath())
 }
 
-export const saveStore = (store: Store): boolean => {
-  return saveStoreToPath(store, getDataPath())
+export const saveStore = (store: Store, options: GenerationCommitOptions = {}): boolean => {
+  return saveStoreToPath(store, getDataPath(), options)
 }

@@ -1,15 +1,19 @@
-export class StorageHydrationGuard {
-  private readonly hydratedClientIds = new Set<number>()
+import { randomUUID } from 'crypto'
 
-  markHydrated(clientId: number): void {
-    this.hydratedClientIds.add(clientId)
+export class StorageHydrationGuard {
+  private readonly hydrationTokens = new Map<number, string>()
+
+  markHydrated(clientId: number): string {
+    const token = randomUUID()
+    this.hydrationTokens.set(clientId, token)
+    return token
   }
 
   revoke(clientId: number): void {
-    this.hydratedClientIds.delete(clientId)
+    this.hydrationTokens.delete(clientId)
   }
 
-  canWrite(clientId: number): boolean {
-    return this.hydratedClientIds.has(clientId)
+  canWrite(clientId: number, hydrationToken: string): boolean {
+    return this.hydrationTokens.get(clientId) === hydrationToken
   }
 }

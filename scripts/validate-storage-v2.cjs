@@ -28,11 +28,12 @@ app.whenReady().then(() => {
   if (fs.existsSync(missingRoot)) fail('Leitura de root ausente criou arquivos no disco.')
 
   const hydrationGuard = new StorageHydrationGuard()
-  if (hydrationGuard.canWrite(7)) fail('Guard liberou escrita antes da hidratacao.')
-  hydrationGuard.markHydrated(7)
-  if (!hydrationGuard.canWrite(7)) fail('Guard nao liberou cliente hidratado.')
+  if (hydrationGuard.canWrite(7, 'invalido')) fail('Guard liberou escrita antes da hidratacao.')
+  const hydrationToken = hydrationGuard.markHydrated(7)
+  if (!hydrationGuard.canWrite(7, hydrationToken)) fail('Guard nao liberou cliente hidratado.')
+  if (hydrationGuard.canWrite(7, 'invalido')) fail('Guard aceitou token de hidratacao incorreto.')
   hydrationGuard.revoke(7)
-  if (hydrationGuard.canWrite(7)) fail('Guard manteve permissao depois da revogacao.')
+  if (hydrationGuard.canWrite(7, hydrationToken)) fail('Guard manteve permissao depois da revogacao.')
 
   const discoveryDedicated = path.join(sandbox, 'discovery-dedicated')
   const discoveryLegacy = path.join(sandbox, 'discovery-legacy')

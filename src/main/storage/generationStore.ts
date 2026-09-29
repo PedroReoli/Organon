@@ -67,6 +67,11 @@ export interface CommittedGeneration {
   transactionId: string
 }
 
+export interface CommittedGenerationState {
+  generation: CommittedGeneration
+  integrity: 'ok' | 'recovered'
+}
+
 export interface GenerationCommitOptions {
   source?: string
   expectedRevision?: number
@@ -169,11 +174,11 @@ const hasCommittedJournal = (dataPath: string, generation: CommittedGeneration):
     && record.revision === generation.revision
 }
 
-export const loadCommittedGeneration = (dataPath: string): CommittedGeneration | null => {
+export const inspectCommittedGeneration = (dataPath: string): CommittedGenerationState | null => {
   const pointer = readCurrentPointer(dataPath)
   if (pointer) {
     const pointedGeneration = validateGeneration(path.join(getGenerationsDir(dataPath), pointer.generationId), pointer)
-    if (pointedGeneration) return pointedGeneration
+    if (pointedGeneration) return { generation: pointedGeneration, integrity: 'ok' }
   }
 
   try {
@@ -185,13 +190,23 @@ export const loadCommittedGeneration = (dataPath: string): CommittedGeneration |
       .filter((generation): generation is CommittedGeneration => Boolean(generation))
       .filter(generation => hasCommittedJournal(dataPath, generation))
       .sort((a, b) => b.revision - a.revision)
-    return candidates[0] ?? null
+    return candidates[0] ? { generation: candidates[0], integrity: 'recovered' } : null
   } catch {
     return null
   }
 }
 
+export const loadCommittedGeneration = (dataPath: string): CommittedGeneration | null => {
+  return inspectCommittedGeneration(dataPath)?.generation ?? null
+}
+
 export const getStorageRevision = (dataPath: string): number => loadCommittedGeneration(dataPath)?.revision ?? 0
+
+export const getStorageRootId = (dataPath: string): string => {
+  const resolved = path.resolve(dataPath).replace(/\\/g, '/')
+  const normalized = process.platform === 'win32' ? resolved.toLowerCase() : resolved
+  return `root-${sha256Buffer(normalized).slice(0, 16)}`
+}
 
 const isProcessAlive = (pid: number): boolean => {
   if (!Number.isSafeInteger(pid) || pid <= 0) return false

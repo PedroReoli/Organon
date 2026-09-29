@@ -119,7 +119,8 @@ export const useStore = () => {
           isHydratedRef.current = true
           setStore(next)
           if (changed || flushed) {
-            await window.electronAPI.saveStore(next)
+            const saved = await window.electronAPI.saveStore(next)
+            if (!saved) throw new Error('O store mudou durante a hidratacao; recarregue os dados atuais.')
           }
         } else {
           const stored = localStorage.getItem('organon-store')
@@ -192,7 +193,13 @@ export const useStore = () => {
       const normalized = normalizeStore(nextStore)
       try {
         if (isElectron()) {
-          await window.electronAPI.saveStore(normalized)
+          const saved = await window.electronAPI.saveStore(normalized)
+          if (!saved) {
+            const latest = normalizeStore(await window.electronAPI.loadStore())
+            setStore(latest)
+            setStoreVersion((version) => version + 1)
+            throw new Error('Conflito de revisao: os dados atuais foram recarregados.')
+          }
         } else {
           localStorage.setItem('organon-store', JSON.stringify(normalized))
         }
