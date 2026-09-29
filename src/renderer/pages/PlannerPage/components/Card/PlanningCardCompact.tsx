@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { PlanningTask } from '../../types/planning.types';
 import type { Project } from '@types';
 import { CheckSquare, Clock } from 'lucide-react';
+import { AutoFitTitle } from './AutoFitTitle';
 
 interface PlanningCardCompactProps {
   task: PlanningTask;
@@ -69,7 +70,8 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
       />
 
       {/* Title (Clique simples abre modal, Ctrl+Clique não abre) */}
-      <span
+      <AutoFitTitle
+        title={task.title}
         onClick={(e) => {
           if (e.ctrlKey || e.metaKey) {
             e.stopPropagation();
@@ -77,13 +79,10 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
           }
           onEdit();
         }}
-        title={task.title}
-        className={`flex-1 truncate text-xs font-medium cursor-pointer transition-colors ${
+        className={`flex-1 cursor-pointer transition-colors ${
           isDone ? 'line-through text-slate-500' : 'text-slate-200 hover:text-indigo-300'
         }`}
-      >
-        {task.title}
-      </span>
+      />
 
       {/* Project Badge */}
       {project && (
@@ -164,6 +163,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
         style={style}
         {...attributes}
         {...listeners}
+        onClick={onEdit}
         onContextMenu={handleContextMenu}
         className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] hover:bg-[#18233c] border border-white/5 hover:border-indigo-500/40 rounded-md cursor-grab active:cursor-grabbing shadow-xs transition-all"
       >
@@ -174,6 +174,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
 
   return (
     <div
+      onClick={onEdit}
       onContextMenu={handleContextMenu}
       className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] border border-white/5 rounded-md shadow-xs"
     >

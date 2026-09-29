@@ -1,48 +1,64 @@
 import React from 'react';
+import { CalendarClock, Columns3, Grid3X3 } from 'lucide-react';
 import { PlannerViewMode } from '../index';
-import { LayoutGrid, CalendarClock } from 'lucide-react';
 
 interface PlannerNavbarProps {
   viewMode: PlannerViewMode;
-  setViewMode: (v: PlannerViewMode) => void;
+  setViewMode: (viewMode: PlannerViewMode) => void;
 }
 
-export const PlannerNavbar: React.FC<PlannerNavbarProps> = ({ viewMode, setViewMode }) => {
-  return (
-    <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 bg-[#0a0f1d] shrink-0">
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0e1628] border border-white/5">
-        <button
-          type="button"
-          onClick={() => setViewMode('weekly')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            viewMode === 'weekly'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-          }`}
-        >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          <span>Visão Semanal</span>
-        </button>
+const MODES: Array<{
+  id: PlannerViewMode;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  featured?: boolean;
+}> = [
+  { id: 'matrix', label: 'Matriz de Turnos', icon: Grid3X3 },
+  { id: 'continuous', label: 'Semana Contínua', icon: Columns3, featured: true },
+  { id: 'daily', label: 'Foco Diário', icon: CalendarClock },
+];
 
-        <button
-          type="button"
-          onClick={() => setViewMode('daily')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            viewMode === 'daily'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-          }`}
-        >
-          <CalendarClock className="w-3.5 h-3.5" />
-          <span>Visão Diária</span>
-        </button>
+export const PlannerNavbar: React.FC<PlannerNavbarProps> = ({ viewMode, setViewMode }) => (
+  <div className="flex items-center justify-between gap-4 px-5 py-2.5 border-b border-white/5 bg-[#0a0f1d] shrink-0">
+    <div className="flex min-w-0 items-center gap-4">
+      <div className="shrink-0">
+        <h1 className="text-sm font-semibold text-slate-100">Planejamento</h1>
+        <p className="text-[10px] text-slate-500">Organize a semana no seu ritmo</p>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
-        <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
-        <span>Planner Ativo</span>
+      <div
+        role="tablist"
+        aria-label="Visualização do planejamento"
+        className="flex items-center gap-1 overflow-x-auto rounded-xl border border-white/5 bg-[#0e1628] p-1"
+      >
+        {MODES.map(({ id, label, icon: Icon, featured }) => {
+          const isActive = viewMode === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setViewMode(id)}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
+                  : featured
+                    ? 'text-indigo-300 hover:bg-indigo-500/10 hover:text-white'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
-  );
-};
 
+    <div className="hidden shrink-0 items-center gap-2 text-xs text-slate-500 sm:flex">
+      <span className="h-2 w-2 rounded-full bg-emerald-500/80" />
+      <span>Planner ativo</span>
+    </div>
+  </div>
+);
