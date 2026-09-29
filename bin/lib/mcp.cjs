@@ -9,8 +9,10 @@ const store = require('./store.cjs');
 const taskCmd = require('./commands/task.cjs');
 const noteCmd = require('./commands/note.cjs');
 const doctorCmd = require('./commands/doctor.cjs');
+const domain = require('./mcp-domain.cjs');
+const packageJson = require('../../package.json');
 
-const MCP_TOOLS = [
+const BASE_TOOLS = [
   {
     name: 'organon_status',
     description: 'Obtém o estado geral, versão, métricas e contagens do Organon.',
@@ -64,6 +66,33 @@ const MCP_TOOLS = [
       properties: {
         idOrTitle: { type: 'string', description: 'ID ou título da tarefa' }
       }
+    }
+  },
+  {
+    name: 'organon_task_update',
+    description: 'Atualiza uma tarefa existente por ID ou título.',
+    inputSchema: {
+      type: 'object',
+      required: ['idOrTitle'],
+      properties: {
+        idOrTitle: { type: 'string' },
+        title: { type: 'string' },
+        status: { type: 'string' },
+        priority: { type: 'string' },
+        date: { type: ['string', 'null'] },
+        time: { type: ['string', 'null'] },
+        durationMinutes: { type: 'number' },
+        reminder: {}
+      }
+    }
+  },
+  {
+    name: 'organon_task_delete',
+    description: 'Remove uma tarefa existente por ID ou título.',
+    inputSchema: {
+      type: 'object',
+      required: ['idOrTitle'],
+      properties: { idOrTitle: { type: 'string' } }
     }
   },
   {
@@ -198,8 +227,125 @@ const MCP_TOOLS = [
         idOrName: { type: 'string', description: 'ID ou nome da pasta' }
       }
     }
+  },
+  {
+    name: 'organon_batch_mutate',
+    description: 'Valida e aplica um lote atômico e idempotente de tarefas, notas e pastas.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['requestId', 'expectedRevision', 'operations'],
+      properties: {
+        requestId: { type: 'string', minLength: 8, maxLength: 128 },
+        expectedRevision: { type: 'integer', minimum: 0 },
+        dryRun: { type: 'boolean', default: false },
+        operations: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 50,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['opId', 'kind', 'input'],
+            properties: {
+              opId: { type: 'string', pattern: '^[a-zA-Z0-9_-]{1,64}$' },
+              kind: { type: 'string', enum: ['task.create', 'task.update', 'task.delete', 'note.create', 'note.update', 'note.append', 'note.metadata', 'folder.create'] },
+              input: { type: 'object' }
+            }
+          }
+        }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_undo',
+    description: 'Reverte um checkpoint por nova transação, recusando divergência ou compensando apenas entidades tocadas.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['requestId', 'checkpointId', 'expectedCurrentRevision'],
+      properties: {
+        requestId: { type: 'string', minLength: 8, maxLength: 128 },
+        checkpointId: { type: 'string' },
+        expectedCurrentRevision: { type: 'integer', minimum: 0 },
+        mode: { type: 'string', enum: ['reject-if-diverged', 'compensating'], default: 'reject-if-diverged' },
+        dryRun: { type: 'boolean', default: false }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_notes_search',
+    description: 'Busca híbrida local em títulos e conteúdo das notas, com scores lexical e de similaridade.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string', minLength: 2 },
+        folderId: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+        limit: { type: 'integer', minimum: 1, maximum: 100 }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_schedule_pressure',
+    description: 'Calcula carga, incerteza e sobreposições da agenda sem alterar dados.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        from: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        to: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        timezone: { type: 'string' },
+        capacityMinutesPerDay: { type: 'number', minimum: 30 },
+        includeUndated: { type: 'boolean' }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_pending_digest',
+    description: 'Consolida tarefas, vencimentos, lembretes e follow-ups de reunião sem mutação.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        from: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        to: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        projectId: { type: 'string' },
+        priority: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 200 }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }
 ];
+
+const MUTATING_TOOLS = new Set([
+  'organon_task_create', 'organon_task_done', 'organon_task_update', 'organon_task_delete',
+  'organon_note_create', 'organon_note_update', 'organon_note_delete', 'organon_note_move',
+  'organon_note_rename', 'organon_note_set', 'organon_folder_create', 'organon_folder_delete',
+]);
+
+const MCP_TOOLS = BASE_TOOLS.map(tool => ({
+  ...tool,
+  outputSchema: tool.outputSchema || {
+    type: 'object',
+    required: ['data'],
+    properties: { data: {} },
+    additionalProperties: false
+  },
+  annotations: tool.annotations || {
+    readOnlyHint: !MUTATING_TOOLS.has(tool.name),
+    destructiveHint: MUTATING_TOOLS.has(tool.name),
+    idempotentHint: !MUTATING_TOOLS.has(tool.name),
+    openWorldHint: false,
+  },
+})).sort((left, right) => left.name.localeCompare(right.name));
 
 function handleToolCall(name, args = {}) {
   switch (name) {
@@ -239,9 +385,55 @@ function handleToolCall(name, args = {}) {
       return noteCmd.handleFolderCreate(args.name, args.parent);
     case 'organon_folder_delete':
       return noteCmd.handleFolderDelete(args.idOrName || args.name);
+    case 'organon_batch_mutate':
+      return domain.handleBatchMutate(args);
+    case 'organon_undo':
+      return domain.handleUndo(args);
+    case 'organon_notes_search':
+      return domain.handleNotesSearch(args);
+    case 'organon_schedule_pressure':
+      return domain.handleSchedulePressure(args);
+    case 'organon_pending_digest':
+      return domain.handlePendingDigest(args);
     default:
       throw new Error(`Ferramenta desconhecida: ${name}`);
   }
+}
+
+const MODERN_PROTOCOL = '2026-07-28';
+const LEGACY_PROTOCOLS = ['2025-11-25', '2025-06-18', '2024-11-05'];
+const SERVER_INFO = { name: 'organon-mcp-server', version: packageJson.version };
+const RATE_LIMIT_PER_MINUTE = 120;
+const recentCalls = [];
+
+function sendResult(id, result, modern = false) {
+  const payload = modern
+    ? { ...result, _meta: { ...(result._meta || {}), 'io.modelcontextprotocol/serverInfo': SERVER_INFO } }
+    : result;
+  console.log(JSON.stringify({ jsonrpc: '2.0', id, result: payload }));
+}
+
+function sendError(id, code, message, data) {
+  console.log(JSON.stringify({
+    jsonrpc: '2.0',
+    id,
+    error: { code, message, ...(data === undefined ? {} : { data }) }
+  }));
+}
+
+function requestProtocol(msg) {
+  return msg.params?._meta?.['io.modelcontextprotocol/protocolVersion']
+    || msg._meta?.['io.modelcontextprotocol/protocolVersion']
+    || null;
+}
+
+function enforceRateLimit() {
+  const cutoff = Date.now() - 60_000;
+  while (recentCalls.length > 0 && recentCalls[0] < cutoff) recentCalls.shift();
+  if (recentCalls.length >= RATE_LIMIT_PER_MINUTE) {
+    throw new domain.McpDomainError('RATE_LIMITED', 'Limite local de chamadas excedido; tente novamente em instantes.');
+  }
+  recentCalls.push(Date.now());
 }
 
 function startMcpServer() {
@@ -257,69 +449,82 @@ function startMcpServer() {
     const raw = line.trim();
     if (!raw) return;
 
+    let msg;
     try {
-      const msg = JSON.parse(raw);
+      msg = JSON.parse(raw);
+    } catch (parseErr) {
+      sendError(null, -32700, 'JSON inválido.');
+      process.stderr.write(`[Organon MCP] Erro de parse JSON: ${parseErr.message}\n`);
+      return;
+    }
+
+    try {
       const id = msg.id;
+      const protocol = requestProtocol(msg);
+      const modern = protocol === MODERN_PROTOCOL;
+
+      if (msg.method === 'server/discover') {
+        sendResult(id, {
+          protocolVersions: [MODERN_PROTOCOL, ...LEGACY_PROTOCOLS],
+          capabilities: { tools: { listChanged: false } },
+          instructions: 'Use dryRun antes de lotes destrutivos e preserve expectedRevision para controle otimista.',
+          ttlMs: 3_600_000,
+          cacheScope: 'private'
+        }, true);
+        return;
+      }
 
       if (msg.method === 'initialize') {
-        const response = {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            protocolVersion: '2024-11-05',
-            capabilities: {
-              tools: {}
-            },
-            serverInfo: {
-              name: 'organon-mcp-server',
-              version: '6.23.2'
-            }
-          }
-        };
-        console.log(JSON.stringify(response));
+        const requested = msg.params?.protocolVersion;
+        const selected = LEGACY_PROTOCOLS.includes(requested) ? requested : LEGACY_PROTOCOLS[0];
+        sendResult(id, {
+          protocolVersion: selected,
+          capabilities: { tools: { listChanged: false } },
+          serverInfo: SERVER_INFO,
+          instructions: 'Use organon_batch_mutate com dryRun e expectedRevision para mutações compostas.'
+        });
         return;
       }
 
       if (msg.method === 'tools/list') {
-        const response = {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            tools: MCP_TOOLS
-          }
-        };
-        console.log(JSON.stringify(response));
+        sendResult(id, {
+          ...(modern ? { resultType: 'result' } : {}),
+          tools: MCP_TOOLS,
+          ...(modern ? { ttlMs: 3_600_000, cacheScope: 'private' } : {})
+        }, modern);
         return;
       }
 
       if (msg.method === 'tools/call') {
         const toolName = msg.params?.name;
         const toolArgs = msg.params?.arguments || {};
+        if (!MCP_TOOLS.some(tool => tool.name === toolName)) {
+          sendError(id, -32602, `Ferramenta desconhecida: ${toolName}`);
+          return;
+        }
         try {
+          enforceRateLimit();
           const res = handleToolCall(toolName, toolArgs);
-          const response = {
-            jsonrpc: '2.0',
-            id,
-            result: {
-              content: [
-                {
-                  type: 'text',
-                  text: typeof res === 'string' ? res : JSON.stringify(res, null, 2)
-                }
-              ]
-            }
-          };
-          console.log(JSON.stringify(response));
+          const structuredContent = { data: res };
+          sendResult(id, {
+            ...(modern ? { resultType: 'result' } : {}),
+            content: [{ type: 'text', text: typeof res === 'string' ? res : JSON.stringify(res, null, 2) }],
+            structuredContent
+          }, modern);
         } catch (err) {
-          const response = {
-            jsonrpc: '2.0',
-            id,
+          const failure = {
             error: {
-              code: -32603,
-              message: err.message
+              code: err.code || 'INTERNAL_ERROR',
+              message: err.message || 'Falha interna na ferramenta.',
+              ...(err.details === undefined ? {} : { details: err.details })
             }
           };
-          console.log(JSON.stringify(response));
+          sendResult(id, {
+            ...(modern ? { resultType: 'result' } : {}),
+            isError: true,
+            content: [{ type: 'text', text: JSON.stringify(failure, null, 2) }],
+            structuredContent: failure
+          }, modern);
         }
         return;
       }
@@ -331,22 +536,17 @@ function startMcpServer() {
 
       // Default method not found
       if (id !== undefined) {
-        console.log(JSON.stringify({
-          jsonrpc: '2.0',
-          id,
-          error: {
-            code: -32601,
-            message: `Método não suportado: ${msg.method}`
-          }
-        }));
+        sendError(id, -32601, `Método não suportado: ${msg.method}`);
       }
-    } catch (parseErr) {
-      process.stderr.write(`[Organon MCP] Erro de parse JSON: ${parseErr.message}\n`);
+    } catch (error) {
+      sendError(msg?.id ?? null, -32603, error.message || 'Falha interna.');
     }
   });
 }
 
 module.exports = {
   startMcpServer,
-  MCP_TOOLS
+  MCP_TOOLS,
+  handleToolCall,
+  MODERN_PROTOCOL,
 };

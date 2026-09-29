@@ -210,14 +210,14 @@ function mirrorCommittedStore(fullStore, sectionFileName, sectionData) {
   for (const canonicalPath of [...new Set(canonicalPaths)]) writeJsonAtomic(canonicalPath, fullStore);
 }
 
-function commitStoreData(nextStore, expectedRevision, sectionFileName, sectionData) {
+function commitStoreData(nextStore, expectedRevision, sectionFileName, sectionData, source = 'cli') {
   const engine = getGenerationEngine();
   if (!engine) {
     throw new Error('Build transacional ausente; execute npm run build antes de usar a CLI.');
   }
 
   const result = engine.commitStoreGeneration(nextStore, dataDir, {
-    source: 'cli',
+    source,
     expectedRevision
   });
   if (!result.success) throw new Error(result.error || 'Commit transacional da CLI foi rejeitado.');
@@ -225,9 +225,26 @@ function commitStoreData(nextStore, expectedRevision, sectionFileName, sectionDa
   if (!committed || committed.revision !== result.revision) {
     throw new Error('A CLI nao conseguiu reler a geracao publicada.');
   }
-  mirrorCommittedStore(committed.store, sectionFileName, sectionData);
-  touchSyncFlag();
+  try {
+    mirrorCommittedStore(committed.store, sectionFileName, sectionData);
+    touchSyncFlag();
+  } catch (error) {
+    process.stderr.write(`[Organon CLI] Commit publicado; espelho legado pendente: ${error.message}\n`);
+  }
   return true;
+}
+
+function commitStoreSnapshot(nextStore, options = {}) {
+  const expectedRevision = Number.isSafeInteger(options.expectedRevision)
+    ? options.expectedRevision
+    : getStoreSnapshot().revision;
+  commitStoreData(nextStore, expectedRevision, 'store.json', nextStore, options.source || 'cli');
+  const committed = getStoreSnapshot();
+  return {
+    revision: committed.revision,
+    rootId: getGenerationEngine()?.getStorageRootId(dataDir) || null,
+    store: committed.store
+  };
 }
 
 function writeSection(sectionFileName, data) {
@@ -310,8 +327,7 @@ function saveNotesData(notesObj) {
 
 function readNoteContent(note) {
   if (!note || !note.mdPath) return '';
-  const notesDir = getNotesDir(dataDir);
-  const filePath = path.join(notesDir, note.mdPath);
+  const filePath = resolveNoteFile(note.mdPath);
   if (fs.existsSync(filePath)) {
     try {
       return fs.readFileSync(filePath, 'utf8');
@@ -322,20 +338,40 @@ function readNoteContent(note) {
   return '';
 }
 
-function writeNoteContent(mdPath, content) {
-  const notesDir = getNotesDir(dataDir);
-  if (!fs.existsSync(notesDir)) {
-    fs.mkdirSync(notesDir, { recursive: true });
+function resolveNoteFile(mdPath) {
+  if (typeof mdPath !== 'string' || !mdPath.trim()) {
+    throw new Error('Caminho de nota invalido.');
   }
-  const filePath = path.join(notesDir, mdPath);
-  fs.writeFileSync(filePath, content || '', 'utf8');
+  const notesDir = path.resolve(getNotesDir(dataDir));
+  const filePath = path.resolve(notesDir, mdPath.replace(/^[\\/]+/, ''));
+  const prefix = `${notesDir}${path.sep}`;
+  if (!filePath.startsWith(prefix)) {
+    throw new Error('Caminho de nota fora do cofre.');
+  }
+  return filePath;
+}
+
+function writeNoteContent(mdPath, content) {
+  const filePath = resolveNoteFile(mdPath);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tmpPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  fs.writeFileSync(tmpPath, content || '', 'utf8');
+  const backupPath = `${filePath}.${process.pid}.${randomUUID()}.bak`;
+  try {
+    if (fs.existsSync(filePath)) fs.renameSync(filePath, backupPath);
+    fs.renameSync(tmpPath, filePath);
+    if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+  } catch (error) {
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* preserva erro original */ }
+    try { if (!fs.existsSync(filePath) && fs.existsSync(backupPath)) fs.renameSync(backupPath, filePath); } catch { /* preserva erro original */ }
+    throw error;
+  }
   return true;
 }
 
 function deleteNoteFile(mdPath) {
   if (!mdPath) return false;
-  const notesDir = getNotesDir(dataDir);
-  const filePath = path.join(notesDir, mdPath);
+  const filePath = resolveNoteFile(mdPath);
   if (fs.existsSync(filePath)) {
     try {
       fs.unlinkSync(filePath);
@@ -436,7 +472,9 @@ module.exports = {
   getHabitsData,
   saveHabitsData,
   getStoreData,
+  getStoreSnapshot,
   saveStoreData,
+  commitStoreSnapshot,
   getSystemStatus,
   randomUUID
 };
