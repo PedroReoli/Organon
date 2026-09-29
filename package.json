@@ -39,6 +39,7 @@
     "dev:vite": "vite",
     "dev:electron": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && electron .",
     "build": "node scripts/clean-dist.cjs && tsc -p tsconfig.node.json && vite build && node scripts/validate-build-output.cjs && node scripts/check-bundle-budget.cjs",
+    "optimize:images": "node scripts/optimize-images.cjs",
     "build:electron": "npm run build && electron-builder",
     "build:full": "npm run build:electron",
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false",
@@ -82,6 +83,7 @@
     "electron": "^41.10.6",
     "electron-builder": "^26.7.0",
     "postcss": "^8.4.32",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "vite": "^6.4.3"
