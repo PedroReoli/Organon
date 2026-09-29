@@ -66,9 +66,10 @@ export function useAppLifecycle({
 
   // Auto-purge da lixeira no startup
   useEffect(() => {
+    if (isLoading) return
     purgeOldTrash()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isLoading])
 
   // Verificação silenciosa de atualizações no startup (após 5s)
   useEffect(() => {

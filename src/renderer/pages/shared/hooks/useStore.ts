@@ -64,6 +64,7 @@ export const useStore = () => {
   const [error, setError] = useState<string | null>(null)
   const [storeVersion, setStoreVersion] = useState(0)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isHydratedRef = useRef(false)
 
   useEffect(() => {
     const loadInitialStore = async () => {
@@ -115,6 +116,7 @@ export const useStore = () => {
             normalized = flushed
           }
           const { store: next, changed } = applyWeeklyMaintenance(normalized)
+          isHydratedRef.current = true
           setStore(next)
           if (changed || flushed) {
             await window.electronAPI.saveStore(next)
@@ -125,6 +127,7 @@ export const useStore = () => {
             const parsed = JSON.parse(stored) as Store
             const normalized = normalizeStore(parsed)
             const { store: next, changed } = applyWeeklyMaintenance(normalized)
+            isHydratedRef.current = true
             setStore(next)
             if (changed) {
               localStorage.setItem('organon-store', JSON.stringify(next))
@@ -132,6 +135,7 @@ export const useStore = () => {
           } else {
             const initial = getDefaultStore()
             const { store: next } = applyWeeklyMaintenance(initial)
+            isHydratedRef.current = true
             setStore(next)
             localStorage.setItem('organon-store', JSON.stringify(next))
           }
@@ -152,6 +156,7 @@ export const useStore = () => {
     if (!isElectron() || !window.electronAPI?.onStoreExternalUpdate) return
 
     const unsubscribe = window.electronAPI.onStoreExternalUpdate((payload) => {
+      if (!isHydratedRef.current) return
       if (payload?.store) {
         const normalized = normalizeStore(payload.store)
         setStore(normalized)
@@ -173,6 +178,10 @@ export const useStore = () => {
   const pendingStoreRef = useRef<Store | null>(null)
 
   const saveStore = useCallback((nextStore: Store) => {
+    if (!isHydratedRef.current) {
+      return
+    }
+
     pendingStoreRef.current = nextStore
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -212,6 +221,10 @@ export const useStore = () => {
   }, [])
 
   const updateStore = useCallback((updater: (prev: Store) => Store) => {
+    if (!isHydratedRef.current) {
+      return
+    }
+
     const now = new Date().toISOString()
     setStore(prev => {
       const next = { ...normalizeStore(updater(prev)), storeUpdatedAt: now }
@@ -249,6 +262,10 @@ export const useStore = () => {
    * Cancela qualquer gravação pendente do debounce para evitar sobrescrita.
    */
   const replaceStore = useCallback((nextStore: Store) => {
+    if (!isHydratedRef.current) {
+      return
+    }
+
     const normalized = normalizeStore(nextStore)
     setStore(normalized)
     saveStore(normalized)
@@ -360,6 +377,7 @@ export const useStore = () => {
 
   useEffect(() => {
     return () => {
+      isHydratedRef.current = false
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }

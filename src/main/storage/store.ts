@@ -109,8 +109,12 @@ export const getSectionJsonRelativePaths = (storeRoot: string): string[] => {
 }
 
 export const loadStoreFromPath = (dataPath: string): Store => {
-  ensureDataDir(dataPath)
-  ensureDataDir(getStoreDir(dataPath))
+  // O carregamento precisa ser estritamente read-only. Inicializacao,
+  // recuperacao persistente e manutencao pertencem a comandos explicitos.
+  if (!fs.existsSync(dataPath)) {
+    return getDefaultStore()
+  }
+
   const storePath = getStorePath(dataPath)
   const tryReadStoreFile = (filePath: string): Store | null => {
     const parsed = readJsonFile(filePath)
@@ -120,7 +124,6 @@ export const loadStoreFromPath = (dataPath: string): Store => {
 
   const canonical = tryReadStoreFile(storePath)
   if (canonical) {
-    saveStoreToPath(canonical, dataPath)
     return canonical
   }
 
@@ -175,7 +178,6 @@ export const loadStoreFromPath = (dataPath: string): Store => {
     const recovered = loadSectionedStoreFromRoot(candidate)
     if (!recovered) continue
     console.log(`Store recuperado com sucesso a partir de: ${candidate}`)
-    saveStoreToPath(recovered, dataPath)
     return recovered
   }
 
@@ -183,7 +185,6 @@ export const loadStoreFromPath = (dataPath: string): Store => {
     const recovered = tryReadStoreFile(candidate)
     if (!recovered) continue
     console.log(`Store recuperado com sucesso a partir de: ${candidate}`)
-    saveStoreToPath(recovered, dataPath)
     return recovered
   }
 

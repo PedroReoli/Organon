@@ -107,13 +107,19 @@ export const createNoteExtrasSlice = (updateStore: UpdateStoreFn, getStore: () =
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - 30)
     const cutoffISO = cutoff.toISOString()
+    const store = getStore()
+    const expiredNoteIds = store.notes
+      .filter((note: any) => note.deletedAt && note.deletedAt < cutoffISO)
+      .map((note: any) => note.id)
+    const expiredFolderIds = store.noteFolders
+      .filter((folder: any) => folder.deletedAt && folder.deletedAt < cutoffISO)
+      .map((folder: any) => folder.id)
+
+    if (expiredNoteIds.length === 0 && expiredFolderIds.length === 0) {
+      return
+    }
+
     updateStore(prev => {
-      const expiredNoteIds = prev.notes
-        .filter((n: any) => n.deletedAt && n.deletedAt < cutoffISO)
-        .map((n: any) => n.id)
-      const expiredFolderIds = prev.noteFolders
-        .filter((f: any) => f.deletedAt && f.deletedAt < cutoffISO)
-        .map((f: any) => f.id)
       return {
         ...prev,
         notes: prev.notes.filter((n: any) => !expiredNoteIds.includes(n.id)),

@@ -16,10 +16,22 @@ app.whenReady().then(() => {
   app.setPath('userData', userData)
   app.setPath('documents', documents)
 
-  const filesystem = require('../dist/main/filesystem.js')
-  const storeModule = require('../dist/main/store.js')
-  const migration = require('../dist/main/storageMigration.js')
-  const backup = require('../dist/main/backup.js')
+  const filesystem = require('../dist/main/storage/filesystem.js')
+  const storeModule = require('../dist/main/storage/store.js')
+  const { StorageHydrationGuard } = require('../dist/main/storage/hydrationGuard.js')
+  const migration = require('../dist/main/storage/storageMigration.js')
+  const backup = require('../dist/main/backup/backupService.js')
+
+  const missingRoot = path.join(sandbox, 'missing-root')
+  storeModule.loadStoreFromPath(missingRoot)
+  if (fs.existsSync(missingRoot)) fail('Leitura de root ausente criou arquivos no disco.')
+
+  const hydrationGuard = new StorageHydrationGuard()
+  if (hydrationGuard.canWrite(7)) fail('Guard liberou escrita antes da hidratacao.')
+  hydrationGuard.markHydrated(7)
+  if (!hydrationGuard.canWrite(7)) fail('Guard nao liberou cliente hidratado.')
+  hydrationGuard.revoke(7)
+  if (hydrationGuard.canWrite(7)) fail('Guard manteve permissao depois da revogacao.')
 
   filesystem.setConfig({
     version: 1,
@@ -39,6 +51,11 @@ app.whenReady().then(() => {
   }]
   store.cards = [{ id: 'card-1' }]
   if (!storeModule.saveStoreToPath(store, legacyRoot)) fail('Não foi possível preparar o store legado.')
+  const legacyStorePath = filesystem.getStorePath(legacyRoot)
+  const fixedMtime = new Date('2001-01-01T00:00:00.000Z')
+  fs.utimesSync(legacyStorePath, fixedMtime, fixedMtime)
+  storeModule.loadStoreFromPath(legacyRoot)
+  if (fs.statSync(legacyStorePath).mtimeMs !== fixedMtime.getTime()) fail('Leitura do store alterou o arquivo canonico.')
   fs.mkdirSync(filesystem.getNotesDir(legacyRoot), { recursive: true })
   fs.writeFileSync(path.join(filesystem.getNotesDir(legacyRoot), '12345678-note-test.md'), '# Conteúdo preservado', 'utf8')
 
@@ -55,6 +72,7 @@ app.whenReady().then(() => {
   fs.writeFileSync(path.join(filesystem.getStoreDir(targetRoot), 'notes.json'), '{invalido', 'utf8')
   const recovered = storeModule.loadStoreFromPath(targetRoot)
   if (recovered.notes.length !== 1 || recovered.cards.length !== 1) fail('A recuperação pelo último índice íntegro falhou.')
+  if (fs.readFileSync(filesystem.getStorePath(targetRoot), 'utf8') !== '{invalido') fail('Leitura de recuperacao reescreveu o store corrompido.')
 
   const created = backup.createBackup(targetRoot, 'manual')
   if (!created.success || !created.backupPath) fail(created.error || 'Backup manual falhou.')
@@ -66,7 +84,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })

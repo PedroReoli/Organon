@@ -18,12 +18,16 @@ import {
   getInstallerStatus,
   migrateToDedicatedStorage,
   assessCatastrophicDataLoss,
+  StorageHydrationGuard,
 } from '../storage'
 import { startRealtimeSyncWatcher, notifyInternalSave, getRecentCliEvents } from '../storage/realtimeSyncWatcher'
 import { executeCliCommand, rollbackCliAction } from '../storage/cliRunner'
 import { installWhisperModelBundle } from '../whisper'
 import type { Canvas, Store, ThemeName } from '../types'
 import { getMainWindow, openDirectoryPicker, openFolderPicker } from '../core'
+
+const storageHydrationGuard = new StorageHydrationGuard()
+const hydrationCleanupRegistered = new Set<number>()
 
 export const registerCoreIpcHandlers = (): void => {
   // Inicializa o watcher em tempo real de sincronização com debounce e diff
@@ -59,11 +63,28 @@ export const registerCoreIpcHandlers = (): void => {
     }
     return false
   })
-  ipcMain.handle('store:load', () => {
-    return loadStore()
+  ipcMain.handle('store:load', (event) => {
+    const store = loadStore()
+    const clientId = event.sender.id
+    storageHydrationGuard.markHydrated(clientId)
+
+    if (!hydrationCleanupRegistered.has(clientId)) {
+      hydrationCleanupRegistered.add(clientId)
+      event.sender.once('destroyed', () => {
+        storageHydrationGuard.revoke(clientId)
+        hydrationCleanupRegistered.delete(clientId)
+      })
+    }
+
+    return store
   })
 
-  ipcMain.handle('store:save', (_event, store: Store) => {
+  ipcMain.handle('store:save', (event, store: Store) => {
+    if (!storageHydrationGuard.canWrite(event.sender.id)) {
+      console.error('Gravacao bloqueada: renderer ainda nao hidratou o store persistido.')
+      return false
+    }
+
     const normalized = normalizeStore(store)
     const current = loadStore()
     const assessment = assessCatastrophicDataLoss(current, normalized)
