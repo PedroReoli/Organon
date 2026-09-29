@@ -203,6 +203,26 @@ export const createBackup = (dataPath: string, category: BackupCategory = 'manua
   }
 }
 
+export const createPreUpdateBackup = (dataPath: string): { success: boolean; backupPath?: string; error?: string } => {
+  const result = createBackup(dataPath, 'pre-update')
+  if (!result.success || !result.backupPath) {
+    return {
+      success: false,
+      error: result.error ?? 'Nao foi possivel criar o backup preventivo.',
+    }
+  }
+
+  const validation = validateBackup(result.backupPath)
+  if (!validation.valid) {
+    return {
+      success: false,
+      error: validation.error ?? 'O backup preventivo falhou na validacao.',
+    }
+  }
+
+  return result
+}
+
 export const listBackups = (dataPath: string): BackupListItem[] => {
   try {
     const backupDir = getBackupDir(dataPath)

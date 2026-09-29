@@ -1,5 +1,5 @@
 import { ipcMain, app } from 'electron'
-import { createBackup } from '../backup/backupService'
+import { createPreUpdateBackup } from '../backup/backupService'
 import { getDataPath } from '../storage/filesystem'
 import { getMainWindow } from './window'
 
@@ -69,15 +69,17 @@ export function registerAutoUpdaterIpc(): void {
   // 2. Baixar a atualização com BACKUP PREVENTIVO dos dados
   ipcMain.handle('updater:download', async () => {
     try {
-      // GARANTIA MEGA SEGURA: Backup preventivo de toda a pasta userData antes de baixar/aplicar
-      try {
-        createBackup(getDataPath(), 'pre-update')
-      } catch (backupErr) {
-        console.warn('Aviso: Falha ao gerar backup pré-update, continuando...', backupErr)
-      }
-
       if (!app.isPackaged) {
         return { success: false, error: 'Modo dev: download de update desativado.' }
+      }
+
+      const backup = createPreUpdateBackup(getDataPath())
+      if (!backup.success) {
+        console.error('Atualizacao cancelada: backup preventivo invalido.', backup.error)
+        return {
+          success: false,
+          error: `Atualizacao cancelada: ${backup.error ?? 'falha no backup preventivo.'}`,
+        }
       }
 
       const updater = getAutoUpdater()

@@ -96,13 +96,18 @@ app.whenReady().then(() => {
   if (!created.success || !created.backupPath) fail(created.error || 'Backup manual falhou.')
   const validation = backup.validateBackup(created.backupPath)
   if (!validation.valid) fail(validation.error || 'Backup não passou na validação.')
+  const preUpdate = backup.createPreUpdateBackup(targetRoot)
+  if (!preUpdate.success || !preUpdate.backupPath) fail(preUpdate.error || 'Backup pre-update falhou.')
+  const invalidDataRoot = path.join(sandbox, 'invalid-data-root')
+  fs.writeFileSync(invalidDataRoot, 'arquivo', 'utf8')
+  if (backup.createPreUpdateBackup(invalidDataRoot).success) fail('Backup pre-update aceitou um data root invalido.')
   fs.unlinkSync(notePath)
   const restored = backup.restoreBackup(created.backupPath, targetRoot)
   if (!restored.success) fail(restored.error || 'A restauração falhou.')
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })
