@@ -163,13 +163,13 @@ function handleNoteUpdate(idOrTitle, options = {}) {
   const resolvedContent = resolveContentFromOptions(options);
 
   if (resolvedContent !== undefined) {
-    store.writeNoteContent(note.mdPath, resolvedContent);
+    note.mdPath = store.writeNoteVersion(note.mdPath, resolvedContent);
   } else if (options.append !== undefined) {
     const existing = store.readNoteContent(note);
-    store.writeNoteContent(note.mdPath, existing.trimEnd() + '\n\n' + options.append + '\n');
+    note.mdPath = store.writeNoteVersion(note.mdPath, existing.trimEnd() + '\n\n' + options.append + '\n');
   } else if (options.prepend !== undefined) {
     const existing = store.readNoteContent(note);
-    store.writeNoteContent(note.mdPath, options.prepend + '\n\n' + existing.trimStart());
+    note.mdPath = store.writeNoteVersion(note.mdPath, options.prepend + '\n\n' + existing.trimStart());
   }
 
   note.updatedAt = new Date().toISOString();
@@ -401,7 +401,7 @@ function handleNotePolish(idOrTitle, options = {}) {
       const original = store.readNoteContent(note);
       const polished = polishMarkdown(original, note.title, options);
       if (polished !== original) {
-        store.writeNoteContent(note.mdPath, polished);
+        note.mdPath = store.writeNoteVersion(note.mdPath, polished);
         note.updatedAt = new Date().toISOString();
         polishedCount++;
         details.push({ id: note.id, title: note.title, diff: polished.length - original.length });
@@ -420,7 +420,7 @@ function handleNotePolish(idOrTitle, options = {}) {
 
   const original = store.readNoteContent(note);
   const polished = polishMarkdown(original, note.title, options);
-  store.writeNoteContent(note.mdPath, polished);
+  note.mdPath = store.writeNoteVersion(note.mdPath, polished);
   note.updatedAt = new Date().toISOString();
   store.saveNotesData(notesData);
 
@@ -472,4 +472,3 @@ module.exports = {
   handleFolderCreate,
   handleFolderDelete,
 };
-

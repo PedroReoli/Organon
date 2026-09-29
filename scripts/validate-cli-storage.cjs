@@ -56,7 +56,13 @@ try {
   if (!freshPlanning.cards.some(card => card.id === 'cli-card-2')) fail('Commit concorrente valido nao foi preservado.')
   if (freshPlanning.cards.some(card => card.id === 'cli-card-stale')) fail('Commit obsoleto contaminou a geracao atual.')
 
-  console.log(JSON.stringify({ cliAutoDiscovery: 'ok', configBackup: 'ok', transactionalWrite: 'ok', revisionCas: 'ok', revision: store.getSystemStatus().revision }))
+  store.writeNoteContent('cli-note.md', '# original')
+  const versionedNotePath = store.writeNoteVersion('cli-note.md', '# revisada')
+  if (versionedNotePath === 'cli-note.md') fail('CLI sobrescreveu sidecar Markdown referenciado.')
+  if (store.readNoteContent({ mdPath: 'cli-note.md' }) !== '# original') fail('CLI alterou a versao Markdown anterior.')
+  if (store.readNoteContent({ mdPath: versionedNotePath }) !== '# revisada') fail('CLI nao publicou a nova versao Markdown.')
+
+  console.log(JSON.stringify({ cliAutoDiscovery: 'ok', configBackup: 'ok', transactionalWrite: 'ok', revisionCas: 'ok', immutableSidecars: 'ok', revision: store.getSystemStatus().revision }))
 } finally {
   delete process.env.ORGANON_DATA_DIR
   fs.rmSync(sandbox, { recursive: true, force: true })

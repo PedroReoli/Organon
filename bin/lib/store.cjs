@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { randomUUID } = require('crypto');
+const { createHash, randomUUID } = require('crypto');
 
 const EXPECTED_REVISION = Symbol('organonExpectedRevision');
 const SECTION_FILES = [
@@ -369,6 +369,17 @@ function writeNoteContent(mdPath, content) {
   return true;
 }
 
+function writeNoteVersion(mdPath, content) {
+  const normalizedPath = String(mdPath || '').replace(/\\/g, '/');
+  const parsed = path.posix.parse(normalizedPath);
+  if (!parsed.base || parsed.dir.split('/').includes('..')) throw new Error('Caminho de nota invalido.');
+  const stem = parsed.name.replace(/--v-[0-9a-f]{12}$/i, '');
+  const hash = createHash('sha256').update(content || '').digest('hex').slice(0, 12);
+  const versionedPath = path.posix.join(parsed.dir, `${stem}--v-${hash}.md`);
+  writeNoteContent(versionedPath, content);
+  return versionedPath;
+}
+
 function deleteNoteFile(mdPath) {
   if (!mdPath) return false;
   const filePath = resolveNoteFile(mdPath);
@@ -466,6 +477,7 @@ module.exports = {
   saveNotesData,
   readNoteContent,
   writeNoteContent,
+  writeNoteVersion,
   deleteNoteFile,
   getProjectsData,
   saveProjectsData,
