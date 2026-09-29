@@ -1,4 +1,5 @@
 const { app, ipcMain } = require('electron')
+const fs = require('node:fs')
 const path = require('path')
 const assert = require('assert')
 
@@ -38,19 +39,12 @@ app.whenReady().then(() => {
   const { listAvailableWhisperModels } = require(path.join(baseDir, 'whisper/index.js'))
   assert.equal(typeof listAvailableWhisperModels, 'function', 'listAvailableWhisperModels deve ser uma função')
 
-  // 5. Verificar Proxies transparentes na raiz de dist/main/
-  console.log('[5/5] Testando compatibilidade de proxies na raiz de dist/main/...')
-  const rootFilesystem = require(path.join(baseDir, 'filesystem.js'))
-  const rootStore = require(path.join(baseDir, 'store.js'))
-  const rootBackup = require(path.join(baseDir, 'backup.js'))
-  const rootIpc = require(path.join(baseDir, 'ipc.js'))
-  const rootWindow = require(path.join(baseDir, 'window.js'))
-
-  assert.equal(typeof rootFilesystem.getStorePath, 'function', 'filesystem.getStorePath deve existir na raiz')
-  assert.equal(typeof rootStore.loadStore, 'function', 'store.loadStore deve existir na raiz')
-  assert.equal(typeof rootBackup.startBackupTimer, 'function', 'backup.startBackupTimer deve existir na raiz')
-  assert.equal(typeof rootIpc.registerIpcHandlers, 'function', 'ipc.registerIpcHandlers deve existir na raiz')
-  assert.equal(typeof rootWindow.createWindow, 'function', 'window.createWindow deve existir na raiz')
+  // 5. Garantir que o build limpo não preservou proxies removidos do código-fonte
+  console.log('[5/5] Verificando ausência de artefatos legados na raiz de dist/main/...')
+  const legacyArtifacts = ['filesystem.js', 'store.js', 'backup.js', 'ipc.js', 'window.js']
+  for (const artifact of legacyArtifacts) {
+    assert.equal(fs.existsSync(path.join(baseDir, artifact)), false, `Artefato legado encontrado: ${artifact}`)
+  }
 
   console.log('\n✅ SUCESSO TOTAL: Todos os subsistemas estão íntegros, equiparáveis e 100% operacionais!')
   app.exit(0)

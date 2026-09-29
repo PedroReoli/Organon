@@ -29,9 +29,9 @@ app.whenReady().then(async () => {
       assert.ok(bytes.length > 16000 * 2 * 9, 'Final recording must preserve the tail')
       return handler(event, input, ...rest)
     } : handler)
-    require('../dist/main/ipcContent').registerContentIpcHandlers()
+    require('../dist/main/ipc/content.ipc').registerContentIpcHandlers()
     ipcMain.handle = originalHandle
-    const { transcribeAudioLocally } = require('../dist/main/localWhisperTranscriber')
+    const { transcribeAudioLocally } = require('../dist/main/whisper/localTranscriber')
     const executable = process.env.ORGANON_WHISPER_CLI
     process.env.ORGANON_WHISPER_CLI = path.join(root, 'missing-whisper.exe')
     await assert.rejects(() => transcribeAudioLocally(fixture, model), /ausente/)

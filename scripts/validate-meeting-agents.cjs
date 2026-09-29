@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs/promises')
 const path = require('node:path')
-const { researchMeeting } = require('../dist/main/meetingResearch')
-const { collectMeetingProject } = require('../dist/main/meetingProjectContext')
-const { isPathSafe } = require('../dist/main/workspaceSafetyGuard')
+const { researchMeeting } = require('../dist/main/meeting/research')
+const { collectMeetingProject } = require('../dist/main/meeting/projectContext')
+const { isPathSafe } = require('../dist/main/storage/workspaceGuard')
 async function main() {
   const root = path.resolve(__dirname, '../.whisper-validation/meeting-project')
   await fs.mkdir(root, { recursive: true })

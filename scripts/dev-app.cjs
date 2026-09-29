@@ -9,6 +9,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
+const { cleanDist } = require('./clean-dist.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -246,6 +247,7 @@ process.on('SIGINT', () => {
 process.on('exit', cleanup);
 
 async function main() {
+  cleanDist();
   renderDashboard();
 
   // Verifica porta livre para o Vite
