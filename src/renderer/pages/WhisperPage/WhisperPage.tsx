@@ -207,6 +207,38 @@ export const WhisperPage: React.FC<Props> = ({
     }
   }
 
+  const handleExportToObsidian = async () => {
+    if (!selectedRecord) {
+      showToast('Nenhuma gravação selecionada para exportar.', 'info')
+      return
+    }
+    try {
+      let vaultPath = settings.obsidianVaultPath || null
+      if (!vaultPath) {
+        vaultPath = await window.electronAPI?.selectObsidianVault?.() || null
+        if (!vaultPath) return
+        onUpdateSettings({ obsidianVaultPath: vaultPath })
+      }
+      const result = await window.electronAPI.exportMeetingToObsidian({
+        vaultPath,
+        meeting: {
+          id: selectedRecord.id,
+          title: selectedRecord.title,
+          createdAt: selectedRecord.createdAt,
+          durationSeconds: selectedRecord.durationSeconds,
+          mode: selectedRecord.mode,
+          fullTranscript: selectedRecord.fullTranscript,
+          segments: selectedRecord.segments,
+          intelligenceData: selectedRecord.intelligenceData,
+          audioPath: selectedRecord.audio?.path || selectedRecord.audioUrl,
+        },
+      })
+      showToast(result.success ? 'Reunião atualizada no Obsidian.' : 'Não foi possível exportar ao Obsidian.', result.success ? 'success' : 'error')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Falha ao exportar ao Obsidian.', 'error')
+    }
+  }
+
   // Estilos Dinâmicos do Status do Sistema
   const systemStatus = isRecording
     ? recordingMode === 'meeting'
@@ -304,6 +336,7 @@ export const WhisperPage: React.FC<Props> = ({
           setIsIntelligencePanelOpen={setIsIntelligencePanelOpen}
           setShowDiagnosticsModal={setShowDiagnosticsModal}
           handleExportToNotes={handleExportToNotes}
+          handleExportToObsidian={() => { void handleExportToObsidian() }}
           setIsSettingsOpen={setIsSettingsOpen}
           systemStatus={systemStatus}
           systemStatusStyles={systemStatusStyles}

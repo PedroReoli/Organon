@@ -680,6 +680,25 @@ declare global {
         durationMs: number
       }>
       getMeetingAudioUrl: (audioPath: string) => Promise<string | null>
+      selectObsidianVault: () => Promise<string | null>
+      exportMeetingToObsidian: (request: {
+        vaultPath: string
+        meeting: {
+          id: string
+          title: string
+          createdAt: string
+          durationSeconds: number
+          mode?: 'meeting' | 'interview' | 'prompt'
+          fullTranscript: string
+          segments?: Array<{ speakerName?: string; timestamp?: string; text?: string; startMs?: number }>
+          intelligenceData?: {
+            executiveSummary?: string
+            decisions?: Array<{ text?: string; confirmed?: boolean }>
+            actionItems?: Array<{ task?: string; assignee?: string; status?: string; confirmed?: boolean }>
+          }
+          audioPath?: string
+        }
+      }) => Promise<{ success: true; notePath: string; audioPath?: string }>
       deleteMeetingAudio: (audioPath: string) => Promise<boolean>
       transcribeAudio: (
         audioPath: string,

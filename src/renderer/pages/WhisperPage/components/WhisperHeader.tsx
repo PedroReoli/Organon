@@ -1,5 +1,5 @@
 import React from 'react'
-import { PanelLeft, PanelRight, FileText, Settings, Sparkles, Mic } from 'lucide-react'
+import { PanelLeft, PanelRight, FileText, Settings, Sparkles, Mic, BookOpen } from 'lucide-react'
 import { RecordingModeType } from './WhisperRecordingHero'
 import { ScreenShareStealthBadge } from './ScreenShareStealthBadge'
 import { WhisperRecord } from '../types/whisper.types'
@@ -14,6 +14,7 @@ interface WhisperHeaderProps {
   setIsIntelligencePanelOpen: (open: boolean) => void
   setShowDiagnosticsModal: (open: boolean) => void
   handleExportToNotes: () => void
+  handleExportToObsidian: () => void
   setIsSettingsOpen: (open: boolean) => void
   systemStatus: string
   systemStatusStyles: React.CSSProperties
@@ -29,6 +30,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
   setIsIntelligencePanelOpen,
   setShowDiagnosticsModal,
   handleExportToNotes,
+  handleExportToObsidian,
   setIsSettingsOpen,
   systemStatus,
   systemStatusStyles,
@@ -104,6 +106,17 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
         >
           <FileText size={13} />
           <span className="whisper-btn-text">Exportar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleExportToObsidian}
+          disabled={!selectedRecord}
+          className="whisper-btn-icon-label"
+          title="Exportar ou atualizar esta reunião no Obsidian"
+        >
+          <BookOpen size={13} />
+          <span className="whisper-btn-text">Obsidian</span>
         </button>
 
         <button

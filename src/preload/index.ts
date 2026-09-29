@@ -286,6 +286,8 @@ const electronAPI = {
     codec?: string
   }) => ipcRenderer.invoke('meetings:saveAudioPackage', request),
   getMeetingAudioUrl: (audioPath: string) => ipcRenderer.invoke('meetings:getAudioUrl', audioPath),
+  selectObsidianVault: () => ipcRenderer.invoke('meetings:selectObsidianVault'),
+  exportMeetingToObsidian: (request: unknown) => ipcRenderer.invoke('meetings:exportObsidian', request),
   deleteMeetingAudio: (audioPath: string) => ipcRenderer.invoke('meetings:deleteAudio', audioPath),
   transcribeAudio: (
     audioPath: string,

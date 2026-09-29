@@ -93,6 +93,81 @@ function writeBufferAtomic(targetPath: string, buffer: Buffer): void {
   }
 }
 
+type ObsidianMeetingExport = {
+  id: string
+  title: string
+  createdAt: string
+  durationSeconds: number
+  mode?: 'meeting' | 'interview' | 'prompt'
+  fullTranscript: string
+  segments?: Array<{ speakerName?: string; timestamp?: string; text?: string; startMs?: number }>
+  intelligenceData?: {
+    executiveSummary?: string
+    decisions?: Array<{ text?: string; confirmed?: boolean }>
+    actionItems?: Array<{ task?: string; assignee?: string; status?: string; confirmed?: boolean }>
+  }
+  audioPath?: string
+}
+
+function sanitizeObsidianFileName(value: string): string {
+  const sanitized = value
+    .normalize('NFKC')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
+    .replace(/[. ]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return (sanitized || 'Reuniao').slice(0, 100)
+}
+
+function yamlString(value: string): string {
+  return JSON.stringify(value.replace(/[\r\n]+/g, ' ').trim())
+}
+
+function buildObsidianMeetingMarkdown(meeting: ObsidianMeetingExport, audioLink?: string): string {
+  const intelligence = meeting.intelligenceData
+  const decisions = (intelligence?.decisions || []).filter(item => item?.text?.trim())
+  const actionItems = (intelligence?.actionItems || []).filter(item => item?.task?.trim())
+  const segments = (meeting.segments || []).filter(segment => segment?.text?.trim())
+  const lines = [
+    '---',
+    `organon_id: ${yamlString(meeting.id)}`,
+    `title: ${yamlString(meeting.title)}`,
+    `created_at: ${yamlString(meeting.createdAt)}`,
+    `duration_seconds: ${Math.max(0, Number(meeting.durationSeconds) || 0)}`,
+    `mode: ${yamlString(meeting.mode || 'meeting')}`,
+    'source: organon',
+    '---',
+    '',
+    `# ${meeting.title.trim() || 'Reuniao'}`,
+    '',
+  ]
+
+  if (audioLink) lines.push('## Audio original', '', `![[${audioLink}]]`, '')
+  if (intelligence?.executiveSummary?.trim()) {
+    lines.push('## Resumo executivo', '', intelligence.executiveSummary.trim(), '')
+  }
+  if (decisions.length) {
+    lines.push('## Decisoes', '', ...decisions.map(item => `- [${item.confirmed ? 'x' : ' '}] ${item.text!.trim()}`), '')
+  }
+  if (actionItems.length) {
+    lines.push('## Acoes', '', ...actionItems.map(item => {
+      const owner = item.assignee?.trim() ? ` @${item.assignee.trim()}` : ''
+      return `- [${item.status === 'done' ? 'x' : ' '}] ${item.task!.trim()}${owner}`
+    }), '')
+  }
+
+  lines.push('## Transcricao', '')
+  if (segments.length) {
+    for (const segment of segments) {
+      const label = [segment.timestamp, segment.speakerName].filter(Boolean).join(' - ')
+      lines.push(label ? `**${label}**` : '**Trecho**', '', segment.text!.trim(), '')
+    }
+  } else {
+    lines.push(meeting.fullTranscript?.trim() || '_Sem transcricao._', '')
+  }
+  return `${lines.join('\n').trim()}\n`
+}
+
 function resolveTranscriptionInput(input: string): { path: string; cleanup: boolean } {
   if (typeof input !== 'string' || !input.trim()) throw new Error('Áudio vazio.')
   const trimmed = input.trim()
@@ -338,6 +413,57 @@ export const registerContentIpcHandlers = (): void => {
     const absPath = safeResolveMeetingPath(audioPath, getDataPath())
     if (!fs.existsSync(absPath) || !fs.statSync(absPath).isFile()) return null
     return pathToFileURL(absPath).toString()
+  })
+
+  ipcMain.handle('meetings:selectObsidianVault', async () => {
+    const result = await showOpenDialog({
+      title: 'Selecionar cofre do Obsidian',
+      properties: ['openDirectory'],
+    })
+    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+  })
+
+  ipcMain.handle('meetings:exportObsidian', (_event, request: {
+    vaultPath: string
+    meeting: ObsidianMeetingExport
+  }) => {
+    const requestedVaultPath = request?.vaultPath?.trim()
+    if (!requestedVaultPath || !path.isAbsolute(requestedVaultPath)) throw new Error('Cofre do Obsidian invalido.')
+    const vaultPath = path.resolve(requestedVaultPath)
+    if (!fs.existsSync(vaultPath) || !fs.statSync(vaultPath).isDirectory()) {
+      throw new Error('Cofre do Obsidian invalido.')
+    }
+    const meeting = request?.meeting
+    const meetingId = validateMeetingId(meeting?.id)
+    if (!meeting?.title?.trim() || !meeting?.createdAt || typeof meeting?.fullTranscript !== 'string') {
+      throw new Error('Dados da reuniao invalidos para exportacao.')
+    }
+
+    const organonDir = path.join(vaultPath, 'Organon')
+    const meetingsDir = path.join(organonDir, 'Reunioes')
+    const assetsDir = path.join(organonDir, 'Assets')
+    fs.mkdirSync(meetingsDir, { recursive: true })
+    fs.mkdirSync(assetsDir, { recursive: true })
+
+    const stableSuffix = `--${meetingId}.md`
+    const existingName = fs.readdirSync(meetingsDir).find(name => name.endsWith(stableSuffix))
+    const noteName = existingName || `${sanitizeObsidianFileName(meeting.title)}${stableSuffix}`
+    const notePath = path.join(meetingsDir, noteName)
+    let audioLink: string | undefined
+    let exportedAudioPath: string | undefined
+
+    if (meeting.audioPath) {
+      const sourceAudioPath = safeResolveMeetingPath(meeting.audioPath, getDataPath())
+      if (fs.existsSync(sourceAudioPath) && fs.statSync(sourceAudioPath).isFile()) {
+        const audioName = `${meetingId}${path.extname(sourceAudioPath).toLowerCase() || '.wav'}`
+        exportedAudioPath = path.join(assetsDir, audioName)
+        writeBufferAtomic(exportedAudioPath, fs.readFileSync(sourceAudioPath))
+        audioLink = `Organon/Assets/${audioName}`
+      }
+    }
+
+    writeBufferAtomic(notePath, Buffer.from(buildObsidianMeetingMarkdown(meeting, audioLink), 'utf-8'))
+    return { success: true, notePath, audioPath: exportedAudioPath }
   })
 
   ipcMain.handle('meetings:deleteAudio', (_event, audioPath: string) => {
