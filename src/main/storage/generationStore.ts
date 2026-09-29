@@ -44,6 +44,7 @@ interface GenerationManifest {
   createdAt: string
   source: string
   files: Record<string, string>
+  metrics?: GenerationCommitMetrics
 }
 
 interface TransactionRecord {
@@ -86,6 +87,13 @@ export interface GenerationCommitResult {
   transactionId?: string
   conflict?: boolean
   error?: string
+  metrics?: GenerationCommitMetrics
+}
+
+export interface GenerationCommitMetrics {
+  payloadBytesWritten: number
+  payloadBytesReused: number
+  changedSections: string[]
 }
 
 const CONTROL_DIR_NAME = '_sistema'
@@ -108,6 +116,13 @@ const writeJsonAtomic = (filePath: string, value: unknown): void => {
   if (!writeTextFileAtomic(filePath, JSON.stringify(value, null, 2))) {
     throw new Error(`Falha ao gravar ${filePath}`)
   }
+}
+
+const readGenerationManifest = (dataPath: string, generationId: string): GenerationManifest | null => {
+  const manifest = readJsonFile(path.join(getGenerationsDir(dataPath), generationId, 'manifest.json')) as Partial<GenerationManifest> | null
+  return manifest?.version === 1 && manifest.generationId === generationId && manifest.files
+    ? manifest as GenerationManifest
+    : null
 }
 
 const readCurrentPointer = (dataPath: string): CurrentPointer | null => {
@@ -291,11 +306,13 @@ export const commitStoreGeneration = (
   let releaseLock: (() => void) | null = null
   let record: TransactionRecord | null = null
   let transactionPath = ''
+  let metrics: GenerationCommitMetrics = { payloadBytesWritten: 0, payloadBytesReused: 0, changedSections: [] }
 
   try {
     ensureDataDir(dataPath)
     releaseLock = acquireLock(dataPath, transactionId)
     const current = loadCommittedGeneration(dataPath)
+    const currentManifest = current ? readGenerationManifest(dataPath, current.generationId) : null
     const previousRevision = current?.revision ?? 0
     if (options.expectedRevision !== undefined && options.expectedRevision !== previousRevision) {
       return {
@@ -333,14 +350,33 @@ export const commitStoreGeneration = (
     const storeContent = JSON.stringify(normalized, null, 2)
     fs.writeFileSync(path.join(stagingGenerationPath, 'store.json'), storeContent, 'utf-8')
     files['store.json'] = sha256Buffer(storeContent)
+    metrics.payloadBytesWritten += Buffer.byteLength(storeContent, 'utf8')
 
     for (const section of STORE_SECTIONS) {
       const payload: Record<string, unknown> = {}
       for (const key of section.keys) payload[key as string] = (normalized as unknown as Record<string, unknown>)[key as string]
       const relativePath = `sections/${section.fileName}`
       const content = JSON.stringify(payload, null, 2)
-      fs.writeFileSync(path.join(stagingGenerationPath, relativePath), content, 'utf-8')
-      files[relativePath] = sha256Buffer(content)
+      const contentHash = sha256Buffer(content)
+      const destinationPath = path.join(stagingGenerationPath, relativePath)
+      const contentBytes = Buffer.byteLength(content, 'utf8')
+      const reusablePath = current && currentManifest?.files[relativePath] === contentHash
+        ? path.join(getGenerationsDir(dataPath), current.generationId, relativePath)
+        : null
+      if (reusablePath && fs.existsSync(reusablePath)) {
+        try {
+          fs.linkSync(reusablePath, destinationPath)
+          metrics.payloadBytesReused += contentBytes
+        } catch {
+          fs.copyFileSync(reusablePath, destinationPath)
+          metrics.payloadBytesWritten += contentBytes
+        }
+      } else {
+        fs.writeFileSync(destinationPath, content, 'utf-8')
+        metrics.payloadBytesWritten += contentBytes
+        metrics.changedSections.push(section.fileName)
+      }
+      files[relativePath] = contentHash
     }
 
     const manifest: GenerationManifest = {
@@ -352,6 +388,7 @@ export const commitStoreGeneration = (
       createdAt: startedAt,
       source,
       files,
+      metrics,
     }
     writeJsonAtomic(path.join(stagingGenerationPath, 'manifest.json'), manifest)
     if (!validateGeneration(stagingGenerationPath, undefined, generationId)) throw new Error('A geracao preparada falhou na validacao.')
@@ -377,7 +414,7 @@ export const commitStoreGeneration = (
     record.completedAt = new Date().toISOString()
     writeTransactionRecord(transactionPath, record)
     pruneTransactionRecords(dataPath)
-    return { success: true, revision, previousRevision, generationId, transactionId }
+    return { success: true, revision, previousRevision, generationId, transactionId, metrics }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const committed = loadCommittedGeneration(dataPath)
@@ -392,6 +429,7 @@ export const commitStoreGeneration = (
         previousRevision: record.previousRevision,
         generationId: committed.generationId,
         transactionId,
+        metrics,
       }
     }
     if (record) {
@@ -408,6 +446,7 @@ export const commitStoreGeneration = (
       generationId: record?.generationId,
       transactionId,
       error: message,
+      metrics,
     }
   } finally {
     releaseLock?.()

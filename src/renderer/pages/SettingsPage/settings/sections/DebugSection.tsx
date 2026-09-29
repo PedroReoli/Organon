@@ -104,6 +104,7 @@ export const DebugSection = ({ activeSection, settings, onUpdateSettings }: Debu
               activeWhisperRecorders: runtimeMetrics.activeWhisperRecorders,
               mainMemory: runtimeMetrics.mainMemory,
               durations: runtimeMetrics.durations,
+              measurements: runtimeMetrics.measurements,
               counters: runtimeMetrics.counters,
             }, null, 2)}
           </pre>

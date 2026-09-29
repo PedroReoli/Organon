@@ -20,6 +20,8 @@ try {
     const dataRoot = path.join(sandbox, name);
     const commitMs = [];
     const loadMs = [];
+    const payloadBytesWritten = [];
+    const payloadBytesReused = [];
     for (let iteration = 0; iteration < 3; iteration += 1) {
       const revision = generationStore.getStorageRevision(dataRoot);
       const startedCommit = performance.now();
@@ -30,6 +32,8 @@ try {
       );
       commitMs.push(performance.now() - startedCommit);
       if (!result.success) throw new Error(result.error || `Falha no benchmark ${name}`);
+      payloadBytesWritten.push(result.metrics?.payloadBytesWritten || 0);
+      payloadBytesReused.push(result.metrics?.payloadBytesReused || 0);
       const startedLoad = performance.now();
       const loaded = generationStore.loadCommittedGeneration(dataRoot);
       loadMs.push(performance.now() - startedLoad);
@@ -42,10 +46,11 @@ try {
       logicalBytes: Buffer.byteLength(JSON.stringify(store), 'utf8'),
       commit: summarize(commitMs),
       load: summarize(loadMs),
+      payloadBytesWritten,
+      payloadBytesReused,
     });
   }
   process.stdout.write(`${JSON.stringify({ generatedAt: new Date().toISOString(), iterations: 3, results: output }, null, 2)}\n`);
 } finally {
   fs.rmSync(sandbox, { recursive: true, force: true });
 }
-

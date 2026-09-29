@@ -106,6 +106,17 @@ app.whenReady().then(() => {
     if (generationStore.loadCommittedGeneration(legacyRoot)?.revision !== 3) fail('Boot repetido alterou a revisao.')
   }
   if (fs.readFileSync(currentPath, 'utf8') !== currentBeforeBoots) fail('Boot read-only alterou o ponteiro CURRENT.')
+  const dirtyRoot = path.join(sandbox, 'dirty-sections')
+  const dirtyInitial = generationStore.commitStoreGeneration(store, dirtyRoot, { expectedRevision: 0, source: 'dirty-set-initial' })
+  if (!dirtyInitial.success || dirtyInitial.metrics?.changedSections.length !== generationStore.STORE_SECTIONS.length) fail('Primeiro commit nao marcou todas as secoes.')
+  const dirtyUpdate = generationStore.commitStoreGeneration(
+    { ...store, cards: [...store.cards, { id: 'card-dirty-set' }] },
+    dirtyRoot,
+    { expectedRevision: 1, source: 'dirty-set-update' }
+  )
+  if (!dirtyUpdate.success) fail(dirtyUpdate.error || 'Commit incremental falhou.')
+  if (dirtyUpdate.metrics?.changedSections.join(',') !== 'planning.json') fail('Dirty-set nao isolou a secao planning.json.')
+  if (!dirtyUpdate.metrics || dirtyUpdate.metrics.payloadBytesReused <= 0) fail('Commit incremental nao reutilizou secoes imutaveis.')
   const legacyStorePath = filesystem.getStorePath(legacyRoot)
   const fixedMtime = new Date('2001-01-01T00:00:00.000Z')
   fs.utimesSync(legacyStorePath, fixedMtime, fixedMtime)
@@ -147,7 +158,7 @@ app.whenReady().then(() => {
   if (fs.readFileSync(notePath, 'utf8') !== '# Conteúdo preservado') fail('A restauração não recuperou o Markdown da nota.')
 
   console.log(JSON.stringify({
-    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', notes: migrated.notes.length,
+    migration: 'ok', recovery: 'ok', backup: 'ok', restore: 'ok', preUpdateGate: 'ok', readOnlyLoad: 'ok', hydrationGuard: 'ok', autoDiscovery: 'ok', transactionalGeneration: 'ok', revisionCas: 'ok', writerLock: 'ok', journal: 'ok', faultRecovery: 'ok', repeatBoot: 'ok', dirtySections: 'ok', notes: migrated.notes.length,
     readablePath: migrated.notes[0].mdPath, root: targetRoot,
   }))
   fs.rmSync(sandbox, { recursive: true, force: true })

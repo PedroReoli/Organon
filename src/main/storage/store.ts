@@ -17,7 +17,7 @@ import {
 } from './filesystem'
 import { getDefaultStore, normalizeStore } from './storeModel'
 import { commitStoreGeneration, loadCommittedGeneration, STORE_SECTIONS } from './generationStore'
-import type { GenerationCommitOptions } from './generationStore'
+import type { GenerationCommitMetrics, GenerationCommitOptions } from './generationStore'
 import type { Store } from '../types'
 
 export { DEFAULT_STUDY_STATE, getDefaultStore, normalizeStore, normalizeStudyState } from './storeModel'
@@ -27,6 +27,10 @@ const hasSectionFilesInDir = (dirPath: string): boolean => {
   if (!fs.existsSync(dirPath)) return false
   return STORE_SECTIONS.some(section => fs.existsSync(path.join(dirPath, section.fileName)))
 }
+
+let lastStorageCommitMetrics: GenerationCommitMetrics | null = null
+
+export const getLastStorageCommitMetrics = (): GenerationCommitMetrics | null => lastStorageCommitMetrics
 
 const readSectionedStoreFromDir = (dirPath: string, requireComplete = false): Partial<Store> | null => {
   if (!hasSectionFilesInDir(dirPath)) return null
@@ -235,6 +239,7 @@ export const saveStoreToPath = (store: Store, dataPath: string, options: Generat
       console.error('Commit transacional rejeitado:', commit.error)
       return false
     }
+    lastStorageCommitMetrics = commit.metrics ?? null
     generationCommitted = true
 
     // Espelhos de compatibilidade para consumidores ainda nao migrados. A geracao

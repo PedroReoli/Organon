@@ -20,6 +20,7 @@ import {
   normalizeStore,
   saveStore,
   getInstallerStatus,
+  getLastStorageCommitMetrics,
   migrateToDedicatedStorage,
   assessCatastrophicDataLoss,
   StorageHydrationGuard,
@@ -29,7 +30,7 @@ import { executeCliCommand, rollbackCliAction } from '../storage/cliRunner'
 import { installWhisperModelBundle } from '../whisper'
 import type { Canvas, Store, ThemeName } from '../types'
 import { getMainWindow, openDirectoryPicker, openFolderPicker } from '../core'
-import { recordRuntimeDuration } from '../diagnostics/runtimeMetrics'
+import { recordRuntimeDuration, recordRuntimeEvent, recordRuntimeMeasurement } from '../diagnostics/runtimeMetrics'
 
 const storageHydrationGuard = new StorageHydrationGuard()
 const hydrationCleanupRegistered = new Set<number>()
@@ -169,6 +170,13 @@ export const registerCoreIpcHandlers = (): void => {
           ? `Conflito de revisao: esperado ${request.expectedRevision}, atual ${revision}.`
           : 'O commit transacional foi rejeitado.',
       }
+    }
+    const commitMetrics = getLastStorageCommitMetrics()
+    if (commitMetrics) {
+      recordRuntimeMeasurement('store.commit.payloadBytesWritten', commitMetrics.payloadBytesWritten)
+      recordRuntimeMeasurement('store.commit.payloadBytesReused', commitMetrics.payloadBytesReused)
+      recordRuntimeMeasurement('store.commit.changedSections', commitMetrics.changedSections.length)
+      recordRuntimeEvent('store.commit.completed', { ...commitMetrics })
     }
     notifyInternalSave()
     const settings = normalized.settings

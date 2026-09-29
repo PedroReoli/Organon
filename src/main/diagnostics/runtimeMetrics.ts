@@ -8,6 +8,7 @@ type RuntimeEvent = {
 
 const events: RuntimeEvent[] = []
 const durationSamples = new Map<string, number[]>()
+const measurementSamples = new Map<string, number[]>()
 const counters = new Map<string, number>()
 let activeWhisperRecorders = 0
 let eventLoopMonitor: NodeJS.Timeout | null = null
@@ -36,6 +37,14 @@ export function recordRuntimeDuration(name: string, durationMs: number): void {
   durationSamples.set(name, samples)
 }
 
+export function recordRuntimeMeasurement(name: string, value: number): void {
+  if (!Number.isFinite(value) || value < 0) return
+  const samples = measurementSamples.get(name) || []
+  samples.push(value)
+  if (samples.length > 500) samples.splice(0, samples.length - 500)
+  measurementSamples.set(name, samples)
+}
+
 const percentile = (samples: number[], percentileValue: number): number => {
   if (!samples.length) return 0
   const ordered = [...samples].sort((a, b) => a - b)
@@ -49,6 +58,14 @@ export async function getRuntimeMetrics(): Promise<Record<string, unknown>> {
     p50Ms: percentile(samples, 0.5),
     p95Ms: percentile(samples, 0.95),
     p99Ms: percentile(samples, 0.99),
+  }]))
+  const measurements = Object.fromEntries([...measurementSamples.entries()].map(([name, samples]) => [name, {
+    samples: samples.length,
+    latest: samples[samples.length - 1] ?? 0,
+    total: samples.reduce((sum, sample) => sum + sample, 0),
+    p50: percentile(samples, 0.5),
+    p95: percentile(samples, 0.95),
+    p99: percentile(samples, 0.99),
   }]))
   return {
     capturedAt: new Date().toISOString(),
@@ -65,6 +82,7 @@ export async function getRuntimeMetrics(): Promise<Record<string, unknown>> {
     })),
     counters: Object.fromEntries(counters),
     durations,
+    measurements,
     recentEvents: events.slice(-100),
   }
 }
