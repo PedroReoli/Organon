@@ -5,7 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const builder = JSON.parse(fs.readFileSync(path.join(root, 'electron-builder.json'), 'utf8'));
-const policy = JSON.parse(fs.readFileSync(path.join(root, 'release', 'channel-policy.json'), 'utf8'));
+const policy = JSON.parse(fs.readFileSync(path.join(root, 'config', 'release-channel-policy.json'), 'utf8'));
 const args = process.argv.slice(2);
 const readArg = name => {
   const index = args.indexOf(name);
@@ -37,4 +37,3 @@ process.stdout.write(`${JSON.stringify({
   automaticDowngrade: false,
   preservesAppDataOnUninstall: true,
 })}\n`);
-

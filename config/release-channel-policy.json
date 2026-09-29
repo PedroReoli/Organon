@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "defaultChannel": "stable",
+  "channels": {
+    "canary": {
+      "versionPattern": "^\\d+\\.\\d+\\.\\d+-canary\\.\\d+$",
+      "audience": "internal",
+      "minimumSoakHours": 24,
+      "initialStagingPercentage": 10,
+      "allowPrerelease": true
+    },
+    "stable": {
+      "versionPattern": "^\\d+\\.\\d+\\.\\d+$",
+      "audience": "public",
+      "minimumSoakHours": 24,
+      "initialStagingPercentage": 25,
+      "allowPrerelease": false
+    }
+  },
+  "promotion": {
+    "requiredChecks": [
+      "ci",
+      "dependency-audit",
+      "windows-lifecycle",
+      "backup-restore",
+      "canary-soak"
+    ],
+    "reuseBrokenVersion": false
+  },
+  "rollback": {
+    "allowAutomaticDowngrade": false,
+    "strategy": "publish-forward-fix",
+    "requireHigherVersion": true
+  }
+}
