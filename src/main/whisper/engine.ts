@@ -7,7 +7,10 @@ import { transcribeAudioLocally } from './localTranscriber'
 export interface WhisperModelInfo {
   id: string
   name: string
+  version: string
   sizeMb: number
+  sizeBytes: number
+  sha256: string
   vramRequiredMb: number
   url: string
   downloaded: boolean
@@ -19,7 +22,10 @@ export const AVAILABLE_MODELS: WhisperModelInfo[] = [
   {
     id: 'ggml-tiny',
     name: 'Whisper Tiny (GGML - ~75MB)',
+    version: 'whisper.cpp-main-be07e048e1e5',
     sizeMb: 75,
+    sizeBytes: 77_691_713,
+    sha256: 'be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21',
     vramRequiredMb: 350,
     url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
     downloaded: false,
@@ -27,7 +33,10 @@ export const AVAILABLE_MODELS: WhisperModelInfo[] = [
   {
     id: 'ggml-base',
     name: 'Whisper Base (GGML - ~142MB)',
+    version: 'whisper.cpp-main-60ed5bc3dd14',
     sizeMb: 142,
+    sizeBytes: 147_951_465,
+    sha256: '60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe',
     vramRequiredMb: 500,
     url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
     downloaded: false,
@@ -35,7 +44,10 @@ export const AVAILABLE_MODELS: WhisperModelInfo[] = [
   {
     id: 'ggml-small',
     name: 'Whisper Small (GGML - ~466MB)',
+    version: 'whisper.cpp-main-1be3a9b20638',
     sizeMb: 466,
+    sizeBytes: 487_601_967,
+    sha256: '1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b',
     vramRequiredMb: 1000,
     url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',
     downloaded: false,
@@ -55,7 +67,7 @@ export function listLocalModels(): WhisperModelInfo[] {
     const filePath = path.join(dir, `${m.id}.bin`)
     return {
       ...m,
-      downloaded: fs.existsSync(filePath) && fs.statSync(filePath).size > 1000000,
+      downloaded: fs.existsSync(filePath) && fs.statSync(filePath).size === m.sizeBytes,
     }
   })
 }

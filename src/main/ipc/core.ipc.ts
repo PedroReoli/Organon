@@ -360,29 +360,14 @@ export const registerCoreIpcHandlers = (): void => {
       return migration
     }
 
-    try {
-      const whisperInstall = await installWhisperModelBundle()
-      if (whisperInstall.warnings.length > 0) {
-        migration.warnings = [...(migration.warnings ?? []), ...whisperInstall.warnings]
-      }
-      if (whisperInstall.installed.length > 0) {
-        migration.warnings = [
-          ...(migration.warnings ?? []),
-          `Pacote Whisper local instalado: ${whisperInstall.installed.map(model => model.id).join(', ')}`,
-        ]
-      }
-      if (whisperInstall.skipped.length > 0 && !whisperInstall.installed.length) {
-        migration.warnings = [
-          ...(migration.warnings ?? []),
-          `Pacote Whisper local já estava presente: ${whisperInstall.skipped.join(', ')}`,
-        ]
-      }
-    } catch (error) {
-      migration.warnings = [
-        ...(migration.warnings ?? []),
-        `Não foi possível instalar o pacote Whisper local: ${String(error)}`,
-      ]
-    }
+    void installWhisperModelBundle()
+      .then(result => {
+        if (result.warnings.length > 0) console.warn('Instalação Whisper concluída com avisos:', result.warnings)
+        if (result.installed.length > 0) {
+          console.info(`Pacote Whisper local instalado em segundo plano: ${result.installed.map(model => model.id).join(', ')}`)
+        }
+      })
+      .catch(error => console.warn('Instalação Whisper em segundo plano falhou:', error))
 
     return migration
   })
