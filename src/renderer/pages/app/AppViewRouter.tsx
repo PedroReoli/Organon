@@ -51,6 +51,9 @@ interface AppViewRouterProps {
   settings: Settings
   projects: Project[]
   meetings: Meeting[]
+  onUpdateMeeting: (meetingId: string, updates: Partial<Meeting>) => void
+  onRemoveMeeting: (meetingId: string) => void
+  onReplaceMeetings: (meetings: Meeting[]) => void
   registeredIDEs: any[]
   dashboardHubs: DashboardHubCard[]
   syncStatus: DashboardSyncStatus
@@ -145,6 +148,9 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
     settings,
     projects,
     meetings,
+    onUpdateMeeting,
+    onRemoveMeeting,
+    onReplaceMeetings,
     registeredIDEs,
     dashboardHubs,
     syncStatus,
@@ -357,6 +363,12 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = (props) => {
               >
                 <WhisperPage
                   onExportToNote={(title, content) => onAddNote(title, content)}
+                  meetings={meetings}
+                  settings={settings}
+                  onUpdateMeeting={onUpdateMeeting}
+                  onRemoveMeeting={onRemoveMeeting}
+                  onReplaceMeetings={onReplaceMeetings}
+                  onUpdateSettings={onUpdateSettings}
                 />
               </Suspense>
             )}

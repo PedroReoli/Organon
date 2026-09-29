@@ -9,6 +9,12 @@ export interface SpeakerSegment {
   timestamp: string
   sourceKind?: WhisperAudioSourceKind
   diarizationConfidence?: number
+  startMs?: number
+  endMs?: number
+  textRaw?: string
+  textClean?: string
+  confidence?: number
+  words?: Array<{ text: string; startMs: number; endMs: number; confidence?: number }>
 }
 
 export interface LiveReport {
@@ -36,11 +42,28 @@ export interface WhisperRecord {
   createdAt: string
   durationSeconds: number
   audioUrl?: string
+  audio?: {
+    path: string
+    sha256: string
+    bytes: number
+    codec: string
+    durationMs: number
+  }
   fullTranscript: string
+  rawTranscript?: string
+  cleanTranscript?: string
+  timingPrecision?: 'word' | 'segment' | 'none'
   segments: SpeakerSegment[]
   liveReport?: LiveReport
   isFavorite?: boolean
   isArchived?: boolean
+}
+
+export interface WhisperAudioMetrics {
+  rms: number
+  peak: number
+  waveform: number[]
+  quality: 'silent' | 'low' | 'good' | 'clipping'
 }
 
 export interface WhisperCaptureCapability {

@@ -349,6 +349,9 @@ export const normalizeStore = (input: Partial<Store> | null | undefined): Store 
       debugHudTitlebar: (settings as Settings)?.debugHudTitlebar ?? base.settings.debugHudTitlebar,
       debugHudInline: (settings as Settings)?.debugHudInline ?? base.settings.debugHudInline,
       debugHudHover: (settings as Settings)?.debugHudHover ?? base.settings.debugHudHover,
+      whisperFolders: Array.isArray((settings as Settings)?.whisperFolders) ? (settings as Settings).whisperFolders : base.settings.whisperFolders,
+      whisperProjectContext: (settings as Settings)?.whisperProjectContext ?? base.settings.whisperProjectContext,
+      obsidianVaultPath: (settings as Settings)?.obsidianVaultPath ?? base.settings.obsidianVaultPath,
     },
   }
 }

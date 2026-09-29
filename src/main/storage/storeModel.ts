@@ -193,6 +193,9 @@ export const normalizeStore = (input: Partial<Store> | null): Store => {
     debugHudTitlebar?: boolean
     debugHudInline?: boolean
     debugHudHover?: boolean
+    whisperFolders?: Settings['whisperFolders']
+    whisperProjectContext?: Settings['whisperProjectContext']
+    obsidianVaultPath?: string | null
   }
 
   const oldSettings = settings as OldSettings
@@ -258,6 +261,9 @@ export const normalizeStore = (input: Partial<Store> | null): Store => {
       debugHudTitlebar: oldSettings?.debugHudTitlebar ?? base.settings.debugHudTitlebar,
       debugHudInline: oldSettings?.debugHudInline ?? base.settings.debugHudInline,
       debugHudHover: oldSettings?.debugHudHover ?? base.settings.debugHudHover,
+      whisperFolders: Array.isArray(oldSettings?.whisperFolders) ? oldSettings.whisperFolders : base.settings.whisperFolders,
+      whisperProjectContext: oldSettings?.whisperProjectContext ?? base.settings.whisperProjectContext,
+      obsidianVaultPath: oldSettings?.obsidianVaultPath ?? base.settings.obsidianVaultPath,
     },
   }
 }

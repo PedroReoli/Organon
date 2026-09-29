@@ -9,7 +9,7 @@ export const createMeetingSlice = (updateStore: UpdateStoreFn) => {
     }))
   }
 
-  const updateMeeting = (meetingId: string, updates: Partial<Pick<Meeting, 'title' | 'transcription'>>) => {
+  const updateMeeting = (meetingId: string, updates: Partial<Meeting>) => {
     updateStore(prev => ({
       ...prev,
       meetings: prev.meetings.map((m: any) =>
@@ -26,9 +26,14 @@ export const createMeetingSlice = (updateStore: UpdateStoreFn) => {
     }))
   }
 
+  const replaceMeetings = (meetings: Meeting[]) => {
+    updateStore(prev => ({ ...prev, meetings }))
+  }
+
   return {
     addMeeting,
     updateMeeting,
     removeMeeting,
+    replaceMeetings,
   }
 }

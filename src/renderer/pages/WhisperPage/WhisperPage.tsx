@@ -1,5 +1,6 @@
 import { MeetingResearchConsole } from './components/MeetingResearchConsole'
 import React, { useState } from 'react'
+import type { Meeting, Settings } from '@types'
 import { WhisperSidebar } from './components/WhisperSidebar'
 import { SpeakerTimeline } from './components/SpeakerTimeline'
 import { LiveMeetingPanel } from './components/LiveMeetingPanel'
@@ -22,9 +23,23 @@ import { useWhisperSelection } from './hooks/useWhisperSelection'
 
 interface Props {
   onExportToNote?: (title: string, content: string) => void
+  meetings: Meeting[]
+  settings: Settings
+  onUpdateMeeting: (meetingId: string, updates: Partial<Meeting>) => void
+  onRemoveMeeting: (meetingId: string) => void
+  onReplaceMeetings: (meetings: Meeting[]) => void
+  onUpdateSettings: (settings: Partial<Settings>) => void
 }
 
-export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
+export const WhisperPage: React.FC<Props> = ({
+  onExportToNote,
+  meetings,
+  settings,
+  onUpdateMeeting,
+  onRemoveMeeting,
+  onReplaceMeetings,
+  onUpdateSettings,
+}) => {
   // Toast Feedback Notification State
   const [toastNotification, setToastNotification] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null)
 
@@ -50,7 +65,14 @@ export const WhisperPage: React.FC<Props> = ({ onExportToNote }) => {
     handleMoveRecord,
     handleDeleteRecord,
     handleNewTranscript,
-  } = useWhisperPersistence()
+  } = useWhisperPersistence({
+    meetings,
+    settings,
+    onUpdateMeeting,
+    onRemoveMeeting,
+    onReplaceMeetings,
+    onUpdateSettings,
+  })
 
   // 2. Hook de Diagnósticos do Whisper
   const {

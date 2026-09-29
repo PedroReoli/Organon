@@ -3,7 +3,8 @@ import { exec, spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
+import { pathToFileURL } from 'url'
 
 import { registerMeetingResearchIpc } from './meeting.ipc'
 import {
@@ -40,6 +41,57 @@ const launchExe = (exePath: string): boolean => {
 }
 
 const TEMP_TRANSCRIBE_DIR = path.join(os.tmpdir(), 'organon-whisper')
+const MAX_MEETING_AUDIO_BYTES = 512 * 1024 * 1024
+
+type MeetingAudioMetadata = {
+  path: string
+  sha256: string
+  bytes: number
+  codec: string
+  durationMs: number
+}
+
+function validateMeetingId(meetingId: string): string {
+  const normalized = meetingId?.trim()
+  if (!normalized || !/^[A-Za-z0-9_-]{1,120}$/.test(normalized)) {
+    throw new Error('Identificador de reuniao invalido.')
+  }
+  return normalized
+}
+
+function decodeWavBase64(input: string): Buffer {
+  if (typeof input !== 'string' || !input.trim()) throw new Error('Audio vazio.')
+  const normalized = input.trim().startsWith('data:') ? input.trim().split(',', 2)[1] ?? '' : input.trim()
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized) || normalized.length % 4 !== 0) {
+    throw new Error('Audio base64 invalido.')
+  }
+  const bytes = Buffer.from(normalized, 'base64')
+  if (bytes.length < 44 || bytes.toString('ascii', 0, 4) !== 'RIFF' || bytes.toString('ascii', 8, 12) !== 'WAVE') {
+    throw new Error('Audio invalido: envie WAV PCM.')
+  }
+  if (bytes.length > MAX_MEETING_AUDIO_BYTES) throw new Error('Audio excede o limite de 512 MB.')
+  return bytes
+}
+
+function writeBufferAtomic(targetPath: string, buffer: Buffer): void {
+  const tempPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`
+  const backupPath = `${targetPath}.${process.pid}.${randomUUID()}.bak`
+  fs.writeFileSync(tempPath, buffer)
+  let movedExisting = false
+  try {
+    if (fs.existsSync(targetPath)) {
+      fs.renameSync(targetPath, backupPath)
+      movedExisting = true
+    }
+    fs.renameSync(tempPath, targetPath)
+    if (movedExisting && fs.existsSync(backupPath)) fs.unlinkSync(backupPath)
+  } catch (error) {
+    if (!fs.existsSync(targetPath) && movedExisting && fs.existsSync(backupPath)) fs.renameSync(backupPath, targetPath)
+    throw error
+  } finally {
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath)
+  }
+}
 
 function resolveTranscriptionInput(input: string): { path: string; cleanup: boolean } {
   if (typeof input !== 'string' || !input.trim()) throw new Error('Áudio vazio.')
@@ -244,18 +296,48 @@ export const registerContentIpcHandlers = (): void => {
     }
   })
 
-  ipcMain.handle('meetings:saveAudio', (_event, meetingId: string, audioBase64: string) => {
+  ipcMain.handle('meetings:saveAudioPackage', (_event, request: {
+    meetingId: string
+    audioBase64: string
+    durationMs?: number
+    codec?: string
+  }): MeetingAudioMetadata => {
     try {
       const dataPath = getDataPath()
-      const audioName = `${meetingId}.webm`
+      const meetingId = validateMeetingId(request?.meetingId)
+      const audioName = `${meetingId}.wav`
       const absPath = safeResolveMeetingPath(audioName, dataPath)
-      const buffer = Buffer.from(audioBase64, 'base64')
-      fs.writeFileSync(absPath, buffer)
-      return audioName
+      const buffer = decodeWavBase64(request?.audioBase64)
+      const metadata: MeetingAudioMetadata = {
+        path: audioName,
+        sha256: createHash('sha256').update(buffer).digest('hex'),
+        bytes: buffer.length,
+        codec: request?.codec?.trim() || 'audio/wav; codecs=pcm',
+        durationMs: Math.max(0, Math.round(Number(request?.durationMs) || 0)),
+      }
+      writeBufferAtomic(absPath, buffer)
+      const metadataPath = safeResolveMeetingPath(`${meetingId}.audio.json`, dataPath)
+      if (!writeTextFileAtomic(metadataPath, JSON.stringify(metadata, null, 2))) {
+        throw new Error('Falha ao gravar metadados do audio.')
+      }
+      return metadata
     } catch (error) {
-      console.error('Erro ao salvar audio:', error)
-      return null
+      console.error('Erro ao salvar pacote de audio:', error)
+      throw error
     }
+  })
+
+  ipcMain.handle('meetings:saveAudio', (_event, meetingId: string, audioBase64: string) => {
+    const normalizedId = validateMeetingId(meetingId)
+    const audioName = `${normalizedId}.wav`
+    writeBufferAtomic(safeResolveMeetingPath(audioName, getDataPath()), decodeWavBase64(audioBase64))
+    return audioName
+  })
+
+  ipcMain.handle('meetings:getAudioUrl', (_event, audioPath: string) => {
+    const absPath = safeResolveMeetingPath(audioPath, getDataPath())
+    if (!fs.existsSync(absPath) || !fs.statSync(absPath).isFile()) return null
+    return pathToFileURL(absPath).toString()
   })
 
   ipcMain.handle('meetings:deleteAudio', (_event, audioPath: string) => {

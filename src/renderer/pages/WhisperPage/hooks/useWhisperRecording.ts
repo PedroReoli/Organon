@@ -2,7 +2,7 @@ import { WhisperPcmRecorder } from '../../../services/WhisperPcmRecorder'
 import { startWhisperLiveCapture } from '../../../services/whisperLiveCapture'
 import { stopRecorder } from '../../../services/whisperAudio'
 import { useState, useRef, useEffect } from 'react'
-import { SpeakerSegment, LiveReport, WhisperRecord, WhisperCaptureReadiness } from '../types/whisper.types'
+import { SpeakerSegment, LiveReport, WhisperRecord, WhisperCaptureReadiness, WhisperAudioMetrics } from '../types/whisper.types'
 import { RecordingModeType } from '../components/WhisperRecordingHero'
 import { MeetingIntelligenceData, ProjectContextConfig, ResearchScope } from '../../../services/meetingIntelligence/types'
 import { MeetingOrchestrator } from '../../../services/meetingIntelligence/MeetingOrchestrator'
@@ -22,6 +22,15 @@ interface RecordingProps {
   showToast: (message: string, type?: 'info' | 'success' | 'error') => void
 }
 
+const EMPTY_AUDIO_METRICS: WhisperAudioMetrics = { rms: 0, peak: 0, waveform: [], quality: 'silent' }
+
+const blobToBase64 = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onerror = () => reject(reader.error || new Error('Falha ao ler o audio gravado.'))
+  reader.onload = () => resolve(String(reader.result || '').split(',', 2)[1] || '')
+  reader.readAsDataURL(blob)
+})
+
 export function useWhisperRecording({
   projectContext,
   selectedRecord,
@@ -34,6 +43,7 @@ export function useWhisperRecording({
   const [interimText, setInterimText] = useState('')
   const [systemCaptureActive, setSystemCaptureActive] = useState(false)
   const [durationSeconds, setDurationSeconds] = useState(0)
+  const [audioMetrics, setAudioMetrics] = useState<WhisperAudioMetrics>(EMPTY_AUDIO_METRICS)
 
   const [liveSegments, setLiveSegments] = useState<SpeakerSegment[]>([])
   const [liveReport] = useState<LiveReport>({
@@ -198,6 +208,7 @@ export function useWhisperRecording({
       setRecordingMode(mode)
       setLiveSegments([])
       setInterimText('')
+      setAudioMetrics(EMPTY_AUDIO_METRICS)
       audioChunksRef.current = []
       systemCaptureEnabledRef.current = false
       setSystemCaptureActive(false)
@@ -238,6 +249,22 @@ export function useWhisperRecording({
       }
       const mediaRecorder = await WhisperPcmRecorder.create(recordingStream)
       mediaRecorderRef.current = mediaRecorder
+
+      mediaRecorder.onlevel = ({ rms, peak }) => {
+        const quality: WhisperAudioMetrics['quality'] = peak >= 0.98
+          ? 'clipping'
+          : rms < 0.006
+            ? 'silent'
+            : rms < 0.03
+              ? 'low'
+              : 'good'
+        setAudioMetrics(previous => ({
+          rms,
+          peak,
+          quality,
+          waveform: [...previous.waveform.slice(-35), Math.min(1, Math.max(rms * 5, peak * 0.65))],
+        }))
+      }
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -295,10 +322,11 @@ export function useWhisperRecording({
       }
 
       let finalMicTranscript = ''
+      let micBlob: Blob | null = null
 
       if (audioChunksRef.current.length > 0) {
         const micMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
-        const micBlob = new Blob(audioChunksRef.current, { type: micMimeType })
+        micBlob = new Blob(audioChunksRef.current, { type: micMimeType })
         const whisperCfg = loadWhisperConfig()
         const whisperContext = buildWhisperContext('')
 
@@ -314,29 +342,97 @@ export function useWhisperRecording({
       if (!combinedText.trim()) { showToast('Nenhuma fala detectada.', 'info'); return }
 
       orchestratorRef.current?.setTranscript(combinedText)
+      const recordId = `rec-${Date.now()}`
+      const title = recordingMode === 'meeting'
+        ? `Reunião Whisper (${new Date().toLocaleTimeString('pt-BR')})`
+        : recordingMode === 'interview'
+          ? `Entrevista (${new Date().toLocaleTimeString('pt-BR')})`
+          : `Prompt por voz (${new Date().toLocaleTimeString('pt-BR')})`
+      const segmentId = `seg-${Date.now()}`
+      const rawTranscript = combinedText.trim()
+      const cleanTranscript = rawTranscript.replace(/\s+/g, ' ')
+      const durationMs = Math.max(0, durationSeconds * 1000)
+      const audio = micBlob && window.electronAPI?.saveMeetingAudioPackage
+        ? await window.electronAPI.saveMeetingAudioPackage({
+          meetingId: recordId,
+          audioBase64: await blobToBase64(micBlob),
+          durationMs,
+          codec: micBlob.type || 'audio/wav; codecs=pcm',
+        })
+        : undefined
+
+      const synthesis = await window.electronAPI?.generateTranscriptNote?.({
+        title,
+        transcript: cleanTranscript,
+        mode: recordingMode,
+      })
+      const synthesizedAt = new Date().toISOString()
+      const baseIntelligence = orchestratorRef.current?.getData() || {
+        questions: [], findings: [], decisions: [], actionItems: [], auditLog: [], tasks: [],
+      }
+      const mergedIntelligence: MeetingIntelligenceData = {
+        ...baseIntelligence,
+        executiveSummary: synthesis?.summary || baseIntelligence.executiveSummary,
+        decisions: [
+          ...baseIntelligence.decisions,
+          ...(synthesis?.decisions || []).map((text, index) => ({
+            id: `decision-${recordId}-${index}`,
+            text,
+            timestamp: synthesizedAt,
+            sourceSegmentIds: [segmentId],
+            confirmed: false,
+          })),
+        ],
+        actionItems: [
+          ...baseIntelligence.actionItems,
+          ...(synthesis?.actionItems || []).map((task, index) => ({
+            id: `action-${recordId}-${index}`,
+            task,
+            timestamp: synthesizedAt,
+            status: 'pending' as const,
+            sourceSegmentIds: [segmentId],
+            confirmed: false,
+          })),
+        ],
+        auditLog: [
+          ...baseIntelligence.auditLog,
+          {
+            id: `synthesis-${recordId}`,
+            timestamp: synthesizedAt,
+            action: 'automatic_synthesis',
+            details: `Síntese automática criada a partir do segmento ${segmentId}.`,
+          },
+        ],
+      }
+      setIntelligenceData(mergedIntelligence)
       const newRecord: WhisperRecord = {
         folderId: null,
-        id: `rec-${Date.now()}`,
-        title: recordingMode === 'meeting'
-          ? `Reunião Whisper (${new Date().toLocaleTimeString('pt-BR')})`
-          : recordingMode === 'interview'
-            ? `Entrevista (${new Date().toLocaleTimeString('pt-BR')})`
-            : `Prompt por voz (${new Date().toLocaleTimeString('pt-BR')})`,
+        id: recordId,
+        title,
         createdAt: new Date().toISOString(),
         durationSeconds,
-        fullTranscript: combinedText,
+        audio,
+        audioUrl: audio?.path,
+        fullTranscript: cleanTranscript,
+        rawTranscript,
+        cleanTranscript,
+        timingPrecision: 'none',
         segments: [
           {
-            id: `seg-${Date.now()}`,
+            id: segmentId,
             speaker: 'user',
             speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
             timestamp: new Date().toLocaleTimeString('pt-BR'),
-            text: combinedText,
+            text: cleanTranscript,
+            textRaw: rawTranscript,
+            textClean: cleanTranscript,
+            startMs: 0,
+            endMs: durationMs,
             sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
           },
         ],
         liveReport,
-        intelligenceData: orchestratorRef.current?.getData(),
+        intelligenceData: mergedIntelligence,
         mode: recordingMode,
       }
 
@@ -372,6 +468,7 @@ export function useWhisperRecording({
     interimText,
     systemCaptureActive,
     durationSeconds,
+    audioMetrics,
     liveSegments,
     setLiveSegments,
     liveReport,

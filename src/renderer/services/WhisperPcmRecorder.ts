@@ -1,11 +1,17 @@
 import { encodeWhisperPcm } from './whisperAudio'
 
+export interface WhisperAudioLevel {
+  rms: number
+  peak: number
+}
+
 /** Records PCM directly: Electron 28's WebM decodeAudioData can crash natively. */
 export class WhisperPcmRecorder extends EventTarget {
   readonly mimeType = 'audio/wav'
   state: 'inactive' | 'recording' = 'inactive'
   ondataavailable: ((event: BlobEvent) => void) | null = null
   onstop: (() => void) | null = null
+  onlevel: ((level: WhisperAudioLevel) => void) | null = null
   private chunks: Float32Array[] = []
   private stopping = false
   private source!: MediaStreamAudioSourceNode
@@ -16,7 +22,7 @@ export class WhisperPcmRecorder extends EventTarget {
     const context = new AudioContext({ sampleRate: 16000 })
     const recorder = new WhisperPcmRecorder(stream, context)
     const code = `class PcmRecorder extends AudioWorkletProcessor {
-      constructor() { super(); this.recording = false; this.buffer = new Float32Array(4096); this.offset = 0; this.port.onmessage = ({ data }) => {
+      constructor() { super(); this.recording = false; this.buffer = new Float32Array(4096); this.offset = 0; this.levelFrame = 0; this.port.onmessage = ({ data }) => {
         if (data === 'start') this.recording = true;
         if (data === 'stop') { this.recording = false; if (this.offset) this.port.postMessage(this.buffer.slice(0, this.offset)); this.port.postMessage('stopped') }
       } }
@@ -24,6 +30,7 @@ export class WhisperPcmRecorder extends EventTarget {
         if (!this.recording || !inputs[0]?.length) return true;
         const channels = inputs[0]; const mono = new Float32Array(channels[0].length);
         for (const channel of channels) for (let i = 0; i < mono.length; i++) mono[i] += channel[i] / channels.length;
+        if (++this.levelFrame % 8 === 0) { let sum = 0; let peak = 0; for (const value of mono) { sum += value * value; peak = Math.max(peak, Math.abs(value)) }; this.port.postMessage({ type: 'level', rms: Math.sqrt(sum / mono.length), peak }) }
         for (const value of mono) { this.buffer[this.offset++] = value; if (this.offset === this.buffer.length) { this.port.postMessage(this.buffer, [this.buffer.buffer]); this.buffer = new Float32Array(4096); this.offset = 0 } }; return true
       }
     }; registerProcessor('pcm-recorder', PcmRecorder)`
@@ -36,7 +43,8 @@ export class WhisperPcmRecorder extends EventTarget {
       recorder.source.connect(recorder.tap).connect(mute).connect(context.destination)
       recorder.tap.port.onmessage = ({ data }) => {
         if (data === 'stopped') void recorder.finish()
-        else recorder.chunks.push(data)
+        else if (data?.type === 'level') recorder.onlevel?.({ rms: data.rms, peak: data.peak })
+        else if (data instanceof Float32Array) recorder.chunks.push(data)
       }
       await context.resume()
       return recorder

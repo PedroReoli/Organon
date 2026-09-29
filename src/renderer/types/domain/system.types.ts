@@ -81,6 +81,25 @@ export interface Meeting {
   duration: number
   createdAt: string
   updatedAt: string
+  folderId?: string | null
+  durationSeconds?: number
+  fullTranscript?: string
+  rawTranscript?: string
+  cleanTranscript?: string
+  segments?: Array<Record<string, unknown>>
+  intelligenceData?: Record<string, unknown>
+  liveReport?: Record<string, unknown>
+  mode?: 'meeting' | 'interview' | 'prompt'
+  timingPrecision?: 'word' | 'segment' | 'none'
+  isFavorite?: boolean
+  isArchived?: boolean
+  audio?: {
+    path: string
+    sha256: string
+    bytes: number
+    codec: string
+    durationMs: number
+  } | null
 }
 
 export interface ClipboardCategory {
@@ -354,6 +373,9 @@ export interface Settings {
   debugHudInline?: boolean
   debugHudHover?: boolean
   reminderVolume?: number
+  whisperFolders?: Array<{ id: string; name: string; color?: string; order: number }>
+  whisperProjectContext?: Record<string, unknown>
+  obsidianVaultPath?: string | null
 }
 
 export type SettingsDensity = 'compact' | 'default' | 'comfort'
@@ -645,6 +667,19 @@ declare global {
       getAppsMemory: (exePaths: string[]) => Promise<Record<string, number>>
       scanInstalledApps: () => Promise<Array<{ name: string; exePath: string }>>
       saveMeetingAudio: (meetingId: string, audioBase64: string) => Promise<string | null>
+      saveMeetingAudioPackage: (request: {
+        meetingId: string
+        audioBase64: string
+        durationMs?: number
+        codec?: string
+      }) => Promise<{
+        path: string
+        sha256: string
+        bytes: number
+        codec: string
+        durationMs: number
+      }>
+      getMeetingAudioUrl: (audioPath: string) => Promise<string | null>
       deleteMeetingAudio: (audioPath: string) => Promise<boolean>
       transcribeAudio: (
         audioPath: string,

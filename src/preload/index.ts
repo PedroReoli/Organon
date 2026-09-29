@@ -279,6 +279,13 @@ const electronAPI = {
   // Meetings
   saveMeetingAudio: (meetingId: string, audioBase64: string) =>
     ipcRenderer.invoke('meetings:saveAudio', meetingId, audioBase64),
+  saveMeetingAudioPackage: (request: {
+    meetingId: string
+    audioBase64: string
+    durationMs?: number
+    codec?: string
+  }) => ipcRenderer.invoke('meetings:saveAudioPackage', request),
+  getMeetingAudioUrl: (audioPath: string) => ipcRenderer.invoke('meetings:getAudioUrl', audioPath),
   deleteMeetingAudio: (audioPath: string) => ipcRenderer.invoke('meetings:deleteAudio', audioPath),
   transcribeAudio: (
     audioPath: string,

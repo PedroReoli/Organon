@@ -48,6 +48,8 @@ export interface ActionItem {
   task: string
   assignee?: string
   status: 'pending' | 'done'
+  sourceSegmentIds?: string[]
+  confirmed?: boolean
 }
 
 export type ResearchScope = 'web' | 'project' | 'both' | 'report'
@@ -59,7 +61,8 @@ export interface MeetingIntelligenceData {
   currentTopic?: string
   questions: Array<{ id: string; text: string; timestamp: string }>
   findings: ProjectFinding[]
-  decisions: Array<{ id: string; text: string; timestamp: string }>
+  executiveSummary?: string
+  decisions: Array<{ id: string; text: string; timestamp: string; sourceSegmentIds?: string[]; confirmed?: boolean }>
   actionItems: ActionItem[]
   auditLog: Array<{ id: string; timestamp: string; action: string; details: string }>
 }

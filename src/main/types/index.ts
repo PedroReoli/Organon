@@ -177,6 +177,9 @@ export interface Settings {
   debugHudTitlebar?: boolean
   debugHudInline?: boolean
   debugHudHover?: boolean
+  whisperFolders?: Array<{ id: string; name: string; color?: string; order: number }>
+  whisperProjectContext?: Record<string, unknown>
+  obsidianVaultPath?: string | null
 }
 
 export interface Bill {
@@ -293,6 +296,25 @@ export interface Meeting {
   duration: number
   createdAt: string
   updatedAt: string
+  folderId?: string | null
+  durationSeconds?: number
+  fullTranscript?: string
+  rawTranscript?: string
+  cleanTranscript?: string
+  segments?: Array<Record<string, unknown>>
+  intelligenceData?: Record<string, unknown>
+  liveReport?: Record<string, unknown>
+  mode?: 'meeting' | 'interview' | 'prompt'
+  timingPrecision?: 'word' | 'segment' | 'none'
+  isFavorite?: boolean
+  isArchived?: boolean
+  audio?: {
+    path: string
+    sha256: string
+    bytes: number
+    codec: string
+    durationMs: number
+  } | null
 }
 
 export interface StudyChecklistItem {

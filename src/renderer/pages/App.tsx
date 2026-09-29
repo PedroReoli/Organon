@@ -98,6 +98,9 @@ export const App = () => {
     clearUserData,
     projects,
     meetings,
+    updateMeeting,
+    removeMeeting,
+    replaceMeetings,
     registeredIDEs,
     addRegisteredIDE,
     updateRegisteredIDE,
@@ -502,6 +505,9 @@ export const App = () => {
           settings={settings}
           projects={projects}
           meetings={meetings}
+          onUpdateMeeting={updateMeeting}
+          onRemoveMeeting={removeMeeting}
+          onReplaceMeetings={replaceMeetings}
           registeredIDEs={registeredIDEs}
           dashboardHubs={dashboardHubs}
           syncStatus={sync.syncStatus as DashboardSyncStatus}
