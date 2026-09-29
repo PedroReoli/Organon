@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, ArrowRight, ClockCounterClockwise } from '@phosphor-icons/react'
+import { X, ClockCounterClockwise } from '@phosphor-icons/react'
 import { AiActivityNotification } from '../../hooks/useAiActivityFeed'
 
 interface DiffViewerModalProps {

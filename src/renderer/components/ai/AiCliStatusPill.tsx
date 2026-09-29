@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { CheckCircle, Circle, ArrowsClockwise, Terminal, HardDrives } from '@phosphor-icons/react'
+import { CheckCircle, ArrowsClockwise, Terminal, HardDrives } from '@phosphor-icons/react'
 import { isElectron } from '@utils'
 
 interface AiCliStatusPillProps {

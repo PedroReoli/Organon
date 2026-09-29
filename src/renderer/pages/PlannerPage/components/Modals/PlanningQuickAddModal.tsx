@@ -10,10 +10,9 @@ import {
   FileText,
   Volume2,
   Repeat,
-  Calendar,
 } from 'lucide-react';
 import type { Project, Day, Period } from '@types';
-import type { CardReminder, ReminderMode, ReminderSound } from '../../../../types/domain/planner.types';
+import type { ReminderMode, ReminderSound } from '../../../../types/domain/planner.types';
 import { playSound } from '../../../../utils/audioAlert';
 
 export interface PlanningQuickAddState {

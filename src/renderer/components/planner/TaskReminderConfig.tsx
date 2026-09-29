@@ -4,12 +4,8 @@ import {
   Bell,
   Clock,
   Repeat,
-  Volume2,
-  Calendar,
-  AlertCircle,
   Play,
-  Check,
-  X
+  Check
 } from 'lucide-react'
 import { playSound } from '../../utils/audioAlert'
 
@@ -50,7 +46,7 @@ export const TaskReminderConfig: React.FC<TaskReminderConfigProps> = ({
   const [repeatUntilDone, setRepeatUntilDone] = useState<boolean>(reminder?.repeatUntilDone ?? true)
   const [sound, setSound] = useState<ReminderSound>(reminder?.sound || 'bell')
   const [nativeToast, setNativeToast] = useState<boolean>(reminder?.nativeToast ?? true)
-  const [alertType, setAlertType] = useState<'alarm' | 'toast'>(reminder?.alertType || 'alarm')
+  const [alertType] = useState<'alarm' | 'toast'>(reminder?.alertType || 'alarm')
 
   // Helper para salvar e disparar onChange
   const applyReminder = (updates: Partial<CardReminder>) => {

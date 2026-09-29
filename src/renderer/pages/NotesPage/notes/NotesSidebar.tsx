@@ -105,7 +105,6 @@ interface NotesSidebarProps {
 export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
   const {
     notes = [],
-    folders = [],
     activeView,
     onGoHome,
     onOpenTrash,
@@ -394,7 +393,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = (props) => {
             }}
             className="px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap transition-all cursor-pointer"
           >
-            Todas ({notes.filter(n => !n.isDeleted).length})
+            Todas ({notes.filter(n => !n.deletedAt).length})
           </button>
           {favorites.length > 0 && (
             <button

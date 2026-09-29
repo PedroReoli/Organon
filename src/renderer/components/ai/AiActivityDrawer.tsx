@@ -394,7 +394,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
                 </div>
 
                 {/* Actions Right */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, shrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                   {item.previousSnapshot && (
                     <button
                       type="button"

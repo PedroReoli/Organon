@@ -67,7 +67,7 @@ export const AiLiveToast: React.FC<AiLiveToastProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          shrink: 0,
+          flexShrink: 0,
         }}
       >
         <Sparkle size={18} weight="duotone" />
@@ -86,6 +86,27 @@ export const AiLiveToast: React.FC<AiLiveToastProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => {
+            onOpenActivityFeed()
+            setLatestItem(null)
+          }}
+          style={{
+            padding: '4px 8px',
+            borderRadius: 6,
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.16)',
+            color: 'var(--color-text-muted, #a1a1aa)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          className="hover:text-white hover:border-white/30"
+        >
+          Feed
+        </button>
+
         <button
           type="button"
           onClick={() => {

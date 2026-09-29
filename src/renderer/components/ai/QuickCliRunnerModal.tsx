@@ -6,7 +6,6 @@ import {
   ArrowsClockwise,
   CheckCircle,
   WarningCircle,
-  Sparkle,
 } from '@phosphor-icons/react'
 import { isElectron } from '@utils'
 

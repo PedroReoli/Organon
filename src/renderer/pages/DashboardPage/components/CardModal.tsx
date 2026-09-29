@@ -4,7 +4,6 @@ import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS, STATUS_
 import { WysiwygEditor } from '@Notes/editor/WysiwygEditor'
 import { getTodayISO } from '@utils'
 import { Button } from '@shared/components/primitives'
-import { Check } from 'lucide-react'
 import { TaskReminderConfig } from '../../../components/planner/TaskReminderConfig'
 
 interface CardModalProps {
@@ -93,6 +92,7 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
       const minsStr = String(now.getMinutes()).padStart(2, '0')
       setStartTime(`${hoursStr}:${minsStr}`)
       setReminderToast(`Tarefa adiada em +${minutesOrTomorrow} min! (Adiada ${nextCount}x)`)
+    }
   }
 
   const [reminder, setReminder] = useState<CardReminder | null | undefined>(card.reminder)
@@ -360,6 +360,11 @@ export const CardModal = ({ card, projects, onClose, onSave, onDelete }: CardMod
               <Button size="sm" variant="secondary" onClick={() => handleQuickPostpone(60)} type="button">+ 1 hora</Button>
               <Button size="sm" variant="secondary" onClick={() => handleQuickPostpone('tomorrow')} type="button">Amanhã</Button>
             </div>
+            {reminderToast && (
+              <div role="status" style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                {reminderToast}
+              </div>
+            )}
           </div>
 
           <TaskReminderConfig
