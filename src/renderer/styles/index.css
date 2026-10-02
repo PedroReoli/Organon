@@ -23,6 +23,7 @@
 @import './shared/utilities.css';
 @import './layout/navigation.css';
 @import './features/reports/reports.css';
+@import './features/reports/projects-shell.css';
 @import './features/reports/reports-pages.css';
 @import './features/settings/core.css';
 @import './features/settings/backup.css';
@@ -66,4 +67,3 @@
 @import './shared/card-ui.css';
 @import './shared/editor-headings.css';
 @import './layout/responsive-global.css';
-
