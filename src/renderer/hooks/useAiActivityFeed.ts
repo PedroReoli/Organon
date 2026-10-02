@@ -5,7 +5,7 @@ import { playSound } from '../utils/audioAlert'
 export interface AiActivityNotification {
   id: string
   timestamp: string
-  agent: 'Antigravity' | 'Claude' | 'Gemini' | 'CLI Organon' | 'Sistema'
+  agent: 'Antigravity' | 'Claude' | 'Gemini' | 'CLI Organon' | 'MCP Organon' | 'Sistema'
   category: 'task' | 'note' | 'project' | 'study' | 'sync'
   type: 'created' | 'updated' | 'deleted' | 'reordered'
   title: string
@@ -17,7 +17,8 @@ export interface AiActivityNotification {
   read: boolean
 }
 
-const STORAGE_KEY = 'organon-ai-activity-feed'
+// O histórico anterior atribuía alterações manuais a agentes sem registrar a origem do commit.
+const STORAGE_KEY = 'organon-ai-activity-feed-v2'
 const MUTE_STORAGE_KEY = 'organon-ai-sound-muted'
 
 export const useAiActivityFeed = (

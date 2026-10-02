@@ -50,7 +50,7 @@ export const AiActivityDrawer: React.FC<AiActivityDrawerProps> = ({
   if (!isOpen) return null
 
   const filtered = notifications.filter((n) => {
-    if (filter === 'ai') return n.agent === 'Antigravity' || n.agent === 'Claude' || n.agent === 'Gemini'
+    if (filter === 'ai') return n.agent === 'Antigravity' || n.agent === 'Claude' || n.agent === 'Gemini' || n.agent === 'MCP Organon'
     if (filter === 'task') return n.category === 'task'
     if (filter === 'note') return n.category === 'note'
     return true

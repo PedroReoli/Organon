@@ -66,6 +66,7 @@ export interface CommittedGeneration {
   revision: number
   generationId: string
   transactionId: string
+  source: string
 }
 
 export interface CommittedGenerationState {
@@ -175,6 +176,7 @@ const validateGeneration = (
       revision: manifest.revision as number,
       generationId: manifest.generationId,
       transactionId: manifest.transactionId,
+      source: typeof manifest.source === 'string' ? manifest.source : '',
     }
   } catch {
     return null

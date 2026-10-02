@@ -3,14 +3,14 @@ import * as path from 'path'
 import { randomUUID } from 'crypto'
 import { getMainWindow } from '../core'
 import { getDataPath, getStoreDir, getNotesDir } from './filesystem'
-import { getStorageControlDir, getStorageRevision } from './generationStore'
+import { getStorageControlDir, loadCommittedGeneration } from './generationStore'
 import { loadStore } from './store'
 import type { Store } from '../types'
 
 export interface RealtimeChangeEvent {
   id: string
   timestamp: string
-  agent: 'Antigravity' | 'Claude' | 'Gemini' | 'CLI Organon' | 'Sistema'
+  agent: 'Antigravity' | 'Claude' | 'Gemini' | 'CLI Organon' | 'MCP Organon' | 'Sistema'
   category: 'task' | 'note' | 'project' | 'study' | 'sync'
   type: 'created' | 'updated' | 'deleted' | 'reordered'
   title: string
@@ -22,37 +22,28 @@ export interface RealtimeChangeEvent {
 }
 
 let lastStoreSnapshot: Store | null = null
+let lastObservedRevision = 0
 let isWatching = false
 let watchCleanups: Array<() => void> = []
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const recentEvents: RealtimeChangeEvent[] = []
-let lastInternalSaveTimestamp = 0
-
 export const notifyInternalSave = (): void => {
-  lastInternalSaveTimestamp = Date.now()
+  const committed = loadCommittedGeneration(getDataPath())
+  if (committed && committed.source !== 'cli' && committed.source !== 'mcp') {
+    lastStoreSnapshot = committed.store
+    lastObservedRevision = committed.revision
+  }
 }
 
 export const getRecentCliEvents = (): RealtimeChangeEvent[] => {
   return [...recentEvents]
 }
 
-const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] => {
+const detectChanges = (prev: Store | null, curr: Store, agent: 'CLI Organon' | 'MCP Organon'): RealtimeChangeEvent[] => {
   const events: RealtimeChangeEvent[] = []
   const now = new Date().toISOString()
 
-  if (!prev) {
-    return [
-      {
-        id: randomUUID(),
-        timestamp: now,
-        agent: 'CLI Organon',
-        category: 'sync',
-        type: 'updated',
-        title: 'Sincronização Inicial de Dados',
-        description: 'Dados carregados e sincronizados com o armazenamento local.',
-      },
-    ]
-  }
+  if (!prev) return events
 
   // 1. Detect Cards (Tasks) changes
   const prevCards = prev.cards || []
@@ -67,7 +58,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
       events.push({
         id: randomUUID(),
         timestamp: now,
-        agent: 'Antigravity',
+        agent,
         category: 'task',
         type: 'created',
         title: `Nova Tarefa: "${card.title}"`,
@@ -80,7 +71,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
       events.push({
         id: randomUUID(),
         timestamp: now,
-        agent: 'Antigravity',
+        agent,
         category: 'task',
         type: 'updated',
         title: `Tarefa Atualizada: "${card.title}"`,
@@ -98,7 +89,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
       events.push({
         id: randomUUID(),
         timestamp: now,
-        agent: 'Antigravity',
+        agent,
         category: 'task',
         type: 'deleted',
         title: `Tarefa Removida: "${prevCard.title}"`,
@@ -123,7 +114,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
       events.push({
         id: randomUUID(),
         timestamp: now,
-        agent: 'Claude',
+        agent,
         category: 'note',
         type: 'created',
         title: `Nova Nota: "${note.title}"`,
@@ -136,7 +127,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
       events.push({
         id: randomUUID(),
         timestamp: now,
-        agent: 'Claude',
+        agent,
         category: 'note',
         type: 'updated',
         title: `Nota Atualizada: "${note.title}"`,
@@ -156,7 +147,7 @@ const detectChanges = (prev: Store | null, curr: Store): RealtimeChangeEvent[] =
         events.push({
           id: randomUUID(),
           timestamp: now,
-          agent: 'Antigravity',
+          agent,
           category: 'note',
           type: 'deleted',
           title: `Nota Removida: "${prevNote.title}"`,
@@ -178,7 +169,9 @@ export const startRealtimeSyncWatcher = (): void => {
 
   try {
     const dataDir = getDataPath()
-    lastStoreSnapshot = loadStore()
+    const initialGeneration = loadCommittedGeneration(dataDir)
+    lastStoreSnapshot = initialGeneration?.store ?? loadStore()
+    lastObservedRevision = initialGeneration?.revision ?? 0
 
     const watchCandidates = [
       getStoreDir(dataDir),
@@ -199,20 +192,20 @@ export const startRealtimeSyncWatcher = (): void => {
     })
 
     const onFileOrDirChange = (_eventType: string, _filename: string | null) => {
-      // Ignore if change was triggered by internal save in the last 800ms
-      if (Date.now() - lastInternalSaveTimestamp < 800) {
-        return
-      }
-
       if (debounceTimer) {
         clearTimeout(debounceTimer)
       }
 
       debounceTimer = setTimeout(() => {
         try {
-          const freshStore = loadStore()
-          const changes = detectChanges(lastStoreSnapshot, freshStore)
+          const committed = loadCommittedGeneration(dataDir)
+          if (!committed || committed.revision === lastObservedRevision) return
+          const freshStore = committed.store
+          const changes = committed.source === 'cli' || committed.source === 'mcp'
+            ? detectChanges(lastStoreSnapshot, freshStore, committed.source === 'cli' ? 'CLI Organon' : 'MCP Organon')
+            : []
           lastStoreSnapshot = freshStore
+          lastObservedRevision = committed.revision
 
           const win = getMainWindow()
           if (win && !win.isDestroyed()) {
@@ -221,7 +214,7 @@ export const startRealtimeSyncWatcher = (): void => {
               store: freshStore,
               changes,
               timestamp: new Date().toISOString(),
-              revision: getStorageRevision(dataDir),
+              revision: committed.revision,
             })
             win.webContents.send('planning:sync-cli')
 
@@ -262,5 +255,9 @@ export const stopRealtimeSyncWatcher = (): void => {
     }
   }
   watchCleanups = []
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = null
+  lastStoreSnapshot = null
+  lastObservedRevision = 0
   isWatching = false
 }

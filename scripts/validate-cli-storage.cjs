@@ -36,6 +36,10 @@ try {
   const initialPlanning = store.getPlanningData()
   initialPlanning.cards.push({ id: 'cli-card-1', title: 'Primeiro commit CLI', status: 'todo' })
   store.savePlanningData(initialPlanning)
+  const generationStore = require('../dist/main/storage/generationStore.js')
+  if (generationStore.loadCommittedGeneration(dedicated)?.source !== 'cli') {
+    fail('A origem CLI nao foi preservada na geracao publicada.')
+  }
   const firstStatus = store.getSystemStatus()
   if (!firstStatus.transactional || firstStatus.revision !== 1) fail('CLI nao publicou a primeira geracao transacional.')
   if (!/^root-[0-9a-f]{16}$/.test(firstStatus.rootId || '')) fail('CLI nao reportou rootId valido.')
