@@ -5,6 +5,7 @@ import { PlanningTask } from '../../types/planning.types';
 import type { Project } from '@types';
 import { CheckSquare, Clock } from 'lucide-react';
 import { AutoFitTitle } from './AutoFitTitle';
+import { TaskTagSummary } from './TaskTagSummary';
 
 interface PlanningCardCompactProps {
   task: PlanningTask;
@@ -14,6 +15,7 @@ interface PlanningCardCompactProps {
   onToggleStatus?: (id: string) => void;
   onPostponeWeek?: (id: string) => void;
   onDelete?: (id: string) => void;
+  tagMode?: boolean;
 }
 
 export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
@@ -24,6 +26,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
   onToggleStatus,
   onPostponeWeek,
   onDelete: _onDelete,
+  tagMode = false,
 }) => {
   const isDone = task.status === 'done';
 
@@ -70,7 +73,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
       />
 
       {/* Title (Clique simples abre modal, Ctrl+Clique não abre) */}
-      <AutoFitTitle
+      {tagMode ? <TaskTagSummary task={task} /> : <AutoFitTitle
         title={task.title}
         onClick={(e) => {
           if (e.ctrlKey || e.metaKey) {
@@ -82,10 +85,10 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
         className={`flex-1 cursor-pointer transition-colors ${
           isDone ? 'line-through text-slate-500' : 'text-slate-200 hover:text-indigo-300'
         }`}
-      />
+      />}
 
       {/* Project Badge */}
-      {project && (
+      {!tagMode && project && (
         <span
           style={{
             borderColor: project.color ? `color-mix(in srgb, ${project.color} 35%, transparent)` : 'rgba(99,102,241,0.3)',
@@ -100,7 +103,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
       )}
 
       {/* Checklist Progress */}
-      {checklistTotal > 0 && (
+      {!tagMode && checklistTotal > 0 && (
         <span className="text-[9.5px] font-mono text-slate-400 flex items-center gap-0.5 shrink-0" title={`Checklist: ${checklistDone}/${checklistTotal}`}>
           <CheckSquare className="w-2.5 h-2.5 text-slate-500" />
           <span>{checklistDone}/{checklistTotal}</span>
@@ -108,14 +111,14 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
       )}
 
       {/* Story Points */}
-      {task.storyPoints && task.storyPoints > 0 ? (
+      {!tagMode && task.storyPoints && task.storyPoints > 0 ? (
         <span className="text-[9.5px] font-mono font-bold px-1 py-0.2 rounded bg-white/5 text-slate-400 shrink-0" title="Story Points">
           {task.storyPoints}pt
         </span>
       ) : null}
 
       {/* Time Badge */}
-      {task.time && (
+      {!tagMode && task.time && (
         <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white/5 text-slate-400 shrink-0 flex items-center gap-0.5">
           <Clock className="w-2.5 h-2.5" />
           {task.time}
@@ -123,7 +126,7 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
       )}
 
       {/* Postpone Button (+7d) */}
-      {onPostponeWeek && (
+      {!tagMode && onPostponeWeek && (
         <button
           type="button"
           onClick={(e) => {
@@ -165,7 +168,10 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
         style={style}
         {...attributes}
         {...listeners}
-        onClick={onEdit}
+        onClick={(event) => {
+          if (tagMode && (event.ctrlKey || event.metaKey)) return;
+          onEdit();
+        }}
         onContextMenu={handleContextMenu}
         className="group min-h-[30px] flex items-center px-2 py-1 bg-[#131b2e] hover:bg-[#18233c] border border-white/5 hover:border-indigo-500/40 rounded-md cursor-grab active:cursor-grabbing shadow-xs transition-all"
       >

@@ -48,7 +48,8 @@ function printHelp() {
     organon task create --title="Minha Tarefa" [--desc="..."] [--date=YYYY-MM-DD] [--time=HH:mm] [--remind-interval=10] [--remind-before=15] [--remind-sound=bell] [--priority=urgent] [--tags=dev,ai]
     organon task done <id_ou_titulo>        \x1b[90m(Alterna status concluído/pendente)\x1b[0m
     organon task get <id_ou_titulo>         \x1b[90m(Exibe detalhes completos, notas e alarmes)\x1b[0m
-    organon task update <id_ou_titulo> [--title=...] [--desc=...] [--status=...] [--priority=...] [--date=...] [--time=...]
+    organon task update <id_ou_titulo> [--title=...] [--desc=...] [--tags=dev,ai] [--status=...] [--priority=...] [--date=...] [--time=...]
+    Dica para IAs: titulo de ate 48 caracteres; use tags curtas e coloque a explicacao completa em --desc.
     organon task delete <id_ou_titulo>
 
   \x1b[36m🏃 SPRINTS & PROJETOS (sprint / project)\x1b[0m

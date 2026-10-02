@@ -44,16 +44,17 @@ const BASE_TOOLS = [
   },
   {
     name: 'organon_task_create',
-    description: 'Cria uma nova tarefa no planejamento do Organon.',
+    description: 'Cria uma tarefa. Prefira título de até 48 caracteres, etiquetas curtas e detalhes completos em description.',
     inputSchema: {
       type: 'object',
       required: ['title'],
       properties: {
-        title: { type: 'string', description: 'Título da tarefa' },
+        title: { type: 'string', description: 'Nome curto da ação, recomendado até 48 caracteres.' },
+        description: { type: 'string', description: 'Explicação completa, contexto e critérios da tarefa.' },
         date: { type: 'string', description: 'Data (YYYY-MM-DD)' },
         time: { type: 'string', description: 'Horário (HH:mm)' },
         priority: { type: 'string', enum: ['urgent', 'high', 'medium', 'low'] },
-        tags: { type: 'array', items: { type: 'string' } }
+        tags: { type: 'array', items: { type: 'string' }, description: 'Etiquetas curtas usadas nos cartões do planejamento.' }
       }
     }
   },
@@ -70,13 +71,15 @@ const BASE_TOOLS = [
   },
   {
     name: 'organon_task_update',
-    description: 'Atualiza uma tarefa existente por ID ou título.',
+    description: 'Atualiza uma tarefa. Mantenha título curto, use tags para identificação rápida e description para detalhes.',
     inputSchema: {
       type: 'object',
       required: ['idOrTitle'],
       properties: {
         idOrTitle: { type: 'string' },
         title: { type: 'string' },
+        description: { type: 'string', description: 'Explicação completa da tarefa.' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Etiquetas exibidas nos cartões.' },
         status: { type: 'string' },
         priority: { type: 'string' },
         date: { type: ['string', 'null'] },
@@ -467,7 +470,7 @@ function startMcpServer() {
         sendResult(id, {
           protocolVersions: [MODERN_PROTOCOL, ...LEGACY_PROTOCOLS],
           capabilities: { tools: { listChanged: false } },
-          instructions: 'Use dryRun antes de lotes destrutivos e preserve expectedRevision para controle otimista.',
+          instructions: 'Use dryRun antes de lotes destrutivos e preserve expectedRevision. Em tarefas, prefira título de até 48 caracteres, tags curtas e explicação completa em description.',
           ttlMs: 3_600_000,
           cacheScope: 'private'
         }, true);
@@ -481,7 +484,7 @@ function startMcpServer() {
           protocolVersion: selected,
           capabilities: { tools: { listChanged: false } },
           serverInfo: SERVER_INFO,
-          instructions: 'Use organon_batch_mutate com dryRun e expectedRevision para mutações compostas.'
+          instructions: 'Use organon_batch_mutate com dryRun e expectedRevision para mutações compostas. Em tarefas, prefira título de até 48 caracteres, tags curtas e explicação completa em description.'
         });
         return;
       }

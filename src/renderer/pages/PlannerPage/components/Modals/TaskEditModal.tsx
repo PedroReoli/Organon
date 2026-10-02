@@ -57,6 +57,8 @@ const inputClass = 'w-full rounded-lg border border-white/10 bg-[#111a2d] px-3 p
 export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, onDelete, onDuplicate }: TaskEditModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [status, setStatus] = useState<PlanningTask['status']>('todo');
   const [priority, setPriority] = useState<PlanningTask['priority']>('P3');
@@ -74,6 +76,8 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
     if (!task) return;
     setTitle(task.title);
     setDescription(task.description || htmlToText(task.descriptionHtml || ''));
+    setTags(task.tags || []);
+    setNewTag('');
     setStatus(task.status || 'todo');
     setPriority(task.priority || 'P3');
     setProjectId(task.projectId || '');
@@ -93,6 +97,10 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
 
   const save = (updates: Partial<PlanningTask> = {}) => {
     if (!task) return;
+    const pendingTag = newTag.trim().replace(/^#/, '');
+    const savedTags = pendingTag && !tags.some((tag) => tag.toLocaleLowerCase() === pendingTag.toLocaleLowerCase())
+      ? [...tags, pendingTag]
+      : tags;
     onSave(task.id, {
       title: title.trim() || task.title,
       description,
@@ -107,6 +115,7 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
       storyPoints: storyPoints || null,
       checklist,
       reminders,
+      tags: savedTags,
       ...updates,
     });
   };
@@ -130,6 +139,14 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
     save({ date: nextDate, hasDate: true });
   };
 
+  const addTag = () => {
+    const value = newTag.trim().replace(/^#/, '');
+    if (value && !tags.some((tag) => tag.toLocaleLowerCase() === value.toLocaleLowerCase())) {
+      setTags((current) => [...current, value]);
+    }
+    setNewTag('');
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] flex justify-end bg-black/65 backdrop-blur-[2px]" onMouseDown={onClose}>
       <aside
@@ -149,6 +166,7 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           <textarea autoFocus rows={2} value={title} onChange={(event) => setTitle(event.target.value)} className="w-full resize-none border-0 bg-transparent p-0 text-xl font-semibold leading-7 text-white outline-none placeholder:text-slate-600" placeholder="Título da tarefa" />
+          <p className="text-[11px] text-slate-500">Use um nome curto; registre o contexto completo na descrição.</p>
 
           <nav className="flex gap-1 rounded-xl border border-white/5 bg-[#0d1423] p-1" aria-label="Seções da tarefa">
             <button type="button" onClick={() => setActiveTab('details')} className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${activeTab === 'details' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-200'}`}><FileText className="h-3.5 w-3.5" />Detalhes</button>
@@ -169,6 +187,17 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
             <label className="text-[10px] font-medium text-slate-500">Estimativa (min)<input type="number" min="0" step="15" value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))} className={`${inputClass} mt-1 text-xs`} /></label>
             <label className="text-[10px] font-medium text-slate-500">Story points<input type="number" min="0" max="100" value={storyPoints} onChange={(event) => setStoryPoints(Number(event.target.value))} className={`${inputClass} mt-1 text-xs`} /></label>
           </div>
+
+          <section>
+            <h3 className="mb-2 text-xs font-semibold text-slate-200">Etiquetas</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-indigo-400/25 bg-indigo-400/10 px-2 py-1 text-xs text-indigo-200">{tag}<button type="button" aria-label={`Remover etiqueta ${tag}`} onClick={() => setTags((current) => current.filter((item) => item !== tag))} className="rounded hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"><X className="h-3 w-3" /></button></span>)}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <input value={newTag} onChange={(event) => setNewTag(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addTag(); } }} placeholder="Ex.: conteúdo, reunião, API" aria-label="Nova etiqueta" className={`${inputClass} text-xs`} />
+              <button type="button" onClick={addTag} aria-label="Adicionar etiqueta" className="rounded-lg border border-indigo-400/30 px-3 text-indigo-200 hover:bg-indigo-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"><Plus className="h-4 w-4" /></button>
+            </div>
+          </section>
 
           <section>
             <div className="mb-2 flex items-center justify-between">
@@ -203,7 +232,7 @@ export const TaskEditModal = ({ task, projects = [], isOpen, onClose, onSave, on
         <footer className="border-t border-white/5 bg-[#0d1320] px-6 py-4">
           <div className="mb-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => save({ status: 'done', completedAt: new Date().toISOString() })} className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/15">Concluir tarefa</button>
-            {onDuplicate && <button type="button" onClick={() => onDuplicate({ ...task, title, description, checklist, reminders })} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"><Copy className="h-3.5 w-3.5" />Duplicar</button>}
+            {onDuplicate && <button type="button" onClick={() => onDuplicate({ ...task, title, description, tags, checklist, reminders })} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"><Copy className="h-3.5 w-3.5" />Duplicar</button>}
             <button type="button" onClick={moveToTomorrow} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5">Mover para amanhã</button>
             {onDelete && <button type="button" onClick={() => { if (window.confirm(`Excluir a tarefa "${task.title}"?`)) onDelete(task.id); }} className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" />Excluir</button>}
           </div>

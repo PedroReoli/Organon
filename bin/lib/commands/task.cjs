@@ -192,6 +192,10 @@ function handleTaskUpdate(idOrTitle, options = {}) {
   if (options.sprint !== undefined) task.sprintId = options.sprint;
   if (options.project !== undefined) task.projectId = options.project;
   if (options.storyPoints !== undefined) task.storyPoints = Number(options.storyPoints);
+  if (options.tags !== undefined) {
+    task.tags = (Array.isArray(options.tags) ? options.tags : String(options.tags).split(','))
+      .map(tag => String(tag).trim()).filter(Boolean);
+  }
   if (options.reminder !== undefined) {
     if (options.reminder === 'none' || options.reminder === false || options.reminder === 'false') {
       task.reminder = null;

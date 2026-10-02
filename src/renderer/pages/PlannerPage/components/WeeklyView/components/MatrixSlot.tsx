@@ -3,11 +3,13 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { PlanningTask } from '../../../types/planning.types';
 import { PlanningCardCompact } from '../../Card/PlanningCardCompact';
+import { TurnOverviewModal } from '../../Card/TurnOverviewModal';
 import { Plus } from 'lucide-react';
 import type { Project } from '@types';
 
 export interface MatrixSlotProps {
   id: string;
+  label?: string;
   isBacklog?: boolean;
   tasks: PlanningTask[];
   projects?: Project[];
@@ -24,6 +26,7 @@ export interface MatrixSlotProps {
 
 export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   id,
+  label,
   isBacklog,
   tasks,
   projects = [],
@@ -40,6 +43,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   const { setNodeRef, isOver } = useDroppable({ id });
   const [isInlineAdding, setIsInlineAdding] = React.useState(false);
   const [inlineTitle, setInlineTitle] = React.useState('');
+  const [showOverview, setShowOverview] = React.useState(false);
   const inlineInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -95,6 +99,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
                 <PlanningCardCompact
                   task={task}
                   project={project}
+                  tagMode
                   isSortable
                   onEdit={() => onEdit(task.id)}
                   onToggleStatus={onToggleStatus}
@@ -186,20 +191,28 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
 
       {/* Quick Add Button at bottom when cards exist */}
       {tasks.length > 0 && !isInlineAdding && (
-        <div className="pt-1 mt-1 border-t border-white/5 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 border-t border-white/5 pt-1 mt-1">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowOverview(true); }}
+            className="flex-1 rounded bg-indigo-500/15 px-1.5 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+          >
+            Ver {tasks.length}
+          </button>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsInlineAdding(true);
             }}
-            className="w-full py-0.5 text-[9.5px] font-semibold flex items-center justify-center gap-1 rounded bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className="rounded bg-white/5 px-1.5 py-1 text-[9.5px] font-semibold flex items-center justify-center gap-1 text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
           >
             <Plus className="w-2.5 h-2.5" />
-            <span>Adicionar</span>
+            <span className="sr-only">Adicionar</span>
           </button>
         </div>
       )}
+      {showOverview && <TurnOverviewModal title={label || 'Turno'} tasks={tasks} onClose={() => setShowOverview(false)} onEdit={onEdit} />}
     </div>
   );
 };

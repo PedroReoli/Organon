@@ -23,6 +23,7 @@ Você está conectado à CLI & Bridge Operacional do Organon — a central unifi
 
 ### 🛡️ MODO OPERATE (DIRETO, RÁPIDO E CONCISO)
 - O Organon opera no modo **Operate** do design system Reoli: tarefas diretas, ações rápidas, respostas compactas em JSON para automações e logs legíveis para humanos.
+- Ao criar ou atualizar tarefas, prefira títulos de até 48 caracteres. Use etiquetas curtas para identificação nos cartões e coloque a ação completa, contexto e critérios em \`--desc\` (ou \`description\` no MCP).
 
 ---
 

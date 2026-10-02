@@ -588,6 +588,7 @@ export const WeeklyView = ({
 
                 <MatrixSlot
                   id="backlog"
+                  label="Backlog"
                   isBacklog
                   tasks={backlogTasks}
                   projects={projects}
@@ -665,6 +666,7 @@ export const WeeklyView = ({
                       >
                         <MatrixSlot
                           id={slotKey}
+                          label={`${day.label} ${day.dayNumber} · ${shift.label}`}
                           tasks={slotTasks}
                           projects={projects}
                           selectedTaskId={selectedTaskId}

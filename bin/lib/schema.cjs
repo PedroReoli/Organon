@@ -41,14 +41,18 @@ const AI_TOOLS_SCHEMA = [
   },
   {
     name: "organon_task_create",
-    description: "Create a new planning task in Organon.",
+    description: "Create a planning task. Prefer a title of at most 48 characters, short tags, and full context in description.",
     parameters: {
       type: "object",
       required: ["title"],
       properties: {
         title: {
           type: "string",
-          description: "Title / summary of the task."
+          description: "Short action name, preferably at most 48 characters."
+        },
+        description: {
+          type: "string",
+          description: "Full action, context and acceptance details."
         },
         date: {
           type: "string",
@@ -98,7 +102,7 @@ const AI_TOOLS_SCHEMA = [
   },
   {
     name: "organon_task_update",
-    description: "Update an existing task in Organon by its ID or title search.",
+    description: "Update a task by ID or title. Keep the title short; use tags and description for context.",
     parameters: {
       type: "object",
       required: ["idOrTitle"],
@@ -109,7 +113,16 @@ const AI_TOOLS_SCHEMA = [
         },
         title: {
           type: "string",
-          description: "New title for the task."
+          description: "Short action name, preferably at most 48 characters."
+        },
+        description: {
+          type: "string",
+          description: "Full action, context and acceptance details."
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Short labels shown on planning cards."
         },
         status: {
           type: "string",

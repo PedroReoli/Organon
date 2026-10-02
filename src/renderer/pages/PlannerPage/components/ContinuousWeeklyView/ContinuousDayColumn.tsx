@@ -4,6 +4,8 @@ import { Plus } from 'lucide-react';
 import type { Project } from '@types';
 import type { PlanningTask } from '../../types/planning.types';
 import { ContinuousTaskCard } from './ContinuousTaskCard';
+import { TurnOverviewModal } from '../Card/TurnOverviewModal';
+import { useState } from 'react';
 
 interface ContinuousDayColumnProps {
   id: string;
@@ -37,6 +39,7 @@ export const ContinuousDayColumn = ({
   onUpdateTask,
 }: ContinuousDayColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const [showOverview, setShowOverview] = useState(false);
   const completed = tasks.filter((task) => task.status === 'done').length;
   const progress = tasks.length ? (completed / tasks.length) * 100 : 0;
 
@@ -75,6 +78,7 @@ export const ContinuousDayColumn = ({
           <span>{formatTotal(tasks)}</span>
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-[width] duration-150" style={{ width: `${progress}%` }} /></div>
+        {tasks.length > 0 && <button type="button" onClick={() => setShowOverview(true)} className="mt-2 w-full rounded-lg border border-indigo-400/25 bg-indigo-400/10 px-2 py-1.5 text-xs font-semibold text-indigo-200 hover:bg-indigo-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">Ver {tasks.length} {tasks.length === 1 ? 'tarefa' : 'tarefas'}</button>}
       </header>
 
       <div className="flex-1 overflow-y-auto p-2.5">
@@ -102,6 +106,7 @@ export const ContinuousDayColumn = ({
           </div>
         </SortableContext>
       </div>
+      {showOverview && <TurnOverviewModal title={`${label} ${dayNumber}`} tasks={tasks} onClose={() => setShowOverview(false)} onEdit={onEdit} />}
     </section>
   );
 };
