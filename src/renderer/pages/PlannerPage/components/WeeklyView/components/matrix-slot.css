@@ -1,0 +1,702 @@
+.planner-matrix-slot {
+  position: relative;
+  container-type: inline-size;
+  flex: 1;
+  min-width: 0;
+  min-height: 90px;
+  height: 100%;
+  padding: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.11);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.planner-matrix-slot.is-over {
+  box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.78), 0 10px 28px rgba(15, 23, 42, 0.34);
+}
+
+.planner-matrix-slot.is-move-target {
+  cursor: pointer;
+}
+
+.planner-matrix-slot.is-move-target:hover {
+  border-color: rgba(129, 140, 248, 0.55) !important;
+  background: #141e34 !important;
+}
+
+.planner-matrix-slot-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+.planner-matrix-task-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  align-content: start;
+}
+
+.planner-matrix-task-grid.is-backlog {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.matrix-task-card-anchor {
+  min-width: 0;
+  height: 100%;
+}
+
+.matrix-task-card {
+  --matrix-priority-color: #3b82f6;
+  position: relative;
+  min-width: 0;
+  min-height: 66px;
+  height: 100%;
+  padding: 7px 8px 7px 11px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  display: grid;
+  grid-template-rows: auto minmax(26px, 1fr) auto;
+  gap: 4px;
+  overflow: hidden;
+  background: #151f33;
+  color: #f1f5f9;
+  box-shadow: 0 5px 16px -14px rgba(0, 0, 0, 0.92);
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.matrix-task-card::before {
+  content: '';
+  position: absolute;
+  inset: 7px auto 7px 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--matrix-priority-color);
+  opacity: 0.92;
+}
+
+.matrix-task-card:hover,
+.matrix-task-card:focus-within {
+  z-index: 2;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--matrix-priority-color) 38%, rgba(148, 163, 184, 0.22));
+  background: #1a2740;
+  box-shadow: 0 12px 24px -18px rgba(0, 0, 0, 0.95);
+}
+
+.matrix-task-card.is-selected {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.28);
+}
+
+.matrix-task-card.is-dragging {
+  z-index: 20;
+  box-shadow: none;
+}
+
+.matrix-task-card.is-done {
+  background: #111a2a;
+}
+
+.matrix-task-card-topline {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.matrix-task-status-toggle,
+.matrix-task-drag-handle {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.matrix-task-status-toggle {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 4px;
+  background: rgba(5, 10, 22, 0.52);
+}
+
+.matrix-task-status-toggle[aria-pressed='true'] {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: white;
+}
+
+.matrix-task-priority {
+  color: var(--matrix-priority-color);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.matrix-task-time {
+  min-width: 0;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.matrix-task-drag-handle {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 5px;
+  background: #202d47;
+  opacity: 0;
+  transform: translateX(3px);
+  transition: opacity 120ms ease, transform 120ms ease, color 120ms ease;
+}
+
+.matrix-task-card:hover .matrix-task-drag-handle,
+.matrix-task-drag-handle:focus-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.matrix-task-drag-handle:hover {
+  color: #e2e8f0;
+}
+
+.matrix-task-title {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  background: transparent;
+  color: #eef2ff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1.24;
+  text-align: left;
+  cursor: pointer;
+}
+
+.matrix-task-title:hover {
+  color: #c7d2fe;
+}
+
+.is-done .matrix-task-title {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.matrix-task-card-footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.matrix-task-context {
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 5px;
+  overflow: hidden;
+  border: 1px solid rgba(129, 140, 248, 0.18);
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #aeb9d3;
+  font-size: 8.5px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matrix-task-metrics {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #7f8da6;
+  font-size: 8.5px;
+  font-weight: 650;
+}
+
+.matrix-task-metrics span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.matrix-task-status-toggle:focus-visible,
+.matrix-task-drag-handle:focus-visible,
+.matrix-task-title:focus-visible,
+.matrix-task-overflow:focus-visible,
+.matrix-slot-footer button:focus-visible,
+.matrix-slot-empty:focus-visible,
+.matrix-task-preview-actions button:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+.matrix-task-overflow {
+  min-width: 0;
+  min-height: 66px;
+  padding: 8px;
+  border: 1px dashed rgba(129, 140, 248, 0.38);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(99, 102, 241, 0.075);
+  color: #c7d2fe;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.matrix-task-overflow:hover {
+  border-color: rgba(129, 140, 248, 0.72);
+  background: rgba(99, 102, 241, 0.15);
+  color: white;
+}
+
+.matrix-task-overflow span {
+  font-size: 14px;
+  font-weight: 780;
+  line-height: 1;
+}
+
+.matrix-task-overflow small {
+  color: #8f9cb5;
+  font-size: 8.5px;
+}
+
+.matrix-task-drop-preview {
+  min-width: 0;
+  min-height: 48px;
+  grid-column: 1 / -1;
+  padding: 8px;
+  border: 1px dashed rgba(129, 140, 248, 0.75);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(49, 46, 129, 0.36);
+  color: #c7d2fe;
+  pointer-events: none;
+}
+
+.matrix-task-drop-preview > span {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #818cf8;
+}
+
+.matrix-task-drop-preview strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #e2e8f0;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matrix-task-drop-preview small {
+  flex: 0 0 auto;
+  font-size: 8.5px;
+}
+
+.matrix-slot-inline-form {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 7px;
+  border: 1px solid rgba(129, 140, 248, 0.72);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  background: #0a1020;
+  box-shadow: 0 12px 26px -20px rgba(0, 0, 0, 0.95);
+}
+
+.matrix-slot-inline-form.is-empty-slot {
+  margin: auto 0;
+}
+
+.matrix-slot-inline-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 29px;
+  padding: 5px 7px;
+  border: 1px solid rgba(100, 116, 139, 0.55);
+  border-radius: 6px;
+  outline: none;
+  background: rgba(15, 23, 42, 0.88);
+  color: white;
+  font: inherit;
+  font-size: 11px;
+}
+
+.matrix-slot-inline-form input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.16);
+}
+
+.matrix-slot-inline-form > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #78869f;
+  font-size: 8.5px;
+}
+
+.matrix-slot-inline-form button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a5b4fc;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.matrix-slot-empty {
+  width: 100%;
+  height: 100%;
+  min-height: 76px;
+  padding: 10px;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  color: #61708a;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.matrix-slot-empty > span {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(100, 116, 139, 0.38);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.matrix-slot-empty:hover {
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+  color: #a8b4c9;
+}
+
+.matrix-slot-footer {
+  min-height: 25px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.matrix-slot-footer button {
+  min-height: 24px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  color: #8391aa;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.matrix-slot-footer button:hover {
+  background: rgba(255, 255, 255, 0.055);
+  color: #dbe4f4;
+}
+
+.matrix-slot-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matrix-task-preview.ds-popover-content {
+  z-index: 10020;
+  width: min(320px, calc(100vw - 24px));
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #33415c;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #101827;
+  color: #e8eef9;
+  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.58), 0 0 0 1px rgba(129, 140, 248, 0.06);
+  transform-origin: var(--radix-popover-content-transform-origin);
+}
+
+.matrix-task-preview[data-state='open'] {
+  animation: matrix-task-preview-in 130ms ease-out;
+}
+
+@keyframes matrix-task-preview-in {
+  from {
+    opacity: 0;
+    transform: scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.matrix-task-preview-heading {
+  padding: 14px 15px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: linear-gradient(180deg, rgba(129, 140, 248, 0.07), transparent);
+}
+
+.matrix-task-preview-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.matrix-task-preview-priority,
+.matrix-task-preview-status {
+  font-size: 9.5px;
+  font-weight: 760;
+}
+
+.matrix-task-preview-priority.is-p1 { color: #ff8b92; }
+.matrix-task-preview-priority.is-p2 { color: #f7c469; }
+.matrix-task-preview-priority.is-p3 { color: #7eb6ff; }
+.matrix-task-preview-priority.is-p4 { color: #a7b3c7; }
+
+.matrix-task-preview-status {
+  color: #8e9bb1;
+}
+
+.matrix-task-preview-heading h3 {
+  margin: 0;
+  color: #f5f7ff;
+  font-size: 14px;
+  font-weight: 740;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.matrix-task-preview-description {
+  margin: 0;
+  padding: 11px 15px 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  color: #a7b3c7;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.matrix-task-preview-description.is-empty {
+  color: #66748c;
+  font-style: italic;
+}
+
+.matrix-task-preview-facts {
+  padding: 11px 15px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.matrix-task-preview-facts > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #a8b4c9;
+  font-size: 10px;
+}
+
+.matrix-task-preview-facts svg {
+  flex: 0 0 auto;
+  color: #818cf8;
+}
+
+.matrix-task-preview-tags {
+  padding: 11px 15px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.matrix-task-preview-tags span {
+  padding: 3px 7px;
+  border: 1px solid rgba(129, 140, 248, 0.2);
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.09);
+  color: #bec5ff;
+  font-size: 9px;
+}
+
+.matrix-task-preview-actions {
+  margin-top: 13px;
+  padding: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  background: rgba(4, 9, 20, 0.28);
+}
+
+.matrix-task-preview-actions button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 7px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #bec9dc;
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.matrix-task-preview-actions button:first-child {
+  border-color: rgba(129, 140, 248, 0.3);
+  background: rgba(99, 102, 241, 0.12);
+  color: #d4d7ff;
+}
+
+.matrix-task-preview-actions button:hover {
+  border-color: rgba(129, 140, 248, 0.42);
+  background: rgba(99, 102, 241, 0.16);
+  color: white;
+}
+
+.matrix-task-preview-arrow {
+  fill: #101827;
+  stroke: #33415c;
+}
+
+@container (max-width: 175px) {
+  .planner-matrix-task-grid:not(.is-backlog) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-card,
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-overflow {
+    min-height: 35px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-card {
+    padding: 5px 7px 5px 9px;
+    grid-template-rows: auto auto;
+    gap: 2px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-card::before {
+    inset-block: 5px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-title {
+    min-height: 0;
+    -webkit-line-clamp: 1;
+    font-size: 10px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-card-footer {
+    display: none;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-overflow {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .planner-matrix-task-grid:not(.is-backlog) .matrix-task-overflow span {
+    font-size: 11px;
+  }
+
+  .matrix-slot-footer {
+    min-height: 23px;
+    margin-top: 3px;
+    padding-top: 3px;
+  }
+
+  .matrix-slot-add span {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .matrix-task-preview-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matrix-task-preview-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planner-matrix-slot,
+  .matrix-task-card,
+  .matrix-task-drag-handle,
+  .matrix-task-overflow,
+  .matrix-slot-empty,
+  .matrix-task-preview[data-state='open'] {
+    animation: none;
+    transition: none;
+  }
+}

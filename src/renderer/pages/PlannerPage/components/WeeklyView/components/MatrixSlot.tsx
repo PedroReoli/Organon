@@ -1,11 +1,18 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import type { PlanningTask } from '../../../types/planning.types';
-import { PlanningCardCompact } from '../../Card/PlanningCardCompact';
+import { MatrixTaskCard } from '../../Card/MatrixTaskCard';
 import { TurnOverviewModal } from '../../Card/TurnOverviewModal';
 import { Plus } from 'lucide-react';
 import type { Project } from '@types';
+import './matrix-slot.css';
+
+const MAX_MATRIX_ITEMS = 6;
 
 export interface MatrixSlotProps {
   id: string;
@@ -46,173 +53,234 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   const [showOverview, setShowOverview] = React.useState(false);
   const inlineInputRef = React.useRef<HTMLInputElement>(null);
 
+  const hasOverflow = !isBacklog && tasks.length > MAX_MATRIX_ITEMS;
+  const visibleTaskLimit = hasOverflow ? MAX_MATRIX_ITEMS - 1 : MAX_MATRIX_ITEMS;
+  const visibleTasks = isBacklog ? tasks : tasks.slice(0, visibleTaskLimit);
+  const hiddenTaskCount = Math.max(0, tasks.length - visibleTasks.length);
+
   React.useEffect(() => {
-    if (isInlineAdding) {
-      inlineInputRef.current?.focus();
-    }
+    if (isInlineAdding) inlineInputRef.current?.focus();
   }, [isInlineAdding]);
+
+  const submitInlineTask = () => {
+    if (inlineTitle.trim()) {
+      if (onQuickCreate) onQuickCreate(inlineTitle.trim());
+      else onOpenAdd();
+      setInlineTitle('');
+    }
+    setIsInlineAdding(false);
+  };
 
   return (
     <div
       ref={setNodeRef}
       onClick={() => {
-        if (selectedTaskId) {
-          onSlotClick(id);
-        }
+        if (selectedTaskId) onSlotClick(id);
       }}
       style={{
         background: isOver
           ? 'color-mix(in srgb, var(--color-primary, #6366f1) 18%, #0f172a)'
           : isBacklog
-          ? '#0c1220'
-          : '#0e1526',
+            ? '#0c1220'
+            : '#0e1526',
         borderColor: isOver
           ? 'var(--color-primary, #6366f1)'
           : selectedTaskId
-          ? 'rgba(99,102,241,0.5)'
-          : 'rgba(255,255,255,0.06)',
+            ? 'rgba(99,102,241,0.5)'
+            : 'rgba(255,255,255,0.06)',
       }}
-      className={`relative flex-1 h-full min-h-[90px] rounded-lg border p-1.5 flex flex-col justify-between transition-all group/slot ${
-        isOver ? 'ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-950/40' : ''
-      } ${
-        selectedTaskId ? 'cursor-pointer hover:border-indigo-400 hover:bg-[#141e34]' : ''
-      }`}
+      className={`planner-matrix-slot group/slot ${isBacklog ? 'is-backlog' : ''} ${
+        isOver ? 'is-over' : ''
+      } ${selectedTaskId ? 'is-move-target' : ''}`}
     >
-      {/* Task List */}
-      <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-full">
-        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => {
-            const project = projects.find((p) => p.id === task.projectId);
-            return (
-              <div
-                key={task.id}
-                onClick={(e) => {
-                  if (e.ctrlKey || e.metaKey) {
-                    e.stopPropagation();
-                    onSelectTask(task.id);
-                  }
-                }}
-                className={`transition-all rounded-md ${
-                  selectedTaskId === task.id ? 'ring-2 ring-indigo-500 bg-indigo-950/50' : ''
-                }`}
-              >
-                <PlanningCardCompact
-                  task={task}
-                  project={project}
-                  tagMode
-                  isSortable
-                  onEdit={() => onEdit(task.id)}
-                  onToggleStatus={onToggleStatus}
-                  onPostponeWeek={onPostponeWeek}
-                />
-              </div>
-            );
-          })}
-        </SortableContext>
+      <div className="planner-matrix-slot-content">
+        {tasks.length > 0 && (
+          <SortableContext
+            items={visibleTasks.map(task => task.id)}
+            strategy={isBacklog ? verticalListSortingStrategy : rectSortingStrategy}
+          >
+            <div className={`planner-matrix-task-grid ${isBacklog ? 'is-backlog' : ''}`}>
+              {visibleTasks.map(task => {
+                const project = projects.find(item => item.id === task.projectId);
+                return (
+                  <MatrixTaskCard
+                    key={task.id}
+                    task={task}
+                    project={project}
+                    isSelected={selectedTaskId === task.id}
+                    onEdit={() => onEdit(task.id)}
+                    onSelectTask={onSelectTask}
+                    onToggleStatus={onToggleStatus}
+                    onPostponeWeek={onPostponeWeek}
+                  />
+                );
+              })}
 
-        {/* Ghost Drop Placeholder */}
-        {isOver && activeTask && !tasks.some((t) => t.id === activeTask.id) && (
-          <div className="w-full min-h-[32px] rounded-md border-2 border-dashed border-indigo-400/80 bg-indigo-950/40 p-1.5 flex items-center gap-2 text-xs text-indigo-300 animate-pulse select-none pointer-events-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-            <span className="truncate font-medium flex-1 text-slate-200">{activeTask.title}</span>
-            <span className="text-[9px] font-mono text-indigo-300/80 shrink-0 uppercase tracking-wider">Soltar aqui</span>
-          </div>
+              {hiddenTaskCount > 0 && (
+                <button
+                  type="button"
+                  className="matrix-task-overflow"
+                  aria-label={`Ver as ${tasks.length} tarefas de ${label || 'este turno'}`}
+                  onClick={event => {
+                    event.stopPropagation();
+                    setShowOverview(true);
+                  }}
+                >
+                  <span>+{hiddenTaskCount}</span>
+                  <small>{hiddenTaskCount === 1 ? 'tarefa' : 'tarefas'}</small>
+                </button>
+              )}
+
+              {isOver && activeTask && !tasks.some(task => task.id === activeTask.id) && (
+                <div className="matrix-task-drop-preview" aria-hidden="true">
+                  <span />
+                  <strong>{activeTask.title}</strong>
+                  <small>Soltar aqui</small>
+                </div>
+              )}
+
+              {isInlineAdding && (
+                <form
+                  onSubmit={event => {
+                    event.preventDefault();
+                    submitInlineTask();
+                  }}
+                  onClick={event => event.stopPropagation()}
+                  className="matrix-slot-inline-form"
+                >
+                  <input
+                    ref={inlineInputRef}
+                    type="text"
+                    value={inlineTitle}
+                    onChange={event => setInlineTitle(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Escape') {
+                        event.stopPropagation();
+                        setIsInlineAdding(false);
+                        setInlineTitle('');
+                      }
+                    }}
+                    placeholder="Nome da tarefa..."
+                    aria-label="Nome da nova tarefa"
+                  />
+                  <div>
+                    <span>Enter salva</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsInlineAdding(false);
+                        onOpenAdd();
+                      }}
+                    >
+                      Mais campos
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </SortableContext>
         )}
 
-        {/* Inline Quick Add Form */}
-        {isInlineAdding && (
+        {tasks.length === 0 && isInlineAdding && (
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (inlineTitle.trim()) {
-                if (onQuickCreate) {
-                  onQuickCreate(inlineTitle.trim());
-                } else {
-                  onOpenAdd();
-                }
-                setInlineTitle('');
-              }
-              setIsInlineAdding(false);
+            onSubmit={event => {
+              event.preventDefault();
+              submitInlineTask();
             }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full p-1.5 rounded-lg bg-[#0a0f1d] border border-indigo-500/80 shadow-lg shadow-indigo-950/50 flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+            onClick={event => event.stopPropagation()}
+            className="matrix-slot-inline-form is-empty-slot"
           >
             <input
               ref={inlineInputRef}
               type="text"
               value={inlineTitle}
-              onChange={(e) => setInlineTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.stopPropagation();
+              onChange={event => setInlineTitle(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  event.stopPropagation();
                   setIsInlineAdding(false);
                   setInlineTitle('');
                 }
               }}
               placeholder="Nome da tarefa..."
-              className="w-full bg-slate-900/80 border border-slate-700/60 rounded px-2 py-1 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-400 transition-colors"
+              aria-label="Nome da nova tarefa"
             />
-            <div className="flex items-center justify-between text-[9px] text-slate-400 px-0.5">
-              <span className="font-mono text-indigo-300/80">↵ Enter salva</span>
+            <div>
+              <span>Enter salva</span>
               <button
                 type="button"
                 onClick={() => {
                   setIsInlineAdding(false);
                   onOpenAdd();
                 }}
-                className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline underline-offset-2"
               >
-                Mais campos...
+                Mais campos
               </button>
             </div>
           </form>
         )}
 
-        {/* Empty State Prompt */}
+        {tasks.length === 0 && isOver && activeTask && (
+          <div className="planner-matrix-task-grid is-drop-target">
+            <div className="matrix-task-drop-preview" aria-hidden="true">
+              <span />
+              <strong>{activeTask.title}</strong>
+              <small>Soltar aqui</small>
+            </div>
+          </div>
+        )}
+
         {tasks.length === 0 && !isInlineAdding && (!isOver || !activeTask) && (
-          <div
-            onClick={(e) => {
+          <button
+            type="button"
+            className="matrix-slot-empty"
+            onClick={event => {
               if (!selectedTaskId) {
-                e.stopPropagation();
+                event.stopPropagation();
                 setIsInlineAdding(true);
               }
             }}
-            className="flex-1 flex flex-col items-center justify-center text-center p-2 cursor-pointer select-none text-slate-500 hover:text-slate-300 transition-colors group/empty"
           >
-            <div className="w-5 h-5 rounded border border-slate-700/60 flex items-center justify-center mb-1 text-slate-500 group-hover/slot:border-slate-400 group-hover/slot:text-slate-300 transition-colors">
-              <Plus className="w-3 h-3" />
-            </div>
-            <span className="text-[9.5px] font-bold tracking-wider uppercase text-slate-500/90 group-hover/slot:text-slate-400 leading-tight">
-              {selectedTaskId ? 'CLIQUE PARA MOVER' : '+ CRIAR TAREFA OU ARRASTE'}
-            </span>
-          </div>
+            <span><Plus size={13} /></span>
+            {selectedTaskId ? 'Clique para mover' : 'Criar tarefa ou arraste'}
+          </button>
         )}
       </div>
 
-      {/* Quick Add Button at bottom when cards exist */}
       {tasks.length > 0 && !isInlineAdding && (
-        <div className="flex items-center gap-1 border-t border-white/5 pt-1 mt-1">
+        <div className="matrix-slot-footer">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setShowOverview(true); }}
-            className="flex-1 rounded bg-indigo-500/15 px-1.5 py-1 text-[10px] font-semibold text-indigo-200 hover:bg-indigo-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="matrix-slot-count"
+            onClick={event => {
+              event.stopPropagation();
+              setShowOverview(true);
+            }}
           >
-            Ver {tasks.length}
+            {tasks.length} {tasks.length === 1 ? 'tarefa' : 'tarefas'}
           </button>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
+            className="matrix-slot-add"
+            onClick={event => {
+              event.stopPropagation();
               setIsInlineAdding(true);
             }}
-            className="rounded bg-white/5 px-1.5 py-1 text-[9.5px] font-semibold flex items-center justify-center gap-1 text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
           >
-            <Plus className="w-2.5 h-2.5" />
-            <span className="sr-only">Adicionar</span>
+            <Plus size={12} />
+            <span>Nova</span>
           </button>
         </div>
       )}
-      {showOverview && <TurnOverviewModal title={label || 'Turno'} tasks={tasks} onClose={() => setShowOverview(false)} onEdit={onEdit} />}
+
+      {showOverview && (
+        <TurnOverviewModal
+          title={label || 'Turno'}
+          tasks={tasks}
+          onClose={() => setShowOverview(false)}
+          onEdit={onEdit}
+        />
+      )}
     </div>
   );
 };
