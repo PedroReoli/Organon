@@ -596,6 +596,8 @@ export const registerContentIpcHandlers = (): void => {
       if (fs.existsSync(absPath)) {
         fs.unlinkSync(absPath)
       }
+      const metadataPath = safeResolveMeetingPath(`${path.parse(audioPath).name}.audio.json`, getDataPath())
+      if (fs.existsSync(metadataPath)) fs.unlinkSync(metadataPath)
       return true
     } catch (error) {
       console.error('Erro ao remover audio:', error)

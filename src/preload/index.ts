@@ -287,6 +287,19 @@ const electronAPI = {
     durationMs?: number
     codec?: string
   }) => ipcRenderer.invoke('meetings:saveAudioPackage', request),
+  startMeetingRecording: (request: {
+    meetingId: string
+    channels: Array<'microphone' | 'system' | 'mixed'>
+    sampleRate?: number
+  }) => ipcRenderer.invoke('meetings:recordingStart', request),
+  appendMeetingRecording: (request: {
+    sessionId: string
+    channel: 'microphone' | 'system' | 'mixed'
+    pcm: ArrayBuffer
+  }) => ipcRenderer.invoke('meetings:recordingAppend', request),
+  finalizeMeetingRecording: (request: { sessionId: string; durationMs?: number }) =>
+    ipcRenderer.invoke('meetings:recordingFinalize', request),
+  cancelMeetingRecording: (sessionId: string) => ipcRenderer.invoke('meetings:recordingCancel', sessionId),
   getMeetingAudioUrl: (audioPath: string) => ipcRenderer.invoke('meetings:getAudioUrl', audioPath),
   selectObsidianVault: () => ipcRenderer.invoke('meetings:selectObsidianVault'),
   exportMeetingToObsidian: (request: unknown) => ipcRenderer.invoke('meetings:exportObsidian', request),

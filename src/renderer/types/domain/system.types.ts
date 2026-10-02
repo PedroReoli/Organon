@@ -101,6 +101,17 @@ export interface Meeting {
     codec: string
     durationMs: number
   } | null
+  audioTracks?: MeetingAudioTrack[]
+}
+
+export interface MeetingAudioTrack {
+  channel: 'microphone' | 'system' | 'mixed'
+  path: string
+  sha256: string
+  bytes: number
+  codec: string
+  durationMs: number
+  sampleRate: number
 }
 
 export interface WhisperTranscriptionProvenance {
@@ -721,6 +732,24 @@ declare global {
         codec: string
         durationMs: number
       }>
+      startMeetingRecording: (request: {
+        meetingId: string
+        channels: Array<'microphone' | 'system' | 'mixed'>
+        sampleRate?: number
+      }) => Promise<{
+        sessionId: string
+        channels: Array<'microphone' | 'system' | 'mixed'>
+      }>
+      appendMeetingRecording: (request: {
+        sessionId: string
+        channel: 'microphone' | 'system' | 'mixed'
+        pcm: ArrayBuffer
+      }) => Promise<{ bytes: number }>
+      finalizeMeetingRecording: (request: {
+        sessionId: string
+        durationMs?: number
+      }) => Promise<{ tracks: MeetingAudioTrack[] }>
+      cancelMeetingRecording: (sessionId: string) => Promise<void>
       getMeetingAudioUrl: (audioPath: string) => Promise<string | null>
       selectObsidianVault: () => Promise<string | null>
       exportMeetingToObsidian: (request: {

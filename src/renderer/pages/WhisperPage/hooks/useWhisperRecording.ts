@@ -1,6 +1,4 @@
-import { WhisperPcmRecorder } from '../../../services/WhisperPcmRecorder'
 import { startWhisperLiveCapture } from '../../../services/whisperLiveCapture'
-import { stopRecorder } from '../../../services/whisperAudio'
 import { useState, useRef, useEffect } from 'react'
 import { SpeakerSegment, LiveReport, WhisperRecord, WhisperCaptureReadiness, WhisperAudioMetrics } from '../types/whisper.types'
 import { RecordingModeType } from '../components/WhisperRecordingHero'
@@ -8,12 +6,17 @@ import { MeetingIntelligenceData, ProjectContextConfig, ResearchScope } from '..
 import { MeetingOrchestrator } from '../../../services/meetingIntelligence/MeetingOrchestrator'
 import {
   transcribeAudioBlobWithFallback,
-  transcribeAudioBlobDetailedWithFallback,
   loadWhisperConfig,
-  getWhisperTranscriptionTuning,
+  buildWhisperInitialPrompt,
   WhisperTranscriptionContext,
 } from '../../../services/whisperService'
 import { extractHotwords } from '../utils/whisperUtils'
+import { MeetingAudioCapture, MeetingAudioTrack } from '../../../services/MeetingAudioCapture'
+import {
+  buildSourceSegments,
+  formatSpeakerTranscript,
+  mergeSourceSegments,
+} from '../../../services/meetingIntelligence/speakerSegmentation'
 
 interface RecordingProps {
   projectContext: ProjectContextConfig | undefined
@@ -24,13 +27,6 @@ interface RecordingProps {
 }
 
 const EMPTY_AUDIO_METRICS: WhisperAudioMetrics = { rms: 0, peak: 0, waveform: [], quality: 'silent' }
-
-const blobToBase64 = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onerror = () => reject(reader.error || new Error('Falha ao ler o audio gravado.'))
-  reader.onload = () => resolve(String(reader.result || '').split(',', 2)[1] || '')
-  reader.readAsDataURL(blob)
-})
 
 export function useWhisperRecording({
   projectContext,
@@ -62,12 +58,10 @@ export function useWhisperRecording({
   })
 
   const startingRef = useRef(false)
-  const mediaRecorderRef = useRef<WhisperPcmRecorder | null>(null)
-  const stopLiveRef = useRef<(() => Promise<void>) | null>(null)
-  const mixContextRef = useRef<AudioContext | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const micStreamRef = useRef<MediaStream | null>(null)
-  const systemStreamRef = useRef<MediaStream | null>(null)
+  const captureRef = useRef<MeetingAudioCapture | null>(null)
+  const stopLiveRefs = useRef<Array<() => Promise<void>>>([])
+  const pendingRecordIdRef = useRef<string | null>(null)
+  const recordingStartedAtRef = useRef(0)
   const orchestratorRef = useRef<MeetingOrchestrator | null>(null)
 
   const savedRecordIdRef = useRef<string | null>(null)
@@ -113,16 +107,10 @@ export function useWhisperRecording({
 
   const systemCaptureEnabledRef = useRef(false)
 
-  const whisperConfig = loadWhisperConfig()
-  const whisperTuning = getWhisperTranscriptionTuning(whisperConfig)
-
   useEffect(() => () => {
     orchestratorRef.current?.dispose()
-    mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop())
-    micStreamRef.current?.getTracks().forEach(track => track.stop())
-    systemStreamRef.current?.getTracks().forEach(track => track.stop())
-    void stopLiveRef.current?.()
-    void mixContextRef.current?.close()
+    void Promise.all(stopLiveRefs.current.map(stop => stop().catch(() => undefined)))
+    void captureRef.current?.cancel()
   }, [])
 
   // Cronômetro de gravação
@@ -210,89 +198,70 @@ export function useWhisperRecording({
       setLiveSegments([])
       setInterimText('')
       setAudioMetrics(EMPTY_AUDIO_METRICS)
-      audioChunksRef.current = []
       systemCaptureEnabledRef.current = false
       setSystemCaptureActive(false)
+      stopLiveRefs.current = []
 
       if (savedRecordIdRef.current) { orchestratorRef.current?.dispose(); orchestratorRef.current = null }
       savedRecordIdRef.current = null
       const orchestrator = ensureOrchestrator()
-
       const savedMicId = localStorage.getItem('organon_selected_mic_id')
-      const audioConstraints = savedMicId && savedMicId !== 'default'
-        ? { deviceId: { exact: savedMicId } }
-        : true
+      const recordId = `rec-${Date.now()}`
+      pendingRecordIdRef.current = recordId
+      const capture = await MeetingAudioCapture.start({
+        meetingId: recordId,
+        microphoneDeviceId: savedMicId || undefined,
+        captureSystemAudio: (mode === 'meeting' || mode === 'interview') && projectContextRef.current?.systemAudio !== false,
+        onMicrophoneLevel: ({ rms, peak }) => {
+          const quality: WhisperAudioMetrics['quality'] = peak >= 0.98
+            ? 'clipping'
+            : rms < 0.006
+              ? 'silent'
+              : rms < 0.03
+                ? 'low'
+                : 'good'
+          setAudioMetrics(previous => ({
+            rms,
+            peak,
+            quality,
+            waveform: [...previous.waveform.slice(-35), Math.min(1, Math.max(rms * 5, peak * 0.65))],
+          }))
+        },
+      })
+      captureRef.current = capture
+      recordingStartedAtRef.current = Date.now()
+      systemCaptureEnabledRef.current = capture.hasSystemAudio
+      setSystemCaptureActive(capture.hasSystemAudio)
 
-      const micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
-      micStreamRef.current = micStream
-
-      let recordingStream = micStream
-      if ((mode === 'meeting' || mode === 'interview') && projectContextRef.current?.systemAudio !== false) {
-        const systemStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-        systemStreamRef.current = systemStream
-        for (const track of systemStream.getAudioTracks()) track.addEventListener('ended', () => {
+      if (capture.systemStream) {
+        for (const track of capture.systemStream.getAudioTracks()) track.addEventListener('ended', () => {
           setSystemCaptureActive(false)
           showToast('A captura do sistema foi interrompida. O microfone continua gravando.', 'error')
         }, { once: true })
-        if (!systemStream.getAudioTracks().length) throw new Error('A fonte selecionada não forneceu áudio do sistema. Ative o compartilhamento de áudio.')
-        const mix = new AudioContext()
-        mixContextRef.current = mix
-        await mix.resume()
-        const destination = mix.createMediaStreamDestination()
-        for (const stream of [micStream, systemStream]) {
-          const gain = mix.createGain()
-          gain.gain.value = 0.5
-          mix.createMediaStreamSource(new MediaStream(stream.getAudioTracks())).connect(gain).connect(destination)
-        }
-        recordingStream = destination.stream
-        setSystemCaptureActive(true)
-        systemCaptureEnabledRef.current = true
       }
-      const mediaRecorder = await WhisperPcmRecorder.create(recordingStream)
-      mediaRecorderRef.current = mediaRecorder
-
-      mediaRecorder.onlevel = ({ rms, peak }) => {
-        const quality: WhisperAudioMetrics['quality'] = peak >= 0.98
-          ? 'clipping'
-          : rms < 0.006
-            ? 'silent'
-            : rms < 0.03
-              ? 'low'
-              : 'good'
-        setAudioMetrics(previous => ({
-          rms,
-          peak,
-          quality,
-          waveform: [...previous.waveform.slice(-35), Math.min(1, Math.max(rms * 5, peak * 0.65))],
-        }))
-      }
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      mediaRecorder.start(whisperTuning.liveChunkMs)
       setIsRecording(true)
       try {
-        stopLiveRef.current = await startWhisperLiveCapture(recordingStream, async audio => {
-          try {
-            const text = await transcribeAudioBlobWithFallback(audio, loadWhisperConfig(), { mode })
-            if (text) {
-              appendLiveTranscriptSegment(text, mode === 'prompt' ? 'microphone' : 'mixed')
-              if (mode !== 'prompt') void orchestrator.processTranscriptSnippet(text)
-            }
-          } catch { setInterimText('Prévia indisponível. O áudio completo será transcrito ao parar.') }
-        })
+        const startLiveSource = async (stream: MediaStream, sourceKind: 'microphone' | 'system') => {
+          const stop = await startWhisperLiveCapture(stream, async audio => {
+            try {
+              const text = await transcribeAudioBlobWithFallback(audio, loadWhisperConfig(), { mode })
+              if (!text) return
+              appendLiveTranscriptSegment(text, sourceKind)
+              void orchestrator.processTranscriptSnippet(text)
+            } catch { setInterimText('Prévia indisponível. O áudio completo será transcrito ao parar.') }
+          })
+          stopLiveRefs.current.push(stop)
+        }
+        await startLiveSource(capture.microphoneStream, 'microphone')
+        if (capture.systemStream) await startLiveSource(capture.systemStream, 'system')
       } catch { setInterimText('Gravando. A transcrição será feita ao parar.') }
 
       showToast(`Gravação iniciada em modo ${getRecordingModeLabel(mode)}.`, 'info')
     } catch (err: any) {
-      micStreamRef.current?.getTracks().forEach(track => track.stop())
-      systemStreamRef.current?.getTracks().forEach(track => track.stop())
-      void mixContextRef.current?.close()
-      mixContextRef.current = null
+      await Promise.all(stopLiveRefs.current.map(stop => stop().catch(() => undefined)))
+      stopLiveRefs.current = []
+      await captureRef.current?.cancel().catch(() => undefined)
+      captureRef.current = null
       console.error('[useWhisperRecording] Erro ao iniciar gravação:', err)
       setIsRecording(false)
       showToast(err?.message || 'Erro ao acessar áudio.', 'error')
@@ -305,98 +274,61 @@ export function useWhisperRecording({
     setIsTranscribing(true)
 
     try {
-      await stopRecorder(mediaRecorderRef.current)
-      await stopLiveRef.current?.()
-      stopLiveRef.current = null
-      await mixContextRef.current?.close()
-      mixContextRef.current = null
+      const capture = captureRef.current
+      if (!capture) throw new Error('A sessão de gravação não está disponível.')
+      const durationMs = Math.max(0, Date.now() - recordingStartedAtRef.current)
+      const stops = stopLiveRefs.current
+      stopLiveRefs.current = []
+      await Promise.all(stops.map(stop => stop().catch(() => undefined)))
+      const audioTracks = await capture.stop(durationMs)
+      captureRef.current = null
       setSystemCaptureActive(false)
 
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop())
-        micStreamRef.current = null
-      }
-
-      if (systemStreamRef.current) {
-        systemStreamRef.current.getTracks().forEach(track => track.stop())
-        systemStreamRef.current = null
-      }
-
-      let finalMicTranscript = ''
-      let finalTranscription: Awaited<ReturnType<typeof transcribeAudioBlobDetailedWithFallback>> | undefined
-      let micBlob: Blob | null = null
+      const recordId = pendingRecordIdRef.current || capture.meetingId
       const whisperCfg = loadWhisperConfig()
-
-      if (audioChunksRef.current.length > 0) {
-        const micMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
-        micBlob = new Blob(audioChunksRef.current, { type: micMimeType })
-        const whisperContext = buildWhisperContext('')
-
-        finalTranscription = await transcribeAudioBlobDetailedWithFallback(micBlob, whisperCfg, whisperContext)
-        finalMicTranscript = finalTranscription.text
+      const whisperContext = buildWhisperContext('')
+      const finalResults: Array<{
+        track: MeetingAudioTrack
+        result: Awaited<ReturnType<typeof window.electronAPI.transcribeAudioDetailed>>
+      }> = []
+      for (const track of audioTracks.filter(item => item.channel !== 'mixed')) {
+        try {
+          const result = await window.electronAPI.transcribeAudioDetailed(track.path, whisperCfg.model, {
+            initialPrompt: buildWhisperInitialPrompt(whisperContext),
+            mode: recordingMode,
+            projectName: projectContextRef.current?.name,
+            hotwords: whisperContext.hotwords,
+          })
+          if (result.text.trim()) finalResults.push({ track, result })
+        } catch (error) {
+          console.warn(`[Whisper] Falha na transcrição final do canal ${track.channel}:`, error)
+        }
       }
 
-      const hasMicSegments = liveSegments.some(segment => segment.sourceKind === 'microphone')
-      if (finalMicTranscript && !hasMicSegments && !finalMicTranscript.startsWith('[Erro')) {
-        appendLiveTranscriptSegment(finalMicTranscript, 'microphone')
-      }
-
-      const combinedText = finalMicTranscript
-      if (!combinedText.trim()) { showToast('Nenhuma fala detectada.', 'info'); return }
-
-      orchestratorRef.current?.setTranscript(combinedText)
-      const recordId = `rec-${Date.now()}`
+      const finalSegments = mergeSourceSegments(finalResults.map(({ track, result }) => (
+        buildSourceSegments({
+          recordId,
+          sourceKind: track.channel as 'microphone' | 'system',
+          result,
+          durationMs,
+          mode: recordingMode,
+        })
+      )))
+      const transcriptSegments = finalSegments.length > 0 ? finalSegments : liveSegments
+      const rawTranscript = formatSpeakerTranscript(transcriptSegments)
+      const cleanTranscript = rawTranscript.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+      orchestratorRef.current?.setTranscript(cleanTranscript)
       const title = recordingMode === 'meeting'
         ? `Reunião Whisper (${new Date().toLocaleTimeString('pt-BR')})`
         : recordingMode === 'interview'
           ? `Entrevista (${new Date().toLocaleTimeString('pt-BR')})`
           : `Prompt por voz (${new Date().toLocaleTimeString('pt-BR')})`
-      const rawTranscript = combinedText.trim()
-      const cleanTranscript = rawTranscript.replace(/\s+/g, ' ')
-      const durationMs = Math.max(0, durationSeconds * 1000)
-      const audio = micBlob && window.electronAPI?.saveMeetingAudioPackage
-        ? await window.electronAPI.saveMeetingAudioPackage({
-          meetingId: recordId,
-          audioBase64: await blobToBase64(micBlob),
-          durationMs,
-          codec: micBlob.type || 'audio/wav; codecs=pcm',
-        })
+      const primaryAudio = audioTracks.find(track => track.channel === 'mixed')
+        || audioTracks.find(track => track.channel === 'microphone')
+      const synthesis = cleanTranscript
+        ? await window.electronAPI?.generateTranscriptNote?.({ title, transcript: cleanTranscript, mode: recordingMode })
         : undefined
-
-      const synthesis = await window.electronAPI?.generateTranscriptNote?.({
-        title,
-        transcript: cleanTranscript,
-        mode: recordingMode,
-      })
       const synthesizedAt = new Date().toISOString()
-      const providerSegments = finalTranscription?.segments ?? []
-      const transcriptSegments: SpeakerSegment[] = providerSegments.length > 0
-        ? providerSegments.map((segment, index) => ({
-          id: `seg-${recordId}-${index}`,
-          speaker: 'user',
-          speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
-          timestamp: new Date(segment.startMs).toISOString().slice(11, 19),
-          text: segment.text,
-          textRaw: segment.text,
-          textClean: segment.text.replace(/\s+/g, ' ').trim(),
-          startMs: segment.startMs,
-          endMs: segment.endMs,
-          confidence: segment.confidence,
-          words: segment.words,
-          sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
-        }))
-        : [{
-          id: `seg-${recordId}-0`,
-          speaker: 'user',
-          speakerName: systemCaptureEnabledRef.current ? 'Microfone + sistema' : 'Você (Microfone)',
-          timestamp: '00:00:00',
-          text: cleanTranscript,
-          textRaw: rawTranscript,
-          textClean: cleanTranscript,
-          startMs: 0,
-          endMs: durationMs,
-          sourceKind: systemCaptureEnabledRef.current ? 'mixed' : 'microphone',
-        }]
       const sourceSegmentIds = transcriptSegments.map(segment => segment.id)
       const baseIntelligence = orchestratorRef.current?.getData() || {
         questions: [], findings: [], decisions: [], actionItems: [], auditLog: [], tasks: [],
@@ -441,24 +373,25 @@ export function useWhisperRecording({
         id: recordId,
         title,
         createdAt: new Date().toISOString(),
-        durationSeconds,
-        audio,
-        audioUrl: audio?.path,
+        durationSeconds: Math.round(durationMs / 1000),
+        audio: primaryAudio,
+        audioTracks,
+        audioUrl: primaryAudio?.path,
         fullTranscript: cleanTranscript,
         rawTranscript,
         cleanTranscript,
-        timingPrecision: finalTranscription?.timingPrecision ?? 'none',
+        timingPrecision: finalResults.some(item => item.result.timingPrecision === 'segment') ? 'segment' : 'none',
         segments: transcriptSegments,
         transcriptionProvenance: {
           schemaVersion: 1,
           raw: {
             version: 1,
             createdAt: synthesizedAt,
-            provider: finalTranscription?.provider ?? 'local',
-            model: finalTranscription?.model ?? whisperCfg.model ?? 'unknown',
-            language: finalTranscription?.language,
-            timingPrecision: finalTranscription?.timingPrecision ?? 'none',
-            sourceAudioSha256: audio?.sha256,
+            provider: finalResults[0]?.result.provider ?? 'local',
+            model: finalResults.map(item => item.result.model).filter(Boolean).join(' + ') || whisperCfg.model || 'unknown',
+            language: finalResults.find(item => item.result.language)?.result.language,
+            timingPrecision: finalResults.some(item => item.result.timingPrecision === 'segment') ? 'segment' : 'none',
+            sourceAudioSha256: primaryAudio?.sha256,
           },
           clean: {
             version: 1,
@@ -480,14 +413,15 @@ export function useWhisperRecording({
 
       savedRecordIdRef.current = newRecord.id
       setRecords(prev => [newRecord, ...prev])
-      showToast('Gravação encerrada e salva com sucesso.', 'success')
+      showToast(cleanTranscript
+        ? 'Gravação encerrada, canais separados e transcrição salvos.'
+        : 'Áudio salvo em canais separados, mas nenhuma fala foi reconhecida.', cleanTranscript ? 'success' : 'info')
       return newRecord.id
     } catch (err: any) {
       console.error('[useWhisperRecording] Erro ao encerrar gravação:', err)
       showToast(err?.message || 'Erro ao processar transcrição final.', 'error')
     } finally {
-      micStreamRef.current?.getTracks().forEach(track => track.stop())
-      systemStreamRef.current?.getTracks().forEach(track => track.stop())
+      pendingRecordIdRef.current = null
       setIsTranscribing(false)
     }
   }

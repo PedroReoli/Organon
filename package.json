@@ -66,7 +66,8 @@
     "setup:whisper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1",
     "test:whisper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-whisper-validation.ps1 && electron scripts/validate-whisper.cjs",
     "test:whisper:installer": "electron scripts/validate-whisper-model-installer.cjs",
-    "test:whisper:transcription": "electron scripts/validate-whisper-transcription.cjs"
+    "test:whisper:transcription": "electron scripts/validate-whisper-transcription.cjs",
+    "test:meeting:recording": "npm run typecheck:node && electron scripts/validate-meeting-recording.cjs"
   },
   "keywords": [
     "electron",

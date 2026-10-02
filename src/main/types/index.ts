@@ -316,6 +316,17 @@ export interface Meeting {
     codec: string
     durationMs: number
   } | null
+  audioTracks?: MeetingAudioTrack[]
+}
+
+export interface MeetingAudioTrack {
+  channel: 'microphone' | 'system' | 'mixed'
+  path: string
+  sha256: string
+  bytes: number
+  codec: string
+  durationMs: number
+  sampleRate: number
 }
 
 export interface WhisperTranscriptionProvenance {

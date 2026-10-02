@@ -1,4 +1,5 @@
 import type { WhisperTranscriptionProvenance } from '@types'
+import type { MeetingAudioTrack } from '../../../services/MeetingAudioCapture'
 
 export type SpeakerRole = 'user' | 'system' | 'interviewer' | 'candidate'
 export type WhisperAudioSourceKind = 'microphone' | 'system' | 'mixed'
@@ -6,11 +7,13 @@ export type WhisperAudioSourceKind = 'microphone' | 'system' | 'mixed'
 export interface SpeakerSegment {
   id: string
   speaker: SpeakerRole
+  speakerId?: string
   speakerName: string
   text: string
   timestamp: string
   sourceKind?: WhisperAudioSourceKind
   diarizationConfidence?: number
+  diarizationMethod?: 'source-channel' | 'acoustic' | 'manual'
   startMs?: number
   endMs?: number
   textRaw?: string
@@ -51,6 +54,7 @@ export interface WhisperRecord {
     codec: string
     durationMs: number
   }
+  audioTracks?: MeetingAudioTrack[]
   fullTranscript: string
   rawTranscript?: string
   cleanTranscript?: string

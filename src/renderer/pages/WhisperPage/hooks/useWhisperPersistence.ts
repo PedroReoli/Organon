@@ -35,6 +35,7 @@ const normalizeRecord = (meeting: Meeting): WhisperRecord => ({
   durationSeconds: meeting.durationSeconds ?? meeting.duration ?? 0,
   audioUrl: meeting.audio?.path ?? meeting.audioPath ?? undefined,
   audio: meeting.audio ?? undefined,
+  audioTracks: meeting.audioTracks,
   fullTranscript: fixMojibake(meeting.fullTranscript ?? meeting.transcription ?? ''),
   rawTranscript: fixMojibake(meeting.rawTranscript ?? meeting.fullTranscript ?? meeting.transcription ?? ''),
   cleanTranscript: fixMojibake(meeting.cleanTranscript ?? meeting.fullTranscript ?? meeting.transcription ?? ''),
@@ -73,6 +74,7 @@ const toMeeting = (record: WhisperRecord, previous?: Meeting): Meeting => ({
   timingPrecision: record.timingPrecision ?? 'none',
   transcriptionProvenance: record.transcriptionProvenance,
   audio: record.audio ?? previous?.audio ?? null,
+  audioTracks: record.audioTracks ?? previous?.audioTracks,
   isFavorite: record.isFavorite,
   isArchived: record.isArchived,
 })
@@ -149,8 +151,15 @@ export function useWhisperPersistence({
   const handleMoveRecord = (id: string, folderId: string | null) => onUpdateMeeting(id, { folderId })
 
   const handleDeleteRecord = (id: string) => {
-    onRemoveMeeting(id)
+    const record = recordsRef.current.find(item => item.id === id)
+    const audioPaths = Array.from(new Set([
+      record?.audio?.path,
+      record?.audioUrl,
+      ...(record?.audioTracks || []).map(track => track.path),
+    ].filter((value): value is string => Boolean(value))))
+    void Promise.allSettled(audioPaths.map(audioPath => window.electronAPI?.deleteMeetingAudio?.(audioPath)))
     if (selectedRecordId === id) setSelectedRecordId(null)
+    onRemoveMeeting(id)
   }
 
   const handleNewTranscript = () => setSelectedRecordId(null)
