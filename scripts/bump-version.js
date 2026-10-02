@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const pkgPath = path.resolve(__dirname, '../package.json');
+const lockPath = path.resolve(__dirname, '../package-lock.json');
 const counterPath = path.resolve(__dirname, '../build.counter.json');
 
 const c = {
@@ -45,6 +46,14 @@ if (versionArgIndex !== -1 && args[versionArgIndex + 1]) {
 // Atualizar package.json
 pkg.version = newVersion;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+
+// Manter o lockfile coerente com a versão publicada sem recalcular dependências.
+if (fs.existsSync(lockPath)) {
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  lock.version = newVersion;
+  if (lock.packages?.['']) lock.packages[''].version = newVersion;
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n', 'utf8');
+}
 
 // Atualizar build.counter.json
 try {

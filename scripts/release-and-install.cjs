@@ -6,6 +6,7 @@ const { spawnSync } = require('child_process')
 
 const projectRoot = path.resolve(__dirname, '..')
 const packagePath = path.join(projectRoot, 'package.json')
+const lockPath = path.join(projectRoot, 'package-lock.json')
 const counterPath = path.join(projectRoot, 'build.counter.json')
 const builderConfigPath = path.join(projectRoot, 'electron-builder.json')
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
@@ -53,6 +54,7 @@ if (isPlan) {
 }
 
 const previousPackage = fs.readFileSync(packagePath, 'utf8')
+const previousLock = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null
 const previousCounter = fs.existsSync(counterPath) ? fs.readFileSync(counterPath, 'utf8') : null
 let releaseVersion = null
 let releaseReady = false
@@ -79,6 +81,11 @@ try {
   releaseReady = true
 } catch (error) {
   fs.writeFileSync(packagePath, previousPackage, 'utf8')
+  if (previousLock === null) {
+    if (fs.existsSync(lockPath)) fs.rmSync(lockPath)
+  } else {
+    fs.writeFileSync(lockPath, previousLock, 'utf8')
+  }
   if (previousCounter === null) {
     if (fs.existsSync(counterPath)) fs.rmSync(counterPath)
   } else {
