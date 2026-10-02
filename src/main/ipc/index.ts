@@ -5,6 +5,7 @@ import { registerConversationIpc } from './conversation.ipc'
 import { registerLocalSyncIpc } from './localSync.ipc'
 import { registerMeetingResearchIpc } from './meeting.ipc'
 import { registerMeetingRecordingIpc } from './meetingRecording.ipc'
+import { registerMeetingDiarizationIpc } from './meetingDiarization.ipc'
 import { registerSuperWhisperIpc, registerAutoUpdaterIpc } from '../core'
 import { registerProjectGraphIpc } from '../services'
 import { registerWakeWordIpc } from '../whisper'
@@ -17,11 +18,13 @@ export * from './conversation.ipc'
 export * from './localSync.ipc'
 export * from './meeting.ipc'
 export * from './meetingRecording.ipc'
+export * from './meetingDiarization.ipc'
 
 export const registerIpcHandlers = (): void => {
   registerCoreIpcHandlers()
   registerContentIpcHandlers()
   registerMeetingRecordingIpc()
+  registerMeetingDiarizationIpc()
   registerBackupIpcHandlers()
   registerConversationIpc()
   registerProjectGraphIpc()

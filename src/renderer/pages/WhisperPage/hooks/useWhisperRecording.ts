@@ -17,6 +17,7 @@ import {
   formatSpeakerTranscript,
   mergeSourceSegments,
 } from '../../../services/meetingIntelligence/speakerSegmentation'
+import { applyLocalSpeakerDiarization } from '../../../services/meetingIntelligence/speakerDiarizationClient'
 
 interface RecordingProps {
   projectContext: ProjectContextConfig | undefined
@@ -305,7 +306,7 @@ export function useWhisperRecording({
         }
       }
 
-      const finalSegments = mergeSourceSegments(finalResults.map(({ track, result }) => (
+      const sourceSegments = mergeSourceSegments(finalResults.map(({ track, result }) => (
         buildSourceSegments({
           recordId,
           sourceKind: track.channel as 'microphone' | 'system',
@@ -314,6 +315,8 @@ export function useWhisperRecording({
           mode: recordingMode,
         })
       )))
+      const systemTrack = audioTracks.find(track => track.channel === 'system')
+      const finalSegments = await applyLocalSpeakerDiarization(sourceSegments, systemTrack?.path)
       const transcriptSegments = finalSegments.length > 0 ? finalSegments : liveSegments
       const rawTranscript = formatSpeakerTranscript(transcriptSegments)
       const cleanTranscript = rawTranscript.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()

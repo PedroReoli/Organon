@@ -750,6 +750,16 @@ declare global {
         durationMs?: number
       }) => Promise<{ tracks: MeetingAudioTrack[] }>
       cancelMeetingRecording: (sessionId: string) => Promise<void>
+      diarizeMeetingSpeakers: (request: {
+        audioPath: string
+        segments: Array<{ id: string; text: string; startMs: number; endMs: number }>
+      }) => Promise<Array<{
+        segmentId: string
+        speakerId: string
+        speakerName: string
+        confidence: number
+        identifiedBy: 'acoustic' | 'self-introduction'
+      }>>
       getMeetingAudioUrl: (audioPath: string) => Promise<string | null>
       selectObsidianVault: () => Promise<string | null>
       exportMeetingToObsidian: (request: {

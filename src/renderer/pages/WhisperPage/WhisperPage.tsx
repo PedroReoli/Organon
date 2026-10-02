@@ -150,6 +150,7 @@ export const WhisperPage: React.FC<Props> = ({
     handleSelectSegmentWithModifier,
     handleSelectAllSegments,
     handleDeleteSelectedSegments,
+    handleRenameSpeaker,
     handlePinHighlight,
     handleAddToNote,
     handleMarkAction,
@@ -483,6 +484,7 @@ export const WhisperPage: React.FC<Props> = ({
                 onMarkDecision={handleMarkDecision}
                 onSearchProject={handleSearchProjectFromSelection}
                 onSearchWeb={handleSearchWebFromSelection}
+                onRenameSpeaker={handleRenameSpeaker}
               />
             </div>
           </div>

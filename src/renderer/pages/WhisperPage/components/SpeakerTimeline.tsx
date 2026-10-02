@@ -16,6 +16,7 @@ interface Props {
   onMarkDecision?: (text: string) => void
   onSearchProject?: (query: string) => void
   onSearchWeb?: (query: string) => void
+  onRenameSpeaker?: (speakerId: string, name: string) => void
   activePlaybackSegmentId?: string | null
   onSeekSegment?: (segment: SpeakerSegment) => void
 }
@@ -26,6 +27,7 @@ type SegmentActionId =
   | 'addToNote'
   | 'markAction'
   | 'markDecision'
+  | 'identifySpeaker'
   | 'searchProject'
   | 'searchWeb'
 
@@ -35,6 +37,7 @@ const ACTIONS: Array<{ id: SegmentActionId; label: string; tone?: 'default' | 'a
   { id: 'addToNote', label: 'Adicionar à nota', tone: 'accent' },
   { id: 'markAction', label: 'Criar tarefa' },
   { id: 'markDecision', label: 'Marcar decisão' },
+  { id: 'identifySpeaker', label: 'Identificar participante' },
   { id: 'searchProject', label: 'Pesquisar no projeto' },
   { id: 'searchWeb', label: 'Pesquisar na web', tone: 'danger' },
 ]
@@ -52,12 +55,15 @@ export const SpeakerTimeline: React.FC<Props> = ({
   onMarkDecision,
   onSearchProject,
   onSearchWeb,
+  onRenameSpeaker,
   activePlaybackSegmentId = null,
   onSeekSegment,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [editingSpeakerId, setEditingSpeakerId] = useState<string | null>(null)
+  const [speakerNameDraft, setSpeakerNameDraft] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(600)
@@ -131,6 +137,13 @@ export const SpeakerTimeline: React.FC<Props> = ({
       return
     }
 
+    if (actionId === 'identifySpeaker') {
+      setEditingSpeakerId(segment.id)
+      setSpeakerNameDraft(segment.speakerName)
+      setOpenMenuId(null)
+      return
+    }
+
     if (actionId === 'searchProject') {
       onSearchProject?.(text)
       return
@@ -139,6 +152,13 @@ export const SpeakerTimeline: React.FC<Props> = ({
     if (actionId === 'searchWeb') {
       onSearchWeb?.(text)
     }
+  }
+
+  const commitSpeakerName = (segment: SpeakerSegment) => {
+    const name = speakerNameDraft.trim()
+    if (name) onRenameSpeaker?.(segment.speakerId || segment.id, name)
+    setEditingSpeakerId(null)
+    setSpeakerNameDraft('')
   }
 
   const renderActionIcon = (actionId: SegmentActionId) => {
@@ -387,9 +407,25 @@ export const SpeakerTimeline: React.FC<Props> = ({
                   {sourceTheme.initial}
                 </span>
 
-                <span style={{ fontSize: '11.5px', fontWeight: 800, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {seg.speakerName}
-                </span>
+                {editingSpeakerId === seg.id ? (
+                  <input
+                    autoFocus
+                    value={speakerNameDraft}
+                    aria-label="Nome do participante"
+                    onClick={event => event.stopPropagation()}
+                    onChange={event => setSpeakerNameDraft(event.target.value)}
+                    onBlur={() => commitSpeakerName(seg)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') commitSpeakerName(seg)
+                      if (event.key === 'Escape') setEditingSpeakerId(null)
+                    }}
+                    style={{ width: '150px', maxWidth: '32vw', fontSize: '11.5px', padding: '2px 5px' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '11.5px', fontWeight: 800, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {seg.speakerName}
+                  </span>
+                )}
 
                 {seg.sourceKind && (
                   <span

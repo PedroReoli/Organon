@@ -300,6 +300,10 @@ const electronAPI = {
   finalizeMeetingRecording: (request: { sessionId: string; durationMs?: number }) =>
     ipcRenderer.invoke('meetings:recordingFinalize', request),
   cancelMeetingRecording: (sessionId: string) => ipcRenderer.invoke('meetings:recordingCancel', sessionId),
+  diarizeMeetingSpeakers: (request: {
+    audioPath: string
+    segments: Array<{ id: string; text: string; startMs: number; endMs: number }>
+  }) => ipcRenderer.invoke('meetings:diarize', request),
   getMeetingAudioUrl: (audioPath: string) => ipcRenderer.invoke('meetings:getAudioUrl', audioPath),
   selectObsidianVault: () => ipcRenderer.invoke('meetings:selectObsidianVault'),
   exportMeetingToObsidian: (request: unknown) => ipcRenderer.invoke('meetings:exportObsidian', request),

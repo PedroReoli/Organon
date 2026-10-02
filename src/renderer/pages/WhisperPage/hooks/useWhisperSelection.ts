@@ -132,6 +132,26 @@ export function useWhisperSelection({
     showToast(`${count} trecho(s) excluído(s) com sucesso.`, 'info')
   }
 
+  const handleRenameSpeaker = (speakerId: string, name: string) => {
+    const normalizedName = name.trim().replace(/\s+/g, ' ').slice(0, 60)
+    if (!normalizedName) return
+    const updateSegments = (segments: SpeakerSegment[]) => segments.map(segment => (
+      (segment.speakerId || segment.id) === speakerId
+        ? { ...segment, speakerName: normalizedName, diarizationMethod: 'manual' as const, diarizationConfidence: 1 }
+        : segment
+    ))
+    if (isRecording) setLiveSegments(updateSegments)
+    else if (selectedRecordId) {
+      setRecords(records => records.map(record => {
+        if (record.id !== selectedRecordId) return record
+        const segments = updateSegments(record.segments || [])
+        const transcript = segments.map(segment => `${segment.speakerName}: ${segment.text}`).join('\n\n')
+        return { ...record, segments, fullTranscript: transcript, cleanTranscript: transcript }
+      }))
+    }
+    showToast(`Participante identificado como ${normalizedName}.`, 'success')
+  }
+
   const handlePinHighlight = (text: string) => {
     const timestamp = new Date().toLocaleTimeString('pt-BR')
     setIntelligenceData((prev: any) => ({
@@ -269,6 +289,7 @@ export function useWhisperSelection({
     handleSelectSegmentWithModifier,
     handleSelectAllSegments,
     handleDeleteSelectedSegments,
+    handleRenameSpeaker,
     handlePinHighlight,
     handleAddToNote,
     handleMarkAction,
