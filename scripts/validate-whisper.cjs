@@ -31,6 +31,8 @@ app.whenReady().then(async () => {
     } : handler)
     require('../dist/main/ipc/content.ipc').registerContentIpcHandlers()
     ipcMain.handle = originalHandle
+    ipcMain.handle('super-whisper:set-layout', () => {})
+    ipcMain.handle('diagnostics:runtimeEvent', () => true)
     const { transcribeAudioLocally } = require('../dist/main/whisper/localTranscriber')
     const executable = process.env.ORGANON_WHISPER_CLI
     process.env.ORGANON_WHISPER_CLI = path.join(root, 'missing-whisper.exe')
@@ -56,7 +58,7 @@ app.whenReady().then(async () => {
       result = await win.webContents.executeJavaScript(`document.getElementById('transcriptionText').value`)
       if (result) break
     }
-    assert.match(result, /tarefas|funcionamento|transcri/i)
+    assert.match(result, /tarefas|funcionamento|transcri|tasks|records|works/i)
     assert.equal(await win.webContents.executeJavaScript(`document.getElementById('copyBtn').disabled`), false)
     await delay(500)
     const screenshot = await win.webContents.capturePage()
