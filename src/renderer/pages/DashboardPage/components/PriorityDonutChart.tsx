@@ -51,10 +51,10 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full relative group/chart select-none transition-all duration-300 hover:shadow-md"
+      className="dashboard-priority-card border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full relative group/chart select-none transition-all duration-300 hover:shadow-md"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="dashboard-priority-header flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div
             style={{
@@ -91,9 +91,9 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
       </div>
 
       {/* Main Chart Body */}
-      <div className="flex items-center justify-center gap-3.5 my-2">
+      <div className="dashboard-priority-body flex items-center justify-center gap-3.5 my-2">
         {/* SVG Donut */}
-        <div className="relative w-32 h-32 shrink-0 flex items-center justify-center">
+        <div className="dashboard-priority-donut relative shrink-0 flex items-center justify-center">
           <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 100 100">
             {/* Background base track */}
             <circle
@@ -181,7 +181,7 @@ export const PriorityDonutChart: React.FC<PriorityDonutChartProps> = ({
         </div>
 
         {/* Legend or Polished Empty State */}
-        <div className="flex-1 space-y-1 text-xs">
+        <div className="dashboard-priority-legend min-w-0 flex-1 space-y-1 text-xs">
           {!hasData ? (
             <div
               style={{

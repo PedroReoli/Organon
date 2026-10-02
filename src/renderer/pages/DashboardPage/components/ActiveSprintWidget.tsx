@@ -49,8 +49,8 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
 
       <div className="relative z-10">
         {/* Top Header */}
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
             <div
               style={{
                 background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
@@ -60,8 +60,8 @@ export const ActiveSprintWidget: React.FC<ActiveSprintWidgetProps> = ({
             >
               <RocketLaunch size={18} weight="duotone" />
             </div>
-            <div>
-              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <div className="min-w-0">
+              <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold uppercase tracking-wider break-words">
                 {sprintName}
               </h3>
               <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Sprint & Entregas</p>

@@ -84,7 +84,7 @@ export const TopNavbarShell: React.FC<Props> = ({
         userSelect: 'none',
         position: 'relative',
       }}
-      className="w-full px-4 sm:px-6 flex items-center justify-between gap-4"
+      className="top-navbar-shell w-full px-4 sm:px-6 flex items-center justify-between gap-4"
     >
       {/* ========================================================
           FLANCO ESQUERDO: LOGO ORGANON COM HOVER SUAVE
@@ -116,9 +116,9 @@ export const TopNavbarShell: React.FC<Props> = ({
       {/* ========================================================
           ZONA CENTRAL: MÓDULOS PRINCIPAIS DE NAVEGAÇÃO
           ======================================================== */}
-      <div className="flex items-center justify-center flex-1 min-w-0 overflow-x-auto no-scrollbar">
+      <div className="top-navbar-links flex items-center justify-start flex-1 min-w-0 overflow-x-auto no-scrollbar">
         {onNavigateView && (
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 shrink-0 mx-auto">
             {mainNavItems.map((item) => {
               const isActive = activeView === item.view || (item.view === 'planner' && activeView === 'agenda')
               return (
@@ -144,7 +144,7 @@ export const TopNavbarShell: React.FC<Props> = ({
                   >
                     {item.icon}
                   </span>
-                  <span className="hidden md:inline">{item.label}</span>
+                  <span className="hidden xl:inline">{item.label}</span>
                 </button>
               )
             })}

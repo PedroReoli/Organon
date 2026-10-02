@@ -58,7 +58,7 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-3.5 rounded-xl shadow-xs flex flex-col justify-between h-full select-none"
+      className="dashboard-hub-card border p-3.5 rounded-xl shadow-xs flex flex-col justify-between h-full select-none"
     >
       <div>
         <div className="flex items-center gap-2 mb-2.5">
@@ -78,7 +78,7 @@ export const ModernHubNavigation: React.FC<ModernHubNavigationProps> = ({ onNavi
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="dashboard-hub-links grid grid-cols-2 gap-1.5">
           {hubs.map(hub => (
             <button
               key={hub.view}

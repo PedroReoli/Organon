@@ -36,8 +36,8 @@ export const CompactTodayQueue: React.FC<CompactTodayQueueProps> = ({
       className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full"
     >
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 min-w-0">
             <div
               style={{
                 background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',

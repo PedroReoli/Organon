@@ -26,8 +26,8 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
       className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full"
     >
       <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
             <div
               style={{
                 background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
@@ -37,7 +37,7 @@ export const RecentNotesWidget: React.FC<RecentNotesWidgetProps> = ({
             >
               <NotePencil size={18} weight="duotone" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 style={{ color: 'var(--color-text)' }} className="text-xs font-bold">Notas Recentes</h3>
               <p style={{ color: 'var(--color-text-muted)' }} className="text-[11px]">Últimos documentos editados</p>
             </div>

@@ -12,6 +12,7 @@ import { ActiveSprintWidget } from './components/ActiveSprintWidget'
 import { RecentNotesWidget } from './components/RecentNotesWidget'
 import { ModernHubNavigation } from './components/ModernHubNavigation'
 import { Gauge, Clock, CalendarBlank, CheckCircle } from '@phosphor-icons/react'
+import './dashboard-responsive.css'
 
 export type DashboardSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
 
@@ -149,7 +150,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
 
   return (
     <div
-      className="w-full h-full min-h-screen p-4 sm:p-6 overflow-y-auto space-y-4"
+      className="dashboard-page w-full h-full min-w-0 overflow-x-hidden overflow-y-auto"
       style={{
         background: 'var(--color-background)',
         color: 'var(--color-text)',
@@ -200,9 +201,9 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
           background: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
         }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border shadow-xs transition-all"
+        className="dashboard-hero flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border shadow-xs transition-all"
       >
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span
               style={{
@@ -262,9 +263,9 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
       />
 
       {/* Main Charts & Queue Grid (Responsive 1 to 3 Columns) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
+      <div className="dashboard-main-grid">
         {/* Weekly Activity Bar Chart (5 Columns on XL) */}
-        <div className="xl:col-span-5 h-full min-w-0">
+        <div className="dashboard-main-grid__weekly min-w-0">
           <WeeklyActivityChart
             days={weeklyData}
             onSelectDate={date => onGoToCalendarDate(date)}
@@ -272,7 +273,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
         </div>
 
         {/* Priority Donut Chart (3 Columns on XL) */}
-        <div className="xl:col-span-3 h-full min-w-0">
+        <div className="dashboard-main-grid__priority min-w-0">
           <PriorityDonutChart
             urgentCount={urgentCount}
             highCount={highCount}
@@ -283,7 +284,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
         </div>
 
         {/* Compact Today Executive Queue (4 Columns on XL) */}
-        <div className="xl:col-span-4 h-full min-w-0">
+        <div className="dashboard-main-grid__queue min-w-0">
           <CompactTodayQueue
             todayCards={todayCards}
             onToggleCard={cardId => {
@@ -299,7 +300,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* Bottom Grid: Sprint Widget, Recent Notes & Modern Hub Navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+      <div className="dashboard-bottom-grid">
         <div className="min-w-0">
           <ActiveSprintWidget
             sprintName="Sprint 1 - Launch & Growth"
@@ -320,7 +321,7 @@ export const DashboardPage: React.FC<DashboardHomeProps> = ({
           />
         </div>
 
-        <div className="min-w-0 md:col-span-2 xl:col-span-1">
+        <div className="min-w-0">
           <ModernHubNavigation onNavigate={onNavigate} />
         </div>
       </div>

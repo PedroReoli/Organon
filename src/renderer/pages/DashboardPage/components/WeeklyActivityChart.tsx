@@ -31,7 +31,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
-      className="border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full relative overflow-hidden transition-all group/container"
+      className="dashboard-weekly-card border p-4 rounded-xl shadow-xs flex flex-col justify-between h-full relative overflow-hidden transition-all group/container"
     >
       {/* Subtle background glow effect */}
       <div
@@ -40,7 +40,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 z-10">
+      <div className="dashboard-weekly-header flex items-center justify-between mb-2 z-10">
         <div className="flex items-center gap-2.5">
           <div
             style={{
@@ -104,7 +104,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
           background: 'color-mix(in srgb, var(--color-background) 80%, var(--color-surface))',
           borderColor: 'var(--color-border)',
         }}
-        className="px-3 py-1.5 rounded-lg border flex items-center justify-between text-xs mb-2 transition-all duration-200 z-10"
+        className="dashboard-weekly-inspector px-3 py-1.5 rounded-lg border flex items-center justify-between text-xs mb-2 transition-all duration-200 z-10"
       >
         <div className="flex items-center gap-2">
           <span
@@ -144,7 +144,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
       </div>
 
       {/* Interactive Bar Chart Area */}
-      <div className="relative h-40 flex items-end justify-between gap-2 px-1 pt-4 pb-1 z-10">
+      <div className="dashboard-weekly-bars relative flex items-end justify-between gap-2 px-1 pt-4 pb-1 z-10">
         {/* Background Grid Guide Lines */}
         <div className="absolute inset-x-2 top-4 bottom-7 flex flex-col justify-between pointer-events-none opacity-20">
           <div className="w-full border-b border-dashed border-white/20" />
@@ -257,7 +257,7 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
           borderColor: 'var(--color-border)',
           color: 'var(--color-text-muted)',
         }}
-        className="flex items-center justify-between pt-2 border-t mt-1 text-[11px] z-10"
+        className="dashboard-weekly-footer flex items-center justify-between pt-2 border-t mt-1 text-[11px] z-10"
       >
         <span className="flex items-center gap-1.5">
           <CalendarBlank size={13} weight="duotone" style={{ color: 'var(--color-primary)' }} />
@@ -271,4 +271,3 @@ export const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ days, 
     </div>
   )
 }
-

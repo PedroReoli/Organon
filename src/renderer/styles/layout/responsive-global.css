@@ -3,6 +3,22 @@
    ========================================================================== */
 
 /* ── Global Toolbar & App Header ─────────────────────────────────────────── */
+@media (max-width: 650px) {
+  .top-navbar-shell {
+    height: auto !important;
+    min-height: 54px;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    padding: 4px 12px 7px;
+  }
+
+  .top-navbar-links {
+    order: 3;
+    flex: 0 0 100%;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 768px) {
   .app-view-toolbar {
     padding: 4px 8px !important;
