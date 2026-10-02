@@ -90,6 +90,7 @@ export function useWhisperRecording({
   }, [selectedRecord?.id])
   const handleAskAgents = async (question: string, scope: ResearchScope) => {
     if ((scope === 'web' || scope === 'both') && projectContextRef.current?.allowWebResearch === false) { showToast('Ative a pesquisa na internet.', 'error'); return }
+    if ((scope === 'web' || scope === 'both') && projectContextRef.current?.allowExternalAI !== true) { showToast('Autorize IA externa nesta reunião para pesquisar na internet.', 'error'); return }
     await ensureOrchestrator().ask(question, scope)
   }
   const handleCancelResearch = (id: string) => { void orchestratorRef.current?.cancel(id) }

@@ -1,4 +1,4 @@
-import { Folder, FolderOpen, Globe, Search, Volume2, Unlink } from 'lucide-react'
+import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, Search, Volume2, Unlink } from 'lucide-react'
 import { ProjectContextConfig } from '../../../services/meetingIntelligence/types'
 
 const defaults: ProjectContextConfig = {
@@ -10,7 +10,9 @@ const defaults: ProjectContextConfig = {
   watchChanges: false,
   systemAudio: true,
   readOnly: true,
-  agentProviderId: 'codex',
+  agentProviderId: 'auto',
+  allowExternalAI: false,
+  allowLocalAI: true,
 }
 
 export function ProjectContextSelector({
@@ -75,11 +77,53 @@ export function ProjectContextSelector({
         {value.path ? (
           <span>Pasta ativa: <strong style={{ color: 'var(--color-text)' }}>{value.path}</strong></span>
         ) : (
-          <span>Nenhuma pasta vinculada. Pesquisa web disponível sem restrições.</span>
+          <span>Nenhuma pasta vinculada. A IA local continua disponível; serviços externos exigem autorização abaixo.</span>
         )}
       </div>
 
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <Bot size={13} style={{ color: 'var(--color-primary)' }} />
+        <label htmlFor="meeting-provider" style={{ fontSize: '11.5px', color: 'var(--color-text)' }}>Provedor preferido</label>
+        <select
+          id="meeting-provider"
+          value={value.agentProviderId}
+          onChange={(event) => update({ agentProviderId: event.target.value as ProjectContextConfig['agentProviderId'] })}
+          className="whisper-select"
+          style={{ minWidth: '170px' }}
+        >
+          <option value="auto">Automático com fallback</option>
+          <option value="ollama">Ollama local</option>
+          <option value="codex">Codex</option>
+          <option value="claude">Claude Code</option>
+          <option value="gemini">Gemini CLI</option>
+          <option value="antigravity">Antigravity</option>
+        </select>
+      </div>
+
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '11.5px', color: 'var(--color-text)' }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={value.allowLocalAI}
+            onChange={(event) => update({ allowLocalAI: event.target.checked })}
+          />
+          <HardDrive size={12} style={{ color: 'var(--color-text-muted)' }} />
+          <span>Permitir IA local</span>
+        </label>
+
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={value.allowExternalAI}
+            onChange={(event) => update({
+              allowExternalAI: event.target.checked,
+              allowWebResearch: event.target.checked ? value.allowWebResearch : false,
+            })}
+          />
+          <Cloud size={12} style={{ color: 'var(--color-text-muted)' }} />
+          <span>Autorizar envio para IA externa nesta reunião</span>
+        </label>
+
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
           <input
             type="checkbox"
@@ -90,10 +134,11 @@ export function ProjectContextSelector({
           <span>Pesquisar perguntas da conversa</span>
         </label>
 
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>
           <input
             type="checkbox"
             checked={value.allowWebResearch}
+            disabled={!value.allowExternalAI}
             onChange={(event) => update({ allowWebResearch: event.target.checked })}
           />
           <Globe size={12} style={{ color: 'var(--color-text-muted)' }} />

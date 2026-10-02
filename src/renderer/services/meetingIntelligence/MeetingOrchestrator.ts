@@ -65,12 +65,17 @@ export class MeetingOrchestrator {
         if (!this.api?.meetingAgentRun) throw new Error('Abra o Organon desktop atualizado para usar os agentes.')
         const answer: AgentTaskResponse = await this.api.meetingAgentRun({ id: task.id, question: clean, scope,
           projectPath: this.projectContext?.enabled ? this.projectContext.path : undefined,
-          context: scope === 'report' ? this.transcript.join(' ') : this.transcript.join(' ').slice(-6000), previousReport: scope === 'report' ? this.exportReport() : undefined })
+          context: scope === 'report' ? this.transcript.join(' ') : this.transcript.join(' ').slice(-6000),
+          previousReport: scope === 'report' ? this.exportReport() : undefined,
+          providerId: this.projectContext?.agentProviderId || 'auto',
+          allowExternalAI: this.projectContext?.allowExternalAI === true,
+          allowLocalAI: this.projectContext?.allowLocalAI !== false,
+        })
         if (this.disposed || (task.status as string) === 'cancelled') return
         if (!answer.findings?.trim()) throw new Error('O agente não retornou uma resposta.')
         if (scope === 'report') answer.sources = Array.from(new Map([...this.data.findings.flatMap(finding => finding.sources), ...answer.sources].map(source => [source.pathOrUrl, source])).values())
-        this.data.findings.unshift({ id: task.id, timestamp: new Date().toLocaleTimeString('pt-BR'), question: clean, summary: answer.findings, sources: answer.sources, confidence: 0 })
-        task.status = 'completed'; task.stage = 'Concluída'; this.log('ResearchCompleted', `${scope}: ${answer.sources.length} fontes retornadas.`)
+        this.data.findings.unshift({ id: task.id, timestamp: new Date().toLocaleTimeString('pt-BR'), question: clean, summary: answer.findings, sources: answer.sources, confidence: 0, providerId: answer.providerId })
+        task.status = 'completed'; task.stage = 'Concluída'; this.log('ResearchCompleted', `${scope}: ${answer.sources.length} fontes retornadas por ${answer.providerId || 'provedor automático'}.`)
       } catch (error) {
         if ((task.status as string) !== 'cancelled') { task.status = 'failed'; task.error = error instanceof Error ? error.message : 'Falha na pesquisa.'; task.stage = task.error }
         this.log('ResearchFailed', task.stage)
@@ -89,7 +94,7 @@ export class MeetingOrchestrator {
     if (this.projectContext?.automaticResearch === false) return
     if (result.intent === 'project_question' && this.projectContext?.enabled) {
       void this.ask(text, 'project', true)
-    } else if (result.intent === 'external_tech_question' && this.projectContext?.allowWebResearch !== false) {
+    } else if (result.intent === 'external_tech_question' && this.projectContext?.allowWebResearch !== false && this.projectContext?.allowExternalAI === true) {
       void this.ask(text, 'web', true)
     }
   }

@@ -3,16 +3,24 @@ import { promisify } from 'util'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
+import { resolveCommand } from './providers/cliRuntime'
+import type { ResearchAnswer } from './providers/types'
+
+export type { ResearchAnswer, ResearchSource } from './providers/types'
 
 const exec = promisify(execFile)
-export interface ResearchSource { type: 'web' | 'project'; title: string; pathOrUrl: string; snippet?: string; lineRange?: string }
-export interface ResearchAnswer { findings: string; sources: ResearchSource[] }
-
 export async function resolveMeetingCodex(): Promise<string> {
-  const candidates = [process.env.ORGANON_CODEX_PATH, process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || '', 'Programs/OpenAI/Codex/bin/codex.exe') : 'codex'].filter(Boolean) as string[]
-  for (const candidate of candidates) {
-    try { await exec(candidate, ['--version'], { windowsHide: true, timeout: 5000 }); return candidate } catch {}
-  }
+  const resolved = await resolveCommand({
+    envKey: 'ORGANON_CODEX_PATH',
+    commands: ['codex'],
+    knownPaths: process.platform === 'win32'
+      ? [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'OpenAI', 'Codex', 'bin', 'codex.exe')]
+      : [],
+    extensionPaths: [
+      { prefix: 'openai.chatgpt-', relativePath: path.join('bin', 'windows-x86_64', 'codex.exe') },
+    ],
+  })
+  if (resolved) return resolved.path
   throw new Error('Codex CLI não encontrado. Instale e entre na sua conta com codex login, ou configure ORGANON_CODEX_PATH.')
 }
 

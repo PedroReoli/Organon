@@ -20,6 +20,7 @@ import { useWhisperPersistence } from './hooks/useWhisperPersistence'
 import { useWhisperDiagnostics } from './hooks/useWhisperDiagnostics'
 import { useWhisperRecording } from './hooks/useWhisperRecording'
 import { useWhisperSelection } from './hooks/useWhisperSelection'
+import { getAgentProviderLabel } from './utils/whisperUtils'
 
 interface Props {
   onExportToNote?: (title: string, content: string) => void
@@ -381,7 +382,7 @@ export const WhisperPage: React.FC<Props> = ({
                     {projectContext?.path ? projectContext.name || 'Pasta Vinculada' : 'Sem pasta vinculada'}
                   </span>
                   <span className="whisper-context-badge">
-                    {projectContext?.allowWebResearch !== false ? '🌐 Web ativa' : '🌐 Web desativada'}
+                    {projectContext?.allowExternalAI === true && projectContext?.allowWebResearch !== false ? '🌐 Web autorizada' : '🔒 Somente local'}
                   </span>
                   {activeTasksCount > 0 && (
                     <span className="whisper-context-badge" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)' }}>
@@ -406,7 +407,12 @@ export const WhisperPage: React.FC<Props> = ({
                   <MeetingResearchConsole
                     data={intelligenceData}
                     hasProject={!!projectContext?.enabled && !!projectContext.path}
-                    allowWeb={projectContext?.allowWebResearch !== false}
+                    allowWeb={projectContext?.allowExternalAI === true && projectContext?.allowWebResearch !== false}
+                    providerPolicy={{
+                      preferredProviderId: projectContext?.agentProviderId || 'auto',
+                      allowExternalAI: projectContext?.allowExternalAI === true,
+                      allowLocalAI: projectContext?.allowLocalAI !== false,
+                    }}
                     onAsk={async (question, scope) => { setIsIntelligencePanelOpen(true); await handleAskAgents(question, scope) }}
                     onCancel={handleCancelResearch}
                     onExport={handleExportResearch}
@@ -554,7 +560,7 @@ export const WhisperPage: React.FC<Props> = ({
           {activeSideTab === 'intelligence' ? (
             <MeetingIntelligencePanel
               data={intelligenceData}
-              agentProviderName="Codex CLI · Web, código e relator"
+              agentProviderName={getAgentProviderLabel(projectContext?.agentProviderId)}
             />
           ) : (
             <LiveMeetingPanel

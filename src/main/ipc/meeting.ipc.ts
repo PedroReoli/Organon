@@ -1,7 +1,7 @@
 import { ipcMain, WebContents } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import { researchMeeting, MeetingResearchRequest, meetingAgentStatus } from '../meeting'
+import { researchMeeting, MeetingResearchRequest, meetingProviderStatus, type ProviderPolicy } from '../meeting'
 import { isPathSafe, isFileSensitiveOrBinary } from '../storage'
 
 const jobs = new Map<number, Map<string, AbortController>>()
@@ -21,11 +21,23 @@ function observe(sender: WebContents) {
 }
 
 export function registerMeetingResearchIpc() {
-  ipcMain.handle('meeting-agent:status', () => meetingAgentStatus())
+  ipcMain.handle('meeting-agent:status', (_event, policy?: Partial<ProviderPolicy>) => {
+    const preferredProviderId = ['auto', 'codex', 'claude', 'gemini', 'antigravity', 'ollama'].includes(policy?.preferredProviderId || '')
+      ? policy?.preferredProviderId
+      : 'auto'
+    return meetingProviderStatus({
+      preferredProviderId,
+      allowExternalAI: policy?.allowExternalAI === true,
+      allowLocalAI: policy?.allowLocalAI !== false,
+    })
+  })
 
   ipcMain.handle('meeting-agent:run', async (event, req: MeetingResearchRequest) => {
     if (!req || typeof req.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(req.id)) {
       throw new Error('Identificador de pesquisa inválido.')
+    }
+    if (req.providerId && !['auto', 'codex', 'claude', 'gemini', 'antigravity', 'ollama'].includes(req.providerId)) {
+      throw new Error('Provedor de IA inválido.')
     }
     observe(event.sender)
     const ownerJobs = jobs.get(event.sender.id) || new Map<string, AbortController>()

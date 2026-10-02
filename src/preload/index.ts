@@ -347,7 +347,7 @@ const electronAPI = {
     customEndpoint?: string
     initialPrompt?: string
   }) => ipcRenderer.invoke('whisper:transcribeCloudDetailed', request),
-  meetingAgentStatus: () => ipcRenderer.invoke('meeting-agent:status'),
+  meetingAgentStatus: (policy?: unknown) => ipcRenderer.invoke('meeting-agent:status', policy),
   meetingAgentRun: (request: unknown) => ipcRenderer.invoke('meeting-agent:run', request),
   meetingAgentCancel: (id: string) => ipcRenderer.invoke('meeting-agent:cancel', id),
   meetingAgentWatch: (root?: string) => ipcRenderer.invoke('meeting-agent:watch', root),

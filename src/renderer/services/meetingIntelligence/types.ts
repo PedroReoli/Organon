@@ -1,3 +1,5 @@
+export type MeetingProviderId = 'codex' | 'claude' | 'gemini' | 'antigravity' | 'ollama'
+
 export interface ProjectContextConfig {
   enabled: boolean
   name: string
@@ -7,7 +9,9 @@ export interface ProjectContextConfig {
   watchChanges?: boolean
   systemAudio?: boolean
   readOnly: true
-  agentProviderId?: 'codex' | 'antigravity' | 'local' | 'auto'
+  agentProviderId?: MeetingProviderId | 'auto'
+  allowExternalAI?: boolean
+  allowLocalAI?: boolean
 }
 
 export type IntentType =
@@ -40,6 +44,7 @@ export interface ProjectFinding {
   summary: string
   sources: SourceAttribution[]
   confidence: number
+  providerId?: MeetingProviderId
 }
 
 export interface ActionItem {
@@ -67,22 +72,8 @@ export interface MeetingIntelligenceData {
   auditLog: Array<{ id: string; timestamp: string; action: string; details: string }>
 }
 
-export interface AgentTaskRequest {
-  meetingTitle: string
-  transcriptSnippet: string
-  intent: IntentType
-  projectPath?: string
-  searchQuery?: string
-}
-
 export interface AgentTaskResponse {
   findings: string
   sources: SourceAttribution[]
-}
-
-export interface IAgentProvider {
-  id: 'codex' | 'antigravity' | 'local' | 'auto'
-  name: string
-  isAvailable(): Promise<boolean>
-  analyze(req: AgentTaskRequest): Promise<AgentTaskResponse>
+  providerId?: MeetingProviderId
 }

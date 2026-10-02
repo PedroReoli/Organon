@@ -1,33 +1,51 @@
 import { useEffect, useState } from 'react'
 import { Bot, RefreshCw, Send, Sparkles, Copy, Download, X, AlertCircle } from 'lucide-react'
-import { MeetingIntelligenceData, ResearchScope } from '../../../services/meetingIntelligence/types'
+import { MeetingIntelligenceData, MeetingProviderId, ResearchScope } from '../../../services/meetingIntelligence/types'
+
+interface ProviderPolicyView {
+  preferredProviderId: MeetingProviderId | 'auto'
+  allowExternalAI: boolean
+  allowLocalAI: boolean
+}
+
+interface ProviderStatusView {
+  id: MeetingProviderId
+  name: string
+  available: boolean
+  installed: boolean
+  detail: string
+  capabilities: { local: boolean }
+}
 
 interface Props {
   data: MeetingIntelligenceData
   hasProject: boolean
   allowWeb: boolean
+  providerPolicy: ProviderPolicyView
   onAsk: (question: string, scope: ResearchScope) => Promise<void>
   onCancel: (id: string) => void
   onExport: () => string
 }
 
-export function MeetingResearchConsole({ data, hasProject, allowWeb, onAsk, onCancel, onExport }: Props) {
+export function MeetingResearchConsole({ data, hasProject, allowWeb, providerPolicy, onAsk, onCancel, onExport }: Props) {
   const [question, setQuestion] = useState('')
   const [scope, setScope] = useState<ResearchScope>('web')
   const [status, setStatus] = useState('Verificando agente…')
   const [available, setAvailable] = useState(false)
+  const [providers, setProviders] = useState<ProviderStatusView[]>([])
   const [copied, setCopied] = useState(false)
 
   const refresh = () => {
-    void (window.electronAPI as any)?.meetingAgentStatus?.()
-      .then((value: { available: boolean; detail: string }) => {
+    void (window.electronAPI as any)?.meetingAgentStatus?.(providerPolicy)
+      .then((value: { available: boolean; detail: string; providers?: ProviderStatusView[] }) => {
         setAvailable(value.available)
         setStatus(value.detail)
+        setProviders(value.providers || [])
       })
       .catch(() => setStatus('Não foi possível verificar o agente.'))
   }
 
-  useEffect(refresh, [])
+  useEffect(refresh, [providerPolicy.preferredProviderId, providerPolicy.allowExternalAI, providerPolicy.allowLocalAI])
 
   const tasks = data.tasks || []
   const active = tasks.filter((task) => task.status === 'running' || task.status === 'queued')
@@ -77,6 +95,25 @@ export function MeetingResearchConsole({ data, hasProject, allowWeb, onAsk, onCa
           <RefreshCw size={11} />
           <span>Verificar Conexão</span>
         </button>
+      </div>
+
+      <div aria-label="Provedores de IA detectados" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {providers.map((provider) => (
+          <span
+            key={provider.id}
+            title={provider.detail}
+            style={{
+              border: '1px solid var(--color-border)',
+              borderRadius: '999px',
+              padding: '3px 7px',
+              fontSize: '10.5px',
+              color: provider.available ? 'var(--color-text)' : 'var(--color-text-muted)',
+              opacity: provider.available ? 1 : 0.65,
+            }}
+          >
+            {provider.available ? '●' : provider.installed ? '◐' : '○'} {provider.name}{provider.capabilities.local ? ' · local' : ''}
+          </span>
+        ))}
       </div>
 
       <form

@@ -20,9 +20,14 @@ export function extractHotwords(text: string): string[] {
   ).slice(0, 16)
 }
 
-export function getAgentProviderLabel(agentProviderId?: 'codex' | 'antigravity' | 'local' | 'auto'): string {
-  if (agentProviderId === 'codex') return 'Codex AI Orchestrator'
-  if (agentProviderId === 'antigravity') return 'Antigravity Agent'
-  if (agentProviderId === 'local') return 'Local LLM Agent'
-  return 'Codex + Antigravity Orchestrator'
+export function getAgentProviderLabel(agentProviderId?: 'codex' | 'claude' | 'gemini' | 'antigravity' | 'ollama' | 'auto'): string {
+  const labels = {
+    codex: 'Codex CLI',
+    claude: 'Claude Code',
+    gemini: 'Gemini CLI',
+    antigravity: 'Antigravity',
+    ollama: 'Ollama local',
+    auto: 'Multi-IA automático com fallback',
+  }
+  return labels[agentProviderId || 'auto']
 }

@@ -68,7 +68,8 @@
     "test:whisper:installer": "electron scripts/validate-whisper-model-installer.cjs",
     "test:whisper:transcription": "electron scripts/validate-whisper-transcription.cjs",
     "test:meeting:recording": "npm run typecheck:node && electron scripts/validate-meeting-recording.cjs",
-    "test:meeting:diarization": "npm run typecheck:node && electron scripts/validate-meeting-diarization.cjs"
+    "test:meeting:diarization": "npm run typecheck:node && electron scripts/validate-meeting-diarization.cjs",
+    "test:meeting:providers": "npm run typecheck:node && node scripts/validate-meeting-provider-gateway.cjs"
   },
   "keywords": [
     "electron",
