@@ -33,18 +33,31 @@
 
 /* Base Layout Containers */
 .whisper-page-container {
+  --whisper-canvas: #0c1324;
+  --whisper-panel: #151f33;
+  --whisper-panel-raised: #1b2940;
+  --whisper-line: #2b3a55;
+  --whisper-line-strong: #3a4c6a;
+  --whisper-ink: #f3f7ff;
+  --whisper-muted: #a7b5ca;
+  --whisper-subtle: #7f90aa;
+  --whisper-accent: #7c83ff;
+  --whisper-record: #f0525f;
+  --whisper-ready: #45d5a1;
   display: flex;
   height: 100%;
   width: 100%;
-  background: var(--color-background);
+  background: var(--whisper-canvas);
   overflow: hidden;
   position: relative;
+  color: var(--whisper-ink);
+  color-scheme: dark;
 }
 
 .whisper-drawer-sidebar {
   height: 100%;
   flex-shrink: 0;
-  background: var(--color-surface);
+  background: var(--whisper-panel);
   overflow: hidden;
   transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -61,24 +74,29 @@
 .whisper-scroll-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 24px;
+  padding: 18px 22px 28px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  scrollbar-color: var(--whisper-line-strong) transparent;
+}
+
+.whisper-scroll-body > * {
+  flex-shrink: 0;
 }
 
 /* Header Component */
 .whisper-header-bar {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--whisper-line);
+  background: var(--whisper-panel);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-shrink: 0;
   z-index: 10;
-  min-height: 48px;
+  min-height: 54px;
 }
 
 .whisper-header-left {
@@ -105,9 +123,9 @@
 
 .whisper-title {
   margin: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 760;
+  color: var(--whisper-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -163,13 +181,13 @@
 }
 
 .whisper-btn-icon-label {
-  padding: 5px 10px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-text);
-  font-size: 11.5px;
+  padding: 6px 10px;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--whisper-muted);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -182,34 +200,35 @@
 }
 
 .whisper-btn-icon-label:hover {
-  background: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--color-border-hover, var(--color-border));
-  transform: translateY(-0.5px);
+  background: var(--whisper-panel-raised);
+  border-color: var(--whisper-line);
+  color: var(--whisper-ink);
 }
 
 .whisper-btn-icon-label.active {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  color: var(--color-primary);
-  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: color-mix(in srgb, var(--whisper-accent) 14%, transparent);
+  color: #b7bbff;
+  border-color: color-mix(in srgb, var(--whisper-accent) 40%, transparent);
 }
 
 /* Mode Switcher Pill */
 .whisper-mode-switcher {
   display: inline-flex;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 7px;
-  padding: 2px;
+  background: var(--whisper-canvas);
+  border: 1px solid var(--whisper-line);
+  border-radius: 9px;
+  padding: 3px;
   gap: 2px;
 }
 
 .whisper-mode-btn {
-  padding: 4px 10px;
-  border-radius: 5px;
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
-  font-size: 11px;
+  color: var(--whisper-subtle);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -221,19 +240,25 @@
 }
 
 .whisper-mode-btn.active {
-  background: var(--color-surface);
-  color: var(--color-primary);
+  background: var(--whisper-panel-raised);
+  color: #c6c9ff;
   font-weight: 700;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+.whisper-mode-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* Status Pill */
 .whisper-status-pill {
-  font-size: 11px;
+  min-height: 30px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 12px;
-  border: none;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -248,51 +273,85 @@
 
 /* Recording Hero Sleek Card */
 .whisper-hero-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 12px 18px;
+  background: var(--whisper-panel);
+  border: 1px solid var(--whisper-line);
+  border-radius: 11px;
+  padding: 15px 18px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 12px 30px -24px rgba(0, 0, 0, 0.9);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .whisper-hero-card.recording {
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 4px 20px -4px rgba(239, 68, 68, 0.15);
+  border-color: color-mix(in srgb, var(--whisper-record) 55%, var(--whisper-line));
+  box-shadow: 0 16px 36px -24px rgba(240, 82, 95, 0.55);
 }
 
 .whisper-recording-progress {
   position: absolute;
-  top: 0;
+  top: 8px;
+  bottom: 8px;
   left: 0;
-  right: 0;
-  height: 2.5px;
-  background: linear-gradient(90deg, #ef4444, #f97316, #ef4444);
-  background-size: 200% 100%;
-  animation: whisperGradientBar 2.5s infinite linear;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: var(--whisper-record);
 }
 
 .whisper-hero-main-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: 18px;
 }
 
 .whisper-hero-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+.whisper-ready-state {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.whisper-ready-state-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--whisper-ready);
+  background: color-mix(in srgb, var(--whisper-ready) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--whisper-ready) 24%, transparent);
+}
+
+.whisper-ready-state-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.whisper-ready-state-copy strong {
+  color: var(--whisper-ink);
+  font-size: 13px;
+}
+
+.whisper-ready-state-copy span {
+  color: var(--whisper-muted);
+  font-size: 12px;
 }
 
 .whisper-live-meter {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -318,7 +377,7 @@
 .whisper-quality-badge {
   border-radius: 999px;
   padding: 2px 7px;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
   color: #15803d;
   background: rgba(34, 197, 94, 0.13);
@@ -379,13 +438,13 @@
 
 .whisper-timer-badge {
   font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ff9ca5;
+  background: rgba(240, 82, 95, 0.1);
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(240, 82, 95, 0.28);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -393,13 +452,13 @@
 }
 
 .whisper-btn-record-start {
-  padding: 6px 16px;
-  height: 32px;
-  border-radius: 7px;
+  padding: 8px 16px;
+  min-height: 38px;
+  border-radius: 8px;
   border: none;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: var(--whisper-record);
   color: #ffffff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -410,40 +469,40 @@
 }
 
 .whisper-btn-record-start:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  background: #ff6470;
+  box-shadow: 0 5px 14px rgba(240, 82, 95, 0.3);
 }
 
 .whisper-btn-record-stop {
-  padding: 6px 16px;
-  height: 32px;
-  border-radius: 7px;
+  padding: 8px 16px;
+  min-height: 38px;
+  border-radius: 8px;
   border: none;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: var(--whisper-record);
   color: #ffffff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 2px 8px rgba(240, 82, 95, 0.24);
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .whisper-btn-record-stop:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+  background: #ff6470;
+  box-shadow: 0 5px 14px rgba(240, 82, 95, 0.3);
 }
 
 .whisper-btn-action-primary {
-  padding: 6px 14px;
-  height: 32px;
-  border-radius: 7px;
+  padding: 8px 14px;
+  min-height: 38px;
+  border-radius: 8px;
   border: none;
-  background: var(--color-primary);
+  background: var(--whisper-accent);
   color: #ffffff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -460,13 +519,13 @@
 }
 
 .whisper-btn-action-secondary {
-  padding: 6px 12px;
-  height: 32px;
-  border-radius: 7px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-text);
-  font-size: 12px;
+  padding: 8px 12px;
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--whisper-line);
+  background: var(--whisper-canvas);
+  color: var(--whisper-ink);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -477,8 +536,50 @@
 }
 
 .whisper-btn-action-secondary:hover {
-  background: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--color-border-hover, var(--color-border));
+  background: var(--whisper-panel-raised);
+  border-color: var(--whisper-line-strong);
+}
+
+.whisper-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.whisper-hero-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--whisper-line) 72%, transparent);
+  color: var(--whisper-muted);
+  font-size: 12px;
+}
+
+.whisper-shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  color: var(--whisper-subtle);
+  white-space: nowrap;
+}
+
+.whisper-shortcut-hint kbd {
+  min-width: 22px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--whisper-line-strong);
+  background: var(--whisper-canvas);
+  color: var(--whisper-muted);
+  font-family: inherit;
+  font-size: 10px;
+  text-align: center;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Interim Live Transcript Card */
@@ -486,14 +587,26 @@
   margin-top: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-background));
-  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
-  font-size: 11.5px;
-  color: var(--color-primary);
+  background: color-mix(in srgb, var(--whisper-accent) 8%, var(--whisper-canvas));
+  border: 1px solid color-mix(in srgb, var(--whisper-accent) 24%, var(--whisper-line));
+  font-size: 12px;
+  color: #c6c9ff;
   line-height: 1.5;
   display: flex;
   align-items: flex-start;
   gap: 8px;
+}
+
+.whisper-interim-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.whisper-interim-box strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--whisper-ink);
+  font-size: 12px;
 }
 
 /* Collapsible Context & Agent Ribbon */
@@ -545,12 +658,13 @@
 
 /* Refined Form Controls in Research & Context */
 .whisper-input {
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 7px 10px;
-  font-size: 12px;
+  min-height: 38px;
+  background: var(--whisper-canvas);
+  color: var(--whisper-ink);
+  border: 1px solid var(--whisper-line);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.18s ease;
 }
@@ -561,23 +675,25 @@
 }
 
 .whisper-select {
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 7px 10px;
-  font-size: 12px;
+  min-height: 38px;
+  background: var(--whisper-canvas);
+  color: var(--whisper-ink);
+  border: 1px solid var(--whisper-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
   outline: none;
   cursor: pointer;
 }
 
 .whisper-btn-outline {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 11.5px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--whisper-line);
+  background: var(--whisper-panel-raised);
+  color: var(--whisper-ink);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -587,12 +703,12 @@
 }
 
 .whisper-btn-outline:hover:not(:disabled) {
-  background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
-  border-color: var(--color-border-hover, var(--color-border));
+  background: color-mix(in srgb, var(--whisper-panel-raised) 78%, white);
+  border-color: var(--whisper-line-strong);
 }
 
 .whisper-btn-outline:disabled {
-  opacity: 0.5;
+  opacity: 0.42;
   cursor: not-allowed;
 }
 
@@ -605,12 +721,10 @@
 }
 
 .whisper-timeline-header {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-  margin-bottom: 8px;
+  color: var(--whisper-muted);
+  margin-bottom: 9px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -618,11 +732,50 @@
 
 .whisper-timeline-card {
   flex: 1;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  background: var(--whisper-panel);
+  border: 1px solid var(--whisper-line);
+  border-radius: 11px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 16px 36px -30px rgba(0, 0, 0, 0.9);
+}
+
+.whisper-page-container button:focus-visible,
+.whisper-page-container input:focus-visible,
+.whisper-page-container select:focus-visible,
+.whisper-page-container [tabindex]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--whisper-accent) 80%, white);
+  outline-offset: 2px;
+}
+
+.whisper-page-container button:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whisper-page-container *,
+  .whisper-page-container *::before,
+  .whisper-page-container *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+.whisper-live-label,
+.whisper-processing-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.whisper-live-label {
+  color: #ff9ca5;
+}
+
+.whisper-processing-state {
+  color: #b7bbff;
 }

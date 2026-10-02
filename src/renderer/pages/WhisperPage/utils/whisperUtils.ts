@@ -27,7 +27,7 @@ export function getAgentProviderLabel(agentProviderId?: 'codex' | 'claude' | 'ge
     gemini: 'Gemini CLI',
     antigravity: 'Antigravity',
     ollama: 'Ollama local',
-    auto: 'Multi-IA automático com fallback',
+    auto: 'Multi-IA com escolha automática',
   }
   return labels[agentProviderId || 'auto']
 }

@@ -38,6 +38,9 @@ export const WhisperRecordDialogs: React.FC<WhisperRecordDialogsProps> = ({
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-record-title"
             style={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -47,7 +50,7 @@ export const WhisperRecordDialogs: React.FC<WhisperRecordDialogsProps> = ({
               boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
             }}
           >
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
+            <h4 id="rename-record-title" style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
               Renomear Gravação
             </h4>
             <input
@@ -123,6 +126,10 @@ export const WhisperRecordDialogs: React.FC<WhisperRecordDialogsProps> = ({
           }}
         >
           <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-record-title"
+            aria-describedby="delete-record-description"
             style={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -132,10 +139,10 @@ export const WhisperRecordDialogs: React.FC<WhisperRecordDialogsProps> = ({
               boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
             }}
           >
-            <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
+            <h4 id="delete-record-title" style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
               Excluir Gravação?
             </h4>
-            <p style={{ margin: '0 0 14px 0', fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+            <p id="delete-record-description" style={{ margin: '0 0 14px 0', fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
               Tem certeza que deseja excluir "{deletingRecord.title}"? Esta ação não pode ser desfeita.
             </p>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

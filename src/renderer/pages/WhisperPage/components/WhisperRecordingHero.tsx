@@ -1,5 +1,5 @@
 import React from 'react'
-import { Circle, Square, Sparkles, ExternalLink, Mic, Loader2, Radio } from 'lucide-react'
+import { Circle, Command, ExternalLink, Loader2, Mic, Radio, Sparkles, Square } from 'lucide-react'
 import type { WhisperAudioMetrics } from '../types/whisper.types'
 
 export type RecordingModeType = 'meeting' | 'interview' | 'prompt'
@@ -20,6 +20,7 @@ interface Props {
   audioMetrics: WhisperAudioMetrics
   onGenerateNotes: () => void
   isGeneratingNote?: boolean
+  canGenerateNotes?: boolean
 }
 
 export const WhisperRecordingHero: React.FC<Props> = ({
@@ -37,6 +38,7 @@ export const WhisperRecordingHero: React.FC<Props> = ({
   audioMetrics,
   onGenerateNotes,
   isGeneratingNote = false,
+  canGenerateNotes = false,
 }) => {
   const formatTimer = (sec: number) => {
     const mins = Math.floor(sec / 60)
@@ -83,7 +85,6 @@ export const WhisperRecordingHero: React.FC<Props> = ({
       {isRecording && <div className="whisper-recording-progress" />}
 
       <div className="whisper-hero-main-row">
-        {/* Esquerda: Status do Áudio + Timer */}
         <div className="whisper-hero-info">
           {isRecording ? (
             <div className="whisper-timer-badge">
@@ -91,17 +92,20 @@ export const WhisperRecordingHero: React.FC<Props> = ({
               <span>{formatTimer(durationSeconds)}</span>
             </div>
           ) : (
-            <div className="whisper-audio-spec-badge">
-              <Mic size={14} style={{ color: 'var(--color-primary)' }} />
-              <span>{audioStatusText}</span>
+            <div className="whisper-ready-state">
+              <span className="whisper-ready-state-icon" aria-hidden="true"><Mic size={17} /></span>
+              <span className="whisper-ready-state-copy">
+                <strong>Pronto para {modeDetails[recordingMode].label.toLowerCase()}</strong>
+                <span>{audioStatusText}</span>
+              </span>
             </div>
           )}
 
           {isRecording && (
             <div className="whisper-live-meter" aria-label={`Qualidade do áudio: ${qualityLabel}`}>
-              <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Radio size={12} style={{ color: '#ef4444' }} />
-                <span>Gravando ao vivo ({modeDetails[recordingMode].label})</span>
+              <span className="whisper-live-label">
+                <Radio size={13} />
+                <span>{modeDetails[recordingMode].label} ao vivo</span>
               </span>
               <div className="whisper-live-waveform" aria-hidden="true">
                 {(audioMetrics.waveform.length ? audioMetrics.waveform : Array(18).fill(0.08)).map((value, index) => (
@@ -113,15 +117,14 @@ export const WhisperRecordingHero: React.FC<Props> = ({
           )}
 
           {isTranscribing && (
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span className="whisper-processing-state" role="status">
               <Loader2 size={12} className="spin" />
-              <span>Processando transcrição...</span>
+              <span>Finalizando transcrição…</span>
             </span>
           )}
         </div>
 
-        {/* Direita: Botão Gravar/Parar, Gerar Notas e Janela Rápida */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="whisper-hero-actions">
           {!isRecording ? (
             <button
               type="button"
@@ -147,16 +150,16 @@ export const WhisperRecordingHero: React.FC<Props> = ({
           <button
             type="button"
             onClick={onGenerateNotes}
-            disabled={isGeneratingNote}
+            disabled={!canGenerateNotes || isGeneratingNote}
             className="whisper-btn-action-primary"
-            title="Gera notas estruturadas da reunião com decisões e tarefas"
+            title={canGenerateNotes ? 'Gerar ata com decisões e próximos passos' : 'Grave ou selecione uma transcrição antes de gerar a ata'}
           >
             {isGeneratingNote ? (
               <Loader2 size={13} className="spin" />
             ) : (
               <Sparkles size={13} />
             )}
-            <span>{isGeneratingNote ? 'Gerando...' : 'Gerar Notas IA'}</span>
+            <span>{isGeneratingNote ? 'Gerando…' : 'Gerar ata com IA'}</span>
           </button>
 
           {/* Botão Janela Rápida / Floating Pill */}
@@ -174,22 +177,23 @@ export const WhisperRecordingHero: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Sublinha informativa discreta quando não estiver gravando */}
       {!isRecording && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div className="whisper-hero-meta">
           <span>{modeDetails[recordingMode].desc}</span>
-          <span style={{ fontSize: '10.5px', opacity: 0.8 }}>Dica: Pressione Ctrl+Shift+Space para ditado em qualquer lugar</span>
+          <span className="whisper-shortcut-hint">
+            <Command size={12} />
+            <span>Ditado global</span>
+            <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>
+          </span>
         </div>
       )}
 
       {/* Pré-visualização do texto parcial em tempo real (Interim) */}
       {isRecording && interimText && (
         <div className="whisper-interim-box">
-          <Mic size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
+          <Mic size={14} className="whisper-interim-icon" />
           <div>
-            <strong style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', opacity: 0.85 }}>
-              Falando agora:
-            </strong>
+            <strong>Ouvindo agora</strong>
             <span>{interimText}</span>
           </div>
         </div>

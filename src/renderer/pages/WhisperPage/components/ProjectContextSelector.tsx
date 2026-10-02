@@ -1,5 +1,18 @@
-import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, ShieldCheck, Volume2, Unlink } from 'lucide-react'
-import { ProjectContextConfig } from '../../../services/meetingIntelligence/types'
+import type { ReactNode } from 'react'
+import {
+  Bot,
+  Cloud,
+  FileCode2,
+  Folder,
+  FolderOpen,
+  Globe,
+  HardDrive,
+  RefreshCw,
+  ShieldCheck,
+  Unlink,
+  Volume2,
+} from 'lucide-react'
+import type { ProjectContextConfig } from '../../../services/meetingIntelligence/types'
 
 const defaults: ProjectContextConfig = {
   enabled: false,
@@ -15,6 +28,43 @@ const defaults: ProjectContextConfig = {
   allowExternalAI: false,
   allowLocalAI: true,
   redactExternalAI: true,
+}
+
+interface PermissionToggleProps {
+  checked: boolean
+  disabled?: boolean
+  icon: ReactNode
+  title: string
+  description: string
+  onChange: (checked: boolean) => void
+}
+
+function PermissionToggle({
+  checked,
+  disabled = false,
+  icon,
+  title,
+  description,
+  onChange,
+}: PermissionToggleProps) {
+  return (
+    <label className={`whisper-permission-toggle ${disabled ? 'is-disabled' : ''}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={event => onChange(event.target.checked)}
+      />
+      <span className="whisper-permission-icon" aria-hidden="true">{icon}</span>
+      <span className="whisper-permission-copy">
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </span>
+      <span className="whisper-switch-track" aria-hidden="true">
+        <span />
+      </span>
+    </label>
+  )
 }
 
 export function ProjectContextSelector({
@@ -33,167 +83,144 @@ export function ProjectContextSelector({
   }
 
   return (
-    <div
-      style={{
-        padding: '12px 14px',
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: '10px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}
-      aria-label="Contexto da reunião"
-    >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Folder size={15} style={{ color: 'var(--color-primary)' }} />
-          <strong style={{ fontSize: '12.5px', color: 'var(--color-text)' }}>Contexto do Projeto & Pastas</strong>
-        </div>
+    <section className="whisper-config-panel whisper-project-context" aria-label="Contexto da reunião">
+      <div className="whisper-config-header">
+        <span className="whisper-config-icon" aria-hidden="true"><FolderOpen size={17} /></span>
+        <span className="whisper-config-title">
+          <strong>Contexto da reunião</strong>
+          <span>Escolha o que o copiloto pode ouvir, ler e pesquisar.</span>
+        </span>
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            type="button"
-            onClick={() => void chooseFolder()}
-            className="whisper-btn-outline"
-          >
-            {value.path ? <FolderOpen size={12} /> : <Folder size={12} />}
-            <span>{value.path ? 'Trocar Pasta' : 'Vincular Pasta'}</span>
+      <div className={`whisper-folder-source ${value.path ? 'has-folder' : ''}`}>
+        <span className="whisper-folder-source-icon" aria-hidden="true">
+          {value.path ? <FolderOpen size={18} /> : <Folder size={18} />}
+        </span>
+        <span className="whisper-folder-source-copy">
+          <strong>{value.path ? value.name || 'Pasta vinculada' : 'Nenhuma pasta vinculada'}</strong>
+          <span title={value.path || undefined}>
+            {value.path || 'Vincule um projeto para pesquisar documentos e código durante a conversa.'}
+          </span>
+        </span>
+        <span className="whisper-folder-source-actions">
+          <button type="button" onClick={() => void chooseFolder()} className="whisper-btn-outline">
+            {value.path ? <RefreshCw size={13} /> : <FolderOpen size={13} />}
+            <span>{value.path ? 'Trocar' : 'Vincular pasta'}</span>
           </button>
-
           {value.path && (
             <button
               type="button"
               onClick={() => update({ enabled: false, path: '', name: '', watchChanges: false })}
-              className="whisper-btn-outline"
+              className="whisper-btn-quiet"
               title="Desvincular pasta do contexto"
             >
-              <Unlink size={12} />
+              <Unlink size={13} />
               <span>Desvincular</span>
             </button>
           )}
-        </div>
+        </span>
       </div>
 
-      <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', overflowWrap: 'anywhere' }}>
-        {value.path ? (
-          <span>Pasta ativa: <strong style={{ color: 'var(--color-text)' }}>{value.path}</strong></span>
-        ) : (
-          <span>Nenhuma pasta vinculada. A IA local continua disponível; serviços externos exigem autorização abaixo.</span>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <Bot size={13} style={{ color: 'var(--color-primary)' }} />
-        <label htmlFor="meeting-provider" style={{ fontSize: '11.5px', color: 'var(--color-text)' }}>Provedor preferido</label>
-        <select
-          id="meeting-provider"
-          value={value.agentProviderId}
-          onChange={(event) => update({ agentProviderId: event.target.value as ProjectContextConfig['agentProviderId'] })}
-          className="whisper-select"
-          style={{ minWidth: '170px' }}
-        >
-          <option value="auto">Automático com fallback</option>
-          <option value="ollama">Ollama local</option>
-          <option value="codex">Codex</option>
-          <option value="claude">Claude Code</option>
-          <option value="gemini">Gemini CLI</option>
-          <option value="antigravity">Antigravity</option>
-        </select>
-        <label htmlFor="copilot-mode" style={{ fontSize: '11.5px', color: 'var(--color-text)' }}>Copiloto</label>
-        <select
-          id="copilot-mode"
-          value={value.copilotMode}
-          onChange={(event) => {
-            const mode = event.target.value as ProjectContextConfig['copilotMode']
-            update({ copilotMode: mode, automaticResearch: mode === 'automatic' })
-          }}
-          className="whisper-select"
-          title="Automático executa pesquisas permitidas; Assistido sugere; Manual apenas registra."
-        >
-          <option value="assist">Assistido (recomendado)</option>
-          <option value="automatic">Automático</option>
-          <option value="manual">Manual</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '11.5px', color: 'var(--color-text)' }}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={value.allowLocalAI}
-            onChange={(event) => update({ allowLocalAI: event.target.checked })}
-          />
-          <HardDrive size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Permitir IA local</span>
+      <div className="whisper-context-fields">
+        <label className="whisper-field" htmlFor="meeting-provider">
+          <span><Bot size={13} /> Provedor preferido</span>
+          <select
+            id="meeting-provider"
+            value={value.agentProviderId}
+            onChange={event => update({ agentProviderId: event.target.value as ProjectContextConfig['agentProviderId'] })}
+            className="whisper-select"
+          >
+            <option value="auto">Escolher automaticamente</option>
+            <option value="ollama">Ollama local</option>
+            <option value="codex">Codex</option>
+            <option value="claude">Claude Code</option>
+            <option value="gemini">Gemini CLI</option>
+            <option value="antigravity">Antigravity (agy)</option>
+          </select>
         </label>
 
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={value.allowExternalAI}
-            onChange={(event) => update({
-              allowExternalAI: event.target.checked,
-              allowWebResearch: event.target.checked ? value.allowWebResearch : false,
-            })}
-          />
-          <Cloud size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Autorizar envio para IA externa nesta reunião</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>
-          <input
-            type="checkbox"
-            checked={value.redactExternalAI}
-            disabled={!value.allowExternalAI}
-            onChange={(event) => update({ redactExternalAI: event.target.checked })}
-          />
-          <ShieldCheck size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Redigir dados sensíveis antes do envio</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>
-          <input
-            type="checkbox"
-            checked={value.allowWebResearch}
-            disabled={!value.allowExternalAI}
-            onChange={(event) => update({ allowWebResearch: event.target.checked })}
-          />
-          <Globe size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Usar internet</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.path ? 'pointer' : 'not-allowed', opacity: value.path ? 1 : 0.6 }}>
-          <input
-            type="checkbox"
-            checked={value.enabled}
-            disabled={!value.path}
-            onChange={(event) => update({ enabled: event.target.checked })}
-          />
-          <span>Analisar código da pasta</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.enabled ? 'pointer' : 'not-allowed', opacity: value.enabled ? 1 : 0.6 }}>
-          <input
-            type="checkbox"
-            checked={value.watchChanges}
-            disabled={!value.enabled}
-            onChange={(event) => update({ watchChanges: event.target.checked })}
-          />
-          <span>Acompanhar alterações</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={value.systemAudio}
-            onChange={(event) => update({ systemAudio: event.target.checked })}
-          />
-          <Volume2 size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Capturar áudio do sistema</span>
+        <label className="whisper-field" htmlFor="copilot-mode">
+          <span><ShieldCheck size={13} /> Comportamento do copiloto</span>
+          <select
+            id="copilot-mode"
+            value={value.copilotMode}
+            onChange={event => {
+              const mode = event.target.value as ProjectContextConfig['copilotMode']
+              update({ copilotMode: mode, automaticResearch: mode === 'automatic' })
+            }}
+            className="whisper-select"
+            title="Automático executa pesquisas permitidas; Assistido sugere; Manual apenas registra."
+          >
+            <option value="assist">Assistido — sugere antes de agir</option>
+            <option value="automatic">Automático — pesquisa durante a fala</option>
+            <option value="manual">Manual — somente quando solicitado</option>
+          </select>
         </label>
       </div>
-    </div>
+
+      <div className="whisper-permissions-heading">
+        <strong>Fontes e permissões</strong>
+        <span>Valem somente para esta configuração de reunião.</span>
+      </div>
+
+      <div className="whisper-permission-grid">
+        <PermissionToggle
+          checked={Boolean(value.allowLocalAI)}
+          icon={<HardDrive size={15} />}
+          title="IA local"
+          description="Usa o Ollama sem enviar conteúdo para fora."
+          onChange={allowLocalAI => update({ allowLocalAI })}
+        />
+        <PermissionToggle
+          checked={Boolean(value.allowExternalAI)}
+          icon={<Cloud size={15} />}
+          title="IAs externas"
+          description="Libera Codex, Claude, Gemini e Antigravity nesta reunião."
+          onChange={allowExternalAI => update({
+            allowExternalAI,
+            allowWebResearch: allowExternalAI ? value.allowWebResearch : false,
+          })}
+        />
+        <PermissionToggle
+          checked={Boolean(value.redactExternalAI)}
+          disabled={!value.allowExternalAI}
+          icon={<ShieldCheck size={15} />}
+          title="Proteção de dados"
+          description="Oculta documentos, contatos, chaves e caminhos pessoais."
+          onChange={redactExternalAI => update({ redactExternalAI })}
+        />
+        <PermissionToggle
+          checked={value.allowWebResearch}
+          disabled={!value.allowExternalAI}
+          icon={<Globe size={15} />}
+          title="Pesquisa na internet"
+          description="Permite consultar a web quando uma pergunta pedir contexto externo."
+          onChange={allowWebResearch => update({ allowWebResearch })}
+        />
+        <PermissionToggle
+          checked={value.enabled}
+          disabled={!value.path}
+          icon={<FileCode2 size={15} />}
+          title="Ler a pasta vinculada"
+          description="Pesquisa arquivos e código somente na pasta escolhida."
+          onChange={enabled => update({ enabled })}
+        />
+        <PermissionToggle
+          checked={Boolean(value.watchChanges)}
+          disabled={!value.enabled}
+          icon={<RefreshCw size={15} />}
+          title="Acompanhar alterações"
+          description="Atualiza o contexto quando arquivos da pasta mudarem."
+          onChange={watchChanges => update({ watchChanges })}
+        />
+        <PermissionToggle
+          checked={Boolean(value.systemAudio)}
+          icon={<Volume2 size={15} />}
+          title="Áudio do sistema"
+          description="Inclui a fala das outras pessoas e o som compartilhado."
+          onChange={systemAudio => update({ systemAudio })}
+        />
+      </div>
+    </section>
   )
 }
-

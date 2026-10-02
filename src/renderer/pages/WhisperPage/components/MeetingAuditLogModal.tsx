@@ -31,6 +31,9 @@ export const MeetingAuditLogModal: React.FC<Props> = ({ logs, onClose }) => {
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="meeting-audit-title"
         style={{
           width: '640px',
           maxWidth: '90vw',
@@ -53,11 +56,11 @@ export const MeetingAuditLogModal: React.FC<Props> = ({ logs, onClose }) => {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text)' }}>
+            <h3 id="meeting-audit-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text)' }}>
               Registro de Auditoria de Agentes (Audit Log)
             </h3>
           </div>
-          <button onClick={onClose} aria-label="Fechar" style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <button type="button" onClick={onClose} aria-label="Fechar auditoria" style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <X size={18} />
           </button>
         </div>

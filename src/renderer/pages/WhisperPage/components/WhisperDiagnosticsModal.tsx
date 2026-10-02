@@ -36,6 +36,9 @@ export const WhisperDiagnosticsModal: React.FC<WhisperDiagnosticsModalProps> = (
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="whisper-diagnostics-title"
         onClick={e => e.stopPropagation()}
         style={{
           background: 'var(--color-surface)',
@@ -49,7 +52,7 @@ export const WhisperDiagnosticsModal: React.FC<WhisperDiagnosticsModalProps> = (
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--color-text)' }}>
+            <h3 id="whisper-diagnostics-title" style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--color-text)' }}>
               Status dos Motores Whisper
             </h3>
             <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
@@ -58,7 +61,9 @@ export const WhisperDiagnosticsModal: React.FC<WhisperDiagnosticsModalProps> = (
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Fechar diagnóstico"
             style={{
               background: 'none',
               border: 'none',
@@ -123,6 +128,7 @@ export const WhisperDiagnosticsModal: React.FC<WhisperDiagnosticsModalProps> = (
         </div>
 
         <button
+          type="button"
           onClick={onClose}
           style={{
             width: '100%',

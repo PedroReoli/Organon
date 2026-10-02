@@ -1,0 +1,198 @@
+/* Adaptação estrutural da superfície Whisper */
+
+@media (max-width: 1280px) {
+  .whisper-page-container .whisper-context-ribbon-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .whisper-project-context {
+    border-right: 0;
+    border-bottom: 1px solid var(--whisper-line);
+  }
+}
+
+@media (max-width: 1120px) {
+  .whisper-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 39;
+    display: block;
+    border: 0;
+    background: rgba(2, 6, 23, 0.58);
+    cursor: default;
+  }
+
+  .whisper-drawer-sidebar.whisper-history-drawer,
+  .whisper-drawer-sidebar.whisper-intelligence-drawer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: 0 24px 56px rgba(2, 6, 23, 0.56);
+  }
+
+  .whisper-drawer-sidebar.whisper-history-drawer {
+    left: 0;
+  }
+
+  .whisper-drawer-sidebar.whisper-intelligence-drawer {
+    right: 0;
+  }
+
+  .whisper-side-tabs .whisper-side-close {
+    display: inline-flex;
+    flex: 0 0 32px;
+    padding: 5px;
+  }
+
+  .whisper-scroll-body {
+    padding-inline: 18px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .whisper-header-bar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .whisper-header-left {
+    flex: 1 1 45%;
+  }
+
+  .whisper-header-center {
+    order: 3;
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px solid var(--whisper-line);
+  }
+
+  .whisper-header-right {
+    flex: 0 1 auto;
+  }
+
+  .whisper-context-ribbon-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .whisper-context-summary {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .whisper-context-toggle-label {
+    margin-left: auto;
+  }
+
+  .whisper-hero-main-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .whisper-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .whisper-hero-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 680px) {
+  .whisper-scroll-body {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .whisper-hero-card,
+  .whisper-config-panel {
+    padding: 14px;
+  }
+
+  .whisper-context-fields,
+  .whisper-permission-grid,
+  .whisper-provider-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .whisper-folder-source {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .whisper-folder-source-actions {
+    grid-column: 1 / -1;
+    padding-left: 44px;
+  }
+
+  .whisper-agent-composer-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .whisper-agent-composer-row .whisper-btn-primary,
+  .whisper-agent-composer-row .whisper-select {
+    width: 100%;
+  }
+
+  .whisper-permissions-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .whisper-permissions-heading span {
+    text-align: left;
+  }
+
+  .whisper-hero-actions > button {
+    flex: 1 1 150px;
+  }
+
+  .whisper-shortcut-hint {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .whisper-drawer-sidebar.whisper-intelligence-drawer {
+    max-width: min(350px, 92vw);
+  }
+
+  .whisper-drawer-sidebar.whisper-history-drawer {
+    max-width: min(280px, 88vw);
+  }
+}
+
+@media (max-width: 460px) {
+  .whisper-context-heading-copy > span,
+  .whisper-context-badge:not(.is-active),
+  .whisper-shortcut-hint > span,
+  .whisper-header-right .whisper-status-pill {
+    display: none;
+  }
+
+  .whisper-context-toggle-label {
+    margin-left: 0;
+  }
+
+  .whisper-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .whisper-hero-actions > button {
+    width: 100%;
+  }
+
+  .whisper-live-meter {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .whisper-live-waveform {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

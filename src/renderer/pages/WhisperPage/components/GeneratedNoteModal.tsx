@@ -62,6 +62,9 @@ export const GeneratedNoteModal: React.FC<Props> = ({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="generated-note-title"
         onClick={e => e.stopPropagation()}
         style={{
           width: '760px',
@@ -111,7 +114,7 @@ export const GeneratedNoteModal: React.FC<Props> = ({
               </span>
             </div>
 
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <h3 id="generated-note-title" style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {noteData.title}
             </h3>
           </div>

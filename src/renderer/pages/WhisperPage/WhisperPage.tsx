@@ -1,19 +1,18 @@
-import { MeetingResearchConsole } from './components/MeetingResearchConsole'
 import React, { useEffect, useRef, useState } from 'react'
 import type { Meeting, Settings } from '@types'
 import { WhisperSidebar } from './components/WhisperSidebar'
 import { SpeakerTimeline } from './components/SpeakerTimeline'
 import { LiveMeetingPanel } from './components/LiveMeetingPanel'
-import { ProjectContextSelector } from './components/ProjectContextSelector'
 import { MeetingIntelligencePanel } from './components/MeetingIntelligencePanel'
 import { WhisperRecordingHero } from './components/WhisperRecordingHero'
+import { WhisperContextWorkspace } from './components/WhisperContextWorkspace'
 import { LiveSearchContextBanner } from './components/LiveSearchContextBanner'
 import { GeneratedNoteModal } from './components/GeneratedNoteModal'
 import { WhisperHeader } from './components/WhisperHeader'
 import { WhisperDiagnosticsModal } from './components/WhisperDiagnosticsModal'
 import { WhisperBulkActionsBar } from './components/WhisperBulkActionsBar'
 import { TranscriptPromptSettingsModal } from '../TranscriptsPage/components/TranscriptPromptSettingsModal'
-import { ChevronDown, ChevronUp, SlidersHorizontal, Sparkles, FileText } from 'lucide-react'
+import { Sparkles, FileText, X } from 'lucide-react'
 import '../../styles/features/whisper/whisper.css'
 
 import { useWhisperPersistence } from './hooks/useWhisperPersistence'
@@ -21,6 +20,9 @@ import { useWhisperDiagnostics } from './hooks/useWhisperDiagnostics'
 import { useWhisperRecording } from './hooks/useWhisperRecording'
 import { useWhisperSelection } from './hooks/useWhisperSelection'
 import { getAgentProviderLabel } from './utils/whisperUtils'
+import '../../styles/features/whisper/whisper-context.css'
+import '../../styles/features/whisper/whisper-intelligence.css'
+import '../../styles/features/whisper/whisper-responsive.css'
 
 interface Props {
   onExportToNote?: (title: string, content: string) => void
@@ -174,12 +176,23 @@ export const WhisperPage: React.FC<Props> = ({
 
   // Controles de Visibilidade da Interface
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)
-  const [isIntelligencePanelOpen, setIsIntelligencePanelOpen] = useState(true)
+  const [isIntelligencePanelOpen, setIsIntelligencePanelOpen] = useState(
+    () => window.innerWidth > 1120,
+  )
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false)
   const [activeSideTab, setActiveSideTab] = useState<'intelligence' | 'summary'>('intelligence')
-  const [isContextBarOpen, setIsContextBarOpen] = useState(false)
   const [quickWindowOpen, setQuickWindowOpen] = useState(false)
+
+  useEffect(() => {
+    const narrowLayout = window.matchMedia('(max-width: 1120px)')
+    const handleLayoutChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setIsIntelligencePanelOpen(false)
+    }
+
+    narrowLayout.addEventListener('change', handleLayoutChange)
+    return () => narrowLayout.removeEventListener('change', handleLayoutChange)
+  }, [])
 
   useEffect(() => {
     void window.electronAPI?.superWhisperIsOpen?.().then(setQuickWindowOpen)
@@ -190,10 +203,6 @@ export const WhisperPage: React.FC<Props> = ({
     const isOpen = await window.electronAPI?.superWhisperIsOpen?.()
     setQuickWindowOpen(Boolean(isOpen))
   }
-
-  const activeTasksCount = (intelligenceData.tasks || []).filter(
-    (t) => t.status === 'running' || t.status === 'queued'
-  ).length
 
   // Handler para Exportar Relatório para Notas
   const handleExportToNotes = async () => {
@@ -253,12 +262,12 @@ export const WhisperPage: React.FC<Props> = ({
   const systemStatusStyles: React.CSSProperties = isRecording
     ? recordingMode === 'meeting'
       ? (systemCaptureActive
-        ? { background: 'rgba(34,197,94,0.15)', color: '#16a34a' }
-        : { background: 'rgba(245,158,11,0.16)', color: '#d97706' })
-      : { background: 'rgba(99,102,241,0.14)', color: '#4f46e5' }
+        ? { background: 'rgba(69,213,161,0.12)', color: '#8ce8c5' }
+        : { background: 'rgba(246,201,120,0.12)', color: '#f1ca81' })
+      : { background: 'rgba(124,131,255,0.13)', color: '#b7bbff' }
     : (captureReadiness.displayCaptureReady
-      ? { background: 'rgba(34,197,94,0.15)', color: '#16a34a' }
-      : { background: 'rgba(248,113,113,0.15)', color: '#dc2626' })
+      ? { background: 'rgba(69,213,161,0.12)', color: '#8ce8c5' }
+      : { background: 'rgba(240,82,95,0.12)', color: '#ff9ca5' })
 
   return (
     <div className="whisper-page-container">
@@ -306,7 +315,7 @@ export const WhisperPage: React.FC<Props> = ({
 
       {/* Histórico Sidebar (Transição Suave de 280px para 0px) */}
       <div
-        className="whisper-drawer-sidebar"
+        className="whisper-drawer-sidebar whisper-history-drawer"
         style={{
           width: isHistoryDrawerOpen ? '280px' : '0px',
           borderRight: isHistoryDrawerOpen ? '1px solid var(--color-border)' : 'none',
@@ -344,6 +353,7 @@ export const WhisperPage: React.FC<Props> = ({
           setIsSettingsOpen={setIsSettingsOpen}
           systemStatus={systemStatus}
           systemStatusStyles={systemStatusStyles}
+          modeLocked={isRecording || isTranscribing}
         />
 
         {/* Scrollable Main Stream Container */}
@@ -365,63 +375,22 @@ export const WhisperPage: React.FC<Props> = ({
             quickWindowOpen={quickWindowOpen}
             onGenerateNotes={() => { setIsIntelligencePanelOpen(true); void handleAskAgents('Gere notas desta reunião com respostas pesquisadas, decisões e próximos passos.', 'report') }}
             isGeneratingNote={isGeneratingNote}
+            canGenerateNotes={displaySegments.length > 0}
           />
 
-          {/* 2. Ribbon Colapsável de Contexto do Projeto e Agentes (no modo reunião) */}
+          {/* 2. Configuração resumida de contexto e agentes (no modo reunião) */}
           {recordingMode !== 'prompt' && (
-            <div className="whisper-context-ribbon">
-              <div
-                className="whisper-context-ribbon-header"
-                onClick={() => setIsContextBarOpen(!isContextBarOpen)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsContextBarOpen(!isContextBarOpen) }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <SlidersHorizontal size={13} style={{ color: 'var(--color-primary)' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>Contexto & Agentes IA</span>
-                  <span className="whisper-context-badge">
-                    {projectContext?.path ? projectContext.name || 'Pasta Vinculada' : 'Sem pasta vinculada'}
-                  </span>
-                  <span className="whisper-context-badge">
-                    {projectContext?.allowExternalAI === true && projectContext?.allowWebResearch !== false ? '🌐 Web autorizada' : '🔒 Somente local'}
-                  </span>
-                  {activeTasksCount > 0 && (
-                    <span className="whisper-context-badge" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)' }}>
-                      <Sparkles size={10} />
-                      <span>{activeTasksCount} agente(s) em execução</span>
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '11px' }}>
-                  <span>{isContextBarOpen ? 'Recolher' : 'Configurar'}</span>
-                  {isContextBarOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                </div>
-              </div>
-
-              {isContextBarOpen && (
-                <div className="whisper-context-ribbon-content">
-                  <ProjectContextSelector
-                    config={projectContext}
-                    onChange={setProjectContext}
-                  />
-                  <MeetingResearchConsole
-                    data={intelligenceData}
-                    hasProject={!!projectContext?.enabled && !!projectContext.path}
-                    allowWeb={projectContext?.allowExternalAI === true && projectContext?.allowWebResearch !== false}
-                    providerPolicy={{
-                      preferredProviderId: projectContext?.agentProviderId || 'auto',
-                      allowExternalAI: projectContext?.allowExternalAI === true,
-                      allowLocalAI: projectContext?.allowLocalAI !== false,
-                    }}
-                    onAsk={async (question, scope) => { setIsIntelligencePanelOpen(true); await handleAskAgents(question, scope) }}
-                    onCancel={handleCancelResearch}
-                    onExport={handleExportResearch}
-                  />
-                </div>
-              )}
-            </div>
+            <WhisperContextWorkspace
+              config={projectContext}
+              data={intelligenceData}
+              onChange={setProjectContext}
+              onAsk={async (question, scope) => {
+                setIsIntelligencePanelOpen(true)
+                await handleAskAgents(question, scope)
+              }}
+              onCancel={handleCancelResearch}
+              onExport={handleExportResearch}
+            />
           )}
 
           {/* 3. Banner de Feedback de Pesquisa e Perguntas ao Vivo */}
@@ -500,8 +469,17 @@ export const WhisperPage: React.FC<Props> = ({
       </div>
 
       {/* Painel Lateral Direito de Inteligência (Retrátil no Desktop) */}
+      {isIntelligencePanelOpen && (
+        <button
+          type="button"
+          className="whisper-drawer-backdrop"
+          aria-label="Fechar painel de inteligência"
+          onClick={() => setIsIntelligencePanelOpen(false)}
+        />
+      )}
+
       <div
-        className="whisper-drawer-sidebar"
+        className="whisper-drawer-sidebar whisper-intelligence-drawer"
         style={{
           width: isIntelligencePanelOpen ? '350px' : '0px',
           display: 'flex',
@@ -509,56 +487,40 @@ export const WhisperPage: React.FC<Props> = ({
           borderLeft: isIntelligencePanelOpen ? '1px solid var(--color-border)' : 'none',
         }}
       >
-        {/* Selector de Abas do Painel Secundário */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', flexShrink: 0 }}>
+        <div className="whisper-side-tabs" role="tablist" aria-label="Painel da reunião">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeSideTab === 'intelligence'}
             onClick={() => setActiveSideTab('intelligence')}
-            style={{
-              flex: 1,
-              padding: '11px 10px',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              border: 'none',
-              background: activeSideTab === 'intelligence' ? 'var(--color-background)' : 'transparent',
-              color: activeSideTab === 'intelligence' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              borderBottom: activeSideTab === 'intelligence' ? '2px solid var(--color-primary)' : 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.16s ease',
-            }}
+            className={activeSideTab === 'intelligence' ? 'is-active' : ''}
           >
             <Sparkles size={13} />
             <span>Inteligência</span>
           </button>
 
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeSideTab === 'summary'}
             onClick={() => setActiveSideTab('summary')}
-            style={{
-              flex: 1,
-              padding: '11px 10px',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              border: 'none',
-              background: activeSideTab === 'summary' ? 'var(--color-background)' : 'transparent',
-              color: activeSideTab === 'summary' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              borderBottom: activeSideTab === 'summary' ? '2px solid var(--color-primary)' : 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.16s ease',
-            }}
+            className={activeSideTab === 'summary' ? 'is-active' : ''}
           >
             <FileText size={13} />
             <span>Ata & Resumo</span>
           </button>
+
+          <button
+            type="button"
+            className="whisper-side-close"
+            aria-label="Fechar painel de inteligência"
+            onClick={() => setIsIntelligencePanelOpen(false)}
+          >
+            <X size={15} />
+          </button>
         </div>
 
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="whisper-side-tab-content">
           {activeSideTab === 'intelligence' ? (
             <MeetingIntelligencePanel
               data={intelligenceData}

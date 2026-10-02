@@ -1,5 +1,5 @@
 import React from 'react'
-import { PanelLeft, PanelRight, FileText, Settings, Sparkles, Mic, BookOpen } from 'lucide-react'
+import { BookOpen, FileText, Info, Mic, PanelLeft, PanelRight, Settings, Sparkles } from 'lucide-react'
 import { RecordingModeType } from './WhisperRecordingHero'
 import { ScreenShareStealthBadge } from './ScreenShareStealthBadge'
 import { WhisperRecord } from '../types/whisper.types'
@@ -18,6 +18,7 @@ interface WhisperHeaderProps {
   setIsSettingsOpen: (open: boolean) => void
   systemStatus: string
   systemStatusStyles: React.CSSProperties
+  modeLocked?: boolean
 }
 
 export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
@@ -34,6 +35,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
   setIsSettingsOpen,
   systemStatus,
   systemStatusStyles,
+  modeLocked = false,
 }) => {
   return (
     <header className="whisper-header-bar">
@@ -63,6 +65,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           <button
             type="button"
             onClick={() => setRecordingMode('meeting')}
+            disabled={modeLocked}
             className={`whisper-mode-btn ${recordingMode === 'meeting' ? 'active' : ''}`}
             title="Modo Reunião: grava microfone e sistema com ata e tarefas automáticas"
           >
@@ -73,6 +76,7 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           <button
             type="button"
             onClick={() => setRecordingMode('prompt')}
+            disabled={modeLocked}
             className={`whisper-mode-btn ${recordingMode === 'prompt' ? 'active' : ''}`}
             title="Modo Ditado: ditado por voz contínuo para comandos e notas"
           >
@@ -92,8 +96,8 @@ export const WhisperHeader: React.FC<WhisperHeaderProps> = ({
           style={systemStatusStyles}
           title="Clique para inspecionar microfone e status do sistema"
         >
+          <Info size={12} />
           <span>{systemStatus}</span>
-          <span style={{ fontSize: '9px', opacity: 0.7 }}>ℹ</span>
         </button>
 
         <ScreenShareStealthBadge />
