@@ -1,5 +1,5 @@
 import React from 'react'
-import { Circle, Command, ExternalLink, Loader2, Mic, Radio, Sparkles, Square } from 'lucide-react'
+import { Circle, Command, ExternalLink, Loader2, Mic, Power, Radio, Sparkles, Square } from 'lucide-react'
 import type { WhisperAudioMetrics } from '../types/whisper.types'
 
 export type RecordingModeType = 'meeting' | 'interview' | 'prompt'
@@ -13,6 +13,10 @@ interface Props {
   onModeChange: (mode: RecordingModeType) => void
   onToggleQuickWindow?: () => void
   quickWindowOpen?: boolean
+  shortcutEnabled?: boolean
+  shortcutRegistered?: boolean
+  shortcutBusy?: boolean
+  onToggleShortcut?: () => void
   systemCaptureActive: boolean
   displayCaptureReady: boolean
   interimText: string
@@ -31,6 +35,10 @@ export const WhisperRecordingHero: React.FC<Props> = ({
   onStopRecording,
   onToggleQuickWindow,
   quickWindowOpen = false,
+  shortcutEnabled = true,
+  shortcutRegistered = false,
+  shortcutBusy = false,
+  onToggleShortcut,
   systemCaptureActive,
   displayCaptureReady,
   interimText,
@@ -180,11 +188,36 @@ export const WhisperRecordingHero: React.FC<Props> = ({
       {!isRecording && (
         <div className="whisper-hero-meta">
           <span>{modeDetails[recordingMode].desc}</span>
-          <span className="whisper-shortcut-hint">
-            <Command size={12} />
-            <span>Ditado global</span>
-            <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>
-          </span>
+          <div className="whisper-shortcut-controls">
+            <span className="whisper-shortcut-hint" aria-hidden="true">
+              <Command size={12} />
+              <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>
+            </span>
+            {onToggleShortcut && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={shortcutEnabled}
+                disabled={shortcutBusy}
+                onClick={onToggleShortcut}
+                className={`whisper-shortcut-toggle ${shortcutEnabled ? 'is-enabled' : ''} ${shortcutEnabled && !shortcutRegistered ? 'is-unavailable' : ''}`}
+                title={shortcutEnabled
+                  ? 'Desativar o atalho global de ditado'
+                  : 'Ativar o atalho global de ditado'}
+              >
+                <Power size={12} />
+                <span>
+                  <strong>Atalho global</strong>
+                  <small>{shortcutBusy
+                    ? 'Alterando…'
+                    : shortcutEnabled
+                      ? shortcutRegistered ? 'Ligado' : 'Indisponível'
+                      : 'Desligado'}</small>
+                </span>
+                <span className="whisper-shortcut-toggle-track" aria-hidden="true"><span /></span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

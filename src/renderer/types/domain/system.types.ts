@@ -426,6 +426,7 @@ export interface Settings {
   debugHudInline?: boolean
   debugHudHover?: boolean
   reminderVolume?: number
+  superWhisperShortcutEnabled?: boolean
   whisperFolders?: Array<{ id: string; name: string; color?: string; order: number }>
   whisperProjectContext?: Record<string, unknown>
   obsidianVaultPath?: string | null
@@ -556,6 +557,7 @@ export const DEFAULT_SETTINGS: Settings = {
   debugHudTitlebar: false,
   debugHudInline: false,
   debugHudHover: true,
+  superWhisperShortcutEnabled: true,
 }
 
 export const DEFAULT_DASHBOARD_WIDGETS: DashboardWidget[] = [
@@ -852,6 +854,8 @@ declare global {
       superWhisperToggle: () => Promise<void>
       superWhisperIsOpen: () => Promise<boolean>
       superWhisperSetLayout: (layout: 'compact' | 'recording' | 'expanded') => Promise<void>
+      superWhisperGetShortcutState: () => Promise<{ enabled: boolean; registered: boolean; unavailable: string[] }>
+      superWhisperSetShortcutEnabled: (enabled: boolean) => Promise<{ enabled: boolean; registered: boolean; unavailable: string[] }>
       superWhisperSend: (text: string) => Promise<void>
       superWhisperGetTheme: () => Promise<{ primary: string; background: string; surface: string; text: string } | null>
       onSuperWhisperTranscript: (cb: (text: string) => void) => void

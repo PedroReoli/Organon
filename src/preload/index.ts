@@ -118,6 +118,7 @@ interface Settings {
   dataDir: string | null
   installerCompleted: boolean
   weekStart: string | null
+  superWhisperShortcutEnabled?: boolean
 }
 
 interface Canvas {
@@ -442,6 +443,9 @@ const electronAPI = {
   superWhisperIsOpen: () => ipcRenderer.invoke('super-whisper:is-open'),
   superWhisperSetLayout: (layout: 'compact' | 'recording' | 'expanded') =>
     ipcRenderer.invoke('super-whisper:set-layout', layout),
+  superWhisperGetShortcutState: () => ipcRenderer.invoke('super-whisper:get-shortcut-state'),
+  superWhisperSetShortcutEnabled: (enabled: boolean) =>
+    ipcRenderer.invoke('super-whisper:set-shortcut-enabled', enabled),
   onSuperWhisperTranscript: (cb: (text: string) => void) =>
     ipcRenderer.on('super-whisper:transcription', (_event, text) => cb(text)),
   offSuperWhisperTranscript: () => ipcRenderer.removeAllListeners('super-whisper:transcription'),

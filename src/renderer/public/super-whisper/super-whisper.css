@@ -46,11 +46,31 @@ body {
   flex-shrink: 0;
 }
 
+.sw-drag-grip {
+  width: 20px;
+  height: 28px;
+  flex: 0 0 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sw-text-muted);
+  cursor: grab;
+  -webkit-app-region: drag;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.sw-drag-grip:hover {
+  background: var(--sw-primary-soft);
+  color: var(--sw-primary);
+}
+
 .sw-header-left {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1;
 }
 
 .sw-header-icon {
@@ -493,8 +513,9 @@ html[data-layout="recording"] .sw-app {
 
 html[data-layout="compact"] .sw-header,
 html[data-layout="recording"] .sw-header {
-  width: 28px;
+  width: 52px;
   padding: 2px;
+  gap: 2px;
   border: 0;
   background: transparent;
 }

@@ -155,6 +155,12 @@
     white-space: normal;
   }
 
+  .whisper-hero-meta,
+  .whisper-shortcut-controls {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
   .whisper-drawer-sidebar.whisper-intelligence-drawer {
     max-width: min(350px, 92vw);
   }
@@ -170,6 +176,14 @@
   .whisper-shortcut-hint > span,
   .whisper-header-right .whisper-status-pill {
     display: none;
+  }
+
+  .whisper-shortcut-hint {
+    display: none;
+  }
+
+  .whisper-shortcut-toggle {
+    width: 100%;
   }
 
   .whisper-context-toggle-label {

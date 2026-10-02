@@ -9,6 +9,29 @@ import { recordRuntimeEvent } from '../diagnostics/runtimeMetrics'
 
 let tray: Tray | null = null
 let superWhisperWindow: BrowserWindow | null = null
+let superWhisperPosition: { x: number; y: number } | null = null
+let superWhisperPositionLoaded = false
+let superWhisperPositionTimer: ReturnType<typeof setTimeout> | null = null
+let superWhisperLayoutMutation = 0
+let isApplyingSuperWhisperLayout = false
+
+const SUPER_WHISPER_SHORTCUTS = [
+  'CommandOrControl+Shift+Space',
+  'CommandOrControl+Shift+V',
+  'Alt+V',
+] as const
+
+export interface SuperWhisperShortcutState {
+  enabled: boolean
+  registered: boolean
+  unavailable: string[]
+}
+
+let superWhisperShortcutState: SuperWhisperShortcutState = {
+  enabled: true,
+  registered: false,
+  unavailable: [],
+}
 
 // Callbacks para comunicação com renderer
 let onQuickTranscribeCallback: (() => void) | null = null
@@ -51,17 +74,73 @@ const SUPER_WHISPER_LAYOUTS: Record<SuperWhisperLayout, { width: number; height:
   expanded: { width: 420, height: 420 },
 }
 
+const getSuperWhisperPositionPath = (): string => (
+  path.join(app.getPath('userData'), 'super-whisper-window.json')
+)
+
+function loadSuperWhisperPosition(): void {
+  if (superWhisperPositionLoaded) return
+  superWhisperPositionLoaded = true
+  try {
+    const stored = JSON.parse(fs.readFileSync(getSuperWhisperPositionPath(), 'utf-8')) as {
+      x?: unknown
+      y?: unknown
+    }
+    if (Number.isFinite(stored.x) && Number.isFinite(stored.y)) {
+      superWhisperPosition = { x: Number(stored.x), y: Number(stored.y) }
+    }
+  } catch {
+    superWhisperPosition = null
+  }
+}
+
+function persistSuperWhisperPosition(): void {
+  if (!superWhisperPosition) return
+  if (superWhisperPositionTimer) clearTimeout(superWhisperPositionTimer)
+  superWhisperPositionTimer = setTimeout(() => {
+    if (!superWhisperPosition) return
+    try {
+      fs.writeFileSync(
+        getSuperWhisperPositionPath(),
+        JSON.stringify(superWhisperPosition),
+        'utf-8',
+      )
+    } catch (error) {
+      console.warn('[Super Whisper] Nao foi possivel salvar a posicao da janela:', error)
+    }
+  }, 180)
+}
+
 function setSuperWhisperLayout(layout: SuperWhisperLayout): void {
   if (!superWhisperWindow || superWhisperWindow.isDestroyed()) return
+  loadSuperWhisperPosition()
   const { width, height } = SUPER_WHISPER_LAYOUTS[layout]
-  const display = screen.getDisplayMatching(superWhisperWindow.getBounds())
+  const currentBounds = superWhisperWindow.getBounds()
+  const display = superWhisperPosition
+    ? screen.getDisplayNearestPoint(superWhisperPosition)
+    : screen.getDisplayMatching(currentBounds)
   const workArea = display.workArea
+  const preferredX = superWhisperPosition?.x ?? workArea.x + workArea.width - width - 20
+  const preferredY = superWhisperPosition?.y ?? workArea.y + workArea.height - height - 20
+  const x = Math.min(Math.max(preferredX, workArea.x), workArea.x + workArea.width - width)
+  const y = Math.min(Math.max(preferredY, workArea.y), workArea.y + workArea.height - height)
+
+  if (superWhisperPosition) {
+    superWhisperPosition = { x, y }
+    persistSuperWhisperPosition()
+  }
+
+  const mutation = ++superWhisperLayoutMutation
+  isApplyingSuperWhisperLayout = true
   superWhisperWindow.setBounds({
-    x: workArea.x + workArea.width - width - 20,
-    y: workArea.y + workArea.height - height - 20,
+    x,
+    y,
     width,
     height,
   }, false)
+  setTimeout(() => {
+    if (mutation === superWhisperLayoutMutation) isApplyingSuperWhisperLayout = false
+  }, 80)
   recordRuntimeEvent('window.whisper.layout', { layout, width, height })
 }
 
@@ -169,6 +248,7 @@ export function createSuperWhisperWindow(): BrowserWindow {
     width: SUPER_WHISPER_LAYOUTS.compact.width,
     height: SUPER_WHISPER_LAYOUTS.compact.height,
     frame: false,
+    movable: true,
     resizable: false,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -186,6 +266,12 @@ export function createSuperWhisperWindow(): BrowserWindow {
     recordRuntimeEvent('window.whisper.render-process-gone', { reason: details.reason, exitCode: details.exitCode })
   })
   superWhisperWindow.on('unresponsive', () => recordRuntimeEvent('window.whisper.unresponsive'))
+  superWhisperWindow.on('move', () => {
+    if (!superWhisperWindow || superWhisperWindow.isDestroyed() || isApplyingSuperWhisperLayout) return
+    const { x, y } = superWhisperWindow.getBounds()
+    superWhisperPosition = { x, y }
+    persistSuperWhisperPosition()
+  })
 
   // Posição: canto inferior direito (respeitando offset da taskbar)
   setSuperWhisperLayout('compact')
@@ -270,25 +356,51 @@ export function initTray(): void {
  * Registra atalhos globais
  */
 export function registerGlobalShortcuts(): void {
-  // Super Whisper: Ctrl+Shift+V
-  globalShortcut.register('CommandOrControl+Shift+V', () => {
-    console.log('[Shortcut] Super Whisper (Ctrl+Shift+V) ativado')
-    showSuperWhisperWindow()
-  })
+  let enabled = true
+  try {
+    enabled = loadStore().settings.superWhisperShortcutEnabled !== false
+  } catch (error) {
+    console.warn('[Shortcut] Nao foi possivel ler a preferencia do Super Whisper:', error)
+  }
+  setSuperWhisperShortcutsEnabled(enabled)
+}
 
-  // Super Whisper: Alt+V
-  globalShortcut.register('Alt+V', () => {
-    console.log('[Shortcut] Super Whisper (Alt+V) ativado')
-    showSuperWhisperWindow()
-  })
+export function setSuperWhisperShortcutsEnabled(enabled: boolean): SuperWhisperShortcutState {
+  for (const accelerator of SUPER_WHISPER_SHORTCUTS) {
+    globalShortcut.unregister(accelerator)
+  }
 
-  // Super Whisper: Ctrl+Shift+Space
-  globalShortcut.register('CommandOrControl+Shift+Space', () => {
-    console.log('[Shortcut] Super Whisper (Ctrl+Shift+Space) ativado')
-    showSuperWhisperWindow()
-  })
+  if (!enabled) {
+    superWhisperShortcutState = { enabled: false, registered: false, unavailable: [] }
+    recordRuntimeEvent('whisper.shortcut.disabled')
+    console.log('[Shortcut] Atalhos globais do Super Whisper desativados')
+    return superWhisperShortcutState
+  }
 
-  console.log('[Tray] Atalhos globais (Ctrl+Shift+V, Alt+V, Ctrl+Shift+Space) registrados com sucesso')
+  const unavailable: string[] = []
+  for (const accelerator of SUPER_WHISPER_SHORTCUTS) {
+    const registered = globalShortcut.register(accelerator, () => {
+      console.log(`[Shortcut] Super Whisper (${accelerator}) ativado`)
+      showSuperWhisperWindow()
+    })
+    if (!registered) unavailable.push(accelerator)
+  }
+
+  superWhisperShortcutState = {
+    enabled: true,
+    registered: globalShortcut.isRegistered('CommandOrControl+Shift+Space'),
+    unavailable,
+  }
+  recordRuntimeEvent('whisper.shortcut.enabled', {
+    registered: superWhisperShortcutState.registered,
+    unavailable,
+  })
+  console.log(
+    unavailable.length
+      ? `[Shortcut] Super Whisper ativo com combinacoes indisponiveis: ${unavailable.join(', ')}`
+      : '[Tray] Atalhos globais do Super Whisper registrados com sucesso',
+  )
+  return superWhisperShortcutState
 }
 
 /**
@@ -346,6 +458,13 @@ export function registerSuperWhisperIpc(): void {
 
   ipcMain.handle('super-whisper:is-open', () => {
     return superWhisperWindow !== null && !superWhisperWindow.isDestroyed() && superWhisperWindow.isVisible()
+  })
+
+  ipcMain.handle('super-whisper:get-shortcut-state', () => superWhisperShortcutState)
+
+  ipcMain.handle('super-whisper:set-shortcut-enabled', (_event, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') throw new Error('Estado do atalho global invalido.')
+    return setSuperWhisperShortcutsEnabled(enabled)
   })
 
   // Enviar transcrição para a janela principal

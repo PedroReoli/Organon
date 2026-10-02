@@ -177,6 +177,7 @@ export interface Settings {
   debugHudTitlebar?: boolean
   debugHudInline?: boolean
   debugHudHover?: boolean
+  superWhisperShortcutEnabled?: boolean
   whisperFolders?: Array<{ id: string; name: string; color?: string; order: number }>
   whisperProjectContext?: Record<string, unknown>
   obsidianVaultPath?: string | null

@@ -183,6 +183,12 @@ export const WhisperPage: React.FC<Props> = ({
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false)
   const [activeSideTab, setActiveSideTab] = useState<'intelligence' | 'summary'>('intelligence')
   const [quickWindowOpen, setQuickWindowOpen] = useState(false)
+  const [shortcutState, setShortcutState] = useState({
+    enabled: settings.superWhisperShortcutEnabled !== false,
+    registered: false,
+    unavailable: [] as string[],
+  })
+  const [shortcutBusy, setShortcutBusy] = useState(false)
 
   useEffect(() => {
     const narrowLayout = window.matchMedia('(max-width: 1120px)')
@@ -196,12 +202,36 @@ export const WhisperPage: React.FC<Props> = ({
 
   useEffect(() => {
     void window.electronAPI?.superWhisperIsOpen?.().then(setQuickWindowOpen)
+    void window.electronAPI?.superWhisperGetShortcutState?.().then(setShortcutState)
   }, [])
 
   const handleToggleQuickWindow = async () => {
     await window.electronAPI?.superWhisperToggle?.()
     const isOpen = await window.electronAPI?.superWhisperIsOpen?.()
     setQuickWindowOpen(Boolean(isOpen))
+  }
+
+  const handleToggleGlobalShortcut = async () => {
+    const nextEnabled = !shortcutState.enabled
+    setShortcutBusy(true)
+    try {
+      const nextState = window.electronAPI?.superWhisperSetShortcutEnabled
+        ? await window.electronAPI.superWhisperSetShortcutEnabled(nextEnabled)
+        : { enabled: nextEnabled, registered: false, unavailable: [] }
+      setShortcutState(nextState)
+      onUpdateSettings({ superWhisperShortcutEnabled: nextState.enabled })
+      if (!nextState.enabled) {
+        showToast('Atalho global do ditado desativado.', 'info')
+      } else if (!nextState.registered) {
+        showToast('Atalho ativado, mas Ctrl+Shift+Space está ocupado por outro aplicativo.', 'error')
+      } else {
+        showToast('Atalho global Ctrl+Shift+Space ativado.', 'success')
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Não foi possível alterar o atalho global.', 'error')
+    } finally {
+      setShortcutBusy(false)
+    }
   }
 
   // Handler para Exportar Relatório para Notas
@@ -373,6 +403,10 @@ export const WhisperPage: React.FC<Props> = ({
             audioMetrics={audioMetrics}
             onToggleQuickWindow={() => { void handleToggleQuickWindow() }}
             quickWindowOpen={quickWindowOpen}
+            shortcutEnabled={shortcutState.enabled}
+            shortcutRegistered={shortcutState.registered}
+            shortcutBusy={shortcutBusy}
+            onToggleShortcut={() => { void handleToggleGlobalShortcut() }}
             onGenerateNotes={() => { setIsIntelligencePanelOpen(true); void handleAskAgents('Gere notas desta reunião com respostas pesquisadas, decisões e próximos passos.', 'report') }}
             isGeneratingNote={isGeneratingNote}
             canGenerateNotes={displaySegments.length > 0}
