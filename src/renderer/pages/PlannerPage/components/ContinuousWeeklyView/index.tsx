@@ -3,6 +3,7 @@ import {
   closestCorners,
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   type DragEndEvent,
   type DragStartEvent,
   PointerSensor,
@@ -10,17 +11,19 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Day, Project } from '@types';
 import type { PlanningTask } from '../../types/planning.types';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
 import { ContinuousDayColumn } from './ContinuousDayColumn';
+import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
 
 interface ContinuousWeeklyViewProps {
   tasks: PlanningTask[];
   projects?: Project[];
   onEdit: (id: string) => void;
-  onMoveTask?: (taskId: string, targetLocation: { day: Day; period: 'morning' | 'afternoon' | 'night' }, targetDate: string) => void;
+  onMoveTask?: (taskId: string, targetLocation: { day: Day; period: 'morning' | 'afternoon' | 'night' }, targetDate: string, targetTaskId?: string) => void;
   onAddTask?: (task: Partial<PlanningTask>) => void;
   onUpdateTask: (id: string, updates: Partial<PlanningTask>) => void;
 }
@@ -63,7 +66,10 @@ export const ContinuousWeeklyView = ({
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [quickAddModal, setQuickAddModal] = useState<PlanningQuickAddState | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const weekDays = useMemo(() => {
     const today = new Date();
@@ -154,6 +160,7 @@ export const ContinuousWeeklyView = ({
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveTaskId(null);
     if (!over) return;
+    if (active.id === over.id) return;
 
     let day = weekDays.find((item) => `continuous-day:${item.key}` === over.id);
     if (!day) {
@@ -167,6 +174,7 @@ export const ContinuousWeeklyView = ({
       String(active.id),
       { day: day.key, period: draggedTask?.location?.period || 'morning' },
       day.dateString,
+      tasks.some(task => task.id === over.id) ? String(over.id) : undefined,
     );
   };
 
@@ -218,7 +226,14 @@ export const ContinuousWeeklyView = ({
             />
           ))}
         </div>
-        <DragOverlay>{activeTask ? <div className="w-60 rounded-xl border border-indigo-400/50 bg-[#172139] p-3 text-xs font-medium text-white shadow-2xl">{activeTask.title}</div> : null}</DragOverlay>
+        <DragOverlay adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
+          {activeTask ? (
+            <PlanningDragOverlay
+              task={activeTask}
+              project={projects.find(project => project.id === activeTask.projectId)}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <PlanningQuickAddModal modal={quickAddModal} projects={projects} onChange={setQuickAddModal} onSubmit={submitQuickAdd} />

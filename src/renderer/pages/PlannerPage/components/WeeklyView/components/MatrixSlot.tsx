@@ -22,6 +22,7 @@ export interface MatrixSlotProps {
   projects?: Project[];
   selectedTaskId: string | null;
   activeTask?: PlanningTask | null;
+  isDragTarget?: boolean;
   onSelectTask: (taskId: string) => void;
   onSlotClick: (slotId: string) => void;
   onEdit: (id: string) => void;
@@ -39,6 +40,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   projects = [],
   selectedTaskId,
   activeTask,
+  isDragTarget = false,
   onSelectTask,
   onSlotClick,
   onEdit,
@@ -57,6 +59,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   const visibleTaskLimit = hasOverflow ? MAX_MATRIX_ITEMS - 1 : MAX_MATRIX_ITEMS;
   const visibleTasks = isBacklog ? tasks : tasks.slice(0, visibleTaskLimit);
   const hiddenTaskCount = Math.max(0, tasks.length - visibleTasks.length);
+  const isActiveDropTarget = isOver || isDragTarget;
 
   React.useEffect(() => {
     if (isInlineAdding) inlineInputRef.current?.focus();
@@ -78,19 +81,19 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
         if (selectedTaskId) onSlotClick(id);
       }}
       style={{
-        background: isOver
+        background: isActiveDropTarget
           ? 'color-mix(in srgb, var(--color-primary, #6366f1) 18%, #0f172a)'
           : isBacklog
             ? '#0c1220'
             : '#0e1526',
-        borderColor: isOver
+        borderColor: isActiveDropTarget
           ? 'var(--color-primary, #6366f1)'
           : selectedTaskId
             ? 'rgba(99,102,241,0.5)'
             : 'rgba(255,255,255,0.06)',
       }}
       className={`planner-matrix-slot group/slot ${isBacklog ? 'is-backlog' : ''} ${
-        isOver ? 'is-over' : ''
+        isActiveDropTarget ? 'is-over' : ''
       } ${selectedTaskId ? 'is-move-target' : ''}`}
     >
       <div className="planner-matrix-slot-content">
@@ -107,6 +110,8 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
                     key={task.id}
                     task={task}
                     project={project}
+                    slotId={id}
+                    previewDisabled={Boolean(activeTask)}
                     isSelected={selectedTaskId === task.id}
                     onEdit={() => onEdit(task.id)}
                     onSelectTask={onSelectTask}
@@ -131,7 +136,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
                 </button>
               )}
 
-              {isOver && activeTask && !tasks.some(task => task.id === activeTask.id) && (
+              {isActiveDropTarget && activeTask && !tasks.some(task => task.id === activeTask.id) && (
                 <div className="matrix-task-drop-preview" aria-hidden="true">
                   <span />
                   <strong>{activeTask.title}</strong>
@@ -220,7 +225,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
           </form>
         )}
 
-        {tasks.length === 0 && isOver && activeTask && (
+        {tasks.length === 0 && isActiveDropTarget && activeTask && (
           <div className="planner-matrix-task-grid is-drop-target">
             <div className="matrix-task-drop-preview" aria-hidden="true">
               <span />
@@ -230,7 +235,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
           </div>
         )}
 
-        {tasks.length === 0 && !isInlineAdding && (!isOver || !activeTask) && (
+        {tasks.length === 0 && !isInlineAdding && (!isActiveDropTarget || !activeTask) && (
           <button
             type="button"
             className="matrix-slot-empty"

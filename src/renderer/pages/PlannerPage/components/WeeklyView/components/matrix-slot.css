@@ -68,6 +68,9 @@
   background: #151f33;
   color: #f1f5f9;
   box-shadow: 0 5px 16px -14px rgba(0, 0, 0, 0.92);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -98,6 +101,7 @@
 .matrix-task-card.is-dragging {
   z-index: 20;
   box-shadow: none;
+  cursor: grabbing;
 }
 
 .matrix-task-card.is-done {
@@ -167,6 +171,7 @@
   background: #202d47;
   opacity: 0;
   transform: translateX(3px);
+  pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease, color 120ms ease;
 }
 

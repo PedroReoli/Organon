@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   DndContext,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -12,6 +14,7 @@ import {
   MeasuringStrategy,
   getClientRect,
 } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { PlanningTask } from '../../types/planning.types';
 import { Plus, Calendar } from 'lucide-react';
 import type { Day, Period, Project } from '@types';
@@ -21,12 +24,13 @@ import {
   WeeklyViewHeader,
 } from './components';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
+import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
 
 interface WeeklyViewProps {
   tasks: PlanningTask[];
   projects?: Project[];
   onEdit: (id: string) => void;
-  onMoveTask?: (taskId: string, targetLocation: any, targetDate?: string | null) => void;
+  onMoveTask?: (taskId: string, targetLocation: any, targetDate?: string | null, targetTaskId?: string) => void;
   onUpdateTask?: (id: string, updates: Partial<PlanningTask>) => void;
   onAddTask?: (task: Partial<PlanningTask>) => void;
 }
@@ -59,6 +63,7 @@ export const WeeklyView = ({
   const [isBacklogCollapsed, setIsBacklogCollapsed] = useState(false);
   const [showMonthWeeks, setShowMonthWeeks] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const zoomFactorRef = useRef(1);
@@ -210,7 +215,8 @@ export const WeeklyView = ({
 
   // Sensors for DnD
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const zoomedClientRect = useCallback((element: HTMLElement) => {
@@ -238,6 +244,7 @@ export const WeeklyView = ({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTaskId(event.active.id as string);
+    setDragTargetId(null);
     try {
       zoomFactorRef.current = (window.electronAPI as any)?.getNativeZoom?.() ?? 1;
     } catch {
@@ -245,13 +252,24 @@ export const WeeklyView = ({
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    if (!event.over) {
+      setDragTargetId(null);
+      return;
+    }
+    const nestedSlotId = event.over.data.current?.slotId;
+    setDragTargetId(typeof nestedSlotId === 'string' ? nestedSlotId : String(event.over.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTaskId(null);
+    setDragTargetId(null);
     if (!over) return;
 
     const draggedTaskId = active.id as string;
     const overId = over.id as string;
+    if (draggedTaskId === overId) return;
 
     if (overId === 'backlog') {
       onMoveTask?.(draggedTaskId, 'backlog', null);
@@ -286,9 +304,15 @@ export const WeeklyView = ({
       onMoveTask?.(
         draggedTaskId,
         targetTask.location || 'backlog',
-        targetTask.date
+        targetTask.date,
+        targetTask.id,
       );
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveTaskId(null);
+    setDragTargetId(null);
   };
 
   useEffect(() => {
@@ -492,7 +516,9 @@ export const WeeklyView = ({
         }}
         measuring={measuring}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         {/* Month Weeks Drop Bar */}
         {(showMonthWeeks || activeTaskId !== null) && (
@@ -594,6 +620,7 @@ export const WeeklyView = ({
                   projects={projects}
                   selectedTaskId={selectedTaskId}
                   activeTask={activeTask}
+                  isDragTarget={dragTargetId === 'backlog'}
                   onSelectTask={setSelectedTaskId}
                   onSlotClick={handleSlotClickToMove}
                   onEdit={onEdit}
@@ -671,6 +698,7 @@ export const WeeklyView = ({
                           projects={projects}
                           selectedTaskId={selectedTaskId}
                           activeTask={activeTask}
+                          isDragTarget={dragTargetId === slotKey}
                           onSelectTask={setSelectedTaskId}
                           onSlotClick={handleSlotClickToMove}
                           onEdit={onEdit}
@@ -696,8 +724,13 @@ export const WeeklyView = ({
           </div>
         </div>
 
-        <DragOverlay zIndex={9999}>
-          {null}
+        <DragOverlay zIndex={9999} adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
+          {activeTask ? (
+            <PlanningDragOverlay
+              task={activeTask}
+              project={projects.find(project => project.id === activeTask.projectId)}
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
 

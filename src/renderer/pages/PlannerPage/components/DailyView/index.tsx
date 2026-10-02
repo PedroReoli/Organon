@@ -4,6 +4,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -12,6 +13,7 @@ import {
   MeasuringStrategy,
   getClientRect,
 } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { PlanningTask } from '../../types/planning.types';
 import type { Project } from '@types';
 import { Clock } from 'lucide-react';
@@ -21,6 +23,7 @@ import {
   DailySidebar,
 } from './components';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
+import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
 
 interface DailyViewProps {
   tasks: PlanningTask[];
@@ -186,7 +189,8 @@ export const DailyView: React.FC<DailyViewProps> = ({
 
   // Sensors for DnD
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const zoomedClientRect = useCallback((element: HTMLElement) => {
@@ -381,6 +385,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
         measuring={measuring}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTaskId(null)}
       >
         <div className="flex-1 flex overflow-hidden p-3 gap-3 min-h-0">
           <DailySidebar
@@ -455,7 +460,14 @@ export const DailyView: React.FC<DailyViewProps> = ({
           </div>
         </div>
 
-        <DragOverlay zIndex={9999}>{null}</DragOverlay>
+        <DragOverlay zIndex={9999} adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
+          {activeTask ? (
+            <PlanningDragOverlay
+              task={activeTask}
+              project={projects.find(project => project.id === activeTask.projectId)}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <PlanningQuickAddModal

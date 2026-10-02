@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent } from 'react'
+import { useEffect, useRef, type CSSProperties, type MouseEvent } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Check, Clock3, GripVertical, ListChecks } from 'lucide-react'
@@ -11,6 +11,8 @@ interface MatrixTaskCardProps {
   task: PlanningTask
   project?: Project
   isSelected?: boolean
+  slotId: string
+  previewDisabled?: boolean
   onEdit: () => void
   onSelectTask: (taskId: string) => void
   onToggleStatus?: (id: string) => void
@@ -25,6 +27,8 @@ export function MatrixTaskCard({
   task,
   project,
   isSelected = false,
+  slotId,
+  previewDisabled = false,
   onEdit,
   onSelectTask,
   onToggleStatus,
@@ -34,14 +38,24 @@ export function MatrixTaskCard({
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({
     id: task.id,
-    data: { type: 'Task', task },
+    data: { type: 'Task', task, slotId },
   })
+  const suppressOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (isDragging) {
+      suppressOpenRef.current = true
+      return
+    }
+    if (!suppressOpenRef.current) return
+    const timer = setTimeout(() => { suppressOpenRef.current = false }, 0)
+    return () => clearTimeout(timer)
+  }, [isDragging])
 
   const isDone = task.status === 'done'
   const priority = task.priority || 'P3'
@@ -59,6 +73,7 @@ export function MatrixTaskCard({
 
   const handleOpen = (event: MouseEvent) => {
     event.stopPropagation()
+    if (suppressOpenRef.current) return
     if (event.ctrlKey || event.metaKey) {
       onSelectTask(task.id)
       return
@@ -70,7 +85,7 @@ export function MatrixTaskCard({
     <MatrixTaskHoverCard
       task={task}
       project={project}
-      disabled={isDragging}
+      disabled={previewDisabled || isDragging}
       onEdit={onEdit}
       onToggleStatus={onToggleStatus}
       onPostponeWeek={onPostponeWeek}
@@ -79,6 +94,8 @@ export function MatrixTaskCard({
         ref={setNodeRef}
         style={style}
         data-planning-task-id={task.id}
+        {...attributes}
+        {...listeners}
         className={`matrix-task-card ${isDone ? 'is-done' : ''} ${isSelected ? 'is-selected' : ''} ${isDragging ? 'is-dragging' : ''}`}
       >
         <div className="matrix-task-card-topline">
@@ -105,17 +122,12 @@ export function MatrixTaskCard({
             </time>
           )}
 
-          <button
-            ref={setActivatorNodeRef}
-            type="button"
+          <span
             className="matrix-task-drag-handle"
-            aria-label={`Arrastar tarefa ${task.title}`}
-            onPointerDown={event => event.stopPropagation()}
-            {...attributes}
-            {...listeners}
+            aria-hidden="true"
           >
             <GripVertical size={13} />
-          </button>
+          </span>
         </div>
 
         <button type="button" className="matrix-task-title" onClick={handleOpen}>
