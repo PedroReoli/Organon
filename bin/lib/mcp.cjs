@@ -10,6 +10,7 @@ const taskCmd = require('./commands/task.cjs');
 const noteCmd = require('./commands/note.cjs');
 const doctorCmd = require('./commands/doctor.cjs');
 const domain = require('./mcp-domain.cjs');
+const meetingDomain = require('./mcp-meetings.cjs');
 const packageJson = require('../../package.json');
 
 const BASE_TOOLS = [
@@ -311,6 +312,74 @@ const BASE_TOOLS = [
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },
   {
+    name: 'organon_meeting_list',
+    description: 'Lista somente metadados e contagens de reuniões; não expõe transcrição nem caminhos de áudio.',
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        includeArchived: { type: 'boolean' },
+        limit: { type: 'integer', minimum: 1, maximum: 200 }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_meeting_read',
+    description: 'Lê uma reunião no nível explicitamente solicitado. O teto pode ser limitado por ORGANON_MCP_MEETING_ACCESS.',
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['idOrTitle'],
+      properties: {
+        idOrTitle: { type: 'string' },
+        access: { type: 'string', enum: ['metadata', 'intelligence', 'transcript', 'full'], default: 'metadata' },
+        maxChars: { type: 'integer', minimum: 1000, maximum: 200000 }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_meeting_search',
+    description: 'Pesquisa localmente em transcrições. Requer access=transcript ou full de forma explícita.',
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['query', 'access'],
+      properties: {
+        query: { type: 'string', minLength: 2, maxLength: 500 },
+        access: { type: 'string', enum: ['transcript', 'full'] },
+        limit: { type: 'integer', minimum: 1, maximum: 50 }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_meeting_summarize',
+    description: 'Retorna resumo, decisões, tarefas, perguntas e riscos já processados localmente. Requer acesso explícito.',
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['idOrTitle', 'access'],
+      properties: {
+        idOrTitle: { type: 'string' },
+        access: { type: 'string', enum: ['intelligence', 'full'] }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  {
+    name: 'organon_meeting_ask',
+    description: 'Faz uma pergunta à IA sobre uma reunião. Requer access=full; IA externa e web exigem allowExternalAI=true.',
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['idOrTitle', 'question', 'access'],
+      properties: {
+        idOrTitle: { type: 'string' },
+        question: { type: 'string', minLength: 4, maxLength: 2000 },
+        access: { type: 'string', const: 'full' },
+        providerId: { type: 'string', enum: ['auto', 'codex', 'claude', 'gemini', 'antigravity', 'ollama'] },
+        allowExternalAI: { type: 'boolean', default: false },
+        allowLocalAI: { type: 'boolean', default: true },
+        web: { type: 'boolean', default: false }
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  },
+  {
     name: 'organon_pending_digest',
     description: 'Consolida tarefas, vencimentos, lembretes e follow-ups de reunião sem mutação.',
     inputSchema: {
@@ -350,7 +419,7 @@ const MCP_TOOLS = BASE_TOOLS.map(tool => ({
   },
 })).sort((left, right) => left.name.localeCompare(right.name));
 
-function handleToolCall(name, args = {}) {
+async function handleToolCall(name, args = {}) {
   switch (name) {
     case 'organon_status':
       return store.getSystemStatus();
@@ -394,6 +463,16 @@ function handleToolCall(name, args = {}) {
       return domain.handleUndo(args);
     case 'organon_notes_search':
       return domain.handleNotesSearch(args);
+    case 'organon_meeting_list':
+      return meetingDomain.handleMeetingList(args);
+    case 'organon_meeting_read':
+      return meetingDomain.handleMeetingRead(args);
+    case 'organon_meeting_search':
+      return meetingDomain.handleMeetingSearch(args);
+    case 'organon_meeting_summarize':
+      return meetingDomain.handleMeetingSummarize(args);
+    case 'organon_meeting_ask':
+      return meetingDomain.handleMeetingAsk(args);
     case 'organon_schedule_pressure':
       return domain.handleSchedulePressure(args);
     case 'organon_pending_digest':
@@ -448,7 +527,7 @@ function startMcpServer() {
     terminal: false
   });
 
-  rl.on('line', (line) => {
+  rl.on('line', async (line) => {
     const raw = line.trim();
     if (!raw) return;
 
@@ -507,7 +586,7 @@ function startMcpServer() {
         }
         try {
           enforceRateLimit();
-          const res = handleToolCall(toolName, toolArgs);
+          const res = await handleToolCall(toolName, toolArgs);
           const structuredContent = { data: res };
           sendResult(id, {
             ...(modern ? { resultType: 'result' } : {}),

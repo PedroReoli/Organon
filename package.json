@@ -70,7 +70,8 @@
     "test:meeting:recording": "npm run typecheck:node && electron scripts/validate-meeting-recording.cjs",
     "test:meeting:diarization": "npm run typecheck:node && electron scripts/validate-meeting-diarization.cjs",
     "test:meeting:providers": "npm run typecheck:node && node scripts/validate-meeting-provider-gateway.cjs",
-    "test:meeting:intelligence": "npm run typecheck && node scripts/validate-meeting-intelligence.cjs"
+    "test:meeting:intelligence": "npm run typecheck && node scripts/validate-meeting-intelligence.cjs",
+    "test:meeting:mcp": "npm run build && node scripts/validate-meeting-mcp.cjs"
   },
   "keywords": [
     "electron",
