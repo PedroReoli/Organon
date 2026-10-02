@@ -99,6 +99,7 @@ export const WhisperPage: React.FC<Props> = ({
     setIntelligenceData,
     handleAskAgents,
     handleCancelResearch,
+    handleCopilotSuggestion,
     handleExportResearch,
     handleStartRecording,
     handleStopRecording,
@@ -108,6 +109,7 @@ export const WhisperPage: React.FC<Props> = ({
     projectContext,
     captureReadiness,
     selectedRecord,
+    records,
     setRecords,
     showToast,
   })
@@ -566,6 +568,8 @@ export const WhisperPage: React.FC<Props> = ({
             <LiveMeetingPanel
               liveReport={isRecording ? liveReport : selectedRecord?.liveReport || { discussedConcepts: [], forgottenPoints: [], actionItems: [] }}
               isLiveRecording={isRecording}
+              intelligenceData={intelligenceData}
+              onSuggestion={handleCopilotSuggestion}
             />
           )}
         </div>

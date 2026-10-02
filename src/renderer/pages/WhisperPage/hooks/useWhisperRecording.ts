@@ -18,11 +18,13 @@ import {
   mergeSourceSegments,
 } from '../../../services/meetingIntelligence/speakerSegmentation'
 import { applyLocalSpeakerDiarization } from '../../../services/meetingIntelligence/speakerDiarizationClient'
+import { buildMeetingMemory } from '../../../services/meetingIntelligence/meetingMemory'
 
 interface RecordingProps {
   projectContext: ProjectContextConfig | undefined
   captureReadiness: WhisperCaptureReadiness
   selectedRecord: WhisperRecord | undefined
+  records: WhisperRecord[]
   setRecords: React.Dispatch<React.SetStateAction<WhisperRecord[]>>
   showToast: (message: string, type?: 'info' | 'success' | 'error') => void
 }
@@ -32,6 +34,7 @@ const EMPTY_AUDIO_METRICS: WhisperAudioMetrics = { rms: 0, peak: 0, waveform: []
 export function useWhisperRecording({
   projectContext,
   selectedRecord,
+  records,
   setRecords,
   showToast,
 }: RecordingProps) {
@@ -66,11 +69,13 @@ export function useWhisperRecording({
   const orchestratorRef = useRef<MeetingOrchestrator | null>(null)
 
   const savedRecordIdRef = useRef<string | null>(null)
+  const recordsRef = useRef(records)
+  recordsRef.current = records
   const projectContextRef = useRef(projectContext)
   projectContextRef.current = projectContext
   const ensureOrchestrator = () => {
     if (!orchestratorRef.current) {
-      const orchestrator = new MeetingOrchestrator(`Reunião ${new Date().toLocaleString('pt-BR')}`, projectContextRef.current, 'codex')
+      const orchestrator = new MeetingOrchestrator(`Reunião ${new Date().toLocaleString('pt-BR')}`, projectContextRef.current)
       orchestratorRef.current = orchestrator
       orchestrator.subscribe(data => {
         const snapshot: MeetingIntelligenceData = JSON.parse(JSON.stringify(data))
@@ -94,6 +99,9 @@ export function useWhisperRecording({
     await ensureOrchestrator().ask(question, scope)
   }
   const handleCancelResearch = (id: string) => { void orchestratorRef.current?.cancel(id) }
+  const handleCopilotSuggestion = (id: string, action: 'accept' | 'dismiss') => {
+    void orchestratorRef.current?.handleSuggestion(id, action)
+  }
   const handleExportResearch = () => ensureOrchestrator().exportReport()
   useEffect(() => {
     orchestratorRef.current?.configure(projectContext)
@@ -207,6 +215,7 @@ export function useWhisperRecording({
       if (savedRecordIdRef.current) { orchestratorRef.current?.dispose(); orchestratorRef.current = null }
       savedRecordIdRef.current = null
       const orchestrator = ensureOrchestrator()
+      orchestrator.setMemory(buildMeetingMemory(recordsRef.current, projectContextRef.current))
       const savedMicId = localStorage.getItem('organon_selected_mic_id')
       const recordId = `rec-${Date.now()}`
       pendingRecordIdRef.current = recordId
@@ -321,7 +330,9 @@ export function useWhisperRecording({
       const transcriptSegments = finalSegments.length > 0 ? finalSegments : liveSegments
       const rawTranscript = formatSpeakerTranscript(transcriptSegments)
       const cleanTranscript = rawTranscript.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
-      orchestratorRef.current?.setTranscript(cleanTranscript)
+      const finalOrchestrator = ensureOrchestrator()
+      for (const segment of transcriptSegments) await finalOrchestrator.processTranscriptSnippet(segment.text)
+      finalOrchestrator.setTranscript(cleanTranscript)
       const title = recordingMode === 'meeting'
         ? `Reunião Whisper (${new Date().toLocaleTimeString('pt-BR')})`
         : recordingMode === 'interview'
@@ -413,6 +424,9 @@ export function useWhisperRecording({
         liveReport,
         intelligenceData: mergedIntelligence,
         mode: recordingMode,
+        projectContext: projectContextRef.current?.path
+          ? { name: projectContextRef.current.name, path: projectContextRef.current.path }
+          : undefined,
       }
 
       savedRecordIdRef.current = newRecord.id
@@ -457,6 +471,7 @@ export function useWhisperRecording({
     orchestratorRef,
     handleAskAgents,
     handleCancelResearch,
+    handleCopilotSuggestion,
     handleExportResearch,
     handleStartRecording,
     handleStopRecording,

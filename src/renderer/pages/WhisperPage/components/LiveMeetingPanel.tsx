@@ -1,12 +1,30 @@
 import React from 'react'
 import { LiveReport } from '../types/whisper.types'
+import type { MeetingIntelligenceData } from '../../../services/meetingIntelligence/types'
 
 interface Props {
   liveReport: LiveReport
   isLiveRecording: boolean
+  intelligenceData: MeetingIntelligenceData
+  onSuggestion: (id: string, action: 'accept' | 'dismiss') => void
 }
 
-export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording }) => {
+export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording, intelligenceData, onSuggestion }) => {
+  const openQuestions = (intelligenceData.openQuestions || []).filter(item => item.status === 'open')
+  const currentQuestion = openQuestions[0]?.text || liveReport.currentQuestion
+  const discussedConcepts = intelligenceData.topics?.length
+    ? intelligenceData.topics.slice(0, 12).map(item => item.label)
+    : liveReport.discussedConcepts
+  const forgottenPoints = [
+    ...(intelligenceData.risks || []).filter(item => item.status === 'open').map(item => `Risco ${item.severity}: ${item.text}`),
+    ...(intelligenceData.contradictions || []).filter(item => item.status === 'review').map(item => `Revisar possível contradição: ${item.currentStatement}`),
+    ...liveReport.forgottenPoints,
+  ].slice(0, 12)
+  const actionItems = intelligenceData.actionItems.length
+    ? intelligenceData.actionItems.filter(item => item.status === 'pending').map(item => `${item.task}${item.assignee ? ` — ${item.assignee}` : ''}${item.dueDate ? ` — prazo ${item.dueDate}` : ''}`)
+    : liveReport.actionItems
+  const suggestions = (intelligenceData.suggestions || []).filter(item => item.status === 'pending').slice(0, 4)
+  const memory = intelligenceData.memory
   return (
     <div
       style={{
@@ -51,6 +69,32 @@ export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording 
         )}
       </div>
 
+      {memory && memory.sourceMeetingIds.length > 0 && (
+        <div style={{ marginBottom: '12px', padding: '9px', borderRadius: '6px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>Preparação com memória · {memory.contextLabel}</div>
+          <div style={{ marginTop: '4px', color: 'var(--color-text)', lineHeight: 1.4 }}>
+            {memory.pendingActions.length} pendência(s), {memory.openQuestions.length} pergunta(s) aberta(s), {memory.risks.length} risco(s) em {memory.sourceMeetingIds.length} reunião(ões).
+          </div>
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#8b5cf6', marginBottom: '6px' }}>Sugestões do copiloto</div>
+          {suggestions.map(item => (
+            <div key={item.id} style={{ padding: '8px', marginBottom: '5px', borderRadius: '6px', border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.07)' }}>
+              <strong style={{ color: 'var(--color-text)' }}>{item.title}</strong>
+              <div style={{ color: 'var(--color-text-muted)', margin: '3px 0 6px' }}>{item.detail}</div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button type="button" className="whisper-btn-outline" onClick={() => onSuggestion(item.id, 'accept')}>Aplicar</button>
+                <button type="button" className="whisper-btn-outline" onClick={() => onSuggestion(item.id, 'dismiss')}>Ignorar</button>
+                <span style={{ marginLeft: 'auto', color: 'var(--color-text-muted)', fontSize: '10px' }}>{Math.round(item.confidence * 100)}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Pergunta / Tópico Atual */}
       <div style={{ marginBottom: '14px', padding: '10px', borderRadius: '6px', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -62,7 +106,7 @@ export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording 
           <span>Pergunta / Dúvida Atual</span>
         </div>
         <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text)', lineHeight: '1.4' }}>
-          {liveReport.currentQuestion || 'Aguardando início da fala...'}
+          {currentQuestion || 'Aguardando início da fala...'}
         </p>
       </div>
 
@@ -74,11 +118,11 @@ export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording 
           </svg>
           <span>Conceitos Abordados</span>
         </div>
-        {liveReport.discussedConcepts.length === 0 ? (
+        {discussedConcepts.length === 0 ? (
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Nenhum conceito registrado ainda.</span>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-            {liveReport.discussedConcepts.map((item, idx) => (
+            {discussedConcepts.map((item, idx) => (
               <span
                 key={idx}
                 style={{
@@ -107,11 +151,11 @@ export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording 
           </svg>
           <span>Pontos a Mencionar</span>
         </div>
-        {liveReport.forgottenPoints.length === 0 ? (
+        {forgottenPoints.length === 0 ? (
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Tudo coberto até o momento.</span>
         ) : (
           <ul style={{ margin: 0, paddingLeft: '14px', fontSize: '11.5px', color: 'var(--color-text)' }}>
-            {liveReport.forgottenPoints.map((pt, idx) => (
+            {forgottenPoints.map((pt, idx) => (
               <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
             ))}
           </ul>
@@ -127,11 +171,11 @@ export const LiveMeetingPanel: React.FC<Props> = ({ liveReport, isLiveRecording 
           </svg>
           <span>Próximos Passos & Ações</span>
         </div>
-        {liveReport.actionItems.length === 0 ? (
+        {actionItems.length === 0 ? (
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Nenhuma ação anotada.</span>
         ) : (
           <ul style={{ margin: 0, paddingLeft: '14px', fontSize: '11.5px', color: 'var(--color-text)' }}>
-            {liveReport.actionItems.map((act, idx) => (
+            {actionItems.map((act, idx) => (
               <li key={idx} style={{ marginBottom: '3px' }}>{act}</li>
             ))}
           </ul>

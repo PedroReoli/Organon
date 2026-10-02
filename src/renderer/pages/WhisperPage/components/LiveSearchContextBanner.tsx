@@ -61,7 +61,7 @@ export const LiveSearchContextBanner: React.FC<Props> = ({ data, isRecording }) 
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
           <span>Orquestração:</span>
-          <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>Agentes Codex CLI</span>
+          <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>Gateway multi-IA</span>
         </div>
       </div>
 

@@ -109,7 +109,10 @@ type ObsidianMeetingExport = {
   intelligenceData?: {
     executiveSummary?: string
     decisions?: Array<{ text?: string; confirmed?: boolean }>
-    actionItems?: Array<{ task?: string; assignee?: string; status?: string; confirmed?: boolean }>
+    actionItems?: Array<{ task?: string; assignee?: string; dueDate?: string; status?: string; confirmed?: boolean }>
+    openQuestions?: Array<{ text?: string; status?: string; answer?: string }>
+    risks?: Array<{ text?: string; severity?: string; status?: string }>
+    topics?: Array<{ label?: string; mentions?: number }>
   }
   audioPath?: string
 }
@@ -132,6 +135,9 @@ function buildObsidianMeetingMarkdown(meeting: ObsidianMeetingExport, audioLink?
   const intelligence = meeting.intelligenceData
   const decisions = (intelligence?.decisions || []).filter(item => item?.text?.trim())
   const actionItems = (intelligence?.actionItems || []).filter(item => item?.task?.trim())
+  const openQuestions = (intelligence?.openQuestions || []).filter(item => item?.text?.trim() && item.status === 'open')
+  const risks = (intelligence?.risks || []).filter(item => item?.text?.trim() && item.status === 'open')
+  const topics = (intelligence?.topics || []).filter(item => item?.label?.trim()).slice(0, 20)
   const segments = (meeting.segments || []).filter(segment => segment?.text?.trim())
   const lines = [
     '---',
@@ -157,9 +163,13 @@ function buildObsidianMeetingMarkdown(meeting: ObsidianMeetingExport, audioLink?
   if (actionItems.length) {
     lines.push('## Acoes', '', ...actionItems.map(item => {
       const owner = item.assignee?.trim() ? ` @${item.assignee.trim()}` : ''
-      return `- [${item.status === 'done' ? 'x' : ' '}] ${item.task!.trim()}${owner}`
+      const dueDate = item.dueDate?.trim() ? ` 📅 ${item.dueDate.trim()}` : ''
+      return `- [${item.status === 'done' ? 'x' : ' '}] ${item.task!.trim()}${owner}${dueDate}`
     }), '')
   }
+  if (openQuestions.length) lines.push('## Perguntas em aberto', '', ...openQuestions.map(item => `- ${item.text!.trim()}`), '')
+  if (risks.length) lines.push('## Riscos', '', ...risks.map(item => `- [${item.severity || 'medium'}] ${item.text!.trim()}`), '')
+  if (topics.length) lines.push('## Topicos', '', topics.map(item => `#${item.label!.trim().replace(/\s+/g, '-')}`).join(' '), '')
 
   lines.push('## Transcricao', '')
   if (segments.length) {

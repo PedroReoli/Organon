@@ -64,6 +64,7 @@ export interface WhisperRecord {
   liveReport?: LiveReport
   isFavorite?: boolean
   isArchived?: boolean
+  projectContext?: { name?: string; path?: string }
 }
 
 export interface WhisperAudioMetrics {

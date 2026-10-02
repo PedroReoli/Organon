@@ -1,4 +1,6 @@
 export type MeetingProviderId = 'codex' | 'claude' | 'gemini' | 'antigravity' | 'ollama'
+export type CopilotMode = 'automatic' | 'assist' | 'manual'
+export type InsightOrigin = 'deterministic' | 'ai' | 'manual'
 
 export interface ProjectContextConfig {
   enabled: boolean
@@ -12,6 +14,7 @@ export interface ProjectContextConfig {
   agentProviderId?: MeetingProviderId | 'auto'
   allowExternalAI?: boolean
   allowLocalAI?: boolean
+  copilotMode?: CopilotMode
 }
 
 export type IntentType =
@@ -52,9 +55,81 @@ export interface ActionItem {
   timestamp: string
   task: string
   assignee?: string
+  dueDate?: string
   status: 'pending' | 'done'
   sourceSegmentIds?: string[]
   confirmed?: boolean
+  confidence?: number
+  origin?: InsightOrigin
+}
+
+export interface DecisionItem {
+  id: string
+  text: string
+  timestamp: string
+  sourceSegmentIds?: string[]
+  confirmed?: boolean
+  confidence?: number
+  origin?: InsightOrigin
+}
+
+export interface TopicInsight {
+  id: string
+  label: string
+  mentions: number
+  lastTimestamp: string
+  confidence: number
+}
+
+export interface OpenQuestion {
+  id: string
+  text: string
+  timestamp: string
+  status: 'open' | 'answered' | 'dismissed'
+  answer?: string
+  confidence: number
+  sourceSegmentIds?: string[]
+}
+
+export interface MeetingRisk {
+  id: string
+  text: string
+  timestamp: string
+  severity: 'low' | 'medium' | 'high'
+  status: 'open' | 'mitigated' | 'dismissed'
+  confidence: number
+  sourceSegmentIds?: string[]
+}
+
+export interface MeetingContradiction {
+  id: string
+  previousStatement: string
+  currentStatement: string
+  timestamp: string
+  status: 'review' | 'resolved' | 'dismissed'
+  confidence: number
+}
+
+export interface CopilotSuggestion {
+  id: string
+  type: 'research_project' | 'research_web' | 'clarify' | 'confirm_decision' | 'assign_owner' | 'set_due_date' | 'risk_mitigation'
+  title: string
+  detail: string
+  timestamp: string
+  status: 'pending' | 'accepted' | 'dismissed'
+  confidence: number
+  suggestedScope?: Exclude<ResearchScope, 'report'>
+  sourceText: string
+}
+
+export interface MeetingMemoryDigest {
+  preparedAt: string
+  sourceMeetingIds: string[]
+  contextLabel: string
+  decisions: string[]
+  pendingActions: string[]
+  openQuestions: string[]
+  risks: string[]
 }
 
 export type ResearchScope = 'web' | 'project' | 'both' | 'report'
@@ -62,13 +137,20 @@ export interface MeetingResearchTask {
   id: string; question: string; scope: ResearchScope; status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'; stage: string; error?: string
 }
 export interface MeetingIntelligenceData {
+  schemaVersion?: 2
   tasks?: MeetingResearchTask[]
   currentTopic?: string
   questions: Array<{ id: string; text: string; timestamp: string }>
   findings: ProjectFinding[]
   executiveSummary?: string
-  decisions: Array<{ id: string; text: string; timestamp: string; sourceSegmentIds?: string[]; confirmed?: boolean }>
+  decisions: DecisionItem[]
   actionItems: ActionItem[]
+  topics?: TopicInsight[]
+  openQuestions?: OpenQuestion[]
+  risks?: MeetingRisk[]
+  contradictions?: MeetingContradiction[]
+  suggestions?: CopilotSuggestion[]
+  memory?: MeetingMemoryDigest
   auditLog: Array<{ id: string; timestamp: string; action: string; details: string }>
 }
 

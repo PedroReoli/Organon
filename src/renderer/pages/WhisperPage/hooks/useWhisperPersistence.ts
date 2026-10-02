@@ -51,6 +51,7 @@ const normalizeRecord = (meeting: Meeting): WhisperRecord => ({
   transcriptionProvenance: meeting.transcriptionProvenance,
   isFavorite: meeting.isFavorite,
   isArchived: meeting.isArchived,
+  projectContext: meeting.projectContext,
 })
 
 const toMeeting = (record: WhisperRecord, previous?: Meeting): Meeting => ({
@@ -77,6 +78,7 @@ const toMeeting = (record: WhisperRecord, previous?: Meeting): Meeting => ({
   audioTracks: record.audioTracks ?? previous?.audioTracks,
   isFavorite: record.isFavorite,
   isArchived: record.isArchived,
+  projectContext: record.projectContext,
 })
 
 export function useWhisperPersistence({

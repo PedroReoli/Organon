@@ -1,4 +1,4 @@
-import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, Search, Volume2, Unlink } from 'lucide-react'
+import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, Volume2, Unlink } from 'lucide-react'
 import { ProjectContextConfig } from '../../../services/meetingIntelligence/types'
 
 const defaults: ProjectContextConfig = {
@@ -6,7 +6,8 @@ const defaults: ProjectContextConfig = {
   name: '',
   path: '',
   allowWebResearch: true,
-  automaticResearch: true,
+  automaticResearch: false,
+  copilotMode: 'assist',
   watchChanges: false,
   systemAudio: true,
   readOnly: true,
@@ -98,6 +99,21 @@ export function ProjectContextSelector({
           <option value="gemini">Gemini CLI</option>
           <option value="antigravity">Antigravity</option>
         </select>
+        <label htmlFor="copilot-mode" style={{ fontSize: '11.5px', color: 'var(--color-text)' }}>Copiloto</label>
+        <select
+          id="copilot-mode"
+          value={value.copilotMode}
+          onChange={(event) => {
+            const mode = event.target.value as ProjectContextConfig['copilotMode']
+            update({ copilotMode: mode, automaticResearch: mode === 'automatic' })
+          }}
+          className="whisper-select"
+          title="Automático executa pesquisas permitidas; Assistido sugere; Manual apenas registra."
+        >
+          <option value="assist">Assistido (recomendado)</option>
+          <option value="automatic">Automático</option>
+          <option value="manual">Manual</option>
+        </select>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '11.5px', color: 'var(--color-text)' }}>
@@ -122,16 +138,6 @@ export function ProjectContextSelector({
           />
           <Cloud size={12} style={{ color: 'var(--color-text-muted)' }} />
           <span>Autorizar envio para IA externa nesta reunião</span>
-        </label>
-
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={value.automaticResearch}
-            onChange={(event) => update({ automaticResearch: event.target.checked })}
-          />
-          <Search size={12} style={{ color: 'var(--color-text-muted)' }} />
-          <span>Pesquisar perguntas da conversa</span>
         </label>
 
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>

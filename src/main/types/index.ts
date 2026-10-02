@@ -317,6 +317,7 @@ export interface Meeting {
     durationMs: number
   } | null
   audioTracks?: MeetingAudioTrack[]
+  projectContext?: { name?: string; path?: string }
 }
 
 export interface MeetingAudioTrack {
