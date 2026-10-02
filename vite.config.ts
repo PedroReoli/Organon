@@ -55,58 +55,42 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: { main: path.resolve(__dirname, 'src/renderer/index.html'), whisper: path.resolve(__dirname, 'src/renderer/super-whisper.html') },
         output: {
-          manualChunks: {
-            // Tiptap (editor de notas — pesado: 8 extensoes)
-            tiptap: [
-              '@tiptap/core',
-              '@tiptap/react',
-              '@tiptap/starter-kit',
-              '@tiptap/extension-link',
-              '@tiptap/extension-image',
-              '@tiptap/extension-task-list',
-              '@tiptap/extension-task-item',
-              '@tiptap/extension-table',
-              '@tiptap/extension-table-row',
-              '@tiptap/extension-table-cell',
-              '@tiptap/extension-table-header',
-              '@tiptap/extension-highlight',
-              '@tiptap/extension-underline',
-              '@tiptap/extension-subscript',
-              '@tiptap/extension-superscript',
-              '@tiptap/extension-text-align',
-              '@tiptap/extension-text-style',
-              '@tiptap/extension-color',
-              '@tiptap/extension-typography',
-              '@tiptap/extension-placeholder',
-            ],
-            // Excalidraw (canvas — ~1.8MB)
-            excalidraw: ['@excalidraw/excalidraw'],
-            // Mermaid (diagramas em notas)
-            mermaid: ['mermaid'],
-            // Katex (equacoes em notas)
-            katex: ['katex'],
-            // jsPDF + html2canvas (export PDF)
-            pdf: ['jspdf', 'html2canvas'],
-            // Radix UI (design system primitives)
-            'radix-ui': [
-              '@radix-ui/react-accordion',
-              '@radix-ui/react-avatar',
-              '@radix-ui/react-checkbox',
-              '@radix-ui/react-dialog',
-              '@radix-ui/react-dropdown-menu',
-              '@radix-ui/react-popover',
-              '@radix-ui/react-radio-group',
-              '@radix-ui/react-select',
-              '@radix-ui/react-separator',
-              '@radix-ui/react-switch',
-              '@radix-ui/react-tooltip',
-            ],
-            // dnd-kit (drag-and-drop)
-            'dnd-kit': [
-              '@dnd-kit/core',
-              '@dnd-kit/sortable',
-              '@dnd-kit/utilities',
-            ],
+          manualChunks(id) {
+            const modulePath = id.replaceAll('\\', '/')
+            const isPackage = (packageName: string) =>
+              modulePath.includes(`/node_modules/${packageName}/`)
+
+            // Capture internal CommonJS files too, not only package entries.
+            // This keeps the React runtime out of feature chunks and prevents
+            // bootstrap cycles such as Radix -> Tiptap -> Radix.
+            if ([
+              'react',
+              'react-dom',
+              'react-is',
+              'scheduler',
+              'use-sync-external-store',
+            ].some(isPackage)) {
+              return 'react-vendor'
+            }
+
+            // Assign only the public entries. Their internal dynamic imports
+            // must remain split instead of being folded into one huge chunk.
+            if (modulePath.endsWith('/node_modules/@excalidraw/excalidraw/dist/prod/index.js')) {
+              return 'excalidraw'
+            }
+            if (modulePath.endsWith('/node_modules/mermaid/dist/mermaid.core.mjs')) {
+              return 'mermaid'
+            }
+
+            if (isPackage('@tiptap') || modulePath.includes('/node_modules/prosemirror-')) {
+              return 'tiptap'
+            }
+            if (isPackage('katex')) return 'katex'
+            if (isPackage('jspdf') || isPackage('html2canvas')) return 'pdf'
+            if (isPackage('@radix-ui')) return 'radix-ui'
+            if (isPackage('@dnd-kit')) return 'dnd-kit'
+
+            return undefined
           },
         },
       },
