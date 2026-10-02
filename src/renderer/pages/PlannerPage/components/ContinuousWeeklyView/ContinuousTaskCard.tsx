@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { BellPlus, Check, GripVertical } from 'lucide-react';
 import type { CardReminderItem, Project } from '@types';
 import type { PlanningTask } from '../../types/planning.types';
@@ -20,7 +19,7 @@ const priorityColors: Record<string, string> = {
 export const ContinuousTaskCard = ({ task, onEdit, onUpdateTask }: ContinuousTaskCardProps) => {
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const suppressOpenRef = useRef(false);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: task.id,
     data: { type: 'continuous-task', task },
   });
@@ -55,7 +54,6 @@ export const ContinuousTaskCard = ({ task, onEdit, onUpdateTask }: ContinuousTas
       ref={setNodeRef}
       data-planning-task-id={task.id}
       aria-label={`Tarefa ${task.title}`}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }}
       {...attributes}
       {...listeners}
       className="group relative flex min-h-11 cursor-grab touch-none select-none items-center gap-2 rounded-lg border border-white/5 bg-[#151f33] px-2 py-1.5 hover:border-indigo-400/35 active:cursor-grabbing"

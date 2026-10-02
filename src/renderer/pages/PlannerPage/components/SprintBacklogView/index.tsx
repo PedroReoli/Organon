@@ -1,12 +1,23 @@
-import { DndContext, closestCorners, DragOverlay } from '@dnd-kit/core';
+import {
+    DndContext,
+    closestCorners,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { PlanningTask, PlanningSprint } from '../../types/planning.types';
 import { SprintHeader } from './SprintHeader';
 import { SprintKanbanColumn } from './SprintKanbanColumn';
 import { BacklogBucket } from './BacklogBucket';
 import { usePlanningDragDrop } from '../../hooks/usePlanningDragDrop';
-import { PlanningCardStandard } from '../Card/PlanningCardStandard';
 
 export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprint?: PlanningSprint, tasks: PlanningTask[], onEdit: (id: string) => void, onMoveTask?: (taskId: string, newStatus: string) => void }) => {
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
     const columns = [
         { id: 'todo', title: 'To Do' },
         { id: 'in_progress', title: 'In Progress' },
@@ -23,15 +34,16 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
         }
     };
 
-    const { activeId, handleDragStart, handleDragOver, handleDragEnd } = usePlanningDragDrop(handleTaskMove);
-    const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
+    const { handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = usePlanningDragDrop(handleTaskMove);
 
     return (
         <DndContext
+            sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
         >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <SprintHeader sprint={sprint} tasks={tasks} />
@@ -50,10 +62,6 @@ export const SprintBacklogView = ({ sprint, tasks, onEdit, onMoveTask }: { sprin
 
                 <BacklogBucket tasks={backlogTasks} onEdit={onEdit} />
             </div>
-
-            <DragOverlay>
-                {activeTask ? <PlanningCardStandard task={activeTask} onEdit={() => {}} /> : null}
-            </DragOverlay>
         </DndContext>
     )
 }

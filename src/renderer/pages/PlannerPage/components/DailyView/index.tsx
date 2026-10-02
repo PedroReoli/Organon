@@ -3,7 +3,6 @@ import {
   DndContext,
   type DragEndEvent,
   type DragStartEvent,
-  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -23,7 +22,7 @@ import {
   DailySidebar,
 } from './components';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
-import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
+import { usePlanningDragCursor } from '../../hooks/usePlanningDragCursor';
 
 interface DailyViewProps {
   tasks: PlanningTask[];
@@ -212,7 +211,6 @@ export const DailyView: React.FC<DailyViewProps> = ({
     return {
       draggable: { measure: zoomedClientRect },
       droppable: { strategy: MeasuringStrategy.Always, measure: zoomedClientRect },
-      dragOverlay: { measure: zoomedClientRect },
     };
   }, [zoomedClientRect]);
 
@@ -256,14 +254,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (!activeTaskId) return;
-    const prevCursor = document.body.style.cursor;
-    document.body.style.cursor = 'grabbing';
-    return () => {
-      document.body.style.cursor = prevCursor;
-    };
-  }, [activeTaskId]);
+  usePlanningDragCursor(Boolean(activeTaskId));
 
   const openQuickAdd = (hour?: number) => {
     const time = hour !== undefined ? `${hour.toString().padStart(2, '0')}:00` : '10:00';
@@ -358,8 +349,6 @@ export const DailyView: React.FC<DailyViewProps> = ({
     setQuickAddModal(null);
   };
 
-  const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
-
   return (
     <div className="flex flex-col h-full w-full bg-[#0a0f1d] text-slate-200 overflow-hidden select-none">
       <DailyViewHeader
@@ -439,7 +428,6 @@ export const DailyView: React.FC<DailyViewProps> = ({
                     hour={hour}
                     tasks={hourTasks}
                     projects={projects}
-                    activeTask={activeTask}
                     onEdit={onEdit}
                     onToggleStatus={onToggleStatus}
                     onOpenAdd={() => openQuickAdd(hour)}
@@ -460,14 +448,6 @@ export const DailyView: React.FC<DailyViewProps> = ({
           </div>
         </div>
 
-        <DragOverlay zIndex={9999} adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
-          {activeTask ? (
-            <PlanningDragOverlay
-              task={activeTask}
-              project={projects.find(project => project.id === activeTask.projectId)}
-            />
-          ) : null}
-        </DragOverlay>
       </DndContext>
 
       <PlanningQuickAddModal

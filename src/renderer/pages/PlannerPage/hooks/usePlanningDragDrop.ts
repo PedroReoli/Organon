@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
+import { usePlanningDragCursor } from './usePlanningDragCursor';
 
 export const usePlanningDragDrop = (onTaskMove: (taskId: string, targetId: string) => void) => {
     const [activeId, setActiveId] = useState<string | null>(null);
+    usePlanningDragCursor(Boolean(activeId));
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string);
@@ -20,10 +22,13 @@ export const usePlanningDragDrop = (onTaskMove: (taskId: string, targetId: strin
         }
     };
 
+    const handleDragCancel = () => setActiveId(null);
+
     return {
         activeId,
         handleDragStart,
         handleDragOver,
-        handleDragEnd
+        handleDragEnd,
+        handleDragCancel
     };
 };

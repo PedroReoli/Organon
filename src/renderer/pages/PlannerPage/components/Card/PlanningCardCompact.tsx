@@ -1,6 +1,5 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { PlanningTask } from '../../types/planning.types';
 import type { Project } from '@types';
 import { CheckSquare, Clock } from 'lucide-react';
@@ -149,23 +148,16 @@ export const PlanningCardCompact: React.FC<PlanningCardCompactProps> = ({
   };
 
   if (isSortable) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    const { attributes, listeners, setNodeRef } = useSortable({
       id: task.id,
       data: { type: 'Task', task },
     });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.3 : 1,
-    };
 
     return (
       <div
         ref={setNodeRef}
         data-planning-task-id={task.id}
         aria-label={`Tarefa ${task.title}`}
-        style={style}
         {...attributes}
         {...listeners}
         onClick={(event) => {

@@ -4,7 +4,6 @@ import {
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
-  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -24,7 +23,7 @@ import {
   WeeklyViewHeader,
 } from './components';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
-import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
+import { usePlanningDragCursor } from '../../hooks/usePlanningDragCursor';
 
 interface WeeklyViewProps {
   tasks: PlanningTask[];
@@ -238,7 +237,6 @@ export const WeeklyView = ({
     return {
       draggable: { measure: zoomedClientRect },
       droppable: { strategy: MeasuringStrategy.Always, measure: zoomedClientRect },
-      dragOverlay: { measure: zoomedClientRect },
     };
   }, [zoomedClientRect]);
 
@@ -315,14 +313,7 @@ export const WeeklyView = ({
     setDragTargetId(null);
   };
 
-  useEffect(() => {
-    if (!activeTaskId) return;
-    const prevCursor = document.body.style.cursor;
-    document.body.style.cursor = 'grabbing';
-    return () => {
-      document.body.style.cursor = prevCursor;
-    };
-  }, [activeTaskId]);
+  usePlanningDragCursor(Boolean(activeTaskId));
 
   const handleSlotClickToMove = (slotId: string) => {
     if (!selectedTaskId) return;
@@ -530,8 +521,8 @@ export const WeeklyView = ({
                   Semanas de {monthNameCapitalized}
                 </span>
                 {activeTaskId && (
-                  <span className="text-[10px] text-indigo-300 font-medium bg-indigo-950/80 border border-indigo-500/50 px-2 py-0.2 rounded-full animate-pulse">
-                    Solte aqui para mover o card para a semana selecionada
+                  <span className="text-[10px] text-indigo-300 font-medium bg-indigo-950/80 border border-indigo-500/50 px-2 py-0.2 rounded-full">
+                    Solte aqui para mover a demanda para a semana selecionada
                   </span>
                 )}
               </div>
@@ -724,14 +715,6 @@ export const WeeklyView = ({
           </div>
         </div>
 
-        <DragOverlay zIndex={9999} adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
-          {activeTask ? (
-            <PlanningDragOverlay
-              task={activeTask}
-              project={projects.find(project => project.id === activeTask.projectId)}
-            />
-          ) : null}
-        </DragOverlay>
       </DndContext>
 
       <PlanningQuickAddModal

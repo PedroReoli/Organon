@@ -1,5 +1,4 @@
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { CheckSquare } from 'lucide-react';
 import { PlanningTask } from '../../types/planning.types';
 
@@ -8,16 +7,10 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
     const doneSub = task.checklist?.filter(c => c.done || c.completed).length || 0;
 
     if (isSortable) {
-        const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        const { attributes, listeners, setNodeRef } = useSortable({
             id: task.id,
             data: { type: 'Task', task }
         });
-
-        const style = {
-            transform: CSS.Transform.toString(transform),
-            transition,
-            opacity: isDragging ? 0.5 : 1,
-        };
 
         return (
             <div
@@ -25,7 +18,6 @@ export const PlanningCardStandard = ({ task, onEdit, isSortable }: { task: Plann
                 data-planning-task-id={task.id}
                 aria-label={`Tarefa ${task.title}`}
                 style={{
-                    ...style,
                     padding: '12px',
                     background: 'var(--color-bg)',
                     border: '1px solid rgba(255,255,255,0.08)',

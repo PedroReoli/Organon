@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   closestCorners,
   DndContext,
-  DragOverlay,
   KeyboardSensor,
   type DragEndEvent,
   type DragStartEvent,
@@ -17,7 +16,7 @@ import type { Day, Project } from '@types';
 import type { PlanningTask } from '../../types/planning.types';
 import { PlanningQuickAddModal, type PlanningQuickAddState } from '../Modals/PlanningQuickAddModal';
 import { ContinuousDayColumn } from './ContinuousDayColumn';
-import { PlanningDragOverlay } from '../Card/PlanningDragOverlay';
+import { usePlanningDragCursor } from '../../hooks/usePlanningDragCursor';
 
 interface ContinuousWeeklyViewProps {
   tasks: PlanningTask[];
@@ -70,6 +69,7 @@ export const ContinuousWeeklyView = ({
     useSensor(PointerSensor, { activationConstraint: { distance: 7 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  usePlanningDragCursor(Boolean(activeTaskId));
 
   const weekDays = useMemo(() => {
     const today = new Date();
@@ -178,8 +178,6 @@ export const ContinuousWeeklyView = ({
     );
   };
 
-  const activeTask = tasks.find((task) => task.id === activeTaskId);
-
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0B0F17] text-slate-200">
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/5 bg-[#0a0f1d] px-4 py-2">
@@ -226,14 +224,6 @@ export const ContinuousWeeklyView = ({
             />
           ))}
         </div>
-        <DragOverlay adjustScale={false} dropAnimation={{ duration: 160, easing: 'ease-out' }}>
-          {activeTask ? (
-            <PlanningDragOverlay
-              task={activeTask}
-              project={projects.find(project => project.id === activeTask.projectId)}
-            />
-          ) : null}
-        </DragOverlay>
       </DndContext>
 
       <PlanningQuickAddModal modal={quickAddModal} projects={projects} onChange={setQuickAddModal} onSubmit={submitQuickAdd} />

@@ -11,7 +11,6 @@ export interface DailySlotProps {
   hour?: number;
   tasks: PlanningTask[];
   projects?: Project[];
-  activeTask?: PlanningTask | null;
   onEdit: (id: string) => void;
   onToggleStatus?: (id: string) => void;
   onOpenAdd: () => void;
@@ -23,7 +22,6 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
   hour,
   tasks,
   projects = [],
-  activeTask,
   onEdit,
   onToggleStatus,
   onOpenAdd,
@@ -78,17 +76,6 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
           })}
         </SortableContext>
 
-        {/* Ghost Drop Placeholder */}
-        {isOver && activeTask && !tasks.some((t) => t.id === activeTask.id) && (
-          <div className="w-full min-h-[32px] rounded-md border-2 border-dashed border-indigo-400/80 bg-indigo-950/40 p-1.5 flex items-center gap-2 text-xs text-indigo-300 animate-pulse select-none pointer-events-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-            <span className="truncate font-medium flex-1 text-slate-200">{activeTask.title}</span>
-            <span className="text-[9px] font-mono text-indigo-300/80 shrink-0 uppercase tracking-wider">
-              Mover para {hourLabel}
-            </span>
-          </div>
-        )}
-
         {/* Inline Quick Add Form */}
         {isInlineAdding && (
           <form
@@ -139,7 +126,7 @@ export const DailyHourSlot: React.FC<DailySlotProps> = ({
         )}
 
         {/* Empty Slot Hover Add Button */}
-        {tasks.length === 0 && !isInlineAdding && (!isOver || !activeTask) && (
+        {tasks.length === 0 && !isInlineAdding && !isOver && (
           <div
             onClick={() => setIsInlineAdding(true)}
             className="h-8 flex items-center justify-between px-3 rounded-md text-xs text-slate-600 opacity-0 group-hover/slot:opacity-100 hover:bg-white/5 hover:text-slate-300 transition-all cursor-pointer select-none"

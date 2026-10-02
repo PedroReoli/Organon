@@ -60,7 +60,7 @@ export const MonthWeekDroppable: React.FC<MonthWeekDroppableProps> = ({
 
       {/* Ghost Drop Placeholder */}
       {isOver && activeTask && (
-        <div className="mt-1.5 py-1 px-1.5 rounded border border-dashed border-indigo-400/80 bg-indigo-950/60 text-[10px] text-indigo-200 font-semibold flex items-center gap-1 animate-pulse">
+        <div className="mt-1.5 py-1 px-1.5 rounded border border-dashed border-indigo-400/80 bg-indigo-950/60 text-[10px] text-indigo-200 font-semibold flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
           <span className="truncate">Mover para esta semana</span>
         </div>

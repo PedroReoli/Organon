@@ -6,13 +6,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import type { PlanningTask } from '../../../types/planning.types';
-import { MatrixTaskCard } from '../../Card/MatrixTaskCard';
+import { MatrixTagGroup } from '../../Card/MatrixTagGroup';
 import { TurnOverviewModal } from '../../Card/TurnOverviewModal';
 import { Plus } from 'lucide-react';
 import type { Project } from '@types';
 import './matrix-slot.css';
 
-const MAX_MATRIX_ITEMS = 6;
+const MAX_MATRIX_GROUPS = 6;
 
 export interface MatrixSlotProps {
   id: string;
@@ -45,7 +45,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   onSlotClick,
   onEdit,
   onToggleStatus,
-  onPostponeWeek,
+  onPostponeWeek: _onPostponeWeek,
   onOpenAdd,
   onQuickCreate,
 }) => {
@@ -55,10 +55,23 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
   const [showOverview, setShowOverview] = React.useState(false);
   const inlineInputRef = React.useRef<HTMLInputElement>(null);
 
-  const hasOverflow = !isBacklog && tasks.length > MAX_MATRIX_ITEMS;
-  const visibleTaskLimit = hasOverflow ? MAX_MATRIX_ITEMS - 1 : MAX_MATRIX_ITEMS;
-  const visibleTasks = isBacklog ? tasks : tasks.slice(0, visibleTaskLimit);
-  const hiddenTaskCount = Math.max(0, tasks.length - visibleTasks.length);
+  const taskGroups = React.useMemo(() => {
+    const groups = new Map<string, { label: string; tasks: PlanningTask[] }>();
+    tasks.forEach(task => {
+      const sourceTag = task.tags?.find(tag => tag?.trim());
+      const label = sourceTag?.trim() || 'Sem tag';
+      const key = label.toLocaleLowerCase('pt-BR');
+      const current = groups.get(key);
+      if (current) current.tasks.push(task);
+      else groups.set(key, { label, tasks: [task] });
+    });
+    return Array.from(groups.values());
+  }, [tasks]);
+  const hasOverflow = !isBacklog && taskGroups.length > MAX_MATRIX_GROUPS;
+  const visibleGroupLimit = hasOverflow ? MAX_MATRIX_GROUPS - 1 : MAX_MATRIX_GROUPS;
+  const visibleGroups = isBacklog ? taskGroups : taskGroups.slice(0, visibleGroupLimit);
+  const hiddenGroups = taskGroups.slice(visibleGroups.length);
+  const hiddenTaskCount = hiddenGroups.reduce((total, group) => total + group.tasks.length, 0);
   const isActiveDropTarget = isOver || isDragTarget;
 
   React.useEffect(() => {
@@ -99,49 +112,38 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
       <div className="planner-matrix-slot-content">
         {tasks.length > 0 && (
           <SortableContext
-            items={visibleTasks.map(task => task.id)}
+            items={visibleGroups.flatMap(group => group.tasks.map(task => task.id))}
             strategy={isBacklog ? verticalListSortingStrategy : rectSortingStrategy}
           >
             <div className={`planner-matrix-task-grid ${isBacklog ? 'is-backlog' : ''}`}>
-              {visibleTasks.map(task => {
-                const project = projects.find(item => item.id === task.projectId);
-                return (
-                  <MatrixTaskCard
-                    key={task.id}
-                    task={task}
-                    project={project}
-                    slotId={id}
-                    previewDisabled={Boolean(activeTask)}
-                    isSelected={selectedTaskId === task.id}
-                    onEdit={() => onEdit(task.id)}
-                    onSelectTask={onSelectTask}
-                    onToggleStatus={onToggleStatus}
-                    onPostponeWeek={onPostponeWeek}
-                  />
-                );
-              })}
+              {visibleGroups.map(group => (
+                <MatrixTagGroup
+                  key={group.label.toLocaleLowerCase('pt-BR')}
+                  label={group.label}
+                  tasks={group.tasks}
+                  projects={projects}
+                  slotId={id}
+                  activeTask={activeTask}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={onSelectTask}
+                  onEdit={onEdit}
+                  onToggleStatus={onToggleStatus}
+                />
+              ))}
 
               {hiddenTaskCount > 0 && (
                 <button
                   type="button"
                   className="matrix-task-overflow"
-                  aria-label={`Ver as ${tasks.length} tarefas de ${label || 'este turno'}`}
+                  aria-label={`Ver as ${tasks.length} demandas de ${label || 'este turno'}`}
                   onClick={event => {
                     event.stopPropagation();
                     setShowOverview(true);
                   }}
                 >
-                  <span>+{hiddenTaskCount}</span>
-                  <small>{hiddenTaskCount === 1 ? 'tarefa' : 'tarefas'}</small>
+                  <span>+{hiddenGroups.length} {hiddenGroups.length === 1 ? 'tag' : 'tags'}</span>
+                  <small>{hiddenTaskCount} {hiddenTaskCount === 1 ? 'demanda' : 'demandas'}</small>
                 </button>
-              )}
-
-              {isActiveDropTarget && activeTask && !tasks.some(task => task.id === activeTask.id) && (
-                <div className="matrix-task-drop-preview" aria-hidden="true">
-                  <span />
-                  <strong>{activeTask.title}</strong>
-                  <small>Soltar aqui</small>
-                </div>
               )}
 
               {isInlineAdding && (
@@ -226,13 +228,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
         )}
 
         {tasks.length === 0 && isActiveDropTarget && activeTask && (
-          <div className="planner-matrix-task-grid is-drop-target">
-            <div className="matrix-task-drop-preview" aria-hidden="true">
-              <span />
-              <strong>{activeTask.title}</strong>
-              <small>Soltar aqui</small>
-            </div>
-          </div>
+          <div className="matrix-slot-drop-target" aria-hidden="true">Soltar neste turno</div>
         )}
 
         {tasks.length === 0 && !isInlineAdding && (!isActiveDropTarget || !activeTask) && (
@@ -262,7 +258,7 @@ export const MatrixSlot: React.FC<MatrixSlotProps> = ({
               setShowOverview(true);
             }}
           >
-            {tasks.length} {tasks.length === 1 ? 'tarefa' : 'tarefas'}
+            {tasks.length} {tasks.length === 1 ? 'demanda' : 'demandas'}
           </button>
           <button
             type="button"
