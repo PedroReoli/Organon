@@ -374,6 +374,7 @@ const BASE_TOOLS = [
         providerId: { type: 'string', enum: ['auto', 'codex', 'claude', 'gemini', 'antigravity', 'ollama'] },
         allowExternalAI: { type: 'boolean', default: false },
         allowLocalAI: { type: 'boolean', default: true },
+        redactExternalAI: { type: 'boolean', default: true },
         web: { type: 'boolean', default: false }
       }
     },

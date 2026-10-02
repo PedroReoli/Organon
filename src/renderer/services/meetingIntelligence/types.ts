@@ -15,6 +15,7 @@ export interface ProjectContextConfig {
   allowExternalAI?: boolean
   allowLocalAI?: boolean
   copilotMode?: CopilotMode
+  redactExternalAI?: boolean
 }
 
 export type IntentType =
@@ -48,6 +49,13 @@ export interface ProjectFinding {
   sources: SourceAttribution[]
   confidence: number
   providerId?: MeetingProviderId
+  privacy?: PrivacyRedactionReport
+}
+
+export interface PrivacyRedactionReport {
+  applied: boolean
+  total: number
+  categories: Record<string, number>
 }
 
 export interface ActionItem {
@@ -158,4 +166,5 @@ export interface AgentTaskResponse {
   findings: string
   sources: SourceAttribution[]
   providerId?: MeetingProviderId
+  privacy?: PrivacyRedactionReport
 }

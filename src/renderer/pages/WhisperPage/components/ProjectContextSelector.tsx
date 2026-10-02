@@ -1,4 +1,4 @@
-import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, Volume2, Unlink } from 'lucide-react'
+import { Bot, Cloud, Folder, FolderOpen, Globe, HardDrive, ShieldCheck, Volume2, Unlink } from 'lucide-react'
 import { ProjectContextConfig } from '../../../services/meetingIntelligence/types'
 
 const defaults: ProjectContextConfig = {
@@ -14,6 +14,7 @@ const defaults: ProjectContextConfig = {
   agentProviderId: 'auto',
   allowExternalAI: false,
   allowLocalAI: true,
+  redactExternalAI: true,
 }
 
 export function ProjectContextSelector({
@@ -138,6 +139,17 @@ export function ProjectContextSelector({
           />
           <Cloud size={12} style={{ color: 'var(--color-text-muted)' }} />
           <span>Autorizar envio para IA externa nesta reunião</span>
+        </label>
+
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>
+          <input
+            type="checkbox"
+            checked={value.redactExternalAI}
+            disabled={!value.allowExternalAI}
+            onChange={(event) => update({ redactExternalAI: event.target.checked })}
+          />
+          <ShieldCheck size={12} style={{ color: 'var(--color-text-muted)' }} />
+          <span>Redigir dados sensíveis antes do envio</span>
         </label>
 
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: value.allowExternalAI ? 'pointer' : 'not-allowed', opacity: value.allowExternalAI ? 1 : 0.6 }}>

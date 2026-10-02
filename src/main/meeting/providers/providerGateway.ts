@@ -1,6 +1,7 @@
 import { createCliProviders } from './cliProviders'
 import { CodexMeetingProvider } from './codexProvider'
 import { OllamaMeetingProvider } from './ollamaProvider'
+import { redactSensitiveText } from '../privacyRedaction'
 import type {
   MeetingAgentProvider,
   MeetingAgentProviderId,
@@ -23,6 +24,7 @@ function normalizedPolicy(policy?: Partial<ProviderPolicy>): ProviderPolicy {
     preferredProviderId: policy?.preferredProviderId || 'auto',
     allowExternalAI: policy?.allowExternalAI === true,
     allowLocalAI: policy?.allowLocalAI !== false,
+    redactExternalAI: policy?.redactExternalAI !== false,
   }
 }
 
@@ -88,7 +90,12 @@ export class MeetingProviderGateway {
       if (!provider) continue
       try {
         progress(`Provedor ${provider.name}: iniciando`)
-        return await provider.run(prompt, { web, signal, progress })
+        const redacted = !provider.capabilities.local && resolvedPolicy.redactExternalAI !== false
+          ? redactSensitiveText(prompt)
+          : { text: prompt, report: { applied: false, total: 0, categories: {} } }
+        if (redacted.report.applied) progress(`Privacidade: ${redacted.report.total} dado(s) sensível(is) redigido(s)`)
+        const answer = await provider.run(redacted.text, { web, signal, progress })
+        return { ...answer, privacy: provider.capabilities.local ? undefined : redacted.report }
       } catch (error) {
         signal.throwIfAborted()
         failures.push(`${provider.name}: ${compactError(error)}`)

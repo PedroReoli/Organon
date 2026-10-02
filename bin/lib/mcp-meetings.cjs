@@ -187,6 +187,7 @@ async function handleMeetingAsk(args = {}) {
       preferredProviderId: args.providerId || 'auto',
       allowExternalAI: args.allowExternalAI === true,
       allowLocalAI: args.allowLocalAI !== false,
+      redactExternalAI: args.redactExternalAI !== false,
     });
     audit('meeting.ask', { meetingId: meeting.id, access, providerId: answer.providerId, externalAuthorized: args.allowExternalAI === true, web: args.web === true });
     return { revision, access, meeting: metadata(meeting), question, ...answer };

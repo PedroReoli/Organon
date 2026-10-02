@@ -149,12 +149,13 @@ export class MeetingOrchestrator {
           providerId: this.projectContext?.agentProviderId || 'auto',
           allowExternalAI: this.projectContext?.allowExternalAI === true,
           allowLocalAI: this.projectContext?.allowLocalAI !== false,
+          redactExternalAI: this.projectContext?.redactExternalAI !== false,
         })
         if (this.disposed || (task.status as string) === 'cancelled') return
         if (!answer.findings?.trim()) throw new Error('O agente não retornou uma resposta.')
         if (scope === 'report') answer.sources = Array.from(new Map([...this.data.findings.flatMap(finding => finding.sources), ...answer.sources].map(source => [source.pathOrUrl, source])).values())
-        this.data.findings.unshift({ id: task.id, timestamp: new Date().toLocaleTimeString('pt-BR'), question: clean, summary: answer.findings, sources: answer.sources, confidence: 0.8, providerId: answer.providerId })
-        task.status = 'completed'; task.stage = 'Concluída'; this.log('ResearchCompleted', `${scope}: ${answer.sources.length} fontes retornadas por ${answer.providerId || 'provedor automático'}.`)
+        this.data.findings.unshift({ id: task.id, timestamp: new Date().toLocaleTimeString('pt-BR'), question: clean, summary: answer.findings, sources: answer.sources, confidence: 0.8, providerId: answer.providerId, privacy: answer.privacy })
+        task.status = 'completed'; task.stage = 'Concluída'; this.log('ResearchCompleted', `${scope}: ${answer.sources.length} fontes por ${answer.providerId || 'provedor automático'}; ${answer.privacy?.total || 0} dado(s) sensível(is) redigido(s).`)
       } catch (error) {
         if ((task.status as string) !== 'cancelled') { task.status = 'failed'; task.error = error instanceof Error ? error.message : 'Falha na pesquisa.'; task.stage = task.error }
         this.log('ResearchFailed', task.stage)

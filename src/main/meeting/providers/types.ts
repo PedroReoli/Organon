@@ -12,6 +12,7 @@ export interface ResearchAnswer {
   findings: string
   sources: ResearchSource[]
   providerId?: MeetingAgentProviderId
+  privacy?: import('../privacyRedaction').PrivacyRedactionReport
 }
 
 export interface ProviderCapabilities {
@@ -51,4 +52,5 @@ export interface ProviderPolicy {
   preferredProviderId?: MeetingAgentProviderId | 'auto'
   allowExternalAI: boolean
   allowLocalAI?: boolean
+  redactExternalAI?: boolean
 }

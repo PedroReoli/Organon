@@ -280,6 +280,11 @@ export const MeetingIntelligencePanel: React.FC<Props> = ({ data, agentProviderN
                   <div style={{ fontSize: '11.5px', color: 'var(--color-text)', whiteSpace: 'pre-wrap', marginBottom: '6px', lineHeight: '1.4' }}>
                     {finding.summary}
                   </div>
+                  {finding.privacy?.applied && (
+                    <div style={{ fontSize: '10px', color: '#16a34a', marginBottom: '5px' }}>
+                      Privacidade: {finding.privacy.total} dado(s) sensível(is) redigido(s) antes do envio externo.
+                    </div>
+                  )}
 
                   {finding.sources && finding.sources.length > 0 && (
                     <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed var(--color-border)' }}>
