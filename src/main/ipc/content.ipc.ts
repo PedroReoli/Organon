@@ -2,7 +2,6 @@ import { app, ipcMain } from 'electron'
 import { exec, spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as os from 'os'
 import { createHash, randomUUID } from 'crypto'
 import { pathToFileURL } from 'url'
 
@@ -15,6 +14,7 @@ import {
   transcribeLocalAudioDetailed,
   type WhisperTranscriptionResult,
 } from '../whisper'
+import { resolveTranscriptionInput } from '../whisper/transcriptionInput'
 import {
   getDataPath,
   safeResolveMeetingPath,
@@ -45,7 +45,6 @@ const launchExe = (exePath: string): boolean => {
   }
 }
 
-const TEMP_TRANSCRIBE_DIR = path.join(os.tmpdir(), 'organon-whisper')
 const MAX_MEETING_AUDIO_BYTES = 512 * 1024 * 1024
 
 type MeetingAudioMetadata = {
@@ -283,26 +282,6 @@ async function transcribeCloudAudioDetailed(request: CloudTranscriptionRequest):
 
 async function transcribeCloudAudio(request: CloudTranscriptionRequest): Promise<string> {
   return (await transcribeCloudAudioDetailed(request)).text
-}
-
-function resolveTranscriptionInput(input: string): { path: string; cleanup: boolean } {
-  if (typeof input !== 'string' || !input.trim()) throw new Error('Áudio vazio.')
-  const trimmed = input.trim()
-  if (trimmed && fs.existsSync(trimmed) && fs.statSync(trimmed).isFile()) {
-    return { path: trimmed, cleanup: false }
-  }
-
-  fs.mkdirSync(TEMP_TRANSCRIBE_DIR, { recursive: true })
-  const tempPath = path.join(TEMP_TRANSCRIBE_DIR, `audio-${Date.now()}-${randomUUID()}.wav`)
-
-  const normalizedBase64 = trimmed.startsWith('data:')
-    ? trimmed.split(',', 2)[1] ?? ''
-    : trimmed
-
-  const bytes = Buffer.from(normalizedBase64, 'base64')
-  if (bytes.length < 44 || bytes.toString('ascii', 0, 4) !== 'RIFF' || bytes.toString('ascii', 8, 12) !== 'WAVE') throw new Error('Áudio inválido: envie WAV PCM.')
-  fs.writeFileSync(tempPath, bytes)
-  return { path: tempPath, cleanup: true }
 }
 
 type TranscriptionRequestOptions = {

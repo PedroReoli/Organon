@@ -38,6 +38,12 @@ app.whenReady().then(async () => {
     process.env.ORGANON_WHISPER_CLI = path.join(root, 'missing-whisper.exe')
     await assert.rejects(() => transcribeAudioLocally(fixture, model), /ausente/)
     process.env.ORGANON_WHISPER_CLI = executable
+    const queuedResults = await Promise.all([
+      transcribeAudioLocally(fixture, model),
+      transcribeAudioLocally(fixture, model),
+    ])
+    assert.equal(queuedResults.length, 2)
+    assert.ok(queuedResults.every(text => /tarefas|funcionamento|transcri|tasks|records|works/i.test(text)))
     ipcMain.handle('super-whisper:get-theme', () => ({ primary: '#6366f1', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' }))
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'media'))
     const win = new BrowserWindow({ show: false, width: 420, height: 420, webPreferences: { preload: path.join(root, 'dist/preload/index.js'), contextIsolation: true, nodeIntegration: false, offscreen: true, backgroundThrottling: false } })

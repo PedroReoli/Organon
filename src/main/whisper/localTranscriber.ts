@@ -8,7 +8,7 @@ import { app } from 'electron'
 import type { WhisperTranscriptionResult, WhisperTranscriptionSegment } from './transcription'
 
 const run = promisify(execFile)
-let active = false
+let transcriptionTail: Promise<void> = Promise.resolve()
 
 interface WhisperJsonToken {
   text?: unknown
@@ -113,10 +113,12 @@ export async function transcribeAudioLocallyDetailed(
   modelPath: string,
   initialPrompt = '',
 ): Promise<WhisperTranscriptionResult> {
-  if (active) throw new Error('Whisper local ocupado. Aguarde a transcrição atual.')
-  active = true
-  try { return await runTranscriptionDetailed(audioPath, modelPath, initialPrompt) }
-  finally { active = false }
+  const transcription = transcriptionTail.then(
+    () => runTranscriptionDetailed(audioPath, modelPath, initialPrompt),
+    () => runTranscriptionDetailed(audioPath, modelPath, initialPrompt),
+  )
+  transcriptionTail = transcription.then(() => undefined, () => undefined)
+  return transcription
 }
 
 export async function transcribeAudioLocally(audioPath: string, modelPath: string, initialPrompt = ''): Promise<string> {
