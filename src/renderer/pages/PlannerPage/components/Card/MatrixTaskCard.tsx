@@ -1,6 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type MouseEvent } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
-import { Check, ChevronRight, Clock3 } from 'lucide-react'
+import { Check, Clock3 } from 'lucide-react'
 import { PRIORITY_COLORS } from '@types'
 import type { Project } from '@types'
 import type { PlanningTask } from '../../types/planning.types'
@@ -19,6 +19,42 @@ interface MatrixTaskCardProps {
 
 type MatrixCardStyle = CSSProperties & {
   '--matrix-priority-color': string
+}
+
+/**
+ * Reduz a fonte progressivamente conforme o tamanho do texto e presença do badge de horário,
+ * priorizando encaixar sem corte e permitindo quebra de até 2 linhas.
+ */
+function getAutofitTitleStyle(title: string, hasTime: boolean): CSSProperties {
+  const len = title.length
+  let fontSize = '11px'
+  let lineHeight = '1.24'
+
+  if (hasTime) {
+    if (len > 30) {
+      fontSize = '8.5px'
+      lineHeight = '1.14'
+    } else if (len > 22) {
+      fontSize = '9px'
+      lineHeight = '1.16'
+    } else if (len > 15) {
+      fontSize = '9.8px'
+      lineHeight = '1.18'
+    }
+  } else {
+    if (len > 38) {
+      fontSize = '8.5px'
+      lineHeight = '1.14'
+    } else if (len > 28) {
+      fontSize = '9.2px'
+      lineHeight = '1.16'
+    } else if (len > 18) {
+      fontSize = '10px'
+      lineHeight = '1.2'
+    }
+  }
+
+  return { fontSize, lineHeight }
 }
 
 export function MatrixTaskCard({
@@ -49,9 +85,11 @@ export function MatrixTaskCard({
 
   const isDone = task.status === 'done'
   const priority = task.priority || 'P3'
-  const contextLabel = project?.name || 'Sem projeto'
   const style: MatrixCardStyle = {
-    '--matrix-priority-color': PRIORITY_COLORS[priority],
+    '--matrix-priority-color': PRIORITY_COLORS[priority] || '#3b82f6',
+    transform: 'none',
+    transition: 'none',
+    opacity: isDragging ? 0.35 : 1,
   }
 
   const handleOpen = (event: MouseEvent) => {
@@ -64,6 +102,8 @@ export function MatrixTaskCard({
     onEdit()
   }
 
+  const autofitStyle = getAutofitTitleStyle(task.title, Boolean(task.time))
+
   return (
     <article
       ref={setNodeRef}
@@ -72,7 +112,7 @@ export function MatrixTaskCard({
       {...attributes}
       {...listeners}
       onClick={handleOpen}
-      className={`matrix-task-card ${isDone ? 'is-done' : ''} ${isSelected ? 'is-selected' : ''}`}
+      className={`matrix-task-card ${isDone ? 'is-done' : ''} ${isSelected ? 'is-selected' : ''} ${isDragging ? 'is-dragging' : ''}`}
     >
       <button
         type="button"
@@ -88,30 +128,18 @@ export function MatrixTaskCard({
         {isDone && <Check size={10} strokeWidth={3} />}
       </button>
 
-      <div className="matrix-task-card-copy">
-        <strong>{task.title}</strong>
-        <span>
-          <b>{priority}</b>
+      <MatrixTaskHoverCard task={task} project={project} disabled={previewDisabled || isDragging}>
+        <div className="matrix-task-card-copy">
+          <span className="matrix-task-card-title" style={autofitStyle}>
+            {task.title}
+          </span>
           {task.time && (
-            <time dateTime={task.time}>
-              <Clock3 size={10} />
+            <time dateTime={task.time} className="matrix-task-card-time">
+              <Clock3 size={9} />
               {task.time}
             </time>
           )}
-          <em title={contextLabel}>{contextLabel}</em>
-        </span>
-      </div>
-
-      <MatrixTaskHoverCard task={task} project={project} disabled={previewDisabled || isDragging}>
-        <button
-          type="button"
-          className="matrix-task-details-trigger"
-          aria-label={`Ver descrição de ${task.title}`}
-          onPointerDown={event => event.stopPropagation()}
-          onClick={handleOpen}
-        >
-          <ChevronRight size={15} />
-        </button>
+        </div>
       </MatrixTaskHoverCard>
     </article>
   )

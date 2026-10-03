@@ -1,13 +1,17 @@
+/* ==========================================================================
+   MATRIX SLOT & PLANNER CARDS (COMPACT + READABLE + DRAG N DROP SHADOW)
+   ========================================================================== */
+
 .planner-matrix-slot {
   position: relative;
   container-type: inline-size;
   flex: 1;
   min-width: 0;
-  min-height: 90px;
+  min-height: 85px;
   height: 100%;
-  padding: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.11);
-  border-radius: 10px;
+  padding: 4px 5px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -15,7 +19,8 @@
 }
 
 .planner-matrix-slot.is-over {
-  box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.82);
+  border-color: rgba(129, 140, 248, 0.85) !important;
+  box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.55), 0 0 14px rgba(99, 102, 241, 0.25);
 }
 
 .planner-matrix-slot.is-move-target {
@@ -30,285 +35,277 @@
 .planner-matrix-slot-content {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.planner-matrix-slot.is-backlog .planner-matrix-slot-content {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
 }
 
+/* Single column list so task titles have full width and are clearly readable */
 .planner-matrix-task-grid {
   min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
-  align-content: start;
-}
-
-.planner-matrix-task-grid.is-backlog {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.matrix-tag-group {
-  min-width: 0;
-  min-height: 43px;
-  padding: 6px 7px;
-  border: 1px solid rgba(129, 140, 248, 0.18);
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto auto 13px;
-  align-items: center;
-  gap: 5px;
-  background: #151f33;
-  color: #e8eef9;
-  font: inherit;
-  text-align: left;
-  cursor: default;
-  transition: border-color 120ms ease, background-color 120ms ease;
-}
-
-.matrix-tag-group:hover,
-.matrix-tag-group:focus-visible,
-.matrix-tag-group[aria-expanded='true'] {
-  border-color: rgba(129, 140, 248, 0.55);
-  outline: none;
-  background: #1a2740;
-}
-
-.matrix-tag-group-icon {
-  width: 22px;
-  height: 22px;
-  border: 1px solid rgba(129, 140, 248, 0.22);
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.1);
-  color: #a5b4fc;
-}
-
-.matrix-tag-group-copy {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.matrix-tag-group-copy strong {
-  overflow: hidden;
-  color: #eef2ff;
-  font-size: 10.5px;
-  font-weight: 720;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.matrix-tag-group-copy small {
-  overflow: hidden;
-  color: #78869f;
-  font-size: 8.5px;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.matrix-tag-group-priorities {
-  display: inline-flex;
-  align-items: center;
-}
-
-.matrix-tag-group-priorities i {
-  width: 5px;
-  height: 5px;
-  margin-left: -1px;
-  border: 1px solid #151f33;
-  border-radius: 50%;
-}
-
-.matrix-tag-group-count {
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.13);
-  color: #c7d2fe;
-  font-size: 9px;
-  font-weight: 760;
-}
-
-.matrix-tag-group-arrow {
-  color: #697891;
-}
-
-.matrix-tag-group[aria-expanded='true'] .matrix-tag-group-arrow {
-  color: #a5b4fc;
-}
-
-.matrix-task-overflow {
-  min-width: 0;
-  min-height: 43px;
-  padding: 6px;
-  border: 1px dashed rgba(129, 140, 248, 0.35);
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background: rgba(99, 102, 241, 0.065);
-  color: #c7d2fe;
-  font: inherit;
-  cursor: pointer;
-}
-
-.matrix-task-overflow:hover {
-  border-color: rgba(129, 140, 248, 0.68);
-  background: rgba(99, 102, 241, 0.13);
-}
-
-.matrix-task-overflow span {
-  font-size: 10px;
-  font-weight: 760;
-}
-
-.matrix-task-overflow small {
-  color: #8290a8;
-  font-size: 8px;
-}
-
-.matrix-slot-inline-form {
-  grid-column: 1 / -1;
-  width: 100%;
-  padding: 7px;
-  border: 1px solid rgba(129, 140, 248, 0.72);
-  border-radius: 8px;
-  display: grid;
-  gap: 6px;
-  background: #0a1020;
-  box-shadow: 0 12px 26px -20px rgba(0, 0, 0, 0.95);
-}
-
-.matrix-slot-inline-form.is-empty-slot {
-  margin: auto 0;
-}
-
-.matrix-slot-inline-form input {
-  width: 100%;
-  min-width: 0;
-  min-height: 29px;
-  padding: 5px 7px;
-  border: 1px solid rgba(100, 116, 139, 0.55);
-  border-radius: 6px;
-  outline: none;
-  background: rgba(15, 23, 42, 0.88);
-  color: white;
-  font: inherit;
-  font-size: 11px;
-}
-
-.matrix-slot-inline-form input:focus {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.16);
-}
-
-.matrix-slot-inline-form > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: #78869f;
-  font-size: 8.5px;
-}
-
-.matrix-slot-inline-form button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #a5b4fc;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.matrix-slot-empty,
-.matrix-slot-drop-target {
-  width: 100%;
+  gap: 3px;
   height: 100%;
-  min-height: 76px;
-  padding: 10px;
-  border: 0;
+}
+
+/* ==========================================================================
+   COMPACT TASK CARD (NO DISPLACEMENT ANIMATION ON SIBLINGS)
+   ========================================================================== */
+
+.matrix-task-card {
+  --matrix-priority-color: #3b82f6;
+  position: relative;
+  min-width: 0;
+  min-height: 25px;
+  padding: 2.5px 6px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-left: 3px solid var(--matrix-priority-color);
+  border-radius: 5px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: transparent;
-  color: #61708a;
-  font: inherit;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-align: center;
+  gap: 5px;
+  background: #131c2e;
+  color: #f1f5f9;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  /* Crucial: cards do NOT displace or bounce when others are dragged */
+  transform: none !important;
+  transition: border-color 100ms ease, background-color 100ms ease;
 }
 
-.matrix-slot-empty {
-  cursor: pointer;
+.matrix-task-card:hover {
+  border-color: rgba(129, 140, 248, 0.4);
+  border-left-color: var(--matrix-priority-color);
+  background: #19263f;
 }
 
-.matrix-slot-empty > span {
-  width: 22px;
-  height: 22px;
-  border: 1px solid rgba(100, 116, 139, 0.38);
-  border-radius: 6px;
+.matrix-task-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+  background: #1b2844;
+}
+
+.matrix-task-card.is-done {
+  background: #0f1624;
+  opacity: 0.72;
+}
+
+.matrix-task-card.is-dragging {
+  opacity: 0.35;
+  cursor: grabbing !important;
+}
+
+.matrix-task-status-toggle {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 3px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: rgba(5, 10, 22, 0.4);
+  color: white;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+  transition: all 100ms ease;
 }
 
-.matrix-slot-empty:hover {
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.018);
-  color: #a8b4c9;
+.matrix-task-status-toggle:hover {
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
 }
 
-.matrix-slot-drop-target {
-  border: 1px dashed rgba(129, 140, 248, 0.68);
-  border-radius: 8px;
+.matrix-task-status-toggle[aria-pressed='true'] {
+  border-color: #10b981;
+  background: #10b981;
+}
+
+.matrix-task-card-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.matrix-task-card-title {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  color: #e2e8f0;
+  font-weight: 550;
+}
+
+.is-done .matrix-task-card-title {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.matrix-task-card-time {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #94a3b8;
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   OVERFLOW BUTTON (+X MAIS)
+   ========================================================================== */
+
+.matrix-task-overflow-btn {
+  width: 100%;
+  min-height: 20px;
+  height: 20px;
+  margin-top: auto;
+  padding: 1px 6px;
+  border: 1px dashed rgba(129, 140, 248, 0.35);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(99, 102, 241, 0.08);
   color: #c7d2fe;
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
 }
+
+.matrix-task-overflow-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(129, 140, 248, 0.65);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   DROP SHADOW ("SOMBRA ONDE ELES VÃO CAIR")
+   ========================================================================== */
+
+.matrix-task-drop-shadow {
+  min-height: 25px;
+  height: 25px;
+  padding: 2px 7px;
+  border: 1.5px dashed rgba(129, 140, 248, 0.85);
+  border-radius: 5px;
+  background: rgba(99, 102, 241, 0.16);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.3), inset 0 0 10px rgba(99, 102, 241, 0.14);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e0e7ff;
+  font-size: 10.5px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+  margin-top: 1px;
+  animation: pulse-matrix-shadow 1.5s infinite ease-in-out;
+}
+
+.matrix-task-drop-shadow.is-empty-slot-shadow {
+  margin-top: 0;
+  width: 100%;
+}
+
+@keyframes pulse-matrix-shadow {
+  0%, 100% {
+    border-color: rgba(129, 140, 248, 0.85);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.28);
+  }
+  50% {
+    border-color: rgba(165, 180, 252, 1);
+    box-shadow: 0 0 18px rgba(129, 140, 248, 0.45);
+  }
+}
+
+.matrix-task-drop-shadow-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #818cf8;
+  box-shadow: 0 0 6px #818cf8;
+  flex-shrink: 0;
+}
+
+.matrix-task-drop-shadow-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.matrix-task-drop-shadow-badge {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(99, 102, 241, 0.35);
+  color: #e0e7ff;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   SLOT FOOTER
+   ========================================================================== */
 
 .matrix-slot-footer {
-  min-height: 25px;
-  margin-top: 5px;
-  padding-top: 5px;
+  margin-top: auto;
+  padding-top: 3px;
   border-top: 1px solid rgba(148, 163, 184, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
 }
 
-.matrix-slot-footer button {
-  min-height: 24px;
-  padding: 3px 6px;
-  border: 0;
-  border-radius: 6px;
+.matrix-slot-count,
+.matrix-slot-add {
+  height: 18px;
+  padding: 0 5px;
+  border: none;
+  border-radius: 3px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  gap: 3px;
   background: transparent;
-  color: #8391aa;
+  color: #7d8ea7;
   font: inherit;
   font-size: 9px;
-  font-weight: 680;
+  font-weight: 650;
   cursor: pointer;
+  transition: all 100ms ease;
 }
 
-.matrix-slot-footer button:hover {
-  background: rgba(255, 255, 255, 0.055);
-  color: #dbe4f4;
+.matrix-slot-count:hover,
+.matrix-slot-add:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
 }
 
 .matrix-slot-count {
@@ -318,291 +315,520 @@
   white-space: nowrap;
 }
 
-.matrix-tag-popover.ds-popover-content {
-  z-index: 10010;
-  width: min(348px, calc(100vw - 24px));
-  max-height: min(460px, calc(100vh - 24px));
-  padding: 0;
-  border: 1px solid #33415c;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #0d1524;
-  color: #e8eef9;
-  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.62);
+/* Empty slot button */
+.matrix-slot-empty {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  border: 1px dashed rgba(148, 163, 184, 0.1);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
 }
 
-.matrix-tag-popover-header {
-  padding: 11px 12px;
+.matrix-slot-empty:hover {
+  border-color: rgba(129, 140, 248, 0.4);
+  background: rgba(99, 102, 241, 0.05);
+  color: #c7d2fe;
+}
+
+.matrix-slot-empty span {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Inline form */
+.matrix-slot-inline-form {
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  background: #111a2d;
+}
+
+.matrix-slot-inline-form input {
+  width: 100%;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  background: #090e19;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 10.5px;
+  outline: none;
+}
+
+.matrix-slot-inline-form input:focus {
+  border-color: #818cf8;
+}
+
+.matrix-slot-inline-form div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 8.5px;
+}
+
+.matrix-slot-inline-form button {
+  border: none;
+  background: transparent;
+  color: #a5b4fc;
+  font: inherit;
+  font-size: 8.5px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   POP-UP (SHIFT OVERVIEW POPOVER) — REPLACES FULL-SCREEN MODAL
+   ========================================================================== */
+
+.matrix-shift-popover.ds-popover-content {
+  z-index: 10020;
+  width: min(390px, calc(100vw - 24px));
+  max-height: min(520px, calc(100vh - 24px));
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0c1322;
+  color: #e8eef9;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(99, 102, 241, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.matrix-shift-popover-header {
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #111b2d;
+  justify-content: space-between;
+  gap: 10px;
+  background: #111a2c;
+  flex-shrink: 0;
 }
 
-.matrix-tag-popover-header > span {
-  width: 27px;
-  height: 27px;
+.matrix-shift-popover-header-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.matrix-shift-popover-header-icon {
+  width: 28px;
+  height: 28px;
   border: 1px solid rgba(129, 140, 248, 0.25);
   border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(99, 102, 241, 0.12);
   color: #a5b4fc;
+  flex-shrink: 0;
 }
 
-.matrix-tag-popover-header > div {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.matrix-tag-popover-header strong {
+.matrix-shift-popover-header-title strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
   overflow: hidden;
-  color: #f5f7ff;
-  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.matrix-tag-popover-header small {
-  color: #7f8da6;
-  font-size: 9px;
-}
-
-.matrix-tag-task-list {
-  max-height: 342px;
-  padding: 7px;
-  display: grid;
+.matrix-shift-popover-counts {
+  display: flex;
+  align-items: center;
   gap: 5px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.48) transparent;
+  color: #94a3b8;
+  font-size: 10px;
 }
 
-.matrix-task-card {
-  --matrix-priority-color: #3b82f6;
+.matrix-shift-popover-counts small {
+  color: #10b981;
+}
+
+.matrix-shift-popover-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.matrix-shift-popover-add-btn {
+  height: 25px;
+  padding: 0 8px;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #c7d2fe;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.matrix-shift-popover-add-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: #818cf8;
+  color: white;
+}
+
+.matrix-shift-popover-close-btn {
+  width: 25px;
+  height: 25px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.matrix-shift-popover-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* Quick Search in Popover */
+.matrix-shift-popover-search {
   position: relative;
-  min-width: 0;
-  min-height: 54px;
-  padding: 7px;
-  border: 1px solid rgba(148, 163, 184, 0.13);
-  border-left: 3px solid var(--matrix-priority-color);
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) 27px;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  background: #0d1525;
+  display: flex;
   align-items: center;
   gap: 7px;
-  background: #151f33;
+  flex-shrink: 0;
+}
+
+.matrix-shift-popover-search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.matrix-shift-popover-search-input {
+  width: 100%;
+  height: 24px;
+  border: none;
+  background: transparent;
   color: #f1f5f9;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+}
+
+.matrix-shift-popover-search-input::placeholder {
+  color: #64748b;
+}
+
+.matrix-shift-popover-search-clear {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.matrix-shift-popover-search-clear:hover {
+  color: #cbd5e1;
+}
+
+/* Task list inside popover */
+.matrix-shift-popover-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 380px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+.matrix-shift-popover-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #64748b;
+  font-size: 11.5px;
+}
+
+.matrix-shift-popover-item {
+  position: relative;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: #131d32;
   cursor: grab;
-  touch-action: none;
   user-select: none;
+  touch-action: none;
+  transform: none !important;
+  transition: all 120ms ease;
 }
 
-.matrix-task-card:hover,
-.matrix-task-card:focus-within {
-  border-color: color-mix(in srgb, var(--matrix-priority-color) 40%, rgba(148, 163, 184, 0.22));
-  border-left-color: var(--matrix-priority-color);
-  background: #19263e;
+.matrix-shift-popover-item:hover {
+  border-color: rgba(129, 140, 248, 0.38);
+  background: #17243c;
 }
 
-.matrix-task-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.32);
+.matrix-shift-popover-item.is-done {
+  background: #0e1627;
+  opacity: 0.65;
 }
 
-.matrix-task-card.is-done {
-  background: #111a2a;
+.matrix-shift-popover-item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-.matrix-task-status-toggle {
+.matrix-shift-popover-check {
   width: 15px;
   height: 15px;
+  min-width: 15px;
+  margin-top: 2px;
   padding: 0;
-  border: 1px solid rgba(148, 163, 184, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(5, 10, 22, 0.52);
+  background: rgba(5, 10, 22, 0.4);
   color: white;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: all 100ms ease;
 }
 
-.matrix-task-status-toggle[aria-pressed='true'] {
-  border-color: #6366f1;
-  background: #6366f1;
+.matrix-shift-popover-check:hover {
+  border-color: #818cf8;
 }
 
-.matrix-task-card-copy {
+.matrix-shift-popover-check[aria-pressed='true'] {
+  border-color: #10b981;
+  background: #10b981;
+}
+
+.matrix-shift-popover-priority-pill {
+  margin-top: 1px;
+  padding: 1px 5px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 750;
+  flex-shrink: 0;
+}
+
+.matrix-shift-popover-item-details {
+  flex: 1;
   min-width: 0;
-  display: grid;
-  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.matrix-task-card-copy strong {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: #eef2ff;
-  font-size: 11px;
-  font-weight: 680;
+.matrix-shift-popover-item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f1f5f9;
   line-height: 1.3;
-  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-.is-done .matrix-task-card-copy strong {
-  color: #697891;
+.is-done .matrix-shift-popover-item-title {
+  color: #64748b;
   text-decoration: line-through;
 }
 
-.matrix-task-card-copy > span {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #7f8da6;
-  font-size: 8.5px;
-  line-height: 1;
-}
-
-.matrix-task-card-copy b {
-  color: var(--matrix-priority-color);
-  font-size: 8.5px;
-}
-
-.matrix-task-card-copy time {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.matrix-task-card-copy em {
-  min-width: 0;
-  overflow: hidden;
-  font-style: normal;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.matrix-task-details-trigger {
-  width: 27px;
-  height: 31px;
-  padding: 0;
-  border: 1px solid rgba(129, 140, 248, 0.16);
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.07);
-  color: #8391aa;
-  cursor: help;
-}
-
-.matrix-task-details-trigger:hover,
-.matrix-task-details-trigger:focus-visible {
-  border-color: rgba(129, 140, 248, 0.5);
-  outline: none;
-  background: rgba(99, 102, 241, 0.14);
-  color: #c7d2fe;
-}
-
-.matrix-tag-popover-hint {
+.matrix-shift-popover-item-desc {
   margin: 0;
-  padding: 7px 10px 8px;
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
-  color: #65738b;
-  font-size: 8.5px;
-  text-align: center;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.matrix-tag-popover-arrow {
-  fill: #111b2d;
-  stroke: #33415c;
+.matrix-shift-popover-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
 }
+
+.matrix-shift-popover-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 9.5px;
+}
+
+.matrix-shift-popover-tag-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #c7d2fe;
+  font-size: 9.5px;
+}
+
+.matrix-shift-popover-edit-btn {
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #c7d2fe;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 120ms ease;
+}
+
+.matrix-shift-popover-edit-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #818cf8;
+  color: white;
+}
+
+.matrix-shift-popover-footer {
+  padding: 6px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  background: #0a101d;
+  color: #64748b;
+  font-size: 9px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.matrix-shift-popover-arrow {
+  fill: #0c1322;
+  stroke: rgba(148, 163, 184, 0.2);
+}
+
+/* ==========================================================================
+   HOVER PREVIEW (DS-TOOLTIP)
+   ========================================================================== */
 
 .matrix-task-preview.ds-tooltip-content {
-  z-index: 10020;
+  z-index: 10030;
   width: min(320px, calc(100vw - 24px));
   min-width: 0;
   padding: 0;
   border: 1px solid #33415c;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #101827;
+  background: #0f172a;
   color: #e8eef9;
-  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.62);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
 }
 
 .matrix-task-preview-heading {
-  padding: 13px 14px 10px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  background: #131d30;
+  background: #131e33;
 }
 
 .matrix-task-preview-kicker {
-  margin-bottom: 7px;
+  margin-bottom: 5px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .matrix-task-preview-priority,
 .matrix-task-preview-status {
-  font-size: 9.5px;
-  font-weight: 760;
+  font-size: 9px;
+  font-weight: 750;
 }
 
 .matrix-task-preview-priority.is-p1 { color: #ff8b92; }
 .matrix-task-preview-priority.is-p2 { color: #f7c469; }
 .matrix-task-preview-priority.is-p3 { color: #7eb6ff; }
 .matrix-task-preview-priority.is-p4 { color: #a7b3c7; }
-
-.matrix-task-preview-status {
-  color: #8e9bb1;
-}
+.matrix-task-preview-status { color: #8e9bb1; }
 
 .matrix-task-preview-heading h3 {
   margin: 0;
-  color: #f5f7ff;
-  font-size: 14px;
-  font-weight: 740;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 .matrix-task-preview-description {
   margin: 0;
-  padding: 11px 14px 0;
+  padding: 8px 12px 0;
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 4;
   color: #a7b3c7;
   font-size: 11px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .matrix-task-preview-description.is-empty {
-  color: #66748c;
+  color: #64748b;
   font-style: italic;
 }
 
 .matrix-task-preview-facts {
-  padding: 11px 14px 12px;
+  padding: 8px 12px 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 6px;
 }
 
 .matrix-task-preview-facts > span {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: #a8b4c9;
   font-size: 10px;
 }
@@ -613,14 +839,14 @@
 }
 
 .matrix-task-preview-tags {
-  padding: 0 14px 13px;
+  padding: 0 12px 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .matrix-task-preview-tags span {
-  padding: 3px 7px;
+  padding: 2px 6px;
   border: 1px solid rgba(129, 140, 248, 0.2);
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.09);
@@ -628,65 +854,20 @@
   font-size: 9px;
 }
 
-.matrix-task-preview-arrow {
-  fill: #101827;
-  stroke: #33415c;
-}
+/* ==========================================================================
+   GLOBAL DRAGGING CURSOR
+   ========================================================================== */
 
-.matrix-tag-group:focus-visible,
-.matrix-task-overflow:focus-visible,
-.matrix-slot-footer button:focus-visible,
-.matrix-slot-empty:focus-visible,
-.matrix-task-status-toggle:focus-visible {
-  outline: 2px solid #818cf8;
-  outline-offset: 2px;
-}
-
-@container (max-width: 175px) {
-  .planner-matrix-task-grid:not(.is-backlog) {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 3px;
-  }
-
-  .matrix-tag-group {
-    min-height: 37px;
-    grid-template-columns: 20px minmax(0, 1fr) auto 12px;
-    padding: 5px 6px;
-  }
-
-  .matrix-tag-group-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .matrix-tag-group-priorities {
-    display: none;
-  }
-
-  .matrix-tag-group-copy small {
-    display: none;
-  }
-
-  .matrix-slot-footer {
-    min-height: 23px;
-    margin-top: 3px;
-    padding-top: 3px;
-  }
-
-  .matrix-slot-add span {
-    display: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .matrix-task-preview-facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
+body.planner-dnd-active,
+body.planner-dnd-active * {
+  cursor: grabbing !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .planner-matrix-slot,
-  .matrix-tag-group {
+  .matrix-task-card,
+  .matrix-task-drop-shadow {
+    animation: none;
     transition: none;
   }
 }
