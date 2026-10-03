@@ -182,9 +182,24 @@ function handleTaskUpdate(idOrTitle, options = {}) {
   if (options.date !== undefined) {
     task.date = options.date === 'none' || options.date === 'null' ? null : options.date;
     task.hasDate = Boolean(task.date);
+    if (task.date) {
+      const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const d = new Date(task.date + 'T12:00:00');
+      if (!isNaN(d.getTime())) {
+        if (!task.location) task.location = {};
+        task.location.day = days[d.getDay()];
+      }
+    }
   }
   if (options.time !== undefined) {
     task.time = options.time === 'none' || options.time === 'null' ? null : options.time;
+    if (task.time) {
+      const hour = parseInt(task.time.split(':')[0], 10);
+      if (!isNaN(hour)) {
+        if (!task.location) task.location = {};
+        task.location.period = hour < 12 ? 'morning' : (hour < 18 ? 'afternoon' : 'night');
+      }
+    }
   }
   if (options.duration || options.durationMinutes) {
     task.durationMinutes = parseInt(options.duration || options.durationMinutes, 10);
